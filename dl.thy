@@ -63,7 +63,13 @@ text \<open>
   constructs are implemented as derived forms to reduce the soundness burden.
 \<close>
 
+(* NOTE: The distinction between sterm and dterm should go away. Right now the
+ difference is that dterms can contain differentials, but sterms cannot. It
+ was decided that probably it's easier to have one type for terms and then
+ have a predicate "is_diff_free" that tells us which of the terms are
+ sterms. *)
  datatype sterm =
+   (* Program variable *)
    SVar id
  (* N.B. This is technically more expressive than true dL since most reals 
    can't be written down. *)
@@ -71,15 +77,26 @@ text \<open>
  | SFunction id "sfun_args" ("$s")
  | SPlus sterm sterm
  | STimes sterm sterm
+(* NOTE: This is a nasty hack. This definition says that every function 
+ and predicate in dL has exactly 5 arguments, which is obviously not
+ always the case. Have this a datatype makes the proofs nasty 
+ (we bake in the "5 arguments" assumption in all the proofs). The next
+ step is to make this simpler by replacing the datatype with a vector [num_args] \<rightarrow> term,
+ where [num_args] is the type representing whatever number of variables we choose to have
+ in the system. Johannes has given me some suggestions how to make that work but I haven't
+ gotten around to trying them yet. *)
 and sfun_args = SFA sterm sterm sterm sterm sterm
  
 datatype dterm =
    Var id ("$\<theta>")
+ (* Differential variables only ok in a dterm *)
  | DiffVar id ("$'")
  | Function id dfun_args ("$f")
  | Plus dterm dterm
  | Times dterm dterm
+   (* Inside a differential can only have simple terms *)
  | Differential sterm
+ (* Wrap a simple term up as a dterm *)
  | Simply sterm
  and dfun_args = FA dterm  dterm  dterm  dterm  dterm
 
