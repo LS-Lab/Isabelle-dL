@@ -100,6 +100,16 @@ datatype dterm =
  | Simply sterm
  and dfun_args = FA dterm  dterm  dterm  dterm  dterm
 
+(* My first attempt at encoding ODE systems to write them as a function which
+ for every variable specifies either the RHS of the ODE (a differential-free term)
+ or explicitly says that variable is not bound by the ODE (None)
+ 
+ NOTE: After discussing this, I am going to try a different representation of ODE's
+ which are built up recursively as either atomic ODE's that bind one variable or 
+ product ODE's that are the product of two smaller ODE systems. This makes some
+ bogus ODE's well-typed, so we will need another predicate to rule out e.g. ODE's
+ that bind the same variable to two different terms.
+ *)
 type_synonym ODE =  "state_dim \<Rightarrow> (sterm option)"
 
 datatype hp =
@@ -107,7 +117,8 @@ datatype hp =
  | Assign id dterm        (infixr ":=" 10)
  | DiffAssign id dterm
  | Test formula           ("?")
- | Evolve ODE formula
+ (* An ODE program is an ODE system with some evolution domain. *)
+ | EvolveODE ODE formula
  | Choice hp hp           (infixl "\<union>\<union>" 10)
  | Sequence hp hp         (infixr ";;" 8)
  | Loop hp                ("_**")
@@ -119,8 +130,11 @@ and formula =
  | And formula formula    (infixl "&&" 8)
  | Forall id formula
  | Box hp formula         ("([[_]]_)" 10)
- | Invariant formula
+ (* DiffFormula \<phi> gives us the invariant for proving \<phi> by differential induction. *)
+ | DiffFormula formula
+ (* Unary quantifier symbols *)
  | InContext id formula
+ (* Nullary quantifier symbols *)
  | Predicational id
  
 (* Derived forms *)
@@ -174,6 +188,8 @@ definition is_interp :: "interp \<Rightarrow> bool"
   where "is_interp I \<equiv> 
     \<forall>x. \<forall>i. (FDERIV (Functions I i) x :> (FunctionFrechet I i x))"
 
+(* sterm_semantics is the term semantics for differential-free terms.
+   stuple_semantics is the semantics for tuples of differential-free terms.*)
 fun sterm_semantics :: "interp \<Rightarrow> sterm \<Rightarrow> simple_state \<Rightarrow> real"
   and stuple_semantics :: "interp \<Rightarrow> sfun_args \<Rightarrow> simple_state \<Rightarrow> func_domain"
   where "sterm_semantics I (SVar x) v = v $ x"
@@ -196,9 +212,16 @@ fun sterm_semantics :: "interp \<Rightarrow> sterm \<Rightarrow> simple_state \<
       | finite_5.a\<^sub>4 \<Rightarrow> sterm_semantics I x4 v
       | finite_5.a\<^sub>5 \<Rightarrow> sterm_semantics I x5 v))"
   
+(* basis_vector i is the i'th basis vector for the standard Euclidean basis. *)
 fun basis_vector :: "id \<Rightarrow> Rn"
   where "basis_vector x = vec_lambda (\<lambda>i. if x = i then 1 else 0)"
 
+(* frechet I \<theta> \<nu> gives us the frechet derivative of the term \<theta> in the interpretation
+ I at state \<nu> (containing only the unprimed variables). The frechet derivative is a 
+ linear map from the differential state \<nu> to reals. 
+ 
+ frechet_tuple is the equivalent for vector-valued terms (i.e. tuples of terms)
+ *)
 fun frechet :: "interp \<Rightarrow> sterm \<Rightarrow> simple_state \<Rightarrow> simple_state \<Rightarrow> real"
   and frechet_tuple :: 
     "interp \<Rightarrow> sfun_args \<Rightarrow> simple_state \<Rightarrow> simple_state \<Rightarrow> func_domain"
@@ -224,6 +247,8 @@ fun frechet :: "interp \<Rightarrow> sterm \<Rightarrow> simple_state \<Rightarr
 fun directional_derivative :: "interp \<Rightarrow> sterm \<Rightarrow> state \<Rightarrow> real" 
   where "directional_derivative I t = (\<lambda>v. frechet I t (fst v) (snd v))"
 
+(* Semantics for terms and tuples of terms that are allowed to contain differentials.
+   Note there is some duplication with sterm_semantics (hence the desire to combine the two).*)
 fun dterm_semantics :: "interp \<Rightarrow> dterm \<Rightarrow> state \<Rightarrow> real"
   and dtuple_semantics :: "interp \<Rightarrow> dfun_args \<Rightarrow> state \<Rightarrow> func_domain"
   where "dterm_semantics I (Var x) = (\<lambda>v. vec_nth (snd v) x)"
@@ -245,21 +270,29 @@ fun dterm_semantics :: "interp \<Rightarrow> dterm \<Rightarrow> state \<Rightar
       | finite_5.a\<^sub>4 \<Rightarrow> dterm_semantics I x4 v
       | finite_5.a\<^sub>5 \<Rightarrow> dterm_semantics I x5 v)))"
 
-  
+(* TODO: Delete, this is completely redundant with dterm_semantics, it just permutes the arguments
+ for no good reason. *)
 fun term_semantics :: "interp \<Rightarrow> state \<Rightarrow> dterm \<Rightarrow> real"
   where "term_semantics I v t = dterm_semantics I t v"
 
+(* repv \<nu> x r replaces the value of (unprimed) variable x in the state \<nu> with r *)
 fun repv :: "state \<Rightarrow> id \<Rightarrow> real \<Rightarrow> state"
   where "repv v x r = 
   (vec_lambda (\<lambda>y. if x = y then r else vec_nth (fst v) y), snd v)"
 
+(* repd \<nu> x' r replaces the value of (primed) variable x' in the state \<nu> with r *)
 fun repd :: "state \<Rightarrow> id \<Rightarrow> real \<Rightarrow> state"
   where "repd v x r = 
   (fst v, vec_lambda (\<lambda>y. if x = y then r else vec_nth (snd v) y))"
 
+(* rhs_semantics gives us the "semantics for the right hand side of an ODE"
+   rhs_semantics I \<nu> ODE gives us vector in Rn that contains for each variable
+   either the value of the corresponding term in the ODE or 0 if the variable is unbound.
+  *)
 fun rhs_semantics:: "interp \<Rightarrow> Rn \<Rightarrow> ODE \<Rightarrow> Rn"
   where "rhs_semantics I \<nu> ODE = vec_lambda (\<lambda>i. case ODE i of None \<Rightarrow> 0 | Some t \<Rightarrow> sterm_semantics I t \<nu>)"
 
+(* ivp I \<nu> ODE gives us an initial-value problem based on ODE in the initial state \<nu>*)
 fun ivp :: "interp \<Rightarrow> Rn \<Rightarrow> ODE \<Rightarrow> Rn ivp"
   where "ivp I \<nu>0 ODE = 
   \<lparr>ivp_f = (\<lambda>t\<nu>. rhs_semantics I  (snd t\<nu>) ODE), 
@@ -268,12 +301,24 @@ fun ivp :: "interp \<Rightarrow> Rn \<Rightarrow> ODE \<Rightarrow> Rn ivp"
    ivp_T = UNIV, 
    ivp_X = UNIV \<rparr>"
 
+(* ivp_semantics_at I IVP t gives the state produced by
+ following IVP for t time. *)
 fun ivp_semantics_at::"interp \<Rightarrow> Rn ivp \<Rightarrow> real \<Rightarrow> state"
   where "ivp_semantics_at I IVP t = 
     (ivp.solution IVP t, ivp_f IVP (t, (ivp.solution IVP t)))"
 
+(* Semantics for formulas, differential formulas, programs, initial-value problems and loops.
+   Loops and IVP's do not strictly have to have their own notion of semantics, but for loops
+   it was helpful to describe the semantics recursively and for IVP's it was convenient to
+   have ivp_semantics as a helper function simply because ODE's are a little complicated.
+   
+   Differential formulas do actually have to have their own notion of semantics, because
+   the meaning of a differential formula (\<phi>)' depends on the syntax of the formula \<phi>:
+   we can have two formulas \<phi> and \<psi> that have the exact same semantics, but where 
+   (\<phi>)' and (\<psi>)' differ because \<phi> and \<psi> differ syntactically.
+*)
 fun fml_semantics  :: "interp \<Rightarrow> formula \<Rightarrow> state set"
-and invariant_semantics  :: "interp \<Rightarrow> formula \<Rightarrow> state set"
+and diff_formula_semantics  :: "interp \<Rightarrow> formula \<Rightarrow> state set"
 and prog_semantics :: "interp \<Rightarrow> hp \<Rightarrow> (state * state) set"
 and ivp_semantics  :: "interp \<Rightarrow> Rn ivp \<Rightarrow> formula \<Rightarrow> state set"
 and loop_semantics :: "interp \<Rightarrow> hp \<Rightarrow> nat \<Rightarrow> (state * state) set"
@@ -289,12 +334,12 @@ and loop_semantics :: "interp \<Rightarrow> hp \<Rightarrow> nat \<Rightarrow> (
         {\<nu>. \<forall> \<omega>. (\<nu>, \<omega>) \<in> prog_semantics I \<alpha> \<longrightarrow> \<omega> \<in> fml_semantics I \<phi>}"
       | "fml_semantics I (InContext c \<phi>) = Contexts I c (fml_semantics I \<phi>)"
       | "fml_semantics I (Predicational p) = Predicationals I p"
-      | "fml_semantics I (Invariant p) = invariant_semantics I p"
-      | "invariant_semantics I (Geq (Simply f) (Simply g)) = 
+      | "fml_semantics I (DiffFormula p) = diff_formula_semantics I p"
+      | "diff_formula_semantics I (Geq (Simply f) (Simply g)) = 
           {v. term_semantics I v (Differential f) \<ge> term_semantics I v (Differential g) }"
-      | "invariant_semantics I (Not p) = invariant_semantics I p"
-      | "invariant_semantics I (And p q) = invariant_semantics I p \<inter> invariant_semantics I p"
-      | "invariant_semantics I  p = fml_semantics I p"
+      | "diff_formula_semantics I (Not p) = diff_formula_semantics I p"
+      | "diff_formula_semantics I (And p q) = diff_formula_semantics I p \<inter> diff_formula_semantics I p"
+      | "diff_formula_semantics I  p = fml_semantics I p"
  
       | "prog_semantics I (Pvar p) = Programs I p"
       | "prog_semantics I (Assign x t) = 
@@ -308,7 +353,7 @@ and loop_semantics :: "interp \<Rightarrow> hp \<Rightarrow> nat \<Rightarrow> (
         {(\<nu>, \<omega>) | \<nu> \<omega>. \<exists>\<mu>. (\<nu>, \<mu>) \<in> prog_semantics I \<alpha> 
                          \<and> (\<mu>, \<omega>) \<in> prog_semantics I \<beta>}"
       | "prog_semantics I (Loop \<alpha>) = (\<Union>n. loop_semantics I \<alpha> n)"
-      | "prog_semantics I (Evolve ODE \<phi>) = 
+      | "prog_semantics I (EvolveODE ODE \<phi>) = 
         {(\<nu>, \<mu>) | \<nu> \<mu>. \<mu> \<in> ivp_semantics I (ivp I (fst \<nu>) ODE) \<phi>}"
       | "ivp_semantics I IVP \<phi> = 
         {\<omega>. (\<exists>t. (\<omega> = ivp_semantics_at I IVP t \<and>
@@ -648,6 +693,11 @@ lemma stuple_deriv:
    from result show ?thesis by auto
 qed
        
+(* Our syntactically-defined derivatives of terms agree with the actual derivatives of the terms.
+ Since our definition of derivative is total, this gives us that derivatives are "decidable" for
+ terms (modulo computations on reals) and that they obey all the expected identities, which gives
+ us the axioms we want for differential terms essentially for free.
+ *)
 lemma frechet_correctness:
   fixes I and \<nu> 
   assumes "is_interp I"
@@ -697,11 +747,18 @@ lemma frechet_correctness:
 
 section \<open>Prerequisites for Substitution\<close>
 subsection \<open>Variable Binding Definitions\<close>
-
+\text\<open>
+  We represent the (free or bound or must-bound) variables of a term as an (id + id) set,
+  where all the (Inl x) elements are unprimed variables x and all the (Inr x) elements are
+  primed variables x'.
+  \<close>
+(* The bound variables of an ODE (which will also be included as free variables) *)
 fun ODE_vars :: "ODE \<Rightarrow> (id + id) set"
   where "ODE_vars ODE =
     (\<Union>x \<in> ({x. ODE x \<noteq> None}) . ({Inl x, Inr x}))"
-    
+
+(* Bound variables of a formula 
+   Bound variables of a program *)
 fun BVF :: "formula \<Rightarrow> (id + id) set"
 and BVP :: "hp \<Rightarrow> (id + id) set"
 where
@@ -711,7 +768,7 @@ where
  | "BVF (And p q) = BVF p \<union> BVF q"
  | "BVF (Forall x p) = {Inl x} \<union> BVF p"
  | "BVF (Box \<alpha> p) = BVP \<alpha> \<union> BVF p"
- | "BVF (Invariant p) = BVF p"
+ | "BVF (DiffFormula p) = BVF p"
  | "BVF (InContext C p) = UNIV"
  | "BVF (Predicational P) = UNIV"    
 
@@ -719,11 +776,12 @@ where
  | "BVP (Assign x \<theta>) = {Inl x}"
  | "BVP (DiffAssign x \<theta>) = {Inr x}"
  | "BVP (Test \<phi>) = {}"
- | "BVP (Evolve ODE \<phi>) = ODE_vars ODE" 
+ | "BVP (EvolveODE ODE \<phi>) = ODE_vars ODE" 
  | "BVP (Choice \<alpha> \<beta>) = BVP \<alpha> \<union> BVP \<beta>"
  | "BVP (Sequence \<alpha> \<beta>) = BVP \<alpha> \<union> BVP \<beta>"
  | "BVP (Loop \<alpha>) = BVP \<alpha>"
 
+(* Must-bound variables (of a program)*)
 fun MBV :: "hp \<Rightarrow> (id + id) set"
   where
    "MBV (Pvar a) = {}"
@@ -732,6 +790,9 @@ fun MBV :: "hp \<Rightarrow> (id + id) set"
  | "MBV (Loop \<alpha>) = {}"
  | "MBV \<alpha> = BVP \<alpha>"
 
+(* Free variables of a simple term *)
+(* Free variables of the arguments to a simple function 
+  (tuple of simple terms) *)
 fun FVS :: "sterm \<Rightarrow> id set"
 and FVSA :: "sfun_args \<Rightarrow> id set"
 where
@@ -742,6 +803,9 @@ where
  | "FVS (STimes f g) = FVS f \<union> FVS g"
  | "FVSA (SFA a1 a2 a3 a4 a5) = FVS a1 \<union> FVS a2 \<union>  FVS a3 \<union>  FVS a4 \<union> FVS a5"   
 
+(* Free variables of a differential term *)
+(* Free variables of the arguments to a differential-term function 
+  (tuples of differential terms)*)
 fun FVD :: "dterm \<Rightarrow> (id + id) set"
 and FVDA :: "dfun_args \<Rightarrow> (id + id) set"
 where
@@ -754,11 +818,14 @@ where
  | "FVD (Simply f) =  {Inl x | x. x \<in> FVS f}"
  | "FVDA (FA a1 a2 a3 a4 a5) = FVD a1 \<union> FVD a2 \<union>  FVD a3 \<union>  FVD a4 \<union> FVD a5"
  
+(* Free variables of an ODE includes both the bound variables and the terms *)
 fun FVODE :: "ODE \<Rightarrow> (id + id) set"
   where
    "FVODE ODE = 
      (\<Union>x \<in> {x. Some x \<in> {(ODE y)| y. y = y}}. FVD (Simply x))"
 
+(* Free variables of a formula *)
+(* Free variables of a program *)
 fun FVF :: "formula \<Rightarrow> (id + id) set"
 and FVP :: "hp \<Rightarrow> (id + id) set"
 where
@@ -768,14 +835,14 @@ where
  | "FVF (And p q) = FVF p \<union> FVF q"
  | "FVF (Forall x p) = FVF p - {Inl x}"
  | "FVF (Box \<alpha> p) =   FVF p - MBV \<alpha>"
- | "FVF (Invariant p) = FVF p"
+ | "FVF (DiffFormula p) = FVF p"
  | "FVF (InContext C p) = UNIV"
  | "FVF (Predicational P) = UNIV"    
  | "FVP (Pvar a) = UNIV"
  | "FVP (Assign x \<theta>) = FVD \<theta>"
  | "FVP (DiffAssign x \<theta>) = FVD \<theta>"
  | "FVP (Test \<phi>) = FVF \<phi>"
- | "FVP (Evolve ODE \<phi>) = ODE_vars ODE \<union> FVODE ODE \<union> FVF \<phi>"
+ | "FVP (EvolveODE ODE \<phi>) = ODE_vars ODE \<union> FVODE ODE \<union> FVF \<phi>"
  | "FVP (Choice \<alpha> \<beta>) = FVP \<alpha> \<union> FVP \<beta>"
  | "FVP (Sequence \<alpha> \<beta>) = (FVP \<alpha> \<union> FVP \<beta>) - (MBV \<alpha>)"
  | "FVP (Loop \<alpha>) = FVP \<alpha>"
@@ -813,6 +880,12 @@ definition f :: "id" where "f \<equiv> finite_5.a\<^sub>1"
 definition valid :: "formula \<Rightarrow> bool" 
 where "valid \<phi> \<equiv> (\<forall> I. \<forall> \<nu>. is_interp I \<longrightarrow> \<nu> \<in> fml_semantics I \<phi>)" 
 
+(* Arguments for a "nullary" function - a tuple of all-zeros. When we encode 
+  a function that has less than the maximum allowed number of arguments, we
+  do so by making the remaining arguments 0 at every use site. We can't actually
+  enforce that the interpretation of the function "doesnt care" about an argument,
+  but if we never use that argument at more than one value there's no way to "notice"
+  that the extra arguments exist *)
 definition empty :: "dfun_args"
   where "empty \<equiv> 
     FA (Simply (SConst 0))
@@ -821,6 +894,7 @@ definition empty :: "dfun_args"
        (Simply (SConst 0))
        (Simply (SConst 0))"
 
+(* Function argument tuple where the first argument is arbitrary and the rest are zero.*)
 fun singleton :: "dterm \<Rightarrow> dfun_args"
   where "singleton t = 
     FA t
@@ -829,6 +903,7 @@ fun singleton :: "dterm \<Rightarrow> dfun_args"
        (Simply (SConst 0))
        (Simply (SConst 0))" 
 
+(* Equivalents of the above for functions over simple terms. *)
 definition sempty :: "sfun_args"
   where "sempty \<equiv> 
     SFA (SConst 0)
@@ -854,7 +929,7 @@ definition loop_iterate_axiom :: "formula"
   where "loop_iterate_axiom \<equiv> ([[$\<alpha> a**]]Predicational PP) 
     \<leftrightarrow> ((Predicational PP) && ([[$\<alpha> a]][[$\<alpha> a**]]Predicational PP))"
   
-definition test_axiom :: "formula"
+definition test_axiom :: "formula"already
   where "test_axiom \<equiv> 
     ([[?($\<phi> H empty)]]$\<phi> P empty) \<leftrightarrow> (($\<phi> H empty) \<rightarrow> ($\<phi> P empty))"
   
