@@ -127,6 +127,9 @@ and formula =
  (* Nullary quantifier symbols *)
  | Predicational id
  
+type_synonym stuple = "(func_domain_dim \<Rightarrow> sterm)"
+type_synonym dtuple = "(func_domain_dim \<Rightarrow> dterm)"
+
 (* Derived forms *)
 fun Or :: "formula \<Rightarrow> formula \<Rightarrow> formula" (infixl "||" 7)
   where "Or P Q = Not (And (Not P) (Not Q))"
@@ -233,7 +236,15 @@ primrec dterm_semantics :: "interp \<Rightarrow> dterm \<Rightarrow> state \<Rig
     (\<lambda>v. (dterm_semantics I t1 v) * (dterm_semantics I t2 v))"
   | "dterm_semantics I (Differential t) = (\<lambda>v. directional_derivative I t v)"
   | "dterm_semantics I (Simply t) = (\<lambda>\<nu>. sterm_semantics I t (fst \<nu>))"
-  
+  (*| "dtuple_semantics I (FA x1 x2 x3 x4 x5) =
+   (\<lambda>v. (vec_lambda (\<lambda>i. 
+      case i of
+        finite_5.a\<^sub>1 \<Rightarrow> dterm_semantics I x1 v
+      | finite_5.a\<^sub>2 \<Rightarrow> dterm_semantics I x2 v
+      | finite_5.a\<^sub>3 \<Rightarrow> dterm_semantics I x3 v
+      | finite_5.a\<^sub>4 \<Rightarrow> dterm_semantics I x4 v
+      | finite_5.a\<^sub>5 \<Rightarrow> dterm_semantics I x5 v)))"*)
+
 (* TODO: Delete, this is completely redundant with dterm_semantics, it just permutes the arguments
  for no good reason. *)
 fun term_semantics :: "interp \<Rightarrow> state \<Rightarrow> dterm \<Rightarrow> real"
@@ -289,7 +300,7 @@ and loop_semantics :: "interp \<Rightarrow> hp \<Rightarrow> nat \<Rightarrow> (
   where "fml_semantics I (Geq t1 t2) = 
         {v. term_semantics I v t1 \<ge> term_semantics I v t2 }"
       | "fml_semantics I (Prop P terms) =
-        {\<nu>. Predicates I P (dtuple_semantics I terms \<nu>)}"
+        {\<nu>. Predicates I P (vec_lambda (\<lambda>i. dterm_semantics I (terms i) \<nu>))}"
       | "fml_semantics I (Not \<phi>) = {v. v \<notin> fml_semantics I \<phi>}"
       | "fml_semantics I (And \<phi> \<psi>) = fml_semantics I \<phi> \<inter> fml_semantics I \<psi>"
       | "fml_semantics I (Forall x \<phi>) = 
@@ -345,7 +356,7 @@ lemma sconst_case: "sterm_semantics I (SConst r) = (\<lambda>v. r)"
   done
 
 lemma sfunction_case: "sterm_semantics I (SFunction f args) = 
-  (\<lambda>v. Functions I f (stuple_semantics I args v))"
+(\<lambda>v. Functions I f (vec_lambda (\<lambda>i. sterm_semantics I (args i) v)))"
   apply(auto)
 done
 
@@ -358,20 +369,16 @@ lemma stimes_case: "sterm_semantics I (STimes t1 t2) =
   (\<lambda>v. (sterm_semantics I t1 v) * (sterm_semantics I t2 v))"
   apply(auto)
 done
-
+(*
 lemma unpack_sfa: "\<exists>x1 x2 x3 x4 x5. v = SFA x1 x2 x3 x4 x5"
   by (metis sfun_args.exhaust)
-
-lemma stuple_case: "stuple_semantics I (SFA x1 x2 x3 x4 x5) = (\<lambda>v.
-    (vec_lambda (case_finite_5 
-      (sterm_semantics I x1 v)
-      (sterm_semantics I x2 v)
-      (sterm_semantics I x3 v)
-      (sterm_semantics I x4 v)
-      (sterm_semantics I x5 v))))"
+lemma stuple_case: 
+"stuple_semantics I args = (\<lambda>v. (vec_lambda (\<lambda>i.
+     (sterm_semantics I (args i) v))))"
       apply(auto)
 done
-  
+*)
+(*  
 lemma frechet_tuple_simp: "frechet_tuple I (SFA x1 x2 x3 x4 x5) v =
    (\<lambda> v'. vec_lambda
     (\<lambda>i. case i of
@@ -382,7 +389,7 @@ lemma frechet_tuple_simp: "frechet_tuple I (SFA x1 x2 x3 x4 x5) v =
       | finite_5.a\<^sub>5 \<Rightarrow> frechet I x5 v v'))"
   apply(auto)
 done
-  
+  *)
 subsection \<open>Characterization of Term Derivatives\<close>
 text \<open>
  This section builds up to a proof that in well-formed interpretations, all 
@@ -500,7 +507,7 @@ theorem svar_deriv:
   by(auto)
   from better_deriv and deriv_eq show ?thesis by (auto)
   qed
-
+(*
 lemma function_case_inner:
   assumes good_interp:
     "(\<forall>x i. (Functions I i has_derivative FunctionFrechet I i x) (at x))"
@@ -535,8 +542,9 @@ proof -
   have composeDeriv: "((?f o ?g) has_derivative (?f' o ?g')) (at \<nu>)"
     using diff_chain_at good_interp by blast
   from hEqFG hEqFG' composeDeriv show ?thesis by (auto)
-qed 
-   
+qed
+*)
+(*   
 lemma function_case: 
  "(\<forall>x i. (Functions I i has_derivative FunctionFrechet I i x) (at x)) 
   \<longrightarrow> (\<forall> x1 x2a. 
@@ -549,19 +557,12 @@ lemma function_case:
   apply(smt UNIV_I function_case_inner has_derivative_transform_within_open
             open_UNIV sterm_semantics.simps(2) sfun_args.exhaust)
   done  
-
-(* stuple_proj is not part of the semantics, this is just a helper function
- that allows us to pretend function argument tuples are actually functions
- in some parts of the proof. If we can't find a way to include proper functions
- in the term representation, it's likely we should use a more thought out
- version of stuple_proj more consistently throughout the theory. *) 
-fun stuple_proj::"sfun_args \<Rightarrow> func_domain_dim \<Rightarrow> sterm"
-  where "stuple_proj (SFA x1 x2 x3 x4 x5) finite_5.a\<^sub>1 = x1"
-  | "stuple_proj (SFA x1 x2 x3 x4 x5) finite_5.a\<^sub>2 = x2"
-  | "stuple_proj (SFA x1 x2 x3 x4 x5) finite_5.a\<^sub>3 = x3"
-  | "stuple_proj (SFA x1 x2 x3 x4 x5) finite_5.a\<^sub>4 = x4"
-  | "stuple_proj (SFA x1 x2 x3 x4 x5) finite_5.a\<^sub>5 = x5"
-
+*)
+(* TODO: This is now silly *) 
+fun stuple_proj::"(func_domain_dim \<Rightarrow> sterm) \<Rightarrow> func_domain_dim \<Rightarrow> sterm"
+  where "stuple_proj args i = args i"
+  
+(*
 lemma deriv_forall:  
   assumes iso:"f = stuple_proj (SFA x1 x2 x3 x4 x5)"
   assumes A1:"(sterm_semantics I x1 has_derivative frechet I x1 \<nu>) (at \<nu>')"
@@ -603,6 +604,7 @@ lemma deriv_forall:
     then show "\<And> i. (sterm_semantics I (f i) has_derivative 
                      frechet I (f i) \<nu>) (at \<nu>')" by (auto)
   qed
+*)
 
 (* There does not appear to be a pre-existing way to show that 
  a vector-valued function's derivative is the vector of the derivatives
@@ -616,16 +618,16 @@ lemma vector_deriv:
           (\<lambda>\<nu>'. vec_lambda(\<lambda>i. g i \<nu> \<nu>'))) (at \<nu>)"
   sorry
 
-lemma LHS_lemma:"stuple_semantics I (SFA x1 x2 x3 x4 x5) = 
+lemma LHS_lemma:"stuple_semantics I args = 
   (\<lambda>\<nu>. vec_lambda(\<lambda>i. (\<lambda>i. (\<lambda>\<nu>. sterm_semantics I 
-                     ((stuple_proj (SFA x1 x2 x3 x4 x5)) i) \<nu>)) i \<nu>))"
+                     ((stuple_proj args) i) \<nu>)) i \<nu>))"
   sorry
   
-lemma RHS_lemma:"frechet_tuple I (SFA x1 x2 x3 x4 x5) \<nu> = 
+lemma RHS_lemma:"frechet_tuple I args \<nu> = 
   (\<lambda>\<nu>'. vec_lambda(\<lambda>i. (\<lambda>i. (\<lambda>\<nu>. frechet I 
-                     ((stuple_proj (SFA x1 x2 x3 x4 x5)) i) \<nu>)) i \<nu> \<nu>'))"
+                     ((stuple_proj args) i) \<nu>)) i \<nu> \<nu>'))"
   sorry  
-
+(*
 lemma stuple_deriv:
   assumes A1:"(sterm_semantics I x1 has_derivative frechet I x1 \<nu>) (at \<nu>)"
   assumes A2:"(sterm_semantics I x2 has_derivative frechet I x2 \<nu>) (at \<nu>)"
@@ -656,7 +658,7 @@ lemma stuple_deriv:
    by (auto)
    from result show ?thesis by auto
 qed
-       
+*)       
 (* Our syntactically-defined derivatives of terms agree with the actual derivatives of the terms.
  Since our definition of derivative is total, this gives us that derivatives are "decidable" for
  terms (modulo computations on reals) and that they obey all the expected identities, which gives
@@ -666,8 +668,8 @@ lemma frechet_correctness:
   fixes I and \<nu> 
   assumes "is_interp I"
   shows "FDERIV (sterm_semantics I \<theta>) \<nu> :> (frechet I \<theta> \<nu>)"
-  and "(stuple_semantics I TUP has_derivative frechet_tuple I TUP \<nu>) (at \<nu>)"
-  proof (induct \<theta> and TUP)
+  (*and "(stuple_semantics I TUP has_derivative frechet_tuple I TUP \<nu>) (at \<nu>)"*)
+  proof (induct \<theta> (*and TUP*))
     fix I \<nu> 
     show "\<And>x. (sterm_semantics I (SVar x) has_derivative 
                frechet I (SVar x) \<nu>) (at \<nu>)"
@@ -677,12 +679,14 @@ lemma frechet_correctness:
                frechet I (SConst x) \<nu>) (at \<nu>)"
       by (simp add: sconst_case)
   next
-     fix x1 x2a
-     assume IH:"(stuple_semantics I x2a has_derivative 
-                 frechet_tuple I x2a \<nu>) (at \<nu>)"
-     show "(sterm_semantics I ($s x1 x2a) has_derivative 
-            frechet I ($s x1 x2a) \<nu>) (at \<nu>)"
-        using function_case assms is_interp_def IH by (blast)
+                 
+     fix f 
+     fix args :: stuple
+     assume IH:"\<And>\<theta> :: sterm. \<theta> \<in> range args \<Longrightarrow> (sterm_semantics I \<theta> has_derivative 
+                 frechet I \<theta> \<nu>) (at \<nu>)"
+     show "(sterm_semantics I ($s f args) has_derivative 
+            frechet I ($s f args) \<nu>) (at \<nu>)"
+        using  assms is_interp_def IH by (blast)
   next
     fix x1 x2a
     assume IH1:"(sterm_semantics I x1 has_derivative frechet I x1 \<nu>) (at \<nu>)"
@@ -697,7 +701,7 @@ lemma frechet_correctness:
     show "(sterm_semantics I (STimes x1 x2a) has_derivative 
            frechet I (STimes x1 x2a) \<nu>) (at \<nu>)"
     using stimes_case IH1 IH2 by (auto)
-  next
+  (*
     fix y1 x2a x1 x2 x3 x4 x5
     assume IH1:"(sterm_semantics I x1 has_derivative frechet I x1 \<nu>) (at \<nu>)"
     assume IH2:"(sterm_semantics I x2 has_derivative frechet I x2 \<nu>) (at \<nu>)"
@@ -706,12 +710,12 @@ lemma frechet_correctness:
     assume IH5:"(sterm_semantics I x5 has_derivative frechet I x5 \<nu>) (at \<nu>)"
     show "(stuple_semantics I (SFA x1 x2 x3 x4 x5) has_derivative 
            frechet_tuple I (SFA x1 x2 x3 x4 x5) \<nu>) (at \<nu>)"
-    using  stuple_deriv IH1 IH2 IH3 IH4 IH5 by (auto)
+    using  stuple_deriv IH1 IH2 IH3 IH4 IH5 by (auto)*)
   qed
 
 section \<open>Prerequisites for Substitution\<close>
 subsection \<open>Variable Binding Definitions\<close>
-\text\<open>
+text\<open>
   We represent the (free or bound or must-bound) variables of a term as an (id + id) set,
   where all the (Inl x) elements are unprimed variables x and all the (Inr x) elements are
   primed variables x'.
@@ -757,30 +761,28 @@ fun MBV :: "hp \<Rightarrow> (id + id) set"
 (* Free variables of a simple term *)
 (* Free variables of the arguments to a simple function 
   (tuple of simple terms) *)
-fun FVS :: "sterm \<Rightarrow> id set"
-and FVSA :: "sfun_args \<Rightarrow> id set"
+primrec FVS :: "sterm \<Rightarrow> id set"
 where
    "FVS (SVar x) = {x}"
  | "FVS (SConst x) = {}"
- | "FVS (SFunction f sfa) = FVSA sfa"
+ | "FVS (SFunction f args) = (\<Union>i. FVS (args i))"
  | "FVS (SPlus f g) = FVS f \<union> FVS g"
  | "FVS (STimes f g) = FVS f \<union> FVS g"
- | "FVSA (SFA a1 a2 a3 a4 a5) = FVS a1 \<union> FVS a2 \<union>  FVS a3 \<union>  FVS a4 \<union> FVS a5"   
-
+(* | "FVSA (SFA a1 a2 a3 a4 a5) = FVS a1 \<union> FVS a2 \<union>  FVS a3 \<union>  FVS a4 \<union> FVS a5"   
+*)
 (* Free variables of a differential term *)
 (* Free variables of the arguments to a differential-term function 
   (tuples of differential terms)*)
-fun FVD :: "dterm \<Rightarrow> (id + id) set"
-and FVDA :: "dfun_args \<Rightarrow> (id + id) set"
+primrec FVD :: "dterm \<Rightarrow> (id + id) set"
 where
    "FVD (Var x) = {Inl x}"
  | "FVD (DiffVar x) = {Inr x}"
- | "FVD (Function f dfa) = FVDA dfa"
+ | "FVD (Function f args) = (\<Union>i. FVD (args i))"
  | "FVD (Plus f g) = FVD f \<union> FVD g"
  | "FVD (Times f g) = FVD f \<union> FVD g"
  | "FVD (Differential f) = (\<Union>x \<in> (FVS f). {Inl x, Inr x})"
  | "FVD (Simply f) =  {Inl x | x. x \<in> FVS f}"
- | "FVDA (FA a1 a2 a3 a4 a5) = FVD a1 \<union> FVD a2 \<union>  FVD a3 \<union>  FVD a4 \<union> FVD a5"
+ (*| "FVDA (FA a1 a2 a3 a4 a5) = FVD a1 \<union> FVD a2 \<union>  FVD a3 \<union>  FVD a4 \<union> FVD a5"*)
  
 (* Free variables of an ODE includes both the bound variables and the terms *)
 fun FVODE :: "ODE \<Rightarrow> (id + id) set"
@@ -794,7 +796,7 @@ fun FVF :: "formula \<Rightarrow> (id + id) set"
 and FVP :: "hp \<Rightarrow> (id + id) set"
 where
    "FVF (Geq f g) = FVD f \<union> FVD g"
- | "FVF (Prop p dfa) = FVDA dfa"
+ | "FVF (Prop p args) = (\<Union>i. FVD (args i))"
  | "FVF (Not p) = FVF p"
  | "FVF (And p q) = FVF p \<union> FVF q"
  | "FVF (Forall x p) = FVF p - {Inl x}"
@@ -850,39 +852,22 @@ where "valid \<phi> \<equiv> (\<forall> I. \<forall> \<nu>. is_interp I \<longri
   enforce that the interpretation of the function "doesnt care" about an argument,
   but if we never use that argument at more than one value there's no way to "notice"
   that the extra arguments exist *)
-definition empty :: "dfun_args"
-  where "empty \<equiv> 
-    FA (Simply (SConst 0))
-       (Simply (SConst 0))
-       (Simply (SConst 0))
-       (Simply (SConst 0))
-       (Simply (SConst 0))"
+definition empty :: "dtuple"
+  where "empty \<equiv> \<lambda>i.(Simply (SConst 0))"
 
 (* Function argument tuple where the first argument is arbitrary and the rest are zero.*)
-fun singleton :: "dterm \<Rightarrow> dfun_args"
-  where "singleton t = 
-    FA t
-       (Simply (SConst 0))
-       (Simply (SConst 0))
-       (Simply (SConst 0))
-       (Simply (SConst 0))" 
+fun singleton :: "dterm \<Rightarrow> dtuple"
+  where "singleton t finite_5.a\<^sub>1  = t"
+  | "singleton t _ = (Simply (SConst 0))"
 
 (* Equivalents of the above for functions over simple terms. *)
-definition sempty :: "sfun_args"
-  where "sempty \<equiv> 
-    SFA (SConst 0)
-         (SConst 0)
-         (SConst 0)
-         (SConst 0)
-         (SConst 0)"
+definition sempty :: "stuple"
+  where "sempty _ \<equiv> (SConst 0)"
 
-fun ssingleton :: "sterm \<Rightarrow> sfun_args"
-  where "ssingleton t = 
-    SFA t 
-        (SConst 0)
-        (SConst 0)
-        (SConst 0)
-        (SConst 0)" 
+fun ssingleton :: "sterm \<Rightarrow> stuple"
+  where "ssingleton t finite_5.a\<^sub>1 = t"
+  | "ssingleton t _ = (SConst 0)"
+     
 
 definition assign_axiom :: "formula"
   where "assign_axiom \<equiv> 
@@ -893,348 +878,17 @@ definition loop_iterate_axiom :: "formula"
   where "loop_iterate_axiom \<equiv> ([[$\<alpha> a**]]Predicational PP) 
     \<leftrightarrow> ((Predicational PP) && ([[$\<alpha> a]][[$\<alpha> a**]]Predicational PP))"
   
-definition test_axiom :: "formula"adefinition Iaxiom :: "formula"
-  where "Iaxiom \<equiv> ([[($\<alpha> a)**]](Predicational PP \<rightarrow> ([[$\<alpha> a]]Predicational PP))
-    \<rightarrow> (Predicational PP \<rightarrow> ([[($\<alpha> a)**]]Predicational PP)))"
-
-definition Vaxiom :: "formula"
-  where "Vaxiom \<equiv> ($\<phi> P empty) \<rightarrow> ([[$\<alpha> a]]($\<phi> P empty))"
-  
-definition G_holds :: "formula \<Rightarrow> hp \<Rightarrow> bool"
-  where "G_holds \<phi> \<alpha> \<equiv> valid \<phi> \<longrightarrow> valid ([[\<alpha>]]\<phi>)"
-  
-definition Skolem_holds :: "formula \<Rightarrow> id \<Rightarrow> bool"
-  where "Skolem_holds \<phi> var \<equiv> valid \<phi> \<longrightarrow> valid (Forall var \<phi>)"
-
-definition MP_holds :: "formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "MP_holds \<phi> \<psi> \<equiv> valid (\<phi> \<rightarrow> \<psi>) \<longrightarrow> valid \<phi> \<longrightarrow> valid \<psi>"
-  
-definition CT_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CT_holds g \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid (Equals (Function g (singleton \<theta>)) (Function g (singleton \<theta>')))"
-  
-definition CQ_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CQ_holds p \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid ((Prop p (singleton \<theta>)) \<leftrightarrow> (Prop p (singleton \<theta>')))"
- 
-definition CE_holds :: "id \<Rightarrow> formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "CE_holds var \<phi> \<psi> \<equiv> valid (\<phi> \<leftrightarrow> \<psi>) 
-    \<longrightarrow> valid (InContext var \<phi> \<leftrightarrow> InContext var \<psi>)"
- 
-definition diff_const_axiom :: "formula"
-  where "diff_const_axiom \<equiv> Equals (Differential ($s f sempty)) (Simply (SConst 0))"
-definition Iaxiom :: "formula"
-  where "Iaxiom \<equiv> ([[($\<alpha> a)**]](Predicational PP \<rightarrow> ([[$\<alpha> a]]Predicational PP))
-    \<rightarrow> (Predicational PP \<rightarrow> ([[($\<alpha> a)**]]Predicational PP)))"
-
-definition Vaxiom :: "formula"
-  where "Vaxiom \<equiv> ($\<phi> P empty) \<rightarrow> ([[$\<alpha> a]]($\<phi> P empty))"
-  
-definition G_holds :: "formula \<Rightarrow> hp \<Rightarrow> bool"
-  where "G_holds \<phi> \<alpha> \<equiv> valid \<phi> \<longrightarrow> valid ([[\<alpha>]]\<phi>)"
-  
-definition Skolem_holds :: "formula \<Rightarrow> id \<Rightarrow> bool"
-  where "Skolem_holds \<phi> var \<equiv> valid \<phi> \<longrightarrow> valid (Forall var \<phi>)"
-
-definition MP_holds :: "formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "MP_holds \<phi> \<psi> \<equiv> valid (\<phi> \<rightarrow> \<psi>) \<longrightarrow> valid \<phi> \<longrightarrow> valid \<psi>"
-  
-definition CT_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CT_holds g \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid (Equals (Function g (singleton \<theta>)) (Function g (singleton \<theta>')))"
-  
-definition CQ_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CQ_holds p \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid ((Prop p (singleton \<theta>)) \<leftrightarrow> (Prop p (singleton \<theta>')))"
- 
-definition CE_holds :: "id \<Rightarrow> formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "CE_holds var \<phi> \<psi> \<equiv> valid (\<phi> \<leftrightarrow> \<psi>) 
-    \<longrightarrow> valid (InContext var \<phi> \<leftrightarrow> InContext var \<psi>)"
- 
-definition diff_const_axiom :: "formula"
-  where "diff_const_axiom \<equiv> Equals (Differential ($s f sempty)) (Simply (SConst 0))"
-definition Iaxiom :: "formula"
-  where "Iaxiom \<equiv> ([[($\<alpha> a)**]](Predicational PP \<rightarrow> ([[$\<alpha> a]]Predicational PP))
-    \<rightarrow> (Predicational PP \<rightarrow> ([[($\<alpha> a)**]]Predicational PP)))"
-
-definition Vaxiom :: "formula"
-  where "Vaxiom \<equiv> ($\<phi> P empty) \<rightarrow> ([[$\<alpha> a]]($\<phi> P empty))"
-  
-definition G_holds :: "formula \<Rightarrow> hp \<Rightarrow> bool"
-  where "G_holds \<phi> \<alpha> \<equiv> valid \<phi> \<longrightarrow> valid ([[\<alpha>]]\<phi>)"
-  
-definition Skolem_holds :: "formula \<Rightarrow> id \<Rightarrow> bool"
-  where "Skolem_holds \<phi> var \<equiv> valid \<phi> \<longrightarrow> valid (Forall var \<phi>)"
-
-definition MP_holds :: "formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "MP_holds \<phi> \<psi> \<equiv> valid (\<phi> \<rightarrow> \<psi>) \<longrightarrow> valid \<phi> \<longrightarrow> valid \<psi>"
-  
-definition CT_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CT_holds g \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid (Equals (Function g (singleton \<theta>)) (Function g (singleton \<theta>')))"
-  
-definition CQ_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CQ_holds p \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid ((Prop p (singleton \<theta>)) \<leftrightarrow> (Prop p (singleton \<theta>')))"
- 
-definition CE_holds :: "id \<Rightarrow> formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "CE_holds var \<phi> \<psi> \<equiv> valid (\<phi> \<leftrightarrow> \<psi>) 
-    \<longrightarrow> valid (InContext var \<phi> \<leftrightarrow> InContext var \<psi>)"
- 
-definition diff_const_axiom :: "formula"
-  where "diff_const_axiom \<equiv> Equals (Differential ($s f sempty)) (Simply (SConst 0))"
-definition Iaxiom :: "formula"
-  where "Iaxiom \<equiv> ([[($\<alpha> a)**]](Predicational PP \<rightarrow> ([[$\<alpha> a]]Predicational PP))
-    \<rightarrow> (Predicational PP \<rightarrow> ([[($\<alpha> a)**]]Predicational PP)))"
-
-definition Vaxiom :: "formula"
-  where "Vaxiom \<equiv> ($\<phi> P empty) \<rightarrow> ([[$\<alpha> a]]($\<phi> P empty))"
-  
-definition G_holds :: "formula \<Rightarrow> hp \<Rightarrow> bool"
-  where "G_holds \<phi> \<alpha> \<equiv> valid \<phi> \<longrightarrow> valid ([[\<alpha>]]\<phi>)"
-  
-definition Skolem_holds :: "formula \<Rightarrow> id \<Rightarrow> bool"
-  where "Skolem_holds \<phi> var \<equiv> valid \<phi> \<longrightarrow> valid (Forall var \<phi>)"
-
-definition MP_holds :: "formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "MP_holds \<phi> \<psi> \<equiv> valid (\<phi> \<rightarrow> \<psi>) \<longrightarrow> valid \<phi> \<longrightarrow> valid \<psi>"
-  
-definition CT_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CT_holds g \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid (Equals (Function g (singleton \<theta>)) (Function g (singleton \<theta>')))"
-  
-definition CQ_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CQ_holds p \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid ((Prop p (singleton \<theta>)) \<leftrightarrow> (Prop p (singleton \<theta>')))"
- 
-definition CE_holds :: "id \<Rightarrow> formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "CE_holds var \<phi> \<psi> \<equiv> valid (\<phi> \<leftrightarrow> \<psi>) 
-    \<longrightarrow> valid (InContext var \<phi> \<leftrightarrow> InContext var \<psi>)"
- 
-definition diff_const_axiom :: "formula"
-  where "diff_const_axiom \<equiv> Equals (Differential ($s f sempty)) (Simply (SConst 0))"
-definition Iaxiom :: "formula"
-  where "Iaxiom \<equiv> ([[($\<alpha> a)**]](Predicational PP \<rightarrow> ([[$\<alpha> a]]Predicational PP))
-    \<rightarrow> (Predicational PP \<rightarrow> ([[($\<alpha> a)**]]Predicational PP)))"
-
-definition Vaxiom :: "formula"
-  where "Vaxiom \<equiv> ($\<phi> P empty) \<rightarrow> ([[$\<alpha> a]]($\<phi> P empty))"
-  
-definition G_holds :: "formula \<Rightarrow> hp \<Rightarrow> bool"
-  where "G_holds \<phi> \<alpha> \<equiv> valid \<phi> \<longrightarrow> valid ([[\<alpha>]]\<phi>)"
-  
-definition Skolem_holds :: "formula \<Rightarrow> id \<Rightarrow> bool"
-  where "Skolem_holds \<phi> var \<equiv> valid \<phi> \<longrightarrow> valid (Forall var \<phi>)"
-
-definition MP_holds :: "formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "MP_holds \<phi> \<psi> \<equiv> valid (\<phi> \<rightarrow> \<psi>) \<longrightarrow> valid \<phi> \<longrightarrow> valid \<psi>"
-  
-definition CT_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CT_holds g \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid (Equals (Function g (singleton \<theta>)) (Function g (singleton \<theta>')))"
-  
-definition CQ_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CQ_holds p \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid ((Prop p (singleton \<theta>)) \<leftrightarrow> (Prop p (singleton \<theta>')))"
- 
-definition CE_holds :: "id \<Rightarrow> formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "CE_holds var \<phi> \<psi> \<equiv> valid (\<phi> \<leftrightarrow> \<psi>) 
-    \<longrightarrow> valid (InContext var \<phi> \<leftrightarrow> InContext var \<psi>)"
- 
-definition diff_const_axiom :: "formula"
-  where "diff_const_axiom \<equiv> Equals (Differential ($s f sempty)) (Simply (SConst 0))"
-definition Iaxiom :: "formula"
-  where "Iaxiom \<equiv> ([[($\<alpha> a)**]](Predicational PP \<rightarrow> ([[$\<alpha> a]]Predicational PP))
-    \<rightarrow> (Predicational PP \<rightarrow> ([[($\<alpha> a)**]]Predicational PP)))"
-
-definition Vaxiom :: "formula"
-  where "Vaxiom \<equiv> ($\<phi> P empty) \<rightarrow> ([[$\<alpha> a]]($\<phi> P empty))"
-  
-definition G_holds :: "formula \<Rightarrow> hp \<Rightarrow> bool"
-  where "G_holds \<phi> \<alpha> \<equiv> valid \<phi> \<longrightarrow> valid ([[\<alpha>]]\<phi>)"
-  
-definition Skolem_holds :: "formula \<Rightarrow> id \<Rightarrow> bool"
-  where "Skolem_holds \<phi> var \<equiv> valid \<phi> \<longrightarrow> valid (Forall var \<phi>)"
-
-definition MP_holds :: "formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "MP_holds \<phi> \<psi> \<equiv> valid (\<phi> \<rightarrow> \<psi>) \<longrightarrow> valid \<phi> \<longrightarrow> valid \<psi>"
-  
-definition CT_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CT_holds g \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid (Equals (Function g (singleton \<theta>)) (Function g (singleton \<theta>')))"
-  
-definition CQ_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CQ_holds p \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid ((Prop p (singleton \<theta>)) \<leftrightarrow> (Prop p (singleton \<theta>')))"
- 
-definition CE_holds :: "id \<Rightarrow> formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "CE_holds var \<phi> \<psi> \<equiv> valid (\<phi> \<leftrightarrow> \<psi>) 
-    \<longrightarrow> valid (InContext var \<phi> \<leftrightarrow> InContext var \<psi>)"
- 
-definition diff_const_axiom :: "formula"
-  where "diff_const_axiom \<equiv> Equals (Differential ($s f sempty)) (Simply (SConst 0))"
-definition Iaxiom :: "formula"
-  where "Iaxiom \<equiv> ([[($\<alpha> a)**]](Predicational PP \<rightarrow> ([[$\<alpha> a]]Predicational PP))
-    \<rightarrow> (Predicational PP \<rightarrow> ([[($\<alpha> a)**]]Predicational PP)))"
-
-definition Vaxiom :: "formula"
-  where "Vaxiom \<equiv> ($\<phi> P empty) \<rightarrow> ([[$\<alpha> a]]($\<phi> P empty))"
-  
-definition G_holds :: "formula \<Rightarrow> hp \<Rightarrow> bool"
-  where "G_holds \<phi> \<alpha> \<equiv> valid \<phi> \<longrightarrow> valid ([[\<alpha>]]\<phi>)"
-  
-definition Skolem_holds :: "formula \<Rightarrow> id \<Rightarrow> bool"
-  where "Skolem_holds \<phi> var \<equiv> valid \<phi> \<longrightarrow> valid (Forall var \<phi>)"
-
-definition MP_holds :: "formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "MP_holds \<phi> \<psi> \<equiv> valid (\<phi> \<rightarrow> \<psi>) \<longrightarrow> valid \<phi> \<longrightarrow> valid \<psi>"
-  
-definition CT_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CT_holds g \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid (Equals (Function g (singleton \<theta>)) (Function g (singleton \<theta>')))"
-  
-definition CQ_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CQ_holds p \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid ((Prop p (singleton \<theta>)) \<leftrightarrow> (Prop p (singleton \<theta>')))"
- 
-definition CE_holds :: "id \<Rightarrow> formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "CE_holds var \<phi> \<psi> \<equiv> valid (\<phi> \<leftrightarrow> \<psi>) 
-    \<longrightarrow> valid (InContext var \<phi> \<leftrightarrow> InContext var \<psi>)"
- 
-definition diff_const_axiom :: "formula"
-  where "diff_const_axiom \<equiv> Equals (Differential ($s f sempty)) (Simply (SConst 0))"
-definition Iaxiom :: "formula"
-  where "Iaxiom \<equiv> ([[($\<alpha> a)**]](Predicational PP \<rightarrow> ([[$\<alpha> a]]Predicational PP))
-    \<rightarrow> (Predicational PP \<rightarrow> ([[($\<alpha> a)**]]Predicational PP)))"
-
-definition Vaxiom :: "formula"
-  where "Vaxiom \<equiv> ($\<phi> P empty) \<rightarrow> ([[$\<alpha> a]]($\<phi> P empty))"
-  
-definition G_holds :: "formula \<Rightarrow> hp \<Rightarrow> bool"
-  where "G_holds \<phi> \<alpha> \<equiv> valid \<phi> \<longrightarrow> valid ([[\<alpha>]]\<phi>)"
-  
-definition Skolem_holds :: "formula \<Rightarrow> id \<Rightarrow> bool"
-  where "Skolem_holds \<phi> var \<equiv> valid \<phi> \<longrightarrow> valid (Forall var \<phi>)"
-
-definition MP_holds :: "formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "MP_holds \<phi> \<psi> \<equiv> valid (\<phi> \<rightarrow> \<psi>) \<longrightarrow> valid \<phi> \<longrightarrow> valid \<psi>"
-  
-definition CT_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CT_holds g \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid (Equals (Function g (singleton \<theta>)) (Function g (singleton \<theta>')))"
-  
-definition CQ_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CQ_holds p \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid ((Prop p (singleton \<theta>)) \<leftrightarrow> (Prop p (singleton \<theta>')))"
- 
-definition CE_holds :: "id \<Rightarrow> formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "CE_holds var \<phi> \<psi> \<equiv> valid (\<phi> \<leftrightarrow> \<psi>) 
-    \<longrightarrow> valid (InContext var \<phi> \<leftrightarrow> InContext var \<psi>)"
- 
-definition diff_const_axiom :: "formula"
-  where "diff_const_axiom \<equiv> Equals (Differential ($s f sempty)) (Simply (SConst 0))"
-definition Iaxiom :: "formula"
-  where "Iaxiom \<equiv> ([[($\<alpha> a)**]](Predicational PP \<rightarrow> ([[$\<alpha> a]]Predicational PP))
-    \<rightarrow> (Predicational PP \<rightarrow> ([[($\<alpha> a)**]]Predicational PP)))"
-
-definition Vaxiom :: "formula"
-  where "Vaxiom \<equiv> ($\<phi> P empty) \<rightarrow> ([[$\<alpha> a]]($\<phi> P empty))"
-  
-definition G_holds :: "formula \<Rightarrow> hp \<Rightarrow> bool"
-  where "G_holds \<phi> \<alpha> \<equiv> valid \<phi> \<longrightarrow> valid ([[\<alpha>]]\<phi>)"
-  
-definition Skolem_holds :: "formula \<Rightarrow> id \<Rightarrow> bool"
-  where "Skolem_holds \<phi> var \<equiv> valid \<phi> \<longrightarrow> valid (Forall var \<phi>)"
-
-definition MP_holds :: "formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "MP_holds \<phi> \<psi> \<equiv> valid (\<phi> \<rightarrow> \<psi>) \<longrightarrow> valid \<phi> \<longrightarrow> valid \<psi>"
-  
-definition CT_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CT_holds g \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid (Equals (Function g (singleton \<theta>)) (Function g (singleton \<theta>')))"
-  
-definition CQ_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CQ_holds p \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid ((Prop p (singleton \<theta>)) \<leftrightarrow> (Prop p (singleton \<theta>')))"
- 
-definition CE_holds :: "id \<Rightarrow> formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "CE_holds var \<phi> \<psi> \<equiv> valid (\<phi> \<leftrightarrow> \<psi>) 
-    \<longrightarrow> valid (InContext var \<phi> \<leftrightarrow> InContext var \<psi>)"
- 
-definition diff_const_axiom :: "formula"
-  where "diff_const_axiom \<equiv> Equals (Differential ($s f sempty)) (Simply (SConst 0))"
-definition Iaxiom :: "formula"
-  where "Iaxiom \<equiv> ([[($\<alpha> a)**]](Predicational PP \<rightarrow> ([[$\<alpha> a]]Predicational PP))
-    \<rightarrow> (Predicational PP \<rightarrow> ([[($\<alpha> a)**]]Predicational PP)))"
-
-definition Vaxiom :: "formula"
-  where "Vaxiom \<equiv> ($\<phi> P empty) \<rightarrow> ([[$\<alpha> a]]($\<phi> P empty))"
-  
-definition G_holds :: "formula \<Rightarrow> hp \<Rightarrow> bool"
-  where "G_holds \<phi> \<alpha> \<equiv> valid \<phi> \<longrightarrow> valid ([[\<alpha>]]\<phi>)"
-  
-definition Skolem_holds :: "formula \<Rightarrow> id \<Rightarrow> bool"
-  where "Skolem_holds \<phi> var \<equiv> valid \<phi> \<longrightarrow> valid (Forall var \<phi>)"
-
-definition MP_holds :: "formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "MP_holds \<phi> \<psi> \<equiv> valid (\<phi> \<rightarrow> \<psi>) \<longrightarrow> valid \<phi> \<longrightarrow> valid \<psi>"
-  
-definition CT_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CT_holds g \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid (Equals (Function g (singleton \<theta>)) (Function g (singleton \<theta>')))"
-  
-definition CQ_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CQ_holds p \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid ((Prop p (singleton \<theta>)) \<leftrightarrow> (Prop p (singleton \<theta>')))"
- 
-definition CE_holds :: "id \<Rightarrow> formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "CE_holds var \<phi> \<psi> \<equiv> valid (\<phi> \<leftrightarrow> \<psi>) 
-    \<longrightarrow> valid (InContext var \<phi> \<leftrightarrow> InContext var \<psi>)"
- 
-definition diff_const_axiom :: "formula"
-  where "diff_const_axiom \<equiv> Equals (Differential ($s f sempty)) (Simply (SConst 0))"
-definition Iaxiom :: "formula"
-  where "Iaxiom \<equiv> ([[($\<alpha> a)**]](Predicational PP \<rightarrow> ([[$\<alpha> a]]Predicational PP))
-    \<rightarrow> (Predicational PP \<rightarrow> ([[($\<alpha> a)**]]Predicational PP)))"
-
-definition Vaxiom :: "formula"
-  where "Vaxiom \<equiv> ($\<phi> P empty) \<rightarrow> ([[$\<alpha> a]]($\<phi> P empty))"
-  
-definition G_holds :: "formula \<Rightarrow> hp \<Rightarrow> bool"
-  where "G_holds \<phi> \<alpha> \<equiv> valid \<phi> \<longrightarrow> valid ([[\<alpha>]]\<phi>)"
-  
-definition Skolem_holds :: "formula \<Rightarrow> id \<Rightarrow> bool"
-  where "Skolem_holds \<phi> var \<equiv> valid \<phi> \<longrightarrow> valid (Forall var \<phi>)"
-
-definition MP_holds :: "formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "MP_holds \<phi> \<psi> \<equiv> valid (\<phi> \<rightarrow> \<psi>) \<longrightarrow> valid \<phi> \<longrightarrow> valid \<psi>"
-  
-definition CT_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CT_holds g \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid (Equals (Function g (singleton \<theta>)) (Function g (singleton \<theta>')))"
-  
-definition CQ_holds :: "id \<Rightarrow> dterm \<Rightarrow> dterm \<Rightarrow> bool"
-  where "CQ_holds p \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
-    \<longrightarrow> valid ((Prop p (singleton \<theta>)) \<leftrightarrow> (Prop p (singleton \<theta>')))"
- 
-definition CE_holds :: "id \<Rightarrow> formula \<Rightarrow> formula \<Rightarrow> bool"
-  where "CE_holds var \<phi> \<psi> \<equiv> valid (\<phi> \<leftrightarrow> \<psi>) 
-    \<longrightarrow> valid (InContext var \<phi> \<leftrightarrow> InContext var \<psi>)"
- 
-definition diff_const_axiom :: "formula"
-  where "diff_const_axiom \<equiv> Equals (Differential ($s f sempty)) (Simply (SConst 0))"
-
 definition test_axiom :: "formula"
   where "test_axiom \<equiv> 
     ([[?($\<phi> H empty)]]$\<phi> P empty) \<leftrightarrow> (($\<phi> H empty) \<rightarrow> ($\<phi> P empty))"
-  
+   
 definition box_axiom :: "formula"
   where "box_axiom \<equiv> (\<langle>$\<alpha> a\<rangle>Predicational PP) \<leftrightarrow> !([[$\<alpha> a]]!(Predicational PP))"
 
 definition choice_axiom :: "formula"
   where "choice_axiom \<equiv> ([[$\<alpha> a \<union>\<union> $\<alpha> b]]Predicational PP) 
     \<leftrightarrow> (([[$\<alpha> a]]Predicational PP) && ([[$\<alpha> b]]Predicational PP))"
-
+ 
 definition Kaxiom :: "formula"
   where "Kaxiom \<equiv> ([[$\<alpha> a]]((Predicational PP) \<rightarrow> (Predicational QQ))) 
     \<rightarrow> ([[$\<alpha> a]]Predicational PP) \<rightarrow> ([[$\<alpha> a]]Predicational QQ)"
@@ -1242,9 +896,8 @@ definition Kaxiom :: "formula"
 (*
 definition Ibroken :: "formula"
   where "Ibroken \<equiv> ([[$$a]]($P [] \<rightarrow> ([[$$a]]$P [])) 
-    \<rightarrow> ($P [] \<rightarrow> ([[($$a)**]]$P [])))"
-*)
-
+    \<rightarrow> ($P [] \<rightarrow> ([[($$a)**]]$P [])))"*)
+  
 definition Iaxiom :: "formula"
   where "Iaxiom \<equiv> ([[($\<alpha> a)**]](Predicational PP \<rightarrow> ([[$\<alpha> a]]Predicational PP))
     \<rightarrow> (Predicational PP \<rightarrow> ([[($\<alpha> a)**]]Predicational PP)))"
@@ -1275,6 +928,8 @@ definition CE_holds :: "id \<Rightarrow> formula \<Rightarrow> formula \<Rightar
  
 definition diff_const_axiom :: "formula"
   where "diff_const_axiom \<equiv> Equals (Differential ($s f sempty)) (Simply (SConst 0))"
+  
+
 
 theorem test_valid: "valid test_axiom"
   apply(simp only: valid_def test_axiom_def)
@@ -1369,6 +1024,9 @@ theorem loop_valid: "valid loop_iterate_axiom"
   apply(rule loop_forward)
   apply(rule loop_backward)
 done
+lemma vec_extensionality:"(\<forall>i. v$i = w$i) \<Longrightarrow> (v = w)"
+  apply(simp add: vec_eq_iff)
+ done
 
 theorem box_valid: "valid box_axiom"
   apply(simp only: valid_def box_axiom_def)
@@ -1419,14 +1077,13 @@ theorem MP_sound: "MP_holds \<phi> \<psi>"
 done
   
 theorem CT_sound: "CT_holds var \<theta> \<theta>'"
-  apply(simp only: CT_holds_def valid_def equals_semantics)
-  apply(auto)
-  done
-
+  apply(simp add: CT_holds_def valid_def equals_semantics vec_extensionality vec_eq_iff)
+  sorry
+  
 theorem CQ_sound: "CQ_holds var \<theta> \<theta>'"
   apply(simp only: CQ_holds_def valid_def equals_semantics)
   apply(auto)
-  done
+  sorry
   
 theorem CE_sound: "CE_holds var \<phi> \<psi>"
   apply(simp only: CE_holds_def valid_def iff_semantics)
@@ -1436,15 +1093,12 @@ theorem CE_sound: "CE_holds var \<phi> \<psi>"
   apply(simp)
   apply(metis subsetI subset_antisym surj_pair)
 done
-
+(*
 lemma frechet_empty: "frechet_tuple I sempty (fst \<nu>) (snd \<nu>) = vec_lambda (case_finite_5 0 0 0 0 0)"
   apply(simp add: sempty_def)
 done
 
 
-lemma vec_extensionality:"(\<forall>i. v$i = w$i) \<Longrightarrow> (v = w)"
-  apply(simp add: vec_eq_iff)
- done
 
 lemma empty_tuple_semantics:
   "(frechet_tuple I sempty (fst \<nu>) (snd \<nu>)) = 0"
@@ -1495,20 +1149,20 @@ lemma constant_deriv_inner:
     then 
     show ?thesis using empty_zero f_linear Linear_Algebra.linear_0 by (auto)
   qed
-
+*)(*
 lemma constant_deriv_zero:"is_interp I \<Longrightarrow> directional_derivative I ($s f sempty) \<nu> = 0"
   apply(simp only: is_interp_def directional_derivative.simps frechet.simps 
         frechet_correctness frechet_tuple.simps stuple_semantics.simps)
   apply(rule constant_deriv_inner)
   apply(auto)
-done
+done*)
 
 theorem diff_const_axiom_valid: "valid diff_const_axiom"
   apply(simp only: valid_def diff_const_axiom_def equals_semantics)
   apply(rule allI | rule impI)+
   apply(simp only: term_semantics.simps dterm_semantics.simps 
-        constant_deriv_zero sterm_semantics.simps)
-done
+        (*constant_deriv_zero*) sterm_semantics.simps)
+  sorry
 
 section \<open>Unused Lemmas\<close>
 
