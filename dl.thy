@@ -960,9 +960,44 @@ theorem MP_sound: "MP_holds \<phi> \<psi>"
   apply(auto)
 done
   
+(*Sledgehammering... 
+"cvc4": One-line proof reconstruction failed: by (smt Cart_lambda_cong). 
+"spass": Try this: by metis (> 1.0 s, timed out).
+
+Isar proof (10 ms):
+proof -
+  fix I :: interp and a :: "(real, Enum.finite_5) vec" and b :: "(real, Enum.finite_5) vec"
+  assume a1: "is_interp I"
+  assume "\<forall>I. is_interp I \<longrightarrow> (\<forall>a b. dterm_semantics I \<theta> (a, b) = dterm_semantics I \<theta>' (a, b))"
+  then have "\<forall>f. dterm_semantics I (if f = a\<^sub>1 then \<theta>' else Simply (SConst 0)) (a, b) = dterm_semantics I (if f = a\<^sub>1 then \<theta> else Simply (SConst 0)) (a, b)"
+    using a1 by presburger
+  then show "Functions I var (\<chi>f. dterm_semantics I (if f = a\<^sub>1 then \<theta> else Simply (SConst 0)) (a, b)) = Functions I var (\<chi>f. dterm_semantics I (if f = a\<^sub>1 then \<theta>' else Simply (SConst 0)) (a, b))"
+    by presburger
+qed
+
+*)
+lemma CT_lemma:"\<And>I a b. \<forall>I. is_interp I \<longrightarrow> (\<forall>a b. dterm_semantics I \<theta> (a, b) = dterm_semantics I \<theta>' (a, b)) \<Longrightarrow>
+             is_interp I \<Longrightarrow>
+             Functions I var (vec_lambda (\<lambda>i. dterm_semantics I (if i = a\<^sub>1 then \<theta> else Simply (SConst 0)) (a, b))) =
+             Functions I var (vec_lambda (\<lambda>i. dterm_semantics I (if i = a\<^sub>1 then \<theta>' else Simply (SConst 0)) (a, b)))"
+proof -
+  fix I :: interp and a :: "(real, Enum.finite_5) vec" and b :: "(real, Enum.finite_5) vec"
+  assume a1: "is_interp I"
+  assume "\<forall>I. is_interp I \<longrightarrow> (\<forall>a b. dterm_semantics I \<theta> (a, b) = dterm_semantics I \<theta>' (a, b))"
+  then have "\<forall>f. dterm_semantics I (if f = a\<^sub>1 then \<theta>' else Simply (SConst 0)) (a, b) = dterm_semantics I (if f = a\<^sub>1 then \<theta> else Simply (SConst 0)) (a, b)"
+    using a1 by presburger
+  then show "Functions I var (vec_lambda (\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta> else Simply (SConst 0)) (a, b)))
+ = Functions I var (vec_lambda (\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta>' else Simply (SConst 0)) (a, b)))"
+    by presburger
+qed
+
+
 theorem CT_sound: "CT_holds var \<theta> \<theta>'"
-  apply(simp add: CT_holds_def valid_def equals_semantics vec_extensionality vec_eq_iff)
-  sorry
+  apply(simp only: CT_holds_def valid_def equals_semantics vec_extensionality vec_eq_iff)
+  apply(simp)
+  apply(rule allI | rule impI)+
+  apply(simp add: CT_lemma)
+  done
   
 theorem CQ_sound: "CQ_holds var \<theta> \<theta>'"
   apply(simp only: CQ_holds_def valid_def equals_semantics)
