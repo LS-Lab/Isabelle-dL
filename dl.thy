@@ -944,8 +944,8 @@ theorem I_valid: "valid Iaxiom"
 theorem V_valid: "valid Vaxiom"
   apply(simp only: valid_def Vaxiom_def impl_semantics)
   apply(rule allI | rule impI)+
-  apply(auto)
-  sorry
+  apply(auto simp add: dl.empty_def)
+  done
 
 theorem G_sound: "G_holds \<phi> \<alpha>"
   apply(simp add: G_holds_def valid_def)
