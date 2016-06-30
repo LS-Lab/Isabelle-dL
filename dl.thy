@@ -1075,15 +1075,19 @@ lemma empty_tuple_semantics:
    show ?thesis 
    by auto 
   qed
-
+*)
+(*
+ \<forall>x i. (Functions I i has_derivative FunctionFrechet I i x) (at x) \<Longrightarrow>
+    FunctionFrechet I f (\<chi>i. sterm_semantics I (sempty i) (fst \<nu>)) (\<chi>i. frechet I (sempty i) (fst \<nu>) (snd \<nu>)) = 0*)
 lemma constant_deriv_inner:
  assumes interp:"\<forall>x i. (Functions I i has_derivative FunctionFrechet I i x) (at x)"
- shows "FunctionFrechet I f (stuple_semantics I sempty (fst \<nu>)) (frechet_tuple I sempty (fst \<nu>) (snd \<nu>)) = 0"
+ shows "FunctionFrechet I f (vec_lambda (\<lambda>i. sterm_semantics I (sempty i) (fst \<nu>))) (vec_lambda(\<lambda>i. frechet I (sempty i) (fst \<nu>) (snd \<nu>)))= 0"
   proof -
-    have empty_zero:"(frechet_tuple I sempty (fst \<nu>) (snd \<nu>)) = 0"
-    using frechet_tuple.simps empty_tuple_semantics
-    by auto
-    let ?x = "stuple_semantics I sempty (fst \<nu>)"
+
+    have empty_zero:"(vec_lambda(\<lambda>i. frechet I (sempty i) (fst \<nu>) (snd \<nu>))) = 0"
+    using sempty_def Cart_lambda_cong frechet.simps(5) zero_vec_def
+    by fastforce
+    let ?x = "(vec_lambda (\<lambda>i. sterm_semantics I (sempty i) (fst \<nu>)))"
     from interp 
     have has_deriv:"(Functions I f has_derivative FunctionFrechet I f ?x) (at ?x)"
     by auto
@@ -1092,20 +1096,20 @@ lemma constant_deriv_inner:
     then 
     show ?thesis using empty_zero f_linear Linear_Algebra.linear_0 by (auto)
   qed
-*)(*
+
 lemma constant_deriv_zero:"is_interp I \<Longrightarrow> directional_derivative I ($s f sempty) \<nu> = 0"
   apply(simp only: is_interp_def directional_derivative.simps frechet.simps 
-        frechet_correctness frechet_tuple.simps stuple_semantics.simps)
+        frechet_correctness)
   apply(rule constant_deriv_inner)
   apply(auto)
-done*)
+done
 
 theorem diff_const_axiom_valid: "valid diff_const_axiom"
   apply(simp only: valid_def diff_const_axiom_def equals_semantics)
   apply(rule allI | rule impI)+
   apply(simp only: term_semantics.simps dterm_semantics.simps 
-        (*constant_deriv_zero*) sterm_semantics.simps)
-  sorry
+        constant_deriv_zero sterm_semantics.simps)
+  done
 
 section \<open>Unused Lemmas\<close>
 
