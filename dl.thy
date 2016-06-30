@@ -999,10 +999,33 @@ theorem CT_sound: "CT_holds var \<theta> \<theta>'"
   apply(simp add: CT_lemma)
   done
   
+lemma CQ_lemma:"\<And>I \<nu>. \<forall>I \<nu>. is_interp I \<longrightarrow> term_semantics I \<nu> \<theta> = term_semantics I \<nu> \<theta>' \<Longrightarrow>
+           is_interp I \<Longrightarrow>
+           Predicates I var (vec_lambda(\<lambda>i. dterm_semantics I (if i = a\<^sub>1 then \<theta> else Simply (SConst 0)) \<nu>)) =
+           Predicates I var (vec_lambda(\<lambda>i. dterm_semantics I (if i = a\<^sub>1 then \<theta>' else Simply (SConst 0)) \<nu>))"
+proof -
+  fix I :: interp and \<nu> :: "(real, Enum.finite_5) vec \<times> (real, Enum.finite_5) vec"
+  assume a1: "\<forall>I \<nu>. is_interp I \<longrightarrow> term_semantics I \<nu> \<theta> = term_semantics I \<nu> \<theta>'"
+  assume a2: "is_interp I"
+  obtain ff :: "(Enum.finite_5 \<Rightarrow> real) \<Rightarrow> (Enum.finite_5 \<Rightarrow> real) \<Rightarrow> Enum.finite_5" where
+    f3: "\<forall>f fa. f (ff fa f) \<noteq> fa (ff fa f) \<or> vec_lambda f = vec_lambda fa"
+    by (meson Cart_lambda_cong)
+  have "term_semantics I \<nu> \<theta> = term_semantics I \<nu> \<theta>'"
+    using a2 a1 by blast
+  then have "dterm_semantics I (if ff (\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta>' else Simply (SConst 0)) \<nu>) (\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta> else Simply (SConst 0)) \<nu>) = a\<^sub>1 then \<theta> else Simply (SConst 0)) \<nu> \<noteq> dterm_semantics I (if ff (\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta>' else Simply (SConst 0)) \<nu>) (\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta> else Simply (SConst 0)) \<nu>) = a\<^sub>1 then \<theta>' else Simply (SConst 0)) \<nu> \<longrightarrow> dterm_semantics I (if ff (\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta>' else Simply (SConst 0)) \<nu>) (\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta> else Simply (SConst 0)) \<nu>) = a\<^sub>1 then \<theta> else Simply (SConst 0)) \<nu> = dterm_semantics I (if ff (\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta>' else Simply (SConst 0)) \<nu>) (\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta> else Simply (SConst 0)) \<nu>) = a\<^sub>1 then \<theta>' else Simply (SConst 0)) \<nu>"
+    by simp
+  then have "(vec_lambda(\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta> else Simply (SConst 0)) \<nu>)) = (vec_lambda(\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta>' else Simply (SConst 0)) \<nu>))"
+    using f3 by meson
+  then show "Predicates I var (vec_lambda(\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta> else Simply (SConst 0)) \<nu>)) = Predicates I var (vec_lambda(\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta>' else Simply (SConst 0)) \<nu>))"
+    by presburger
+qed 
+
 theorem CQ_sound: "CQ_holds var \<theta> \<theta>'"
-  apply(simp only: CQ_holds_def valid_def equals_semantics)
-  apply(auto)
-  sorry
+  apply(simp only: CQ_holds_def valid_def equals_semantics vec_extensionality vec_eq_iff)
+  apply(rule allI | rule impI)+
+  apply(simp only: iff_semantics singleton.simps fml_semantics.simps mem_Collect_eq)
+  apply(simp only: CQ_lemma)
+  done
   
 theorem CE_sound: "CE_holds var \<phi> \<psi>"
   apply(simp only: CE_holds_def valid_def iff_semantics)
@@ -1012,6 +1035,7 @@ theorem CE_sound: "CE_holds var \<phi> \<psi>"
   apply(simp)
   apply(metis subsetI subset_antisym surj_pair)
 done
+
 (*
 lemma frechet_empty: "frechet_tuple I sempty (fst \<nu>) (snd \<nu>) = vec_lambda (case_finite_5 0 0 0 0 0)"
   apply(simp add: sempty_def)
