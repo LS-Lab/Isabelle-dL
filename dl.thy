@@ -226,8 +226,8 @@ fun directional_derivative :: "interp \<Rightarrow> sterm \<Rightarrow> state \<
 (* Semantics for terms and tuples of terms that are allowed to contain differentials.
    Note there is some duplication with sterm_semantics (hence the desire to combine the two).*)
 primrec dterm_semantics :: "interp \<Rightarrow> dterm \<Rightarrow> state \<Rightarrow> real"
-  where "dterm_semantics I (Var x) = (\<lambda>v. vec_nth (snd v) x)"
-  | "dterm_semantics I (DiffVar x) = (\<lambda>v. vec_nth (fst v) x)"
+  where "dterm_semantics I (Var x) = (\<lambda>v. vec_nth (fst v) x)"
+  | "dterm_semantics I (DiffVar x) = (\<lambda>v. vec_nth (snd v) x)"
   | "dterm_semantics I (Function f args) = 
     (\<lambda>v. Functions I f (vec_lambda (\<lambda>i. dterm_semantics I (args i) v)))"
   | "dterm_semantics I (Plus t1 t2) = 
@@ -708,8 +708,7 @@ definition empty :: "dtuple"
 
 (* Function argument tuple where the first argument is arbitrary and the rest are zero.*)
 fun singleton :: "dterm \<Rightarrow> dtuple"
-  where "singleton t finite_5.a\<^sub>1  = t"
-  | "singleton t _ = (Simply (SConst 0))"
+  where "singleton t i = (if i = finite_5.a\<^sub>1 then t else (Simply (SConst 0)))"
 
 (* Equivalents of the above for functions over simple terms. *)
 definition sempty :: "stuple"
@@ -787,12 +786,6 @@ theorem test_valid: "valid test_axiom"
   apply(auto)
 done
 
-theorem assign_valid: "valid assign_axiom"
-  apply(simp add: valid_def assign_axiom_def)
-  apply(auto)
-  sorry
-(*done*)
-
 lemma li_zero_case: "loop_semantics I \<alpha> 0 = {(\<nu>, \<nu>) | \<nu>. \<nu> = \<nu>}"
   apply(auto)
 done
@@ -827,6 +820,49 @@ lemma iff_to_impl: "((\<nu> \<in> fml_semantics I A) \<longleftrightarrow> (\<nu
      \<and> ((\<nu> \<in> fml_semantics I B) \<longrightarrow> (\<nu> \<in> fml_semantics I A)))"
 apply (auto)
 done
+
+lemma vec_extensionality:"(\<forall>i. v$i = w$i) \<Longrightarrow> (v = w)"
+  apply(simp add: vec_eq_iff)
+ done
+ 
+lemma proj_sing1:"(singleton \<theta> x) = \<theta>"
+apply(auto simp add: singleton_def x_def)
+done
+
+lemma proj_sing2:"x \<noteq> y  \<Longrightarrow> (singleton \<theta> y) = Simply (SConst 0)"
+apply(auto simp add: singleton_def x_def)
+done
+
+lemma assign_lem1:
+"dterm_semantics I (if i = finite_5.a\<^sub>1 then $\<theta> x else Simply (SConst 0))
+                   (vec_lambda (\<lambda>y. if x = y then Functions I f 
+  (vec_lambda (\<lambda>i. dterm_semantics I (dl.empty i) \<nu>)) else  vec_nth (fst \<nu>) y), snd \<nu>)
+=
+ dterm_semantics I (if i = finite_5.a\<^sub>1 then $f f dl.empty else Simply (SConst 0)) \<nu>
+"
+ apply(case_tac "i = x")
+ apply(auto simp add: proj_sing1) 
+ done
+
+lemma assign_lem:
+"dterm_semantics I (singleton ($\<theta> x) i)
+   (vec_lambda (\<lambda>y. if y = x  then Functions I f (vec_lambda (\<lambda>i. dterm_semantics I (dl.empty i) \<nu>)) else vec_nth (fst \<nu>) y), snd \<nu>)
+                   =
+ dterm_semantics I (singleton ($f f dl.empty) i) \<nu>"
+ apply(case_tac "i = x ")
+ apply(auto simp add: proj_sing1) 
+ done
+ 
+ 
+ (* fml_semantics.simps prog_semantics.simps 
+        impl_semantics mem_Collect_eq*)
+theorem assign_valid: "valid assign_axiom"
+  apply(simp only: valid_def assign_axiom_def)
+  apply(rule allI | rule impI)+
+  apply(simp only: iff_semantics fml_semantics.simps mem_Collect_eq prog_semantics.simps)
+  apply(simp)
+  apply(simp only: assign_lem1)
+  done
 
 lemma mem_to_nonempty: "\<omega> \<in> S \<Longrightarrow> (S \<noteq> {})"
 apply (auto)
@@ -875,9 +911,6 @@ theorem loop_valid: "valid loop_iterate_axiom"
   apply(rule loop_forward)
   apply(rule loop_backward)
 done
-lemma vec_extensionality:"(\<forall>i. v$i = w$i) \<Longrightarrow> (v = w)"
-  apply(simp add: vec_eq_iff)
- done
 
 theorem box_valid: "valid box_axiom"
   apply(simp only: valid_def box_axiom_def)
