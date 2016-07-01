@@ -181,13 +181,9 @@ definition is_interp :: "interp \<Rightarrow> bool"
   where "is_interp I \<equiv> 
     \<forall>x. \<forall>i. (FDERIV (Functions I i) x :> (FunctionFrechet I i x))"
 
-(* sterm_semantics is the term semantics for differential-free terms.
-   stuple_semantics is the semantics for tuples of differential-free terms.*)
+(* sterm_semantics is the term semantics for differential-free terms. *)
 primrec sterm_semantics :: "interp \<Rightarrow> sterm \<Rightarrow> simple_state \<Rightarrow> real"
   where "sterm_semantics I (SVar x) v = v $ x"
-  (* Here's the problem case for automatic termination proof: (args i) is not 
-     structurally smaller than (SFunction f args). Need a way to prove (and if
-     necessary, add as an invariant) that it's smaller in some way *)
   | "sterm_semantics I (SFunction f args) v = 
     Functions I f (vec_lambda (\<lambda>i. sterm_semantics I (args i) v))"
   | "sterm_semantics I (SPlus t1 t2) v = 
@@ -203,12 +199,8 @@ fun basis_vector :: "id \<Rightarrow> Rn"
 (* frechet I \<theta> \<nu> gives us the frechet derivative of the term \<theta> in the interpretation
  I at state \<nu> (containing only the unprimed variables). The frechet derivative is a 
  linear map from the differential state \<nu> to reals. 
- 
- frechet_tuple is the equivalent for vector-valued terms (i.e. tuples of terms)
  *)
 primrec frechet :: "interp \<Rightarrow> sterm \<Rightarrow> simple_state \<Rightarrow> simple_state \<Rightarrow> real"
-  (*and frechet_tuple :: 
-    "interp \<Rightarrow> sfun_args \<Rightarrow> simple_state \<Rightarrow> simple_state \<Rightarrow> func_domain"*)
   where "frechet I (SVar x) v = (\<lambda>v'. inner v' (basis_vector x))"
   | "frechet I (SFunction f args) v = 
     (\<lambda>v'. FunctionFrechet I f (vec_lambda (\<lambda>i. sterm_semantics I (args i) v))
@@ -223,7 +215,7 @@ primrec frechet :: "interp \<Rightarrow> sterm \<Rightarrow> simple_state \<Righ
 fun directional_derivative :: "interp \<Rightarrow> sterm \<Rightarrow> state \<Rightarrow> real" 
   where "directional_derivative I t = (\<lambda>v. frechet I t (fst v) (snd v))"
 
-(* Semantics for terms and tuples of terms that are allowed to contain differentials.
+(* Semantics for terms that are allowed to contain differentials.
    Note there is some duplication with sterm_semantics (hence the desire to combine the two).*)
 primrec dterm_semantics :: "interp \<Rightarrow> dterm \<Rightarrow> state \<Rightarrow> real"
   where "dterm_semantics I (Var x) = (\<lambda>v. vec_nth (fst v) x)"
@@ -236,14 +228,6 @@ primrec dterm_semantics :: "interp \<Rightarrow> dterm \<Rightarrow> state \<Rig
     (\<lambda>v. (dterm_semantics I t1 v) * (dterm_semantics I t2 v))"
   | "dterm_semantics I (Differential t) = (\<lambda>v. directional_derivative I t v)"
   | "dterm_semantics I (Simply t) = (\<lambda>\<nu>. sterm_semantics I t (fst \<nu>))"
-  (*| "dtuple_semantics I (FA x1 x2 x3 x4 x5) =
-   (\<lambda>v. (vec_lambda (\<lambda>i. 
-      case i of
-        finite_5.a\<^sub>1 \<Rightarrow> dterm_semantics I x1 v
-      | finite_5.a\<^sub>2 \<Rightarrow> dterm_semantics I x2 v
-      | finite_5.a\<^sub>3 \<Rightarrow> dterm_semantics I x3 v
-      | finite_5.a\<^sub>4 \<Rightarrow> dterm_semantics I x4 v
-      | finite_5.a\<^sub>5 \<Rightarrow> dterm_semantics I x5 v)))"*)
 
 (* TODO: Delete, this is completely redundant with dterm_semantics, it just permutes the arguments
  for no good reason. *)
@@ -369,27 +353,7 @@ lemma stimes_case: "sterm_semantics I (STimes t1 t2) =
   (\<lambda>v. (sterm_semantics I t1 v) * (sterm_semantics I t2 v))"
   apply(auto)
 done
-(*
-lemma unpack_sfa: "\<exists>x1 x2 x3 x4 x5. v = SFA x1 x2 x3 x4 x5"
-  by (metis sfun_args.exhaust)
-lemma stuple_case: 
-"stuple_semantics I args = (\<lambda>v. (vec_lambda (\<lambda>i.
-     (sterm_semantics I (args i) v))))"
-      apply(auto)
-done
-*)
-(*  
-lemma frechet_tuple_simp: "frechet_tuple I (SFA x1 x2 x3 x4 x5) v =
-   (\<lambda> v'. vec_lambda
-    (\<lambda>i. case i of
-       finite_5.a\<^sub>1 \<Rightarrow> frechet I x1 v v'
-      | finite_5.a\<^sub>2 \<Rightarrow> frechet I x2 v v'
-      | finite_5.a\<^sub>3 \<Rightarrow> frechet I x3 v v'
-      | finite_5.a\<^sub>4 \<Rightarrow> frechet I x4 v v'
-      | finite_5.a\<^sub>5 \<Rightarrow> frechet I x5 v v'))"
-  apply(auto)
-done
-  *)
+
 subsection \<open>Characterization of Term Derivatives\<close>
 text \<open>
  This section builds up to a proof that in well-formed interpretations, all 
@@ -476,7 +440,7 @@ lemma inner_prod_eq:
     =(\<lambda>v. vec_nth v i)"
       by (auto)
     from 18 show ?thesis by(auto)
-  qed
+qed
 
 theorem svar_deriv: 
   fixes x:: id and \<nu>:: "Rn" and F::"real filter"
@@ -506,51 +470,11 @@ theorem svar_deriv:
     = (\<lambda>v'. inner v' (vec_lambda (\<lambda>i. if x = i then 1 else 0)))"
   by(auto)
   from better_deriv and deriv_eq show ?thesis by (auto)
-  qed
+qed
+
 (* TODO: This is now silly *) 
 fun stuple_proj::"(func_domain_dim \<Rightarrow> sterm) \<Rightarrow> func_domain_dim \<Rightarrow> sterm"
   where "stuple_proj args i = args i"
-
-(* lemma stuple_deriv_original:
-  assumes A1:"(sterm_semantics I x1 has_derivative frechet I x1 \<nu>) (at \<nu>)"
-  assumes A2:"(sterm_semantics I x2 has_derivative frechet I x2 \<nu>) (at \<nu>)"
-  assumes A3:"(sterm_semantics I x3 has_derivative frechet I x3 \<nu>) (at \<nu>)"
-  assumes A4:"(sterm_semantics I x4 has_derivative frechet I x4 \<nu>) (at \<nu>)"
-  assumes A5:"(sterm_semantics I x5 has_derivative frechet I x5 \<nu>) (at \<nu>)"
-  shows "(stuple_semantics I (SFA x1 x2 x3 x4 x5) 
-    has_derivative frechet_tuple I (SFA x1 x2 x3 x4 x5) \<nu>) (at \<nu>)"
- proof -
-   let ?TUP = "(SFA x1 x2 x3 x4 x5)"
-   let ?FTUP = "stuple_proj ?TUP"
-   let ?U = "UNIV:: state_dim set"
-   let ?BASIS = 
-     "\<lambda>i. \<lambda>\<nu>. vec_lambda(\<lambda>j. if i = j then 
-        sterm_semantics I (stuple_proj ?TUP i) \<nu> else 0)"
-   let ?BASIS' = 
-      "\<lambda>i. \<lambda>\<nu>'. vec_lambda(\<lambda>j. if i = j then 
-       frechet I (stuple_proj ?TUP i) \<nu> \<nu>' else 0)"
-   from A1 A2 A3 A4 A5 deriv_forall
-     have allDerivs:"\<forall> i. (sterm_semantics I (?FTUP i) has_derivative 
-                       frechet I (?FTUP i) \<nu>) (at \<nu>)"
-     by (auto)
-   from allDerivs and allToAnd
-     have andDerivs:"\<And>i. i\<in>?U \<Longrightarrow> ((?BASIS i) has_derivative (?BASIS' i)) (at \<nu>)"
-     by (auto)
-   from stuple_to_sum
-     have stuple_is_sum:"(stuple_semantics I (SFA x1 x2 x3 x4 x5))
-       = (\<lambda>\<nu>.(\<Sum>i\<in>?U. (?BASIS i \<nu>)))"
-     by(auto) 
-   from allDerivs ftuple_to_sum
-     have ftuple_is_sum:"(frechet_tuple I (SFA x1 x2 x3 x4 x5) \<nu>) 
-       = (\<lambda>\<nu>'. (\<Sum>i\<in>?U. (?BASIS' i \<nu>')))"
-     by(auto)
-   from andDerivs has_derivative_setsum
-     have sum_deriv: 
-      "((\<lambda>\<nu>. (\<Sum>i\<in>?U. ?BASIS  i \<nu>)) has_derivative  
-       ((\<lambda>\<nu>'. (\<Sum>i\<in>?U. ?BASIS' i \<nu>')))) (at \<nu>)"
-     by (auto)
-   from stuple_is_sum ftuple_is_sum sum_deriv show ?thesis by (auto)
-*)
 
 lemma function_case_inner:
   assumes good_interp:
@@ -587,71 +511,28 @@ proof -
   from hEqFG hEqFG' composeDeriv show ?thesis by (auto)
 qed
 
-(*   
-lemma function_case:  "(\<forall>x i. (Functions I i has_derivative FunctionFrechet I i x) (at x)) 
-  \<longrightarrow> (\<forall> x1 x2a. 
-    ((stuple_semantics I x2a has_derivative frechet_tuple I x2a \<nu>) (at \<nu>) 
-      \<longrightarrow> (sterm_semantics I ($s x1 x2a) has_derivative 
-           frechet I ($s x1 x2a) \<nu>) (at \<nu>)))"
-  apply(rule impI)
-  apply(rule allI)
-  apply(rule allI)
-  apply(smt UNIV_I function_case_inner has_derivative_transform_within_open
-            open_UNIV sterm_semantics.simps(2) sfun_args.exhaust)
-  done  
-*)
-(*
-lemma vector_deriv:
-  assumes "\<forall>(i::func_domain_dim). ((f i) has_derivative (g i \<nu>)) (at \<nu>)"
-  shows "((\<lambda>\<nu>. vec_lambda(\<lambda>i. f i \<nu>)) has_derivative 
-          (\<lambda>\<nu>'. vec_lambda(\<lambda>i. g i \<nu> \<nu>'))) (at \<nu>)"
-  sorry
-*)
-  lemma norm_axis: "norm (axis i x) = norm x"
-    unfolding axis_def norm_vec_def
-    by (simp add: if_distrib[where f=norm] setL2_def if_distrib[where f="\<lambda>x. x\<^sup>2"] setsum.If_cases)
+lemma norm_axis: "norm (axis i x) = norm x"
+  unfolding axis_def norm_vec_def
+  by (simp add: if_distrib[where f=norm] setL2_def if_distrib[where f="\<lambda>x. x\<^sup>2"] setsum.If_cases)
 
-  lemma bounded_linear_axis: "bounded_linear (axis i)"
-  proof
-    show "axis i (x + y) = axis i x + axis i y" "axis i (r *\<^sub>R x) = r *\<^sub>R axis i x" for x y :: "'a" and r
-      by (auto simp: vec_eq_iff axis_def)
-    show "\<exists>K. \<forall>x::'a. norm (axis i x) \<le> norm x * K"
-      by (auto simp add: norm_axis intro!: exI[of _ 1])
-  qed
+lemma bounded_linear_axis: "bounded_linear (axis i)"
+proof
+  show "axis i (x + y) = axis i x + axis i y" "axis i (r *\<^sub>R x) = r *\<^sub>R axis i x" for x y :: "'a" and r
+    by (auto simp: vec_eq_iff axis_def)
+  show "\<exists>K. \<forall>x::'a. norm (axis i x) \<le> norm x * K"
+    by (auto simp add: norm_axis intro!: exI[of _ 1])
+qed
 
-  lemma has_derivative_vec:
-    assumes "\<And>i. ((\<lambda>x. f i x) has_derivative (\<lambda>h. f' i h)) F"
-    shows "((\<lambda>x. \<chi> i. f i x) has_derivative (\<lambda>h. \<chi> i. f' i h)) F"
-  proof -
-    have *: "(\<chi> i. f i x) = (\<Sum>i\<in>UNIV. axis i (f i x))" "(\<chi> i. f' i x) = (\<Sum>i\<in>UNIV. axis i (f' i x))" for x
-      by (simp_all add: axis_def setsum.If_cases vec_eq_iff)
-    show ?thesis
-      unfolding *
-      by (intro has_derivative_setsum bounded_linear.has_derivative[OF bounded_linear_axis] assms)
-  qed
-
-lemma func_lemma1:" (\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> (sterm_semantics I \<theta> has_derivative frechet I \<theta> \<nu>) (at \<nu>)) \<Longrightarrow> 
-        (sterm_semantics I (args i) has_derivative (frechet I (args i) \<nu>)) (at \<nu>)"
-apply(auto)
-done
-(*
-lemma func_lemma2:"                               
-Functions I f (vec_lambda(\<lambda>i. sterm_semantics I (args i) v)) has_derivative 
-FunctionFrechet I f (vec_lambda(\<lambda>i. sterm_semantics I (args i) \<nu>)) (vec_lambda(\<lambda>i. frechet I (args i) \<nu> v'))"
-sorry
-*)
-
-(*
-  assumes good_interp:
-    "(\<forall>x i. (Functions I i has_derivative FunctionFrechet I i x) (at x))"       
-  assumes IH:"((\<lambda>v. vec_lambda(\<lambda>i. sterm_semantics I (args i) v)) 
-             has_derivative (\<lambda> v. vec_lambda(\<lambda>i. frechet I (args i) \<nu> v))) (at \<nu>)"
-  shows  "((\<lambda>v. Functions I f (vec_lambda(\<lambda>i. sterm_semantics I (args i) v)))
-            has_derivative (\<lambda>v. frechet I ($s f args) \<nu> v)) (at \<nu>)"
-*)
-(*lemma vector_deriv:"\<forall>(i::func_domain_dim). ((f i) has_derivative (g i \<nu>)) (at \<nu>) \<Longrightarrow> ((\<lambda>\<nu>. vec_lambda(\<lambda>i. f i \<nu>)) has_derivative 
-          (\<lambda>\<nu>'. vec_lambda(\<lambda>i. g i \<nu> \<nu>'))) (at \<nu>)"
-sorry*)
+lemma has_derivative_vec:
+  assumes "\<And>i. ((\<lambda>x. f i x) has_derivative (\<lambda>h. f' i h)) F"
+  shows "((\<lambda>x. \<chi> i. f i x) has_derivative (\<lambda>h. \<chi> i. f' i h)) F"
+proof -
+  have *: "(\<chi> i. f i x) = (\<Sum>i\<in>UNIV. axis i (f i x))" "(\<chi> i. f' i x) = (\<Sum>i\<in>UNIV. axis i (f' i x))" for x
+    by (simp_all add: axis_def setsum.If_cases vec_eq_iff)
+  show ?thesis
+    unfolding *
+    by (intro has_derivative_setsum bounded_linear.has_derivative[OF bounded_linear_axis] assms)
+qed
 
 lemma func_lemma2:"\<forall>x i. (Functions I i has_derivative FunctionFrechet I i x) (at x) \<Longrightarrow>
     (\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> (sterm_semantics I \<theta> has_derivative frechet I \<theta> \<nu>) (at \<nu>)) \<Longrightarrow>
@@ -686,8 +567,7 @@ lemma frechet_correctness:
   fixes I and \<nu> 
   assumes good_interp:"is_interp I"
   shows "FDERIV (sterm_semantics I \<theta>) \<nu> :> (frechet I \<theta> \<nu>)"
-  (*and "(stuple_semantics I TUP has_derivative frechet_tuple I TUP \<nu>) (at \<nu>)"*)
-  proof (induct \<theta> (*and TUP*))
+  proof (induct \<theta>)
     fix I \<nu> 
     show "\<And>x. (sterm_semantics I (SVar x) has_derivative 
                frechet I (SVar x) \<nu>) (at \<nu>)"
@@ -767,8 +647,6 @@ fun MBV :: "hp \<Rightarrow> (id + id) set"
  | "MBV \<alpha> = BVP \<alpha>"
 
 (* Free variables of a simple term *)
-(* Free variables of the arguments to a simple function 
-  (tuple of simple terms) *)
 primrec FVS :: "sterm \<Rightarrow> id set"
 where
    "FVS (SVar x) = {x}"
@@ -776,8 +654,7 @@ where
  | "FVS (SFunction f args) = (\<Union>i. FVS (args i))"
  | "FVS (SPlus f g) = FVS f \<union> FVS g"
  | "FVS (STimes f g) = FVS f \<union> FVS g"
-(* | "FVSA (SFA a1 a2 a3 a4 a5) = FVS a1 \<union> FVS a2 \<union>  FVS a3 \<union>  FVS a4 \<union> FVS a5"   
-*)
+
 (* Free variables of a differential term *)
 (* Free variables of the arguments to a differential-term function 
   (tuples of differential terms)*)
@@ -1236,268 +1113,4 @@ lemma sum_unique_nonzero:
    from partition union_sum zeroInter Bzero Asingle 
    show ?thesis by auto
  qed
-
-(*
-lemma stuple_to_sum:"stuple_semantics I (SFA x1 x2 x3 x4 x5) \<nu> 
- = (\<Sum>i\<in>UNIV. ((\<lambda>i. vec_lambda(\<lambda>j. if i = j then 
-    sterm_semantics I (stuple_proj (SFA x1 x2 x3 x4 x5) i) \<nu> else 0)) i))"
-  sorry
-  
-lemma ftuple_to_sum:
-   assumes allDerivs:
-   "\<forall> i. (sterm_semantics I ((stuple_proj (SFA x1 x2 x3 x4 x5)) i)
-   has_derivative frechet I ((stuple_proj (SFA x1 x2 x3 x4 x5)) i) \<nu>) (at \<nu>)"
-  shows "
-  (\<lambda>\<nu>'. frechet_tuple I (SFA x1 x2 x3 x4 x5) \<nu> \<nu>') =  
-  (\<lambda>\<nu>'. (\<Sum>i\<in>UNIV. ((\<lambda>i. vec_lambda(\<lambda>j. if i = j then 
-    frechet I (stuple_proj (SFA x1 x2 x3 x4 x5) i) \<nu> \<nu>' else 0)) i)))"
-  sorry
-  
-lemma has_derivative_Quintuple:
-  assumes d1: "(f1 has_derivative f1') (at x within s)" 
-  and     d2: "(f2 has_derivative f2') (at x within s)"
-  and     d3: "(f3 has_derivative f3') (at x within s)"
-  and     d4: "(f4 has_derivative f4') (at x within s)"
-  and     d5: "(f5 has_derivative f5') (at x within s)"
-  shows "((\<lambda>x. (f1 x, (f2 x, (f3 x, (f4 x, f5 x))))) has_derivative 
-         (\<lambda>h. (f1' h, (f2' h, (f3' h, (f4' h, f5' h)))))) (at x within s)"
-proof - 
-  from d4 d5
-  have d45:
-  "((\<lambda>x. (f4 x, f5 x)) has_derivative (\<lambda>h. (f4' h, f5' h))) (at x within s)"
-  by (rule has_derivative_Pair)
-  from d3 d45
-  have d345: "((\<lambda>x. (f3 x, (f4 x, f5 x))) 
-    has_derivative (\<lambda>h. (f3' h, (f4' h, f5' h)))) (at x within s)"
-  by (rule has_derivative_Pair)
-  from d2 d345
-  have d2345: "((\<lambda>x. (f2 x, (f3 x, (f4 x, f5 x)))) 
-    has_derivative (\<lambda>h. (f2' h, (f3' h, (f4' h, f5' h))))) (at x within s)"
-  by (rule has_derivative_Pair)
-  from d1 d2345
-  have d12345: "((\<lambda>x. (f1 x, (f2 x, (f3 x, (f4 x, f5 x))))) 
-    has_derivative (\<lambda>h. (f1' h, (f2' h, (f3' h, (f4' h, f5' h)))))) 
-    (at x within s)"
-  by (rule has_derivative_Pair)
-  from d12345 show ?thesis by auto
-qed
-
-lemma allToAnd:
-  assumes "\<forall> i. (sterm_semantics I ((stuple_proj (SFA x1 x2 x3 x4 x5)) i) 
-    has_derivative frechet I ((stuple_proj (SFA x1 x2 x3 x4 x5)) i) \<nu>) (at \<nu>)"
-  shows "\<And>i. i\<in>UNIV \<Longrightarrow> (((\<lambda>i. \<lambda>\<nu>. vec_lambda(\<lambda>j. if i = j then 
-    sterm_semantics I (stuple_proj (SFA x1 x2 x3 x4 x5) i) \<nu> else 0)) i) 
-  has_derivative ((\<lambda>i. \<lambda>\<nu>'. vec_lambda(\<lambda>j. if i = j then 
-    frechet I (stuple_proj (SFA x1 x2 x3 x4 x5) i) \<nu> \<nu>' else 0)) i)) (at \<nu>)"
-  proof -
-    let ?TUP = "(SFA x1 x2 x3 x4 x5)"
-    let ?FTUP = "stuple_proj ?TUP"
-    let ?U = "UNIV:: state_dim set"
-    let ?BASIS = "\<lambda>i. \<lambda>\<nu>. vec_lambda(\<lambda>j. if i = j then 
-        sterm_semantics I (?FTUP i) \<nu> else 0)"
-    let ?BASIS' = "\<lambda>i. \<lambda>\<nu>'. vec_lambda(\<lambda>j. if i = j then
-        frechet I (?FTUP i) \<nu> \<nu>' else 0)"
-    have f_eq:"\<And>i. vec_nth (?BASIS i \<nu>) i = sterm_semantics I (?FTUP i) \<nu>" 
-    by auto
-    have f_neq:"\<And>i j. i \<noteq> j \<Longrightarrow> vec_nth (?BASIS i \<nu>) j = 0" 
-    by auto
-    have f_eq':"\<And>i \<nu>'. vec_nth (?BASIS' i \<nu>') i = frechet I (?FTUP i) \<nu> \<nu>'"
-    by auto
-    have f_neq':"\<And>i j \<nu>'. i \<noteq> j \<Longrightarrow> vec_nth (?BASIS' i \<nu>') j = 0"
-    by auto
-    
-    from f_eq f_neq  f_eq' f_neq' has_derivative_def
- qed
- 
- lemma stuple_deriv_original:
-  assumes A1:"(sterm_semantics I x1 has_derivative frechet I x1 \<nu>) (at \<nu>)"
-  assumes A2:"(sterm_semantics I x2 has_derivative frechet I x2 \<nu>) (at \<nu>)"
-  assumes A3:"(sterm_semantics I x3 has_derivative frechet I x3 \<nu>) (at \<nu>)"
-  assumes A4:"(sterm_semantics I x4 has_derivative frechet I x4 \<nu>) (at \<nu>)"
-  assumes A5:"(sterm_semantics I x5 has_derivative frechet I x5 \<nu>) (at \<nu>)"
-  shows "(stuple_semantics I (SFA x1 x2 x3 x4 x5) 
-    has_derivative frechet_tuple I (SFA x1 x2 x3 x4 x5) \<nu>) (at \<nu>)"
- proof -
-   let ?TUP = "(SFA x1 x2 x3 x4 x5)"
-   let ?FTUP = "stuple_proj ?TUP"
-   let ?U = "UNIV:: state_dim set"
-   let ?BASIS = 
-     "\<lambda>i. \<lambda>\<nu>. vec_lambda(\<lambda>j. if i = j then 
-        sterm_semantics I (stuple_proj ?TUP i) \<nu> else 0)"
-   let ?BASIS' = 
-      "\<lambda>i. \<lambda>\<nu>'. vec_lambda(\<lambda>j. if i = j then 
-       frechet I (stuple_proj ?TUP i) \<nu> \<nu>' else 0)"
-   from A1 A2 A3 A4 A5 deriv_forall
-     have allDerivs:"\<forall> i. (sterm_semantics I (?FTUP i) has_derivative 
-                       frechet I (?FTUP i) \<nu>) (at \<nu>)"
-     by (auto)
-   from allDerivs and allToAnd
-     have andDerivs:"\<And>i. i\<in>?U \<Longrightarrow> ((?BASIS i) has_derivative (?BASIS' i)) (at \<nu>)"
-     by (auto)
-   from stuple_to_sum
-     have stuple_is_sum:"(stuple_semantics I (SFA x1 x2 x3 x4 x5))
-       = (\<lambda>\<nu>.(\<Sum>i\<in>?U. (?BASIS i \<nu>)))"
-     by(auto) 
-   from allDerivs ftuple_to_sum
-     have ftuple_is_sum:"(frechet_tuple I (SFA x1 x2 x3 x4 x5) \<nu>) 
-       = (\<lambda>\<nu>'. (\<Sum>i\<in>?U. (?BASIS' i \<nu>')))"
-     by(auto)
-   from andDerivs has_derivative_setsum
-     have sum_deriv: 
-      "((\<lambda>\<nu>. (\<Sum>i\<in>?U. ?BASIS  i \<nu>)) has_derivative  
-       ((\<lambda>\<nu>'. (\<Sum>i\<in>?U. ?BASIS' i \<nu>')))) (at \<nu>)"
-     by (auto)
-   from stuple_is_sum ftuple_is_sum sum_deriv show ?thesis by (auto)
-*)
-
-(*
-lemma function_case_inner:
-  assumes good_interp:
-    "(\<forall>x i. (Functions I i has_derivative FunctionFrechet I i x) (at x))"
-  assumes IH:"(stuple_semantics I (SFA y1 y2 y3 y4 y5) 
-             has_derivative frechet_tuple I (SFA y1 y2 y3 y4 y5) \<nu>) (at \<nu>)"
-  shows  "((\<lambda>v. Functions I x1 (stuple_semantics I (SFA y1 y2 y3 y4 y5) v))
-            has_derivative frechet I ($s x1 (SFA y1 y2 y3 y4 y5)) \<nu>) (at \<nu>)"
-proof -
-  let ?args = "(SFA y1 y2 y3 y4 y5)"
-  let ?h = "(\<lambda>v. Functions I x1 (stuple_semantics I ?args v))"
-  let ?h' = "frechet I ($s x1 ?args) \<nu>"
-  let ?g = "stuple_semantics I ?args"
-  let ?g' = "frechet_tuple I ?args \<nu>"
-  let ?f = "(\<lambda>y. Functions I x1 y)"
-  let ?f' = "FunctionFrechet I x1 (?g \<nu>)"                                
-  have hEqFG: "?h = ?f o ?g" by (auto)                                       
-  have hEqFG': "?h' = ?f' o ?g'"                                   
-    proof -
-      have frechet_def:"frechet I (SFunction x1 ?args) \<nu> 
-        = (\<lambda>v'. FunctionFrechet I x1 (?g \<nu>) (frechet_tuple I ?args \<nu> v'))" 
-      by (auto)
-      have composition:
-        "(\<lambda>v'. FunctionFrechet I x1 (?g \<nu>) (frechet_tuple I ?args \<nu> v')) 
-      = (FunctionFrechet I x1 (?g \<nu>)) o (frechet_tuple I ?args \<nu>)"
-      by (auto)
-      from frechet_def and composition show ?thesis by (auto)
-    qed 
-  have fDeriv: "(?f has_derivative ?f') (at (?g \<nu>))" 
-    using  good_interp is_interp_def by blast
-  from IH have gDeriv: "(?g has_derivative ?g') (at \<nu>)" by (auto)
-  from fDeriv and gDeriv
-  have composeDeriv: "((?f o ?g) has_derivative (?f' o ?g')) (at \<nu>)"
-    using diff_chain_at good_interp by blast
-  from hEqFG hEqFG' composeDeriv show ?thesis by (auto)
-qed                                                                            
-*)
-(*   
-lemma function_case: 
- "(\<forall>x i. (Functions I i has_derivative FunctionFrechet I i x) (at x)) 
-  \<longrightarrow> (\<forall> x1 x2a. 
-    ((stuple_semantics I x2a has_derivative frechet_tuple I x2a \<nu>) (at \<nu>) 
-      \<longrightarrow> (sterm_semantics I ($s x1 x2a) has_derivative 
-           frechet I ($s x1 x2a) \<nu>) (at \<nu>)))"
-  apply(rule impI)
-  apply(rule allI)
-  apply(rule allI)
-  apply(smt UNIV_I function_case_inner has_derivative_transform_within_open
-            open_UNIV sterm_semantics.simps(2) sfun_args.exhaust)
-  done  
-*)
-  
-(*
-lemma deriv_forall:  
-  assumes iso:"f = stuple_proj (SFA x1 x2 x3 x4 x5)"
-  assumes A1:"(sterm_semantics I x1 has_derivative frechet I x1 \<nu>) (at \<nu>')"
-  assumes A2:"(sterm_semantics I x2 has_derivative frechet I x2 \<nu>) (at \<nu>')"
-  assumes A3:"(sterm_semantics I x3 has_derivative frechet I x3 \<nu>) (at \<nu>')"
-  assumes A4:"(sterm_semantics I x4 has_derivative frechet I x4 \<nu>) (at \<nu>')"
-  assumes A5:"(sterm_semantics I x5 has_derivative frechet I x5 \<nu>) (at \<nu>')"
-  shows "\<forall> i.(sterm_semantics I (f i) has_derivative frechet I (f i)\<nu>) (at \<nu>')"
-  proof
-    from iso and A1 
-    have B1:"(sterm_semantics I (f finite_5.a\<^sub>1) has_derivative 
-              frechet I x1 \<nu>) (at \<nu>')"
-    by (auto)
-    from iso and A2 
-    have B2:"(sterm_semantics I (f finite_5.a\<^sub>2) has_derivative 
-              frechet I x2 \<nu>) (at \<nu>')"
-    by (auto)
-    from iso and A3 
-    have B3:"(sterm_semantics I (f finite_5.a\<^sub>3) has_derivative 
-              frechet I x3 \<nu>) (at \<nu>')"
-    by (auto)
-    from iso and A4 
-    have B4:"(sterm_semantics I (f finite_5.a\<^sub>4) has_derivative 
-              frechet I x4 \<nu>) (at \<nu>')"
-    by (auto)
-    from iso and A5 
-    have B5:"(sterm_semantics I (f finite_5.a\<^sub>5) has_derivative 
-              frechet I x5 \<nu>) (at \<nu>')"
-    by (auto)
-    let ?P = "\<lambda>i.(sterm_semantics I (f i) has_derivative
-              frechet I (f i) \<nu>) (at \<nu>')"
-    from B1 B2 B3 B4 B5 iso 
-    have conj:"?P finite_5.a\<^sub>1 \<and> ?P finite_5.a\<^sub>2 \<and> ?P finite_5.a\<^sub>3 
-             \<and> ?P finite_5.a\<^sub>4 \<and> ?P finite_5.a\<^sub>5"
-    by (auto)
-    from enum_all_finite_5_def conj
-    have all:"\<forall> i. ?P i"
-    by(auto)
-    then show "\<And> i. (sterm_semantics I (f i) has_derivative 
-                     frechet I (f i) \<nu>) (at \<nu>')" by (auto)
-  qed
-*)
-
-(* There does not appear to be a pre-existing way to show that 
- a vector-valued function's derivative is the vector of the derivatives
- of its components, except by representing vectors as nested pairs, which
- seems unpleasant. And since the use of tuples for function arguments
- is already in question, it might make more sense to change our 
- representation before doing this part of the proof. *)
-(*lemma vector_deriv:
-  assumes "\<forall>(i::func_domain_dim). ((f i) has_derivative (g i \<nu>)) (at \<nu>)"
-  shows "((\<lambda>\<nu>. vec_lambda(\<lambda>i. f i \<nu>)) has_derivative 
-          (\<lambda>\<nu>'. vec_lambda(\<lambda>i. g i \<nu> \<nu>'))) (at \<nu>)"
-  sorry
-
-lemma LHS_lemma:"stuple_semantics I args = 
-  (\<lambda>\<nu>. vec_lambda(\<lambda>i. (\<lambda>i. (\<lambda>\<nu>. sterm_semantics I 
-                     ((stuple_proj args) i) \<nu>)) i \<nu>))"
-  sorry
-  
-lemma RHS_lemma:"frechet_tuple I args \<nu> = 
-  (\<lambda>\<nu>'. vec_lambda(\<lambda>i. (\<lambda>i. (\<lambda>\<nu>. frechet I 
-                     ((stuple_proj args) i) \<nu>)) i \<nu> \<nu>'))"
-  sorry*)  
-(*
-lemma stuple_deriv:
-  assumes A1:"(sterm_semantics I x1 has_derivative frechet I x1 \<nu>) (at \<nu>)"
-  assumes A2:"(sterm_semantics I x2 has_derivative frechet I x2 \<nu>) (at \<nu>)"
-  assumes A3:"(sterm_semantics I x3 has_derivative frechet I x3 \<nu>) (at \<nu>)"
-  assumes A4:"(sterm_semantics I x4 has_derivative frechet I x4 \<nu>) (at \<nu>)"
-  assumes A5:"(sterm_semantics I x5 has_derivative frechet I x5 \<nu>) (at \<nu>)"
-  shows "(stuple_semantics I (SFA x1 x2 x3 x4 x5) has_derivative 
-          frechet_tuple I (SFA x1 x2 x3 x4 x5) \<nu>) (at \<nu>)"
- proof -
-   let ?TUP = "(SFA x1 x2 x3 x4 x5)"
-   let ?FTUP = "stuple_proj ?TUP"
-   let ?U = "UNIV:: state_dim set"
-   let ?F = "(\<lambda>i. (\<lambda>\<nu>. sterm_semantics I (?FTUP i) \<nu>))"
-   let ?G = "(\<lambda>i. (\<lambda>\<nu>. frechet I (?FTUP i) \<nu>))"
-   from A1 A2 A3 A4 A5 deriv_forall
-   have allDerivs:"\<forall> i. (sterm_semantics I (?FTUP i) has_derivative 
-                         frechet I (?FTUP i) \<nu>) (at \<nu>)"
-   by (auto)
-   have LHS_eq:
-   "stuple_semantics I (SFA x1 x2 x3 x4 x5) = (\<lambda>\<nu>. vec_lambda(\<lambda>i. ?F i \<nu>))"
-   by (rule LHS_lemma)
-   have RHS_eq:
-   "frechet_tuple I (SFA x1 x2 x3 x4 x5) \<nu> = (\<lambda>\<nu>'. vec_lambda(\<lambda>i. ?G i \<nu> \<nu>'))"
-   by (rule RHS_lemma)
-   from allDerivs vector_deriv LHS_eq RHS_eq have
-   result:"(stuple_semantics I (SFA x1 x2 x3 x4 x5) has_derivative 
-            frechet_tuple I (SFA x1 x2 x3 x4 x5) \<nu>) (at \<nu>)"
-   by (auto)
-   from result show ?thesis by auto
-qed
-*)       
-
 end
