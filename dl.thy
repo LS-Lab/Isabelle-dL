@@ -229,11 +229,6 @@ primrec dterm_semantics :: "interp \<Rightarrow> dterm \<Rightarrow> state \<Rig
   | "dterm_semantics I (Differential t) = (\<lambda>v. directional_derivative I t v)"
   | "dterm_semantics I (Simply t) = (\<lambda>\<nu>. sterm_semantics I t (fst \<nu>))"
 
-(* TODO: Delete, this is completely redundant with dterm_semantics, it just permutes the arguments
- for no good reason. *)
-fun term_semantics :: "interp \<Rightarrow> state \<Rightarrow> dterm \<Rightarrow> real"
-  where "term_semantics I v t = dterm_semantics I t v"
-
 (* repv \<nu> x r replaces the value of (unprimed) variable x in the state \<nu> with r *)
 fun repv :: "state \<Rightarrow> id \<Rightarrow> real \<Rightarrow> state"
   where "repv v x r = 
@@ -282,7 +277,7 @@ and prog_semantics :: "interp \<Rightarrow> hp \<Rightarrow> (state * state) set
 and ivp_semantics  :: "interp \<Rightarrow> Rn ivp \<Rightarrow> formula \<Rightarrow> state set"
 and loop_semantics :: "interp \<Rightarrow> hp \<Rightarrow> nat \<Rightarrow> (state * state) set"
   where "fml_semantics I (Geq t1 t2) = 
-        {v. term_semantics I v t1 \<ge> term_semantics I v t2 }"
+        {v. dterm_semantics I t1 v \<ge> dterm_semantics I t2 v}"
       | "fml_semantics I (Prop P terms) =
         {\<nu>. Predicates I P (vec_lambda (\<lambda>i. dterm_semantics I (terms i) \<nu>))}"
       | "fml_semantics I (Not \<phi>) = {v. v \<notin> fml_semantics I \<phi>}"
@@ -295,16 +290,16 @@ and loop_semantics :: "interp \<Rightarrow> hp \<Rightarrow> nat \<Rightarrow> (
       | "fml_semantics I (Predicational p) = Predicationals I p"
       | "fml_semantics I (DiffFormula p) = diff_formula_semantics I p"
       | "diff_formula_semantics I (Geq (Simply f) (Simply g)) = 
-          {v. term_semantics I v (Differential f) \<ge> term_semantics I v (Differential g) }"
+          {v. dterm_semantics I (Differential f) v \<ge> dterm_semantics I (Differential g) v}"
       | "diff_formula_semantics I (Not p) = diff_formula_semantics I p"
       | "diff_formula_semantics I (And p q) = diff_formula_semantics I p \<inter> diff_formula_semantics I p"
       | "diff_formula_semantics I  p = fml_semantics I p"
  
       | "prog_semantics I (Pvar p) = Programs I p"
       | "prog_semantics I (Assign x t) = 
-        {(\<nu>, \<omega>) | \<nu> \<omega>. \<omega> = repv \<nu> x (term_semantics I \<nu> t)}"
+        {(\<nu>, \<omega>) | \<nu> \<omega>. \<omega> = repv \<nu> x (dterm_semantics I t \<nu>)}"
       | "prog_semantics I (DiffAssign x t) =
-        {(\<nu>, \<omega>) | \<nu> \<omega>. \<omega> = repd \<nu> x (term_semantics I \<nu> t)}"
+        {(\<nu>, \<omega>) | \<nu> \<omega>. \<omega> = repd \<nu> x (dterm_semantics I t \<nu>)}"
       | "prog_semantics I (Test \<phi>) = {(\<nu>, \<nu>) | \<nu>. \<nu> \<in> fml_semantics I \<phi>}"
       | "prog_semantics I (Choice \<alpha> \<beta>) = 
         prog_semantics I \<alpha> \<union> prog_semantics I \<beta>"
@@ -752,7 +747,6 @@ fun ssingleton :: "sterm \<Rightarrow> stuple"
   where "ssingleton t finite_5.a\<^sub>1 = t"
   | "ssingleton t _ = (SConst 0)"
      
-
 definition assign_axiom :: "formula"
   where "assign_axiom \<equiv> 
     ([[x := ($f f empty)]] (Prop P (singleton (Var x)))) 
@@ -812,8 +806,6 @@ definition CE_holds :: "id \<Rightarrow> formula \<Rightarrow> formula \<Rightar
  
 definition diff_const_axiom :: "formula"
   where "diff_const_axiom \<equiv> Equals (Differential ($s f sempty)) (Simply (SConst 0))"
-  
-
 
 theorem test_valid: "valid test_axiom"
   apply(simp only: valid_def test_axiom_def)
@@ -840,7 +832,7 @@ lemma impl_semantics [simp]: "(\<nu> \<in> fml_semantics I (A \<rightarrow> B))
 done
 
 lemma equals_semantics [simp]: "(\<nu> \<in> fml_semantics I (Equals \<theta> \<theta>')) 
-  = (term_semantics I \<nu> \<theta> = term_semantics I \<nu> \<theta>')"
+  = (dterm_semantics I \<theta> \<nu> = dterm_semantics I \<theta>' \<nu>)"
   apply(auto)
 done
 
@@ -970,13 +962,13 @@ theorem I_valid: "valid Iaxiom"
   apply(simp only: valid_def Iaxiom_def fml_semantics.simps 
     prog_semantics.simps iff_semantics impl_semantics mem_Collect_eq)
   apply(rule allI | rule impI)+
-  sorry
+sorry
   
 theorem V_valid: "valid Vaxiom"
   apply(simp only: valid_def Vaxiom_def impl_semantics)
   apply(rule allI | rule impI)+
   apply(auto simp add: dl.empty_def)
-  done
+done
 
 theorem G_sound: "G_holds \<phi> \<alpha>"
   apply(simp add: G_holds_def valid_def)
@@ -1006,7 +998,6 @@ proof -
     by presburger
 qed
 
-
 theorem CT_sound: "CT_holds var \<theta> \<theta>'"
   apply(simp only: CT_holds_def valid_def equals_semantics vec_extensionality vec_eq_iff)
   apply(simp)
@@ -1014,18 +1005,18 @@ theorem CT_sound: "CT_holds var \<theta> \<theta>'"
   apply(simp add: CT_lemma)
   done
   
-lemma CQ_lemma:"\<And>I \<nu>. \<forall>I \<nu>. is_interp I \<longrightarrow> term_semantics I \<nu> \<theta> = term_semantics I \<nu> \<theta>' \<Longrightarrow>
+lemma CQ_lemma:"\<And>I \<nu>. \<forall>I \<nu>. is_interp I \<longrightarrow> dterm_semantics I \<theta> \<nu> = dterm_semantics I \<theta>' \<nu> \<Longrightarrow>
            is_interp I \<Longrightarrow>
            Predicates I var (vec_lambda(\<lambda>i. dterm_semantics I (if i = a\<^sub>1 then \<theta> else Simply (SConst 0)) \<nu>)) =
            Predicates I var (vec_lambda(\<lambda>i. dterm_semantics I (if i = a\<^sub>1 then \<theta>' else Simply (SConst 0)) \<nu>))"
 proof -
   fix I :: interp and \<nu> :: "(real, Enum.finite_5) vec \<times> (real, Enum.finite_5) vec"
-  assume a1: "\<forall>I \<nu>. is_interp I \<longrightarrow> term_semantics I \<nu> \<theta> = term_semantics I \<nu> \<theta>'"
+  assume a1: "\<forall>I \<nu>. is_interp I \<longrightarrow> dterm_semantics I \<theta> \<nu> = dterm_semantics I \<theta>' \<nu>"
   assume a2: "is_interp I"
   obtain ff :: "(Enum.finite_5 \<Rightarrow> real) \<Rightarrow> (Enum.finite_5 \<Rightarrow> real) \<Rightarrow> Enum.finite_5" where
     f3: "\<forall>f fa. f (ff fa f) \<noteq> fa (ff fa f) \<or> vec_lambda f = vec_lambda fa"
     by (meson Cart_lambda_cong)
-  have "term_semantics I \<nu> \<theta> = term_semantics I \<nu> \<theta>'"
+  have "dterm_semantics I \<theta> \<nu> = dterm_semantics I \<theta>' \<nu> "
     using a2 a1 by blast
   then have "dterm_semantics I (if ff (\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta>' else Simply (SConst 0)) \<nu>) (\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta> else Simply (SConst 0)) \<nu>) = a\<^sub>1 then \<theta> else Simply (SConst 0)) \<nu> \<noteq> dterm_semantics I (if ff (\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta>' else Simply (SConst 0)) \<nu>) (\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta> else Simply (SConst 0)) \<nu>) = a\<^sub>1 then \<theta>' else Simply (SConst 0)) \<nu> \<longrightarrow> dterm_semantics I (if ff (\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta>' else Simply (SConst 0)) \<nu>) (\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta> else Simply (SConst 0)) \<nu>) = a\<^sub>1 then \<theta> else Simply (SConst 0)) \<nu> = dterm_semantics I (if ff (\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta>' else Simply (SConst 0)) \<nu>) (\<lambda>f. dterm_semantics I (if f = a\<^sub>1 then \<theta> else Simply (SConst 0)) \<nu>) = a\<^sub>1 then \<theta>' else Simply (SConst 0)) \<nu>"
     by simp
@@ -1040,7 +1031,7 @@ theorem CQ_sound: "CQ_holds var \<theta> \<theta>'"
   apply(rule allI | rule impI)+
   apply(simp only: iff_semantics singleton.simps fml_semantics.simps mem_Collect_eq)
   apply(simp only: CQ_lemma)
-  done
+done
   
 theorem CE_sound: "CE_holds var \<phi> \<psi>"
   apply(simp only: CE_holds_def valid_def iff_semantics)
@@ -1079,7 +1070,7 @@ done
 theorem diff_const_axiom_valid: "valid diff_const_axiom"
   apply(simp only: valid_def diff_const_axiom_def equals_semantics)
   apply(rule allI | rule impI)+
-  apply(simp only: term_semantics.simps dterm_semantics.simps 
+  apply(simp only:  dterm_semantics.simps 
         constant_deriv_zero sterm_semantics.simps)
   done
 
