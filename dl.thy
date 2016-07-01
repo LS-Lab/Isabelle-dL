@@ -600,12 +600,35 @@ lemma function_case:  "(\<forall>x i. (Functions I i has_derivative FunctionFrec
             open_UNIV sterm_semantics.simps(2) sfun_args.exhaust)
   done  
 *)
-
+(*
 lemma vector_deriv:
   assumes "\<forall>(i::func_domain_dim). ((f i) has_derivative (g i \<nu>)) (at \<nu>)"
   shows "((\<lambda>\<nu>. vec_lambda(\<lambda>i. f i \<nu>)) has_derivative 
           (\<lambda>\<nu>'. vec_lambda(\<lambda>i. g i \<nu> \<nu>'))) (at \<nu>)"
   sorry
+*)
+  lemma norm_axis: "norm (axis i x) = norm x"
+    unfolding axis_def norm_vec_def
+    by (simp add: if_distrib[where f=norm] setL2_def if_distrib[where f="\<lambda>x. x\<^sup>2"] setsum.If_cases)
+
+  lemma bounded_linear_axis: "bounded_linear (axis i)"
+  proof
+    show "axis i (x + y) = axis i x + axis i y" "axis i (r *\<^sub>R x) = r *\<^sub>R axis i x" for x y :: "'a" and r
+      by (auto simp: vec_eq_iff axis_def)
+    show "\<exists>K. \<forall>x::'a. norm (axis i x) \<le> norm x * K"
+      by (auto simp add: norm_axis intro!: exI[of _ 1])
+  qed
+
+  lemma has_derivative_vec:
+    assumes "\<And>i. ((\<lambda>x. f i x) has_derivative (\<lambda>h. f' i h)) F"
+    shows "((\<lambda>x. \<chi> i. f i x) has_derivative (\<lambda>h. \<chi> i. f' i h)) F"
+  proof -
+    have *: "(\<chi> i. f i x) = (\<Sum>i\<in>UNIV. axis i (f i x))" "(\<chi> i. f' i x) = (\<Sum>i\<in>UNIV. axis i (f' i x))" for x
+      by (simp_all add: axis_def setsum.If_cases vec_eq_iff)
+    show ?thesis
+      unfolding *
+      by (intro has_derivative_setsum bounded_linear.has_derivative[OF bounded_linear_axis] assms)
+  qed
 
 lemma func_lemma1:" (\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> (sterm_semantics I \<theta> has_derivative frechet I \<theta> \<nu>) (at \<nu>)) \<Longrightarrow> 
         (sterm_semantics I (args i) has_derivative (frechet I (args i) \<nu>)) (at \<nu>)"
@@ -637,12 +660,13 @@ proof -
   assume a1: "\<forall>x i. (Functions I i has_derivative FunctionFrechet I i x) (at x)"
   assume a2: "\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> (sterm_semantics I \<theta> has_derivative frechet I \<theta> \<nu>) (at \<nu>)"
   have "\<forall>f fa v. (\<exists>fb. \<not> (f (fb::Enum.finite_5) has_derivative fa fb (v::(real, Enum.finite_5) vec)) (at v)) \<or> ((\<lambda>v. vec_lambda(\<lambda>fa. (f fa v::real))) has_derivative (\<lambda>va. vec_lambda(\<lambda>f. fa f v va))) (at v)"
-    using vector_deriv by blast
+    using has_derivative_vec by force
   then have "((\<lambda>v. vec_lambda(\<lambda>f. sterm_semantics I (args f) v) )has_derivative (\<lambda>v. vec_lambda(\<lambda>f. frechet I (args f) \<nu> v))) (at \<nu>)"
     using a2 by (meson rangeI)
   then show "((\<lambda>v. Functions I f (vec_lambda(\<lambda>f. sterm_semantics I (args f) v))) has_derivative frechet I ($s f args) \<nu>) (at \<nu>)"
     using a1 function_case_inner by blast
 qed 
+
 lemma func_lemma:"                  
 is_interp I \<Longrightarrow>                 
 (\<And>\<theta> :: sterm. \<theta> \<in> range args \<Longrightarrow> (sterm_semantics I \<theta> has_derivative 
