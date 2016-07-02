@@ -577,6 +577,16 @@ apply(erule func_lemma2)
 apply(auto)
 done
 
+lemma dfree_vac1:"dfree ($' var) \<Longrightarrow> Anything"
+apply(rule dl.dfree.cases)
+apply(auto)
+done
+
+lemma dfree_vac2:"dfree (Differential d) \<Longrightarrow> Anything"
+apply(rule dl.dfree.cases)
+apply(auto)
+done
+
 (* Our syntactically-defined derivatives of terms agree with the actual derivatives of the terms.
  Since our definition of derivative is total, this gives us that derivatives are "decidable" for
  terms (modulo computations on reals) and that they obey all the expected identities, which gives
@@ -585,7 +595,7 @@ done
 lemma frechet_correctness:
   fixes I and \<nu> 
   assumes good_interp:"is_interp I"
-  shows "FDERIV (sterm_sem I \<theta>) \<nu> :> (frechet I \<theta> \<nu>)"
+  shows "dfree \<theta> \<Longrightarrow> FDERIV (sterm_sem I \<theta>) \<nu> :> (frechet I \<theta> \<nu>)"
   proof (induct \<theta>)
     fix I \<nu> 
     show "\<And>x. (sterm_sem I (Var x) has_derivative 
@@ -595,29 +605,43 @@ lemma frechet_correctness:
     show "\<And>x. (sterm_sem I (Const x) has_derivative 
                frechet I (Const x) \<nu>) (at \<nu>)"
       by (simp add: sconst_case)
-  next
-                 
+  next        
      fix f 
      fix args :: stuple
-     assume IH:"\<And>\<theta> :: trm. \<theta> \<in> range args \<Longrightarrow> (sterm_sem I \<theta> has_derivative 
+     assume IH:"\<And>\<theta> :: trm. \<theta> \<in> range args \<Longrightarrow> dfree \<theta> \<Longrightarrow> (sterm_sem I \<theta> has_derivative 
                  frechet I \<theta> \<nu>) (at \<nu>)"
-     show "(sterm_sem I ($f f args) has_derivative 
+     show "dfree ($f f args) \<Longrightarrow> (sterm_sem I ($f f args) has_derivative 
             frechet I ($f f args) \<nu>) (at \<nu>)"
-        using IH func_lemma good_interp by (auto)
+        proof -
+          assume a1: "dfree ($f f args)"
+          have "\<forall>t. \<not> dfree t \<or> (\<exists>f. t = trm.Var f) \<or> (\<exists>r. t = Const r) \<or> (\<exists>f. (\<exists>fa. t = $f fa f) \<and> (\<forall>t. t \<notin> range f \<or> dfree t)) \<or> (\<exists>ta tb. t = Plus ta tb \<and> dfree ta \<and> dfree tb) \<or> (\<exists>ta tb. t = Times ta tb \<and> dfree ta \<and> dfree tb)"
+          by (metis (no_types) dfree.cases)
+          then show ?thesis
+          using a1 IH func_lemma good_interp by auto
+        qed
   next
     fix x1 x2a
-    assume IH1:"(sterm_sem I x1 has_derivative frechet I x1 \<nu>) (at \<nu>)"
-    assume IH2:"(sterm_sem I x2a has_derivative frechet I x2a \<nu>) (at \<nu>)"
-    show "(sterm_sem I (Plus x1 x2a) has_derivative 
+    assume IH1:"dfree x1 \<Longrightarrow> (sterm_sem I x1 has_derivative frechet I x1 \<nu>) (at \<nu>)"
+    assume IH2:"dfree x2a \<Longrightarrow> (sterm_sem I x2a has_derivative frechet I x2a \<nu>) (at \<nu>)"
+    show "dfree (Plus x1 x2a) \<Longrightarrow> (sterm_sem I (Plus x1 x2a) has_derivative 
           frechet I (Plus x1 x2a) \<nu>) (at \<nu>)"
-      using IH1 IH2 splus_case by (auto)
+      using IH1 IH2 splus_case dfree.cases by fastforce
   next
     fix x1 x2a
-    assume IH1:"(sterm_sem I x1 has_derivative frechet I x1 \<nu>) (at \<nu>)"
-    assume IH2:"(sterm_sem I x2a has_derivative frechet I x2a \<nu>) (at \<nu>)"
-    show "(sterm_sem I (Times x1 x2a) has_derivative 
+    assume IH1:"dfree x1 \<Longrightarrow> (sterm_sem I x1 has_derivative frechet I x1 \<nu>) (at \<nu>)"
+    assume IH2:"dfree x2a \<Longrightarrow> (sterm_sem I x2a has_derivative frechet I x2a \<nu>) (at \<nu>)"
+    show "dfree (Times x1 x2a) \<Longrightarrow> (sterm_sem I (Times x1 x2a) has_derivative 
            frechet I (Times x1 x2a) \<nu>) (at \<nu>)"
-    using stimes_case IH1 IH2 by (auto)
+    using stimes_case IH1 IH2 dfree.cases by fastforce
+  next
+    fix x1
+    show "dfree ($' x1) \<Longrightarrow> (sterm_sem I ($' x1) has_derivative frechet I ($' x1) \<nu>) (at \<nu>)"
+    using dfree_vac1 by (auto)
+  next
+    fix x1
+    assume IH:"(dfree x1 \<Longrightarrow> (sterm_sem I x1 has_derivative frechet I x1 \<nu>) (at \<nu>))"
+    show "dfree (Differential x1) \<Longrightarrow> (sterm_sem I (Differential x1) has_derivative frechet I (Differential x1) \<nu>) (at \<nu>)"
+    using dfree_vac2 by (auto)
   qed                                 
 
 section \<open>Prerequisites for Substitution\<close>
@@ -823,7 +847,7 @@ definition CE_holds :: "id \<Rightarrow> formula \<Rightarrow> formula \<Rightar
     \<longrightarrow> valid (InContext var \<phi> \<leftrightarrow> InContext var \<psi>)"
  
 definition diff_const_axiom :: "formula"
-  where "diff_const_axiom \<equiv> Equals (Differential ($s f sempty)) (Const 0)"
+  where "diff_const_axiom \<equiv> Equals (Differential ($f f sempty)) (Const 0)"
 
 theorem test_valid: "valid test_axiom"
   apply(simp only: valid_def test_axiom_def)
@@ -878,9 +902,9 @@ apply(auto simp add: singleton_def x_def)
 done
 
 lemma assign_lem1:
-"dterm_sem I (if i = finite_5.a\<^sub>1 then Var x else (Const 0)
+"dterm_sem I (if i = finite_5.a\<^sub>1 then Var x else (Const 0))
                    (vec_lambda (\<lambda>y. if x = y then Functions I f 
-  (vec_lambda (\<lambda>i. dterm_sem I (dl.empty i) \<nu>)) else  vec_nth (fst \<nu>) y), snd \<nu>))
+  (vec_lambda (\<lambda>i. dterm_sem I (dl.empty i) \<nu>)) else  vec_nth (fst \<nu>) y), snd \<nu>)
 =
  dterm_sem I (if i = finite_5.a\<^sub>1 then $f f dl.empty else (Const 0)) \<nu>
 "
@@ -1003,16 +1027,16 @@ done
   
 lemma CT_lemma:"\<And>I a b. \<forall>I. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b)) \<Longrightarrow>
              is_interp I \<Longrightarrow>
-             Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = a\<^sub>1 then \<theta> else Simply (SConst 0)) (a, b))) =
-             Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = a\<^sub>1 then \<theta>' else Simply (SConst 0)) (a, b)))"
+             Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = a\<^sub>1 then \<theta> else  (Const 0)) (a, b))) =
+             Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = a\<^sub>1 then \<theta>' else (Const 0)) (a, b)))"
 proof -
   fix I :: interp and a :: "(real, Enum.finite_5) vec" and b :: "(real, Enum.finite_5) vec"
   assume a1: "is_interp I"
   assume "\<forall>I. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b))"
-  then have "\<forall>f. dterm_sem I (if f = a\<^sub>1 then \<theta>' else Simply (SConst 0)) (a, b) = dterm_sem I (if f = a\<^sub>1 then \<theta> else Simply (SConst 0)) (a, b)"
+  then have "\<forall>f. dterm_sem I (if f = a\<^sub>1 then \<theta>' else (Const 0)) (a, b) = dterm_sem I (if f = a\<^sub>1 then \<theta> else (Const 0)) (a, b)"
     using a1 by presburger
-  then show "Functions I var (vec_lambda (\<lambda>f. dterm_sem I (if f = a\<^sub>1 then \<theta> else Simply (SConst 0)) (a, b)))
- = Functions I var (vec_lambda (\<lambda>f. dterm_sem I (if f = a\<^sub>1 then \<theta>' else Simply (SConst 0)) (a, b)))"
+  then show "Functions I var (vec_lambda (\<lambda>f. dterm_sem I (if f = a\<^sub>1 then \<theta> else (Const 0)) (a, b)))
+ = Functions I var (vec_lambda (\<lambda>f. dterm_sem I (if f = a\<^sub>1 then \<theta>' else (Const 0)) (a, b)))"
     by presburger
 qed
 
