@@ -765,11 +765,70 @@ where "Iagree I J V \<equiv>
       \<and> (Predicationals I i = Predicationals J i)
       \<and> (Programs I i = Programs J i))"
 
-definition Vagree :: "state \<Rightarrow> state \<Rightarrow> id set \<Rightarrow> bool"
+definition Vagree :: "state \<Rightarrow> state \<Rightarrow> (id + id) set \<Rightarrow> bool"
 where "Vagree \<nu> \<nu>' V \<equiv> 
-  (\<forall>i\<in>V. vec_nth(fst \<nu>) i = vec_nth(fst \<nu>') i 
-       \<and> vec_nth(snd \<nu>) i = vec_nth(snd \<nu>') i)"
+   (\<forall>i\<in>{v | i v. i = Inl v \<and> i \<in> V}. vec_nth(fst \<nu>) i = vec_nth(fst \<nu>') i)
+ \<and> (\<forall>i\<in>{v | i v. i = Inr v \<and> i \<in> V}. vec_nth(snd \<nu>) i = vec_nth(snd \<nu>') i)"
 
+lemma bound_effect_sterm:"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> sterm_sem I  \<theta> (fst \<nu>) = sterm_sem I \<theta> (fst \<nu>')"
+apply(induct "\<theta>")
+apply(auto simp add: Vagree_def)
+by (meson rangeI)
+
+lemma bound_effect_frechet:(*"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> frechet I  \<theta> (fst \<nu>) (snd \<nu>) = frechet I  \<theta> (fst \<nu>') (snd \<nu>')"*)
+  fixes I :: interp and \<nu> :: state and \<nu>'::state
+  shows "Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> frechet I  \<theta> (fst \<nu>) (snd \<nu>) = frechet I  \<theta> (fst \<nu>') (snd \<nu>')"
+proof (induct "\<theta>")
+fix x::id
+assume agree:" Vagree \<nu> \<nu>' (FVT (trm.Var x))"
+show "frechet I (trm.Var x) (fst \<nu>) (snd \<nu>) = frechet I (trm.Var x) (fst \<nu>') (snd \<nu>')" by sorry
+
+next
+fix r::real
+assume agree:"Vagree \<nu> \<nu>' (FVT (Const r))"
+show "frechet I (Const r) (fst \<nu>) (snd \<nu>) = frechet I (Const r) (fst \<nu>') (snd \<nu>')" by (auto)
+
+next
+fix var::id and args :: "(id \<Rightarrow> trm)"
+assume IH:"(\<And>arg. arg \<in> range args \<Longrightarrow> Vagree \<nu> \<nu>' (FVT arg) \<Longrightarrow> frechet I arg (fst \<nu>) (snd \<nu>) = frechet I arg (fst \<nu>') (snd \<nu>'))"
+assume agree:"Vagree \<nu> \<nu>' (FVT ($f var args))"
+show "frechet I ($f var args) (fst \<nu>) (snd \<nu>) = frechet I ($f var args) (fst \<nu>') (snd \<nu>')" by sorry
+
+next
+fix t1::trm and t2::trm
+assume IH1:"(Vagree \<nu> \<nu>' (FVT t1) \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
+assume IH2:"(Vagree \<nu> \<nu>' (FVT t2) \<Longrightarrow> frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
+show "Vagree \<nu> \<nu>' (FVT (Plus t1 t2)) \<Longrightarrow> frechet I (Plus t1 t2) (fst \<nu>) (snd \<nu>) = frechet I (Plus t1 t2) (fst \<nu>') (snd \<nu>')"
+by (smt FVT.simps(4) IH1 IH2 UnCI Vagree_def bound_effect_sterm frechet.simps(3) mem_Collect_eq)
+
+next
+fix t1::trm and t2::trm
+assume IH1:"(Vagree \<nu> \<nu>' (FVT t1) \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
+assume IH2:"(Vagree \<nu> \<nu>' (FVT t2) \<Longrightarrow> frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
+show "Vagree \<nu> \<nu>' (FVT (Times t1 t2)) \<Longrightarrow> frechet I (Times t1 t2) (fst \<nu>) (snd \<nu>) = frechet I (Times t1 t2) (fst \<nu>') (snd \<nu>')"
+by (smt FVT.simps(5) IH1 IH2 UnCI Vagree_def bound_effect_sterm frechet.simps(4) mem_Collect_eq)
+
+(* By contradiction*)
+next
+fix x::id
+show "Vagree \<nu> \<nu>' (FVT ($' x)) \<Longrightarrow> frechet I ($' x) (fst \<nu>) (snd \<nu>) = frechet I ($' x) (fst \<nu>') (snd \<nu>')" 
+by sorry
+
+(* By contradiction*)
+next
+fix \<theta>::trm
+assume IH:"(Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> frechet I \<theta> (fst \<nu>) (snd \<nu>) = frechet I \<theta> (fst \<nu>') (snd \<nu>'))"
+show "Vagree \<nu> \<nu>' (FVT (Differential \<theta>)) \<Longrightarrow> frechet I (Differential \<theta>) (fst \<nu>) (snd \<nu>) = frechet I (Differential \<theta>) (fst \<nu>') (snd \<nu>')"
+by sorry
+qed
+
+
+
+lemma bound_effect_dterm:"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> dterm_sem I  \<theta> \<nu> = dterm_sem I \<theta> \<nu>'"
+apply(induct "\<theta>")
+apply(auto simp add: Vagree_def)
+apply (meson rangeI)
+done
 
 subsection \<open>Axioms\<close>
 text \<open>
