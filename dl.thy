@@ -694,6 +694,11 @@ where
  | "FVT (Differential f) = (\<Union>x \<in> (FVT f). primify x)"
  | "FVT (DiffVar x) = {Inr x}"
 
+fun FVDiff :: "trm \<Rightarrow> (id + id) set"
+where "FVDiff f = (\<Union>x \<in> (FVT f). primify x)"
+
+lemma FVDiff_sub:"FVT f \<subseteq> FVDiff f"
+sorry
  
 (* Free variables of an ODE includes both the bound variables and the terms *)
 fun FVODE :: "ODE \<Rightarrow> (id + id) set"
@@ -775,61 +780,121 @@ apply(induct "\<theta>")
 apply(auto simp add: Vagree_def)
 by (meson rangeI)
 
+
+lemma agree_plus1:"Vagree \<nu> \<nu>' (FVDiff (Plus t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t1)"
+sorry
+
+lemma agree_plus2:"Vagree \<nu> \<nu>' (FVDiff (Plus t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t2)"
+sorry
+
+lemma agree_times1:"Vagree \<nu> \<nu>' (FVDiff (Times t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t1)"
+sorry
+
+lemma agree_times2:"Vagree \<nu> \<nu>' (FVDiff (Times t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t2)"
+sorry
+
 lemma bound_effect_frechet:(*"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> frechet I  \<theta> (fst \<nu>) (snd \<nu>) = frechet I  \<theta> (fst \<nu>') (snd \<nu>')"*)
   fixes I :: interp and \<nu> :: state and \<nu>'::state
-  shows "Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> frechet I  \<theta> (fst \<nu>) (snd \<nu>) = frechet I  \<theta> (fst \<nu>') (snd \<nu>')"
+  shows "dfree \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff \<theta>) \<Longrightarrow> frechet I  \<theta> (fst \<nu>) (snd \<nu>) = frechet I  \<theta> (fst \<nu>') (snd \<nu>')"
 proof (induct "\<theta>")
 fix x::id
-assume agree:" Vagree \<nu> \<nu>' (FVT (trm.Var x))"
-show "frechet I (trm.Var x) (fst \<nu>) (snd \<nu>) = frechet I (trm.Var x) (fst \<nu>') (snd \<nu>')" by sorry
+assume free:"dfree (trm.Var x)"
+assume agree:" Vagree \<nu> \<nu>' (FVDiff (trm.Var x))"
+have useful:"snd \<nu> $ x = snd \<nu>' $ x" using agree Vagree_def by (auto)
+show "frechet I (trm.Var x) (fst \<nu>) (snd \<nu>) = frechet I (trm.Var x) (fst \<nu>') (snd \<nu>')" 
+using useful inner_prod_eq Cart_lambda_cong zero_vec_def Linear_Algebra.linear_0 by (auto)
+(*
+(\<And>i. (\<lambda>v. v \<bullet> (\<chi>ia. if i = ia then 1 else 0)) = (\<lambda>v. v $ i))
+ \<Longrightarrow> (\<And>f g. (\<And>x. f x = g x) \<Longrightarrow> vec_lambda f = vec_lambda g) 
+ \<Longrightarrow> 0 \<equiv> \<chi>i. 0 
+ \<Longrightarrow> (\<And>f. linear f \<Longrightarrow> f 0 = 0) 
+ \<Longrightarrow> snd \<nu> $ x = snd \<nu>' $ x
+*)
+
 
 next
 fix r::real
-assume agree:"Vagree \<nu> \<nu>' (FVT (Const r))"
-show "frechet I (Const r) (fst \<nu>) (snd \<nu>) = frechet I (Const r) (fst \<nu>') (snd \<nu>')" by (auto)
+assume agree:"Vagree \<nu> \<nu>' (FVDiff (Const r))"
+show "dfree (Const r) \<Longrightarrow> frechet I (Const r) (fst \<nu>) (snd \<nu>) = frechet I (Const r) (fst \<nu>') (snd \<nu>')" by (auto)
 
 next
 fix var::id and args :: "(id \<Rightarrow> trm)"
-assume IH:"(\<And>arg. arg \<in> range args \<Longrightarrow> Vagree \<nu> \<nu>' (FVT arg) \<Longrightarrow> frechet I arg (fst \<nu>) (snd \<nu>) = frechet I arg (fst \<nu>') (snd \<nu>'))"
-assume agree:"Vagree \<nu> \<nu>' (FVT ($f var args))"
-show "frechet I ($f var args) (fst \<nu>) (snd \<nu>) = frechet I ($f var args) (fst \<nu>') (snd \<nu>')" by sorry
+assume IH:"(\<And>arg. arg \<in> range args \<Longrightarrow> dfree arg \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff arg) \<Longrightarrow> frechet I arg (fst \<nu>) (snd \<nu>) = frechet I arg (fst \<nu>') (snd \<nu>'))"
+assume agree:"Vagree \<nu> \<nu>' (FVDiff ($f var args))"
+show "dfree ($f var args) \<Longrightarrow> frechet I ($f var args) (fst \<nu>) (snd \<nu>) = frechet I ($f var args) (fst \<nu>') (snd \<nu>')" 
+by sorry
 
+(* smt chokes on the full IH, so simplify things a bit first *)
 next
 fix t1::trm and t2::trm
-assume IH1:"(Vagree \<nu> \<nu>' (FVT t1) \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
-assume IH2:"(Vagree \<nu> \<nu>' (FVT t2) \<Longrightarrow> frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
-show "Vagree \<nu> \<nu>' (FVT (Plus t1 t2)) \<Longrightarrow> frechet I (Plus t1 t2) (fst \<nu>) (snd \<nu>) = frechet I (Plus t1 t2) (fst \<nu>') (snd \<nu>')"
-by (smt FVT.simps(4) IH1 IH2 UnCI Vagree_def bound_effect_sterm frechet.simps(3) mem_Collect_eq)
+assume IH1:"(dfree t1 \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t1) \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
+assume IH2:"(dfree t2 \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t2) \<Longrightarrow> frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
+assume dfree:"dfree (Plus t1 t2)"
+have dfree1:"dfree t1" 
+using dfree dfree.cases trm.distinct(15) trm.distinct(23) trm.distinct(31) trm.distinct(5) trm.inject(4) by blast
+have dfree2:"dfree t2" 
+using dfree dfree.cases trm.distinct(15) trm.distinct(23) trm.distinct(31) trm.distinct(5) trm.inject(4) by blast
+have IH1':"(Vagree \<nu> \<nu>' (FVDiff t1) \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
+using IH1 dfree1 by (auto)
+have IH2':"(Vagree \<nu> \<nu>' (FVDiff t2) \<Longrightarrow> frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
+using IH2 dfree2 by (auto)
+assume agree:"Vagree \<nu> \<nu>' (FVDiff (Plus t1 t2))"
+have agree1:"Vagree \<nu> \<nu>' (FVDiff t1)" using agree agree_plus1 by (auto)
+have agree2:"Vagree \<nu> \<nu>' (FVDiff t2)" using agree agree_plus2 by (auto)
+have IH1'':"(frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
+using IH1' agree1 by (auto)
+have IH2'':"(frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
+using IH2' agree2 by (auto)
+show "frechet I (Plus t1 t2) (fst \<nu>) (snd \<nu>) = frechet I (Plus t1 t2) (fst \<nu>') (snd \<nu>')"
+by (smt FVT.simps(4) IH1'' IH2'' UnCI Vagree_def bound_effect_sterm frechet.simps(3) mem_Collect_eq)
 
+(* smt chokes on the full IH, so simplify things a bit first *)
 next
 fix t1::trm and t2::trm
-assume IH1:"(Vagree \<nu> \<nu>' (FVT t1) \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
-assume IH2:"(Vagree \<nu> \<nu>' (FVT t2) \<Longrightarrow> frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
-show "Vagree \<nu> \<nu>' (FVT (Times t1 t2)) \<Longrightarrow> frechet I (Times t1 t2) (fst \<nu>) (snd \<nu>) = frechet I (Times t1 t2) (fst \<nu>') (snd \<nu>')"
-by (smt FVT.simps(5) IH1 IH2 UnCI Vagree_def bound_effect_sterm frechet.simps(4) mem_Collect_eq)
+assume IH1:"(dfree t1 \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t1) \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
+assume IH2:"(dfree t2 \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t2) \<Longrightarrow> frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
+assume dfree:"dfree (Times t1 t2)"
+have dfree1:"dfree t1" 
+using dfree dfree.cases trm.distinct(15) trm.distinct(23) trm.distinct(31) trm.distinct(5) trm.inject(4) by blast
+have dfree2:"dfree t2" 
+using dfree dfree.cases trm.distinct(15) trm.distinct(23) trm.distinct(31) trm.distinct(5) trm.inject(4) by blast
+have IH1':"(Vagree \<nu> \<nu>' (FVDiff t1) \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
+using IH1 dfree1 by (auto)
+have IH2':"(Vagree \<nu> \<nu>' (FVDiff t2) \<Longrightarrow> frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
+using IH2 dfree2 by (auto)
+assume agree:"Vagree \<nu> \<nu>' (FVDiff (Times t1 t2))"
+have agree1:"Vagree \<nu> \<nu>' (FVDiff t1)" using agree agree_times1 by (auto)
+have agree2:"Vagree \<nu> \<nu>' (FVDiff t2)" using agree agree_times2 by (auto)
+have IH1'':"(frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
+using IH1' agree1 by (auto)
+have IH2'':"(frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
+using IH2' agree2 by (auto)
+have almost:"Vagree \<nu> \<nu>' (FVT (Times t1 t2)) \<Longrightarrow> frechet I (Times t1 t2) (fst \<nu>) (snd \<nu>) = frechet I (Times t1 t2) (fst \<nu>') (snd \<nu>')"
+by (smt FVT.simps(5) IH1'' IH2'' UnCI Vagree_def bound_effect_sterm frechet.simps(4)  mem_Collect_eq agree )
+show "frechet I (Times t1 t2) (fst \<nu>) (snd \<nu>) = frechet I (Times t1 t2) (fst \<nu>') (snd \<nu>')" 
+using agree FVDiff_sub almost by (simp add: Vagree_def subset_eq)
 
 (* By contradiction*)
 next
 fix x::id
-show "Vagree \<nu> \<nu>' (FVT ($' x)) \<Longrightarrow> frechet I ($' x) (fst \<nu>) (snd \<nu>) = frechet I ($' x) (fst \<nu>') (snd \<nu>')" 
-by sorry
+show "dfree ($' x) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff ($' x)) \<Longrightarrow> frechet I ($' x) (fst \<nu>) (snd \<nu>) = frechet I ($' x) (fst \<nu>') (snd \<nu>')" 
+using dfree_vac1 by (auto)
 
 (* By contradiction*)
 next
 fix \<theta>::trm
-assume IH:"(Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> frechet I \<theta> (fst \<nu>) (snd \<nu>) = frechet I \<theta> (fst \<nu>') (snd \<nu>'))"
-show "Vagree \<nu> \<nu>' (FVT (Differential \<theta>)) \<Longrightarrow> frechet I (Differential \<theta>) (fst \<nu>) (snd \<nu>) = frechet I (Differential \<theta>) (fst \<nu>') (snd \<nu>')"
-by sorry
+assume IH:"(dfree \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff \<theta>) \<Longrightarrow> frechet I \<theta> (fst \<nu>) (snd \<nu>) = frechet I \<theta> (fst \<nu>') (snd \<nu>'))"
+show "dfree (Differential \<theta>) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff (Differential \<theta>)) \<Longrightarrow> frechet I (Differential \<theta>) (fst \<nu>) (snd \<nu>) = frechet I (Differential \<theta>) (fst \<nu>') (snd \<nu>')"
+using dfree_vac2 by (auto)
 qed
 
-
-
-lemma bound_effect_dterm:"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> dterm_sem I  \<theta> \<nu> = dterm_sem I \<theta> \<nu>'"
+(*
+lemma bound_effect_dterm:"dsafe \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> dterm_sem I  \<theta> \<nu> = dterm_sem I \<theta> \<nu>'"
 apply(induct "\<theta>")
-apply(auto simp add: Vagree_def)
-apply (meson rangeI)
+apply(auto simp add: Vagree_def bound_effect_frechet dfree_is_dsafe)
+apply (meson rangeI bound_effect_frechet dfree_is_dsafe)
 done
-
+*)
 subsection \<open>Axioms\<close>
 text \<open>
   The uniform substitution calculus is based on a finite list of concrete 
