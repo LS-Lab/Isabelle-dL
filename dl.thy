@@ -193,17 +193,6 @@ record interp =
 definition is_interp :: "interp \<Rightarrow> bool"
   where "is_interp I \<equiv> 
     \<forall>x. \<forall>i. (FDERIV (Functions I i) x :> (FunctionFrechet I i x))"
-(*
-inductive trm_sem :: "interp \<Rightarrow> trm \<Rightarrow> state \<Rightarrow> real \<Rightarrow> bool"
-where
-  | "trm_sem I (SFunction f args) v = 
-    Functions I f (vec_lambda (\<lambda>i. sterm_sem I (args i) v))"
-  | "sterm_sem I (SPlus t1 t2) v = 
-    (sterm_sem I t1 v) + (sterm_sem I t2 v)"
-  | "sterm_sem I (STimes t1 t2) v =                     
-    (sterm_sem I t1 v) * (sterm_sem I t2 v)"
-  | "sterm_sem I (SConst r) v = r"
-**)
 
 (* sterm_sem is the term sem for differential-free terms. *)
 primrec sterm_sem :: "interp \<Rightarrow> trm \<Rightarrow> simple_state \<Rightarrow> real"
@@ -734,7 +723,52 @@ where
  | "FVP (Choice \<alpha> \<beta>) = FVP \<alpha> \<union> FVP \<beta>"
  | "FVP (Sequence \<alpha> \<beta>) = (FVP \<alpha> \<union> FVP \<beta>) - (MBV \<alpha>)"
  | "FVP (Loop \<alpha>) = FVP \<alpha>"
- 
+
+primrec SIGT :: "trm \<Rightarrow> id set"
+where
+  "SIGT (Var var) = {}"
+| "SIGT (Const r) = {}"
+| "SIGT (Function var f) = {var} \<union> (\<Union>i. SIGT (f i))"
+| "SIGT (Plus t1 t2) = SIGT t1 \<union> SIGT t2"
+| "SIGT (Times t1 t2) = SIGT t1 \<union> SIGT t2"
+| "SIGT (DiffVar x) = {}"
+| "SIGT (Differential t) = SIGT t"
+   
+primrec SIGP   :: "hp      \<Rightarrow> id set"
+and     SIGF   :: "formula \<Rightarrow> id set"
+where
+  "SIGP (Pvar var) = {}"
+| "SIGP (Assign var t) = SIGT t"
+| "SIGP (DiffAssign var t) = SIGT t"
+| "SIGP (Test p) = SIGF p"
+| "SIGP (EvolveODE ODE p) = SIGF p \<union> (\<Union>i. (case ODE i of None \<Rightarrow> {} | Some t \<Rightarrow> SIGT t))"
+| "SIGP (Choice a b) = SIGP a \<union> SIGP b"
+| "SIGP (Sequence a b) = SIGP a \<union> SIGP b" 
+| "SIGP (Loop a) = SIGP a"
+| "SIGF (Geq t1 t2) = SIGT t1 \<union> SIGT t2"
+| "SIGF (Prop var args) = {var} \<union> (\<Union>i. SIGT (args i))"
+| "SIGF (Not p) = SIGF p"
+| "SIGF (And p1 p2) = SIGF p1 \<union> SIGF p2"
+| "SIGF (Forall var p) = SIGF p"
+| "SIGF (Box a p) = SIGP a \<union> SIGF p"
+| "SIGF (DiffFormula p) = SIGF p"
+| "SIGF (InContext var p) = {var} \<union> SIGF p"
+| "SIGF (Predicational var) = {var}"
+
+(* TODO: Distinguish identifiers for functions, predicates, etc*)
+definition Iagree :: "interp \<Rightarrow> interp \<Rightarrow> id set \<Rightarrow> bool"
+where "Iagree I J V \<equiv> 
+  (\<forall>i\<in>V.(Functions I i = Functions J i) 
+      \<and> (FunctionFrechet I i = FunctionFrechet J i) 
+      \<and> (Predicates I i = Predicates J i)
+      \<and> (Contexts I i = Contexts J i)
+      \<and> (Predicationals I i = Predicationals J i)
+      \<and> (Programs I i = Programs J i))"
+
+definition Vagree :: "state \<Rightarrow> state \<Rightarrow> id set \<Rightarrow> bool"
+where "Vagree \<nu> \<nu>' V \<equiv> 
+  (\<forall>i\<in>V. vec_nth(fst \<nu>) i = vec_nth(fst \<nu>') i 
+       \<and> vec_nth(snd \<nu>) i = vec_nth(snd \<nu>') i)"
 
 
 subsection \<open>Axioms\<close>
