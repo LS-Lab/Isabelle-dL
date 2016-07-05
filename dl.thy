@@ -803,26 +803,36 @@ assume agree:" Vagree \<nu> \<nu>' (FVDiff (trm.Var x))"
 have useful:"snd \<nu> $ x = snd \<nu>' $ x" using agree Vagree_def by (auto)
 show "frechet I (trm.Var x) (fst \<nu>) (snd \<nu>) = frechet I (trm.Var x) (fst \<nu>') (snd \<nu>')" 
 using useful inner_prod_eq Cart_lambda_cong zero_vec_def Linear_Algebra.linear_0 by (auto)
-(*
-(\<And>i. (\<lambda>v. v \<bullet> (\<chi>ia. if i = ia then 1 else 0)) = (\<lambda>v. v $ i))
- \<Longrightarrow> (\<And>f g. (\<And>x. f x = g x) \<Longrightarrow> vec_lambda f = vec_lambda g) 
- \<Longrightarrow> 0 \<equiv> \<chi>i. 0 
- \<Longrightarrow> (\<And>f. linear f \<Longrightarrow> f 0 = 0) 
- \<Longrightarrow> snd \<nu> $ x = snd \<nu>' $ x
-*)
-
 
 next
 fix r::real
 assume agree:"Vagree \<nu> \<nu>' (FVDiff (Const r))"
 show "dfree (Const r) \<Longrightarrow> frechet I (Const r) (fst \<nu>) (snd \<nu>) = frechet I (Const r) (fst \<nu>') (snd \<nu>')" by (auto)
+(* *)
 
 next
 fix var::id and args :: "(id \<Rightarrow> trm)"
 assume IH:"(\<And>arg. arg \<in> range args \<Longrightarrow> dfree arg \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff arg) \<Longrightarrow> frechet I arg (fst \<nu>) (snd \<nu>) = frechet I arg (fst \<nu>') (snd \<nu>'))"
+assume free:"dfree ($f var args)"
+have frees:"(\<And>i. dfree (args i))" using free by (metis dfree.cases rangeI trm.distinct(13) trm.distinct(23) trm.distinct(25) trm.distinct(4) trm.inject(3))
 assume agree:"Vagree \<nu> \<nu>' (FVDiff ($f var args))"
-show "dfree ($f var args) \<Longrightarrow> frechet I ($f var args) (fst \<nu>) (snd \<nu>) = frechet I ($f var args) (fst \<nu>') (snd \<nu>')" 
-by sorry
+have agrees:"\<And>i. Vagree \<nu> \<nu>' (FVDiff (args i))" using agree by sledgehammer
+have sterms:"\<And>i. sterm_sem I (args i) (fst \<nu>) = sterm_sem I (args i) (fst \<nu>')" using frees agrees bound_effect_sterm by (smt FVDiff_sub Vagree_def mem_Collect_eq subset_eq)
+have frechets:"\<And>i. frechet I (args i) (fst \<nu>) (snd \<nu>) = frechet I (args i) (fst \<nu>') (snd \<nu>')"  using IH agrees frees rangeI by blast
+
+show "frechet I ($f var args) (fst \<nu>) (snd \<nu>) = frechet I ($f var args) (fst \<nu>') (snd \<nu>')" 
+using agrees sterms frechets by (auto)
+(*
+ dfree ($f var args) \<Longrightarrow>
+ FunctionFrechet I var (\<chi>i. sterm_sem I (args i) (fst \<nu>))  (\<chi>i. frechet I (args i) (fst \<nu>) (snd \<nu>)) =
+ FunctionFrechet I var (\<chi>i. sterm_sem I (args i) (fst \<nu>')) (\<chi>i. frechet I (args i) (fst \<nu>') (snd \<nu>'))
+
+STS 
+  sterm_sem I (args i) (fst \<nu>) = sterm_sem I (args i) (fst \<nu>') (by sterm_bound_effect, applies b/c def of FV(f args))
+AND
+  frechet I (args i) (fst \<nu>) (snd \<nu>) = frechet I (args i) (fst \<nu>') (snd \<nu>')  (by IH, applies b/c args i \in range args and b/c def of FV(f args))
+*)
+
 
 (* smt chokes on the full IH, so simplify things a bit first *)
 next
