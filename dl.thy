@@ -697,8 +697,14 @@ where
 fun FVDiff :: "trm \<Rightarrow> (id + id) set"
 where "FVDiff f = (\<Union>x \<in> (FVT f). primify x)"
 
+lemma primify_contains:"x \<in> primify x"
+apply(cases "x")
+apply(auto)
+done
+
 lemma FVDiff_sub:"FVT f \<subseteq> FVDiff f"
-sorry
+apply (auto simp add:  primify_contains)
+done
  
 (* Free variables of an ODE includes both the bound variables and the terms *)
 fun FVODE :: "ODE \<Rightarrow> (id + id) set"
@@ -781,19 +787,93 @@ apply(auto simp add: Vagree_def)
 by (meson rangeI)
 
 
+(* 
+fun primify :: "(id + id) \<Rightarrow> (id + id) set"
+ where
+   "primify (Inl x) = {Inl x, Inr x}"
+ | "primify (Inr x) = {Inl x, Inr x}"
+
+fun FVDiff :: "trm \<Rightarrow> (id + id) set"
+where "FVDiff f = (\<Union>x \<in> (FVT f). primify x)"
+
+ | "FVT (Function f args) = (\<Union>i. FVT (args i))"
+ | "FVT (Plus f g) = FVT f \<union> FVT g"
+ | "FVT (Times f g) = FVT f \<union> FVT g"
+
+(*
+ | "FVT (Function f args) = (\<Union>i. FVT (args i))"
+ | "FVT (Plus f g) = FVT f \<union> FVT g"
+ | "FVT (Times f g) = FVT f \<union> FVT g"
+*)
+*)
+
+lemma agree_supset:"A \<supseteq> B \<Longrightarrow> Vagree \<nu> \<nu>' A \<Longrightarrow> Vagree \<nu> \<nu>' B"
+apply(auto simp add: Vagree_def)
+done
+
+lemma union_supset1:"A \<union> B \<supseteq> A"
+apply(auto)
+done
+
+lemma fvdiff_plus1:"FVDiff (Plus t1 t2) = FVDiff t1 \<union> FVDiff t2"
+apply (auto)
+done
+
 lemma agree_plus1:"Vagree \<nu> \<nu>' (FVDiff (Plus t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t1)"
-sorry
+proof -
+  assume agree:"Vagree \<nu> \<nu>' (FVDiff (Plus t1 t2))"
+  have agree':"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i) \<union> (\<Union>i\<in>FVT t2. primify i))"
+  using fvdiff_plus1 FVDiff.simps agree by (auto)
+  have agreeL:"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i))"
+  using agree' agree_supset union_supset1 by (blast)
+  show "Vagree \<nu> \<nu>' (FVDiff t1)" using agreeL by (auto)
+qed
 
 lemma agree_plus2:"Vagree \<nu> \<nu>' (FVDiff (Plus t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t2)"
-sorry
+proof -
+  assume agree:"Vagree \<nu> \<nu>' (FVDiff (Plus t1 t2))"
+  have agree':"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i) \<union> (\<Union>i\<in>FVT t2. primify i))"
+  using fvdiff_plus1 FVDiff.simps agree by (auto)
+  have agreeR:"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t2. primify i))"
+  using agree' agree_supset union_supset1 by (blast)
+  show "Vagree \<nu> \<nu>' (FVDiff t2)" using agreeR by (auto)
+qed
 
 lemma agree_times1:"Vagree \<nu> \<nu>' (FVDiff (Times t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t1)"
-sorry
+proof -
+  assume agree:"Vagree \<nu> \<nu>' (FVDiff (Times t1 t2))"
+  have agree':"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i) \<union> (\<Union>i\<in>FVT t2. primify i))"
+  using fvdiff_plus1 FVDiff.simps agree by (auto)
+  have agreeL:"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i))"
+  using agree' agree_supset union_supset1 by (blast)
+  show "Vagree \<nu> \<nu>' (FVDiff t1)" using agreeL by (auto)
+qed
 
 lemma agree_times2:"Vagree \<nu> \<nu>' (FVDiff (Times t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t2)"
-sorry
+proof -
+  assume agree:"Vagree \<nu> \<nu>' (FVDiff (Times t1 t2))"
+  have agree':"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i) \<union> (\<Union>i\<in>FVT t2. primify i))"
+  using fvdiff_plus1 FVDiff.simps agree by (auto)
+  have agreeR:"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t2. primify i))"
+  using agree' agree_supset union_supset1 by (blast)
+  show "Vagree \<nu> \<nu>' (FVDiff t2)" using agreeR by (auto)
+qed
 
-lemma bound_effect_frechet:(*"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> frechet I  \<theta> (fst \<nu>) (snd \<nu>) = frechet I  \<theta> (fst \<nu>') (snd \<nu>')"*)
+lemma agree_func:"Vagree \<nu> \<nu>' (FVDiff ($f var args)) \<Longrightarrow> (\<And>i. Vagree \<nu> \<nu>' (FVDiff (args i)))"
+proof -
+  assume agree:"Vagree \<nu> \<nu>' (FVDiff ($f var args))"
+  have agree':"Vagree \<nu> \<nu>' ((\<Union>i. (\<Union>j \<in>(FVT (args i)). primify j)))"
+  using fvdiff_plus1 FVDiff.simps agree by (auto)
+  fix i :: state_dim
+  have "\<And>S. \<not> S \<subseteq> (\<Union>f. UNION (FVT (args f)) primify) \<or> Vagree \<nu> \<nu>' S"
+    using agree' agree_supset by blast
+  then have "\<And>f. f \<notin> UNIV \<or> Vagree \<nu> \<nu>' (UNION (FVT (args f)) primify)"
+    by blast
+  then show "Vagree \<nu> \<nu>' (FVDiff (args i))"
+    by simp
+qed
+
+lemma bound_effect_frechet:
   fixes I :: interp and \<nu> :: state and \<nu>'::state
   shows "dfree \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff \<theta>) \<Longrightarrow> frechet I  \<theta> (fst \<nu>) (snd \<nu>) = frechet I  \<theta> (fst \<nu>') (snd \<nu>')"
 proof (induct "\<theta>")
@@ -808,7 +888,6 @@ next
 fix r::real
 assume agree:"Vagree \<nu> \<nu>' (FVDiff (Const r))"
 show "dfree (Const r) \<Longrightarrow> frechet I (Const r) (fst \<nu>) (snd \<nu>) = frechet I (Const r) (fst \<nu>') (snd \<nu>')" by (auto)
-(* *)
 
 next
 fix var::id and args :: "(id \<Rightarrow> trm)"
@@ -816,23 +895,11 @@ assume IH:"(\<And>arg. arg \<in> range args \<Longrightarrow> dfree arg \<Longri
 assume free:"dfree ($f var args)"
 have frees:"(\<And>i. dfree (args i))" using free by (metis dfree.cases rangeI trm.distinct(13) trm.distinct(23) trm.distinct(25) trm.distinct(4) trm.inject(3))
 assume agree:"Vagree \<nu> \<nu>' (FVDiff ($f var args))"
-have agrees:"\<And>i. Vagree \<nu> \<nu>' (FVDiff (args i))" using agree by sledgehammer
+have agrees:"\<And>i. Vagree \<nu> \<nu>' (FVDiff (args i))" using agree agree_func by (auto)
 have sterms:"\<And>i. sterm_sem I (args i) (fst \<nu>) = sterm_sem I (args i) (fst \<nu>')" using frees agrees bound_effect_sterm by (smt FVDiff_sub Vagree_def mem_Collect_eq subset_eq)
 have frechets:"\<And>i. frechet I (args i) (fst \<nu>) (snd \<nu>) = frechet I (args i) (fst \<nu>') (snd \<nu>')"  using IH agrees frees rangeI by blast
-
 show "frechet I ($f var args) (fst \<nu>) (snd \<nu>) = frechet I ($f var args) (fst \<nu>') (snd \<nu>')" 
 using agrees sterms frechets by (auto)
-(*
- dfree ($f var args) \<Longrightarrow>
- FunctionFrechet I var (\<chi>i. sterm_sem I (args i) (fst \<nu>))  (\<chi>i. frechet I (args i) (fst \<nu>) (snd \<nu>)) =
- FunctionFrechet I var (\<chi>i. sterm_sem I (args i) (fst \<nu>')) (\<chi>i. frechet I (args i) (fst \<nu>') (snd \<nu>'))
-
-STS 
-  sterm_sem I (args i) (fst \<nu>) = sterm_sem I (args i) (fst \<nu>') (by sterm_bound_effect, applies b/c def of FV(f args))
-AND
-  frechet I (args i) (fst \<nu>) (snd \<nu>) = frechet I (args i) (fst \<nu>') (snd \<nu>')  (by IH, applies b/c args i \in range args and b/c def of FV(f args))
-*)
-
 
 (* smt chokes on the full IH, so simplify things a bit first *)
 next
