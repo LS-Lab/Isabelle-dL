@@ -82,7 +82,7 @@ where
  |"(\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> dfree \<theta>) \<Longrightarrow> dfree (Function i args)"
  |"dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
  |"dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
- 
+
 inductive dsafe :: "trm \<Rightarrow> bool"
 where
   "dsafe (Var i)"
@@ -90,6 +90,8 @@ where
  |"(\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> dsafe \<theta>) \<Longrightarrow> dsafe (Function i args)"
  |"dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
  |"dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
+ |"dfree \<theta> \<Longrightarrow> dsafe (Differential \<theta>)"
+ |"dsafe ($' i)"
 
 lemma dfree_is_dsafe:"dfree \<theta> \<Longrightarrow> dsafe \<theta>"
 apply(induct "\<theta>")
@@ -964,6 +966,74 @@ assume IH:"(dfree \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff \<theta
 show "dfree (Differential \<theta>) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff (Differential \<theta>)) \<Longrightarrow> frechet I (Differential \<theta>) (fst \<nu>) (snd \<nu>) = frechet I (Differential \<theta>) (fst \<nu>') (snd \<nu>')"
 using dfree_vac2 by (auto)
 qed
+
+lemma bound_effect_dterm:
+  fixes I :: interp and \<nu> :: state and \<nu>'::state
+  shows "dsafe \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> dterm_sem I  \<theta> \<nu> = dterm_sem I \<theta> \<nu>'"
+proof (induct "\<theta>")
+fix x :: id
+assume safe:"dsafe (trm.Var x)"
+assume agree:"Vagree \<nu> \<nu>' (FVT (trm.Var x))"
+show "dterm_sem I (trm.Var x) \<nu> = dterm_sem I (trm.Var x) \<nu>'" using safe agree Vagree_def rangeI by (auto)
+
+next
+fix r ::real
+assume safe:"dsafe (Const r)"
+assume agree:"Vagree \<nu> \<nu>' (FVT (Const r))"
+show "dterm_sem I (Const r) \<nu> = dterm_sem I (Const r) \<nu>'" using safe agree by (auto)
+
+next
+fix f :: id and args :: "id \<Rightarrow> trm"
+assume IH:"\<And>arg. arg \<in> range args \<Longrightarrow> dsafe arg \<Longrightarrow> Vagree \<nu> \<nu>' (FVT arg) \<Longrightarrow> dterm_sem I arg \<nu> = dterm_sem I arg \<nu>'"
+assume safe:"dsafe ($f f args)"
+assume agree:"Vagree \<nu> \<nu>' (FVT ($f f args))"
+show "dterm_sem I ($f f args) \<nu> = dterm_sem I ($f f args) \<nu>'" using IH safe agree Vagree_def rangeI 
+FVT.simps UnCI agree_supset dsafe.simps dterm_sem.simps subset_eq trm.distinct  trm.inject 
+trm.simps union_supset1 Cart_lambda_cong SUP_upper imageE
+by sorry
+
+next
+fix t1 :: trm and t2 :: trm
+assume IH1:"dsafe t1 \<Longrightarrow> Vagree \<nu> \<nu>' (FVT t1) \<Longrightarrow> dterm_sem I t1 \<nu> = dterm_sem I t1 \<nu>'"
+assume IH2:"dsafe t2 \<Longrightarrow> Vagree \<nu> \<nu>' (FVT t2) \<Longrightarrow> dterm_sem I t2 \<nu> = dterm_sem I t2 \<nu>'"
+assume safe:"dsafe (Plus t1 t2)"
+assume agree:"Vagree \<nu> \<nu>' (FVT (Plus t1 t2))"
+show "dterm_sem I (Plus t1 t2) \<nu> = dterm_sem I (Plus t1 t2) \<nu>'" using IH1 IH2 safe agree Vagree_def
+by (metis FVT.simps(4) UnCI agree_supset dsafe.simps dterm_sem.simps(4) subset_eq trm.distinct(24) trm.distinct(32) trm.distinct(34) trm.inject(4) trm.simps(13) trm.simps(23) trm.simps(43) union_supset1)
+
+next
+fix t1 :: trm and t2 :: trm
+assume IH1:"dsafe t1 \<Longrightarrow> Vagree \<nu> \<nu>' (FVT t1) \<Longrightarrow> dterm_sem I t1 \<nu> = dterm_sem I t1 \<nu>'"
+assume IH2:"dsafe t2 \<Longrightarrow> Vagree \<nu> \<nu>' (FVT t2) \<Longrightarrow> dterm_sem I t2 \<nu> = dterm_sem I t2 \<nu>'"
+assume safe:"dsafe (Times t1 t2)"
+assume agree:"Vagree \<nu> \<nu>' (FVT (Times t1 t2))"
+show "dterm_sem I (Times t1 t2) \<nu> = dterm_sem I (Times t1 t2) \<nu>'" 
+using IH1 IH2 safe agree Vagree_def
+by (metis agree_supset subset_eq union_supset1 UnCI FVT.simps(5)  dsafe.simps  dterm_sem.simps(5)  trm.distinct(32)  trm.distinct(37)  trm.distinct(26)  trm.inject(5)  trm.simps(15) trm.simps(25) trm.simps(46))
+
+next
+fix x :: id
+assume safe:"dsafe ($' x)"
+assume agree:"Vagree \<nu> \<nu>' (FVT ($' x))"
+show "dterm_sem I ($' x) \<nu> = dterm_sem I ($' x) \<nu>'" using safe agree Vagree_def rangeI 
+by (simp)
+
+next
+fix t :: trm
+assume IH:"dsafe t \<Longrightarrow> Vagree \<nu> \<nu>' (FVT t) \<Longrightarrow> dterm_sem I t \<nu> = dterm_sem I t \<nu>'"
+assume safe:"dsafe (Differential t)"
+assume agree:"Vagree \<nu> \<nu>' (FVT (Differential t))"
+have free:"dfree t" using safe dsafe.cases by (auto)
+show "dterm_sem I (Differential t) \<nu> = dterm_sem I (Differential t) \<nu>'"
+using IH safe agree bound_effect_frechet free by (auto)
+qed
+
+(* 
+
+ 6. \<And>x. dsafe ($' x) \<Longrightarrow> Vagree \<nu> \<nu>' (FVT ($' x)) \<Longrightarrow> dterm_sem I ($' x) \<nu> = dterm_sem I ($' x) \<nu>'
+ 7. \<And>\<theta>. (dsafe \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta> \<nu>') \<Longrightarrow>
+         dsafe (Differential \<theta>) \<Longrightarrow> Vagree \<nu> \<nu>' (FVT (Differential \<theta>)) \<Longrightarrow> dterm_sem I (Differential \<theta>) \<nu> = dterm_sem I (Differential \<theta>) \<nu>'
+*)
 
 (*
 lemma bound_effect_dterm:"dsafe \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> dterm_sem I  \<theta> \<nu> = dterm_sem I \<theta> \<nu>'"
