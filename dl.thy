@@ -821,6 +821,10 @@ lemma fvdiff_plus1:"FVDiff (Plus t1 t2) = FVDiff t1 \<union> FVDiff t2"
 apply (auto)
 done
 
+lemma agree_func_fvt:"Vagree \<nu> \<nu>' (FVT (Function f args)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVT (args i))"
+apply(auto simp add: union_supset1 agree_supset Vagree_def)
+done
+
 lemma agree_plus1:"Vagree \<nu> \<nu>' (FVDiff (Plus t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t1)"
 proof -
   assume agree:"Vagree \<nu> \<nu>' (FVDiff (Plus t1 t2))"
@@ -874,6 +878,7 @@ proof -
   then show "Vagree \<nu> \<nu>' (FVDiff (args i))"
     by simp
 qed
+
 
 lemma bound_effect_frechet:
   fixes I :: interp and \<nu> :: state and \<nu>'::state
@@ -987,10 +992,14 @@ fix f :: id and args :: "id \<Rightarrow> trm"
 assume IH:"\<And>arg. arg \<in> range args \<Longrightarrow> dsafe arg \<Longrightarrow> Vagree \<nu> \<nu>' (FVT arg) \<Longrightarrow> dterm_sem I arg \<nu> = dterm_sem I arg \<nu>'"
 assume safe:"dsafe ($f f args)"
 assume agree:"Vagree \<nu> \<nu>' (FVT ($f f args))"
-show "dterm_sem I ($f f args) \<nu> = dterm_sem I ($f f args) \<nu>'" using IH safe agree Vagree_def rangeI 
-FVT.simps UnCI agree_supset dsafe.simps dterm_sem.simps subset_eq trm.distinct  trm.inject 
-trm.simps union_supset1 Cart_lambda_cong SUP_upper imageE
-by sorry
+have safes:"(\<And>i. dsafe (args i))" 
+using safe dsafe.simps rangeI trm.distinct(13) trm.distinct(23) trm.distinct(25) trm.distinct(27) trm.distinct(29) trm.distinct(3) trm.inject(3) by blast
+have agrees:"\<And>i. Vagree \<nu> \<nu>' (FVT (args i))" 
+using agree agree_func_fvt by (auto)
+have dterms:"\<And>i. dterm_sem I (args i) \<nu> = dterm_sem I (args i) \<nu>'" 
+using safes agrees bound_effect_sterm IH rangeI by (simp)
+show "dterm_sem I ($f f args) \<nu> = dterm_sem I ($f f args) \<nu>'" 
+using dterms by (auto)
 
 next
 fix t1 :: trm and t2 :: trm
