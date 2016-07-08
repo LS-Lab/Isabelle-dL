@@ -624,16 +624,23 @@ lemma frechet_correctness:
     have free2:"dfree x2a" using free splus_case dfree.cases by (blast)
     have sem1:"(sterm_sem I x1 has_derivative frechet I x1 \<nu>) (at \<nu>)" using IH1 free1 by (auto)
     have sem2:"(sterm_sem I x2a has_derivative frechet I x2a \<nu>) (at \<nu>)" using IH2 free2 by (auto)
+    have obvious:"sterm_sem I (Plus x1 x2a) = (\<lambda>\<nu>. sterm_sem I x1 \<nu> + sterm_sem I x2a \<nu>)" by (auto)
     show "(sterm_sem I (Plus x1 x2a) has_derivative 
           frechet I (Plus x1 x2a) \<nu>) (at \<nu>)"
-      using splus_case dfree.cases sem1 sem2 sterm_sem.simps frechet.simps IH1 IH2 free1 free2 sledgehammer
+      using splus_case dfree.cases sem1 sem2 sterm_sem.simps obvious by(auto)
   next
     fix x1 x2a
     assume IH1:"dfree x1 \<Longrightarrow> (sterm_sem I x1 has_derivative frechet I x1 \<nu>) (at \<nu>)"
     assume IH2:"dfree x2a \<Longrightarrow> (sterm_sem I x2a has_derivative frechet I x2a \<nu>) (at \<nu>)"
-    show "dfree (Times x1 x2a) \<Longrightarrow> (sterm_sem I (Times x1 x2a) has_derivative 
+    assume free:"dfree (Times x1 x2a)"
+    have free1:"dfree x1" using free splus_case dfree.cases by (blast)
+    have free2:"dfree x2a" using free splus_case dfree.cases by (blast)
+    have sem1:"(sterm_sem I x1 has_derivative frechet I x1 \<nu>) (at \<nu>)" using IH1 free1 by (auto)
+    have sem2:"(sterm_sem I x2a has_derivative frechet I x2a \<nu>) (at \<nu>)" using IH2 free2 by (auto)
+    have obvious:"sterm_sem I (Times x1 x2a) = (\<lambda>\<nu>. sterm_sem I x1 \<nu> * sterm_sem I x2a \<nu>)" by (auto)
+    show "(sterm_sem I (Times x1 x2a) has_derivative 
            frechet I (Times x1 x2a) \<nu>) (at \<nu>)"
-    using stimes_case IH1 IH2 dfree.cases by (auto)
+    using stimes_case IH1 IH2 sem1 sem2 dfree.cases obvious by(auto)
   next
     fix x1
     show "dfree ($' x1) \<Longrightarrow> (sterm_sem I ($' x1) has_derivative frechet I ($' x1) \<nu>) (at \<nu>)"
@@ -870,7 +877,7 @@ qed
 
 
 lemma  bound_effect_frechet :
-  fixes I :: "'state_dim::finite interp" and \<nu> :: "'state_dim state" and \<nu>'::"'state_dim state"
+  fixes I :: "'state_dim interp" and \<nu> :: "'state_dim state" and \<nu>'::"'state_dim state"
   shows "dfree \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff \<theta>) \<Longrightarrow> frechet I  \<theta> (fst \<nu>) (snd \<nu>) = frechet I  \<theta> (fst \<nu>') (snd \<nu>')"
 proof (induct "\<theta>")
 fix x::'state_dim
