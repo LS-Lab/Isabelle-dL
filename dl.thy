@@ -844,7 +844,7 @@ qed
 lemma agree_times1:"Vagree \<nu> \<nu>' (FVDiff (Times t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t1)"
 proof -
   assume agree:"Vagree \<nu> \<nu>' (FVDiff (Times t1 t2))"
-  have agree':"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i) \<union> (\<Union>i\<in>FVT t2. primify i))"
+  have agree':"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i) \<union> https://www.linkedin.com/comm/jobs2/view/153894609?refId=c3016259-ef01-424e-a7de-4a37f4e6da73&trk=eml-jymbii-organic-job-card&midToken=AQGkjSR_7WOedg&trkEmail=eml-jobs_jymbii_digest-null-52-null-null-5s3iu5~iqe679ul~6n(\<Union>i\<in>FVT t2. primify i))"
   using fvdiff_plus1 FVDiff.simps agree by (auto)
   have agreeL:"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i))"
   using agree' agree_supset union_supset1 by (blast)
@@ -875,6 +875,34 @@ proof -
     by simp
 qed
 
+lemma sum_unique_nonzero:
+ fixes i::"'state_dim::finite" and f::"'state_dim \<Rightarrow> real"
+ assumes restZero:"\<And>j. j\<in>(UNIV::'state_dim set) \<Longrightarrow> j \<noteq> i \<Longrightarrow> f j = 0" 
+ shows "(\<Sum>j\<in>(UNIV::'state_dim set). f j) = f i"
+ proof -
+   let ?U = "UNIV :: 'state_dim set"
+   let ?A = "{k \<in> ?U. k = i}"
+   let ?B = "{k \<in> ?U. \<not>(k = i)}"
+   have finA:"finite ?A" by auto
+   have finB:"finite ?B" by auto
+   have emptyInter: "?A \<inter> ?B = {}" by auto
+   from emptyInter 
+   have zeroInter:"(\<Sum>j \<in> (?A \<inter> ?B). f j) = 0" 
+   by (auto)
+   have union_univ:"?U = ?A \<union> ?B " by (auto)
+   from union_univ
+   have partition:"(\<Sum>j \<in> ?U. (f j)) = (\<Sum>j \<in> ?A \<union> ?B. (f j))"
+   by (auto)
+   from finA finB
+   have union_sum:"(\<Sum>j \<in> ?A \<union> ?B. (f j)) = 
+     (\<Sum>j \<in> ?A. (f j)) + (\<Sum>j \<in> ?B. (f j)) - (\<Sum>j \<in> (?A \<inter> ?B). (f j))"
+   by (rule setsum_Un)
+   from restZero
+   have Bzero:"(\<Sum>j \<in> ?B. (f j)) = 0" by (auto)
+   have Asingle:"(\<Sum>j \<in> ?A. (f j)) = f i" by (auto)
+   from partition union_sum zeroInter Bzero Asingle 
+   show ?thesis by auto
+ qed
 
 lemma  bound_effect_frechet :
   fixes I :: "'state_dim interp" and \<nu> :: "'state_dim state" and \<nu>'::"'state_dim state"
@@ -882,10 +910,15 @@ lemma  bound_effect_frechet :
 proof (induct "\<theta>")
 fix x::'state_dim
 assume free:"dfree (trm.Var x)"
-assume agree:" Vagree \<nu> \<nu>' (FVDiff (trm.Var x))"
-have useful:"snd \<nu> $ x = snd \<nu>' $ x" using agree Vagree_def by (auto)
+assume agree:"Vagree \<nu> \<nu>' (FVDiff (trm.Var x))"
+have agree':"
+   (\<forall>i\<in>{v | i v. i = Inl v \<and> i \<in> (FVDiff (trm.Var x))}. vec_nth(fst \<nu>) i = vec_nth(fst \<nu>') i)
+ \<and> (\<forall>i\<in>{v | i v. i = Inr v \<and> i \<in> (FVDiff (trm.Var x))}. vec_nth(snd \<nu>) i = vec_nth(snd \<nu>') i)"
+using agree Vagree_def by metis
+have useful:"snd \<nu> $ x = snd \<nu>' $ x" using agree' Vagree_def by (auto)
 show "frechet I (trm.Var x) (fst \<nu>) (snd \<nu>) = frechet I (trm.Var x) (fst \<nu>') (snd \<nu>')" 
-using useful inner_prod_eq Cart_lambda_cong zero_vec_def Linear_Algebra.linear_0 by (auto)
+using sum_unique_nonzero useful inner_prod_eq pointed_finite.frechet.simps(1) pointed_finite.inner_prod_eq useful
+by (metis (no_types))
 
 next
 fix r::real
@@ -991,7 +1024,8 @@ assume IH:"\<And>arg. arg \<in> range args \<Longrightarrow> dsafe arg \<Longrig
 assume safe:"dsafe ($f f args)"
 assume agree:"Vagree \<nu> \<nu>' (FVT ($f f args))"
 have safes:"(\<And>i. dsafe (args i))" 
-using safe dsafe.simps rangeI trm.distinct(13) trm.distinct(23) trm.distinct(25) trm.distinct(27) trm.distinct(29) trm.distinct(3) trm.inject(3) by blast
+using safe dsafe.simps rangeI trm.distinct(13) trm.distinct(23) trm.distinct(25) trm.distinct(27) trm.distinct(29) trm.distinct(3) trm.inject(3) 
+by (metis (no_types, lifting))
 have agrees:"\<And>i. Vagree \<nu> \<nu>' (FVT (args i))" 
 using agree agree_func_fvt by (blast)
 have dterms:"\<And>i. dterm_sem I (args i) \<nu> = dterm_sem I (args i) \<nu>'" 
@@ -1413,35 +1447,5 @@ theorem diff_const_axiom_valid: "valid diff_const_axiom"
         constant_deriv_zero sterm_sem.simps)
   done
 
-section \<open>Unused Lemmas\<close>
-
-lemma sum_unique_nonzero:
- fixes i::"'state_dim::finite" and f::"'state_dim \<Rightarrow> real"
- assumes restZero:"\<And>j. j\<in>(UNIV::'state_dim set) \<Longrightarrow> j \<noteq> i \<Longrightarrow> f j = 0" 
- shows "(\<Sum>j\<in>(UNIV::'state_dim set). f j) = f i"
- proof -
-   let ?U = "UNIV :: 'state_dim set"
-   let ?A = "{k \<in> ?U. k = i}"
-   let ?B = "{k \<in> ?U. \<not>(k = i)}"
-   have finA:"finite ?A" by auto
-   have finB:"finite ?B" by auto
-   have emptyInter: "?A \<inter> ?B = {}" by auto
-   from emptyInter 
-   have zeroInter:"(\<Sum>j \<in> (?A \<inter> ?B). f j) = 0" 
-   by (auto)
-   have union_univ:"?U = ?A \<union> ?B " by (auto)
-   from union_univ
-   have partition:"(\<Sum>j \<in> ?U. (f j)) = (\<Sum>j \<in> ?A \<union> ?B. (f j))"
-   by (auto)
-   from finA finB
-   have union_sum:"(\<Sum>j \<in> ?A \<union> ?B. (f j)) = 
-     (\<Sum>j \<in> ?A. (f j)) + (\<Sum>j \<in> ?B. (f j)) - (\<Sum>j \<in> (?A \<inter> ?B). (f j))"
-   by (rule setsum_Un)
-   from restZero
-   have Bzero:"(\<Sum>j \<in> ?B. (f j)) = 0" by (auto)
-   have Asingle:"(\<Sum>j \<in> ?A. (f j)) = f i" by (auto)
-   from partition union_sum zeroInter Bzero Asingle 
-   show ?thesis by auto
- qed
 end
 end
