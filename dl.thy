@@ -340,7 +340,7 @@ and loop_sem :: "'a::finite interp \<Rightarrow> 'a hp \<Rightarrow> nat \<Right
       | "loop_sem I \<alpha> (Suc n) = 
         {(\<nu>, \<omega>) | \<nu> \<omega>. \<exists>\<mu>. (\<nu>, \<mu>) \<in> prog_sem I \<alpha> 
                          \<and> (\<mu>, \<omega>) \<in> loop_sem I \<alpha> n}"
-
+print_theorems
    
 subsection \<open>Trivial Simplification Lemmas\<close>
 text \<open>
@@ -800,10 +800,9 @@ where "Vagree \<nu> \<nu>' V \<equiv>
    (\<forall>i\<in>{v | i v. i = Inl v \<and> i \<in> V}. vec_nth(fst \<nu>) i = vec_nth(fst \<nu>') i)
  \<and> (\<forall>i\<in>{v | i v. i = Inr v \<and> i \<in> V}. vec_nth(snd \<nu>) i = vec_nth(snd \<nu>') i)"
 
-lemma bound_effect_sterm:"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> sterm_sem I  \<theta> (fst \<nu>) = sterm_sem I \<theta> (fst \<nu>')"
-apply(induct "\<theta>")
+lemma agree_nil:"Vagree \<nu> \<omega> {}"
 apply(auto simp add: Vagree_def)
-by (meson rangeI)
+done
 
 lemma agree_supset:"A \<supseteq> B \<Longrightarrow> Vagree \<nu> \<nu>' A \<Longrightarrow> Vagree \<nu> \<nu>' B"
 apply(auto simp add: Vagree_def)
@@ -844,7 +843,7 @@ qed
 lemma agree_times1:"Vagree \<nu> \<nu>' (FVDiff (Times t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t1)"
 proof -
   assume agree:"Vagree \<nu> \<nu>' (FVDiff (Times t1 t2))"
-  have agree':"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i) \<union> https://www.linkedin.com/comm/jobs2/view/153894609?refId=c3016259-ef01-424e-a7de-4a37f4e6da73&trk=eml-jymbii-organic-job-card&midToken=AQGkjSR_7WOedg&trkEmail=eml-jobs_jymbii_digest-null-52-null-null-5s3iu5~iqe679ul~6n(\<Union>i\<in>FVT t2. primify i))"
+  have agree':"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i) \<union> (\<Union>i\<in>FVT t2. primify i))"
   using fvdiff_plus1 FVDiff.simps agree by (auto)
   have agreeL:"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i))"
   using agree' agree_supset union_supset1 by (blast)
@@ -875,6 +874,77 @@ proof -
     by simp
 qed
 
+lemma agree_trans:"Vagree \<nu> \<mu> A \<Longrightarrow> Vagree \<mu> \<omega> B \<Longrightarrow> Vagree \<nu> \<omega> (A \<inter> B)"
+apply(auto simp add: Vagree_def)
+done
+
+(*
+lemma bound_effect:
+fixes I
+assumes good_interp:"is_interp I"
+shows "\<And>\<nu>. \<And>\<omega>. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<Longrightarrow> Vagree \<nu> \<omega> (- (BVP \<alpha>))"
+proof (induct "\<alpha>")
+fix x \<nu> \<omega> 
+assume sem:"(\<nu>, \<omega>) \<in> prog_sem I ($\<alpha> x)"
+show "Vagree \<nu> \<omega> (- BVP ($\<alpha> x))" 
+using agree_nil Compl_UNIV_eq pointed_finite.BVP.simps(1) by fastforce
+
+next
+fix x e \<nu> \<omega>
+assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (x := e)"
+show "Vagree \<nu> \<omega> (- (BVP (x := e)))" 
+using agree_nil Compl_UNIV_eq pointed_finite.BVP.simps(2) by auto
+
+next
+fix x e \<nu> \<omega>
+assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (DiffAssign x e)"
+show "Vagree \<nu> \<omega> (- BVP (DiffAssign x e))" by auto
+
+next
+fix ODE P \<nu> \<omega>
+assume agree:"Vagree \<nu> \<omega> (- BVP (? P))"
+assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P)"
+show "Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))" 
+by auto
+
+next
+fix a b \<nu> \<omega>
+assume IH1:"\<And>\<nu>'. \<And>\<omega>'. ((\<nu>', \<omega>') \<in> prog_sem I a \<Longrightarrow> Vagree \<nu>' \<omega>' (- BVP a))"
+assume IH2:"\<And>\<nu>'. \<And>\<omega>'. ((\<nu>', \<omega>') \<in> prog_sem I b \<Longrightarrow> Vagree \<nu>' \<omega>' (- BVP b))"
+assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (a \<union>\<union> b)"
+have sems:"(\<nu>, \<omega>) \<in> prog_sem I (a) \<or> (\<nu>, \<omega>) \<in> prog_sem I (b)" using sem by auto
+have agrees:"Vagree \<nu> \<omega> (- BVP a) \<or> Vagree \<nu> \<omega> (- BVP b)" using IH1 IH2 sems by blast
+have sub1:"-(BVP a) \<supseteq> (- BVP a \<inter> - BVP b)" by auto 
+have sub2:"-(BVP a) \<supseteq> (- BVP a \<inter> - BVP b)" by auto 
+have res:"Vagree \<nu> \<omega> (- BVP a \<inter> - BVP b)" using agrees sub1 sub2 agree_supset by blast
+show "Vagree \<nu> \<omega> (- BVP (a \<union>\<union> b))" using res by auto
+
+next
+fix a b \<nu> \<omega>
+assume IH1:"\<And>\<nu>'. \<And>\<omega>'. ((\<nu>', \<omega>') \<in> prog_sem I a \<Longrightarrow> Vagree \<nu>' \<omega>' (- BVP a))"
+assume IH2:"\<And>\<nu>'. \<And>\<omega>'. ((\<nu>', \<omega>') \<in> prog_sem I b \<Longrightarrow> Vagree \<nu>' \<omega>' (- BVP b))"
+assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (a ;; b)"
+have sems:"\<exists>\<mu>. (\<nu>, \<mu>) \<in> prog_sem I a  \<and> (\<mu>, \<omega>) \<in> prog_sem I b" using sem by auto
+obtain \<mu> where sems':"(\<nu>, \<mu>) \<in> prog_sem I a  \<and> (\<mu>, \<omega>) \<in> prog_sem I b" using sems by auto
+have agrees1:"Vagree \<nu> \<mu> (- BVP a) " using IH1 sems' by auto
+have agrees2:"Vagree \<mu> \<omega> (- BVP b) " using IH2 sems' by auto
+have agrees:"Vagree \<nu> \<omega> ((- BVP a) \<inter> (- BVP b))" using agrees1 agrees2 agree_trans by blast
+show "Vagree \<nu> \<omega> (- BVP (a ;; b))" using agrees by auto
+
+
+next
+fix a \<nu> \<omega>
+assume IH:"((\<nu>, \<omega>) \<in> prog_sem I a \<Longrightarrow> Vagree \<nu> \<omega> (- BVP a))"
+assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (a** )"
+show "Vagree \<nu> \<omega> (- BVP (\<alpha>** ))" by auto
+qed
+*)
+
+lemma coincidence_sterm:"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> sterm_sem I  \<theta> (fst \<nu>) = sterm_sem I \<theta> (fst \<nu>')"
+apply(induct "\<theta>")
+apply(auto simp add: Vagree_def)
+by (meson rangeI)
+
 lemma sum_unique_nonzero:
  fixes i::"'state_dim::finite" and f::"'state_dim \<Rightarrow> real"
  assumes restZero:"\<And>j. j\<in>(UNIV::'state_dim set) \<Longrightarrow> j \<noteq> i \<Longrightarrow> f j = 0" 
@@ -904,7 +974,7 @@ lemma sum_unique_nonzero:
    show ?thesis by auto
  qed
 
-lemma  bound_effect_frechet :
+lemma  coincidence_frechet :
   fixes I :: "'state_dim interp" and \<nu> :: "'state_dim state" and \<nu>'::"'state_dim state"
   shows "dfree \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff \<theta>) \<Longrightarrow> frechet I  \<theta> (fst \<nu>) (snd \<nu>) = frechet I  \<theta> (fst \<nu>') (snd \<nu>')"
 proof (induct "\<theta>")
@@ -932,7 +1002,7 @@ assume free:"dfree ($f var args)"
 have frees:"(\<And>i. dfree (args i))" using free by (metis dfree.cases rangeI trm.distinct(13) trm.distinct(23) trm.distinct(25) trm.distinct(4) trm.inject(3))
 assume agree:"Vagree \<nu> \<nu>' (FVDiff ($f var args))"
 have agrees:"\<And>i. Vagree \<nu> \<nu>' (FVDiff (args i))" using agree agree_func by (blast)
-have sterms:"\<And>i. sterm_sem I (args i) (fst \<nu>) = sterm_sem I (args i) (fst \<nu>')" using frees agrees bound_effect_sterm by (smt FVDiff_sub Vagree_def mem_Collect_eq subset_eq)
+have sterms:"\<And>i. sterm_sem I (args i) (fst \<nu>) = sterm_sem I (args i) (fst \<nu>')" using frees agrees coincidence_sterm by (smt FVDiff_sub Vagree_def mem_Collect_eq subset_eq)
 have frechets:"\<And>i. frechet I (args i) (fst \<nu>) (snd \<nu>) = frechet I (args i) (fst \<nu>') (snd \<nu>')"  using IH agrees frees rangeI by blast
 show "frechet I ($f var args) (fst \<nu>) (snd \<nu>) = frechet I ($f var args) (fst \<nu>') (snd \<nu>')" 
 using agrees sterms frechets by (auto)
@@ -959,7 +1029,7 @@ using IH1' agree1 by (auto)
 have IH2'':"(frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
 using IH2' agree2 by (auto)
 show "frechet I (Plus t1 t2) (fst \<nu>) (snd \<nu>) = frechet I (Plus t1 t2) (fst \<nu>') (snd \<nu>')"
-by (smt FVT.simps(4) IH1'' IH2'' UnCI Vagree_def bound_effect_sterm frechet.simps(3) mem_Collect_eq)
+by (smt FVT.simps(4) IH1'' IH2'' UnCI Vagree_def coincidence_sterm frechet.simps(3) mem_Collect_eq)
 
 (* smt chokes on the full IH, so simplify things a bit first *)
 next
@@ -983,7 +1053,7 @@ using IH1' agree1 by (auto)
 have IH2'':"(frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
 using IH2' agree2 by (auto)
 have almost:"Vagree \<nu> \<nu>' (FVT (Times t1 t2)) \<Longrightarrow> frechet I (Times t1 t2) (fst \<nu>) (snd \<nu>) = frechet I (Times t1 t2) (fst \<nu>') (snd \<nu>')"
-by (smt FVT.simps(5) IH1'' IH2'' UnCI Vagree_def bound_effect_sterm frechet.simps(4)  mem_Collect_eq agree )
+by (smt FVT.simps(5) IH1'' IH2'' UnCI Vagree_def coincidence_sterm frechet.simps(4)  mem_Collect_eq agree )
 show "frechet I (Times t1 t2) (fst \<nu>) (snd \<nu>) = frechet I (Times t1 t2) (fst \<nu>') (snd \<nu>')" 
 using agree FVDiff_sub almost pointed_finite.agree_supset
 by (metis)
@@ -1002,7 +1072,7 @@ show "dfree (Differential \<theta>) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDif
 using dfree_vac2 by (auto)
 qed
 
-lemma bound_effect_dterm:
+lemma coincidence_dterm:
   fixes I :: "'state_dim::finite interp" and \<nu> :: "'state_dim state" and \<nu>'::"'state_dim state"
   shows "dsafe \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> dterm_sem I  \<theta> \<nu> = dterm_sem I \<theta> \<nu>'"
 proof (induct "\<theta>")
@@ -1029,7 +1099,7 @@ by (metis (no_types, lifting))
 have agrees:"\<And>i. Vagree \<nu> \<nu>' (FVT (args i))" 
 using agree agree_func_fvt by (blast)
 have dterms:"\<And>i. dterm_sem I (args i) \<nu> = dterm_sem I (args i) \<nu>'" 
-using safes agrees bound_effect_sterm IH rangeI by (simp)
+using safes agrees coincidence_sterm IH rangeI by (simp)
 show "dterm_sem I ($f f args) \<nu> = dterm_sem I ($f f args) \<nu>'" 
 using dterms by (auto)
 
@@ -1066,7 +1136,7 @@ assume safe:"dsafe (Differential t)"
 assume agree:"Vagree \<nu> \<nu>' (FVT (Differential t))"
 have free:"dfree t" using safe dsafe.cases by (auto)
 show "dterm_sem I (Differential t) \<nu> = dterm_sem I (Differential t) \<nu>'"
-using IH safe agree bound_effect_frechet free by (auto)
+using IH safe agree coincidence_frechet free by (auto)
 qed
 
 subsection \<open>Axioms\<close>
