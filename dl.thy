@@ -844,7 +844,7 @@ qed
 lemma agree_times1:"Vagree \<nu> \<nu>' (FVDiff (Times t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t1)"
 proof -
   assume agree:"Vagree \<nu> \<nu>' (FVDiff (Times t1 t2))"
-  have agree':"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i) \<union> https://www.linkedin.com/comm/jobs2/view/153894609?refId=c3016259-ef01-424e-a7de-4a37f4e6da73&trk=eml-jymbii-organic-job-card&midToken=AQGkjSR_7WOedg&trkEmail=eml-jobs_jymbii_digest-null-52-null-null-5s3iu5~iqe679ul~6n(\<Union>i\<in>FVT t2. primify i))"
+  have agree':"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i) \<union> (\<Union>i\<in>FVT t2. primify i))"
   using fvdiff_plus1 FVDiff.simps agree by (auto)
   have agreeL:"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i))"
   using agree' agree_supset union_supset1 by (blast)
