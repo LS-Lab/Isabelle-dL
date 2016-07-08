@@ -20,6 +20,25 @@ theory "dl"
 imports Complex_Main HOL "~~/src/HOL/Multivariate_Analysis/Multivariate_Analysis" "Ordinary_Differential_Equations/Ordinary_Differential_Equations"
 begin
 
+locale pointed_finite =
+  fixes foo :: "'state_dim::finite"
+  fixes id1 :: 'state_dim
+  fixes id2 :: 'state_dim
+  fixes id3 :: 'state_dim
+type_synonym 'a Rvec = "real^('a::finite)"
+type_synonym 'a state = "'a Rvec \<times> 'a Rvec"
+type_synonym 'a simple_state = "'a Rvec"
+type_synonym 'a func_domain = "real^('a::finite)"
+record ('a) interp =
+  Functions       :: "'a \<Rightarrow> 'a func_domain \<Rightarrow> real"
+  FunctionFrechet :: "'a \<Rightarrow> 'a Rvec \<Rightarrow> 'a func_domain \<Rightarrow> real"
+  Predicates      :: "'a \<Rightarrow> ('a \<Rightarrow> real) \<Rightarrow> bool"
+  Contexts        :: "'a \<Rightarrow> 'a state set \<Rightarrow> 'a state set"
+  Predicationals  :: "'a \<Rightarrow> 'a state set"
+  Programs        :: "'a \<Rightarrow> ('a state * 'a state) set"
+
+context pointed_finite
+begin
 subsection \<open>States\<close>
 text \<open>We formalize a state S as a pair (S_V, S_V') : \<real>^n \<times> \<real>^n , where S_V assigns
   values to the program variables and S_V' assigns values to their 
@@ -34,14 +53,6 @@ text \<open>We formalize a state S as a pair (S_V, S_V') : \<real>^n \<times> \<
   realistic proofs. For this to be a feasible option, the rest of this theory 
   needs to be agnostic to n, which it currently is not.
   \<close>
-
-type_synonym state_dim = "Enum.finite_5"
-type_synonym Rn = "real^state_dim"
-type_synonym id = state_dim
-type_synonym state = "Rn \<times> Rn"
-type_synonym simple_state = Rn
-type_synonym func_domain_dim = "Enum.finite_5"
-type_synonym func_domain = "real^func_domain_dim"
 
 subsection \<open>Syntax\<close>
 text \<open>
@@ -63,19 +74,19 @@ text \<open>
   constructs are implemented as derived forms to reduce the soundness burden.
 \<close>
 
- datatype trm =
+ datatype ('a) trm =
    (* Program variable *)
-   Var id
+   Var 'a
  (* N.B. This is technically more expressive than true dL since most reals 
    can't be written down. *)
  | Const real
- | Function id "func_domain_dim \<Rightarrow> trm" ("$f")
- | Plus trm trm
- | Times trm trm
- | DiffVar id ("$'")
- | Differential trm
+ | Function 'a "'a \<Rightarrow> 'a trm" ("$f")
+ | Plus "'a trm" "'a trm"
+ | Times "'a trm" "'a trm"
+ | DiffVar 'a ("$'")
+ | Differential "'a trm"
 
-inductive dfree :: "trm \<Rightarrow> bool"
+inductive dfree :: "'a trm \<Rightarrow> bool"
 where
   "dfree (Var i)"
  |"dfree (Const r)"
@@ -83,7 +94,7 @@ where
  |"dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
  |"dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
 
-inductive dsafe :: "trm \<Rightarrow> bool"
+inductive dsafe :: "'a trm \<Rightarrow> bool"
 where
   "dsafe (Var i)"
  |"dsafe (Const r)"
@@ -98,10 +109,10 @@ apply(induct "\<theta>")
 apply(simp add: dsafe.intros(1))
 apply(simp add: dsafe.intros(2))
 apply(metis dfree.cases dsafe.intros(3) trm.distinct(13) trm.distinct(23) trm.distinct(25) trm.distinct(3) trm.inject(3))
-using dfree.simps dsafe.intros(4) apply(blast)
-using dfree.simps dsafe.intros(5) apply(blast)
-using dfree.simps dsafe.intros(5) apply(blast)
-using dfree.simps dsafe.intros(5) apply(blast)
+using pointed_finite.dfree.cases pointed_finite.dsafe.intros(4) apply auto[1]
+using pointed_finite.dfree.cases pointed_finite.dsafe.intros(5) apply auto[1]
+using pointed_finite.dfree.cases pointed_finite.dsafe.intros(6) apply auto[1]
+using pointed_finite.dfree.cases pointed_finite.dsafe.intros(6) apply auto[1]
 done
 
 
@@ -115,53 +126,53 @@ done
  bogus ODE's well-typed, so we will need another predicate to rule out e.g. ODE's
  that bind the same variable to two different terms.
  *)
-type_synonym ODE =  "state_dim \<Rightarrow> (trm option)"
+type_synonym ('a) ODE =  "'a \<Rightarrow> ('a trm option)"
 
-datatype hp =
-   Pvar id                ("$\<alpha>")
- | Assign id trm        (infixr ":=" 10)
- | DiffAssign id trm
- | Test formula           ("?")
+datatype ('a) hp =
+   Pvar 'a                           ("$\<alpha>")
+ | Assign 'a "(('a) trm)"                (infixr ":=" 10)
+ | DiffAssign 'a "('a) trm"
+ | Test "'a formula"                 ("?")
  (* An ODE program is an ODE system with some evolution domain. *)
- | EvolveODE ODE formula
- | Choice hp hp           (infixl "\<union>\<union>" 10)
- | Sequence hp hp         (infixr ";;" 8)
- | Loop hp                ("_**")
+ | EvolveODE "'a ODE" "'a formula"
+ | Choice "'a hp" "'a hp"            (infixl "\<union>\<union>" 10)
+ | Sequence "'a hp"  "'a hp"         (infixr ";;" 8)
+ | Loop "'a hp"                      ("_**")
 
-and formula =
-   Geq trm trm      
- | Prop id "func_domain_dim \<Rightarrow> trm"      ("$\<phi>")
- | Not formula            ("!")
- | And formula formula    (infixl "&&" 8)
- | Forall id formula
- | Box hp formula         ("([[_]]_)" 10)
+and 'a formula =
+   Geq "'a trm" "'a trm"
+ | Prop 'a "'a \<Rightarrow> 'a trm"      ("$\<phi>")
+ | Not "'a formula"            ("!")
+ | And "'a formula" "'a formula"    (infixl "&&" 8)
+ | Forall 'a "'a formula"
+ | Box "'a hp" "'a formula"         ("([[_]]_)" 10)
  (* DiffFormula \<phi> gives us the invariant for proving \<phi> by differential induction. *)
- | DiffFormula formula
+ | DiffFormula "'a formula"
  (* Unary quantifier symbols *)
- | InContext id formula
+ | InContext 'a "'a formula"
  (* Nullary quantifier symbols *)
- | Predicational id
+ | Predicational 'a
  
-type_synonym stuple = "(func_domain_dim \<Rightarrow> trm)"
-type_synonym dtuple = "(func_domain_dim \<Rightarrow> trm)"
+type_synonym 'a stuple = "('a \<Rightarrow> 'a trm)"
+type_synonym 'a dtuple = "('a \<Rightarrow> 'a trm)"
 
 (* Derived forms *)
-fun Or :: "formula \<Rightarrow> formula \<Rightarrow> formula" (infixl "||" 7)
+fun Or :: "'a formula \<Rightarrow> 'a formula \<Rightarrow> 'a formula" (infixl "||" 7)
   where "Or P Q = Not (And (Not P) (Not Q))"
 
-fun Implies :: "formula \<Rightarrow> formula \<Rightarrow> formula" (infixr "\<rightarrow>" 10)
+fun Implies :: "'a formula \<Rightarrow> 'a formula \<Rightarrow> 'a formula" (infixr "\<rightarrow>" 10)
   where "Implies P Q = Or Q (Not P)"
 
-fun Equiv :: "formula \<Rightarrow> formula \<Rightarrow> formula" (infixl "\<leftrightarrow>" 10) 
+fun Equiv :: "'a formula \<Rightarrow> 'a formula \<Rightarrow> 'a formula" (infixl "\<leftrightarrow>" 10) 
   where "Equiv P Q = Or (And P Q) (And (Not P) (Not Q))"
 
-fun Exists :: "id \<Rightarrow> formula \<Rightarrow> formula"
+fun Exists :: "'a \<Rightarrow> 'a formula \<Rightarrow> 'a formula"
   where "Exists x P = Not (Forall x (Not P))"
   
-fun Equals :: "trm \<Rightarrow> trm \<Rightarrow> formula"
+fun Equals :: "'a trm \<Rightarrow> 'a trm \<Rightarrow> 'a formula"
   where "Equals \<theta> \<theta>' = ((Geq \<theta> \<theta>') && (Geq \<theta>' \<theta>))"
 
-fun Diamond :: "hp \<Rightarrow> formula \<Rightarrow> formula" ("(\<langle>_\<rangle>_)" 10)
+fun Diamond :: "'a hp \<Rightarrow> 'a formula \<Rightarrow> 'a formula" ("(\<langle>_\<rangle>_)" 10)
   where "Diamond \<alpha> P = Not(Box \<alpha> (Not P))"
   
 subsection \<open>Denotational Semantics\<close>
@@ -184,20 +195,14 @@ text \<open>
   FunctionFrechet.
   \<close>
 
-record interp =
-  Functions       :: "id \<Rightarrow> func_domain \<Rightarrow> real"
-  FunctionFrechet :: "id \<Rightarrow> Rn \<Rightarrow> func_domain \<Rightarrow> real"
-  Predicates      :: "id \<Rightarrow> func_domain \<Rightarrow> bool"
-  Contexts        :: "id \<Rightarrow> state set \<Rightarrow> state set"
-  Predicationals  :: "id \<Rightarrow> state set"
-  Programs        :: "id \<Rightarrow> (state * state) set"
 
-definition is_interp :: "interp \<Rightarrow> bool"
+
+definition is_interp :: "('a::finite) interp \<Rightarrow> bool"
   where "is_interp I \<equiv> 
     \<forall>x. \<forall>i. (FDERIV (Functions I i) x :> (FunctionFrechet I i x))"
 
 (* sterm_sem is the term sem for differential-free terms. *)
-primrec sterm_sem :: "interp \<Rightarrow> trm \<Rightarrow> simple_state \<Rightarrow> real"
+primrec sterm_sem :: "'a::finite interp \<Rightarrow> 'a trm \<Rightarrow> 'a simple_state \<Rightarrow> real"
   where "sterm_sem I (Var x) v = v $ x"
   | "sterm_sem I (Function f args) v = 
     Functions I f (vec_lambda (\<lambda>i. sterm_sem I (args i) v))"
@@ -210,14 +215,14 @@ primrec sterm_sem :: "interp \<Rightarrow> trm \<Rightarrow> simple_state \<Righ
   | "sterm_sem I (Differential d) v = undefined"
   
 (* basis_vector i is the i'th basis vector for the standard Euclidean basis. *)
-fun basis_vector :: "id \<Rightarrow> Rn"
+fun basis_vector :: "'a::finite \<Rightarrow> 'a Rvec"
   where "basis_vector x = vec_lambda (\<lambda>i. if x = i then 1 else 0)"
 
 (* frechet I \<theta> \<nu> gives us the frechet derivative of the term \<theta> in the interpretation
  I at state \<nu> (containing only the unprimed variables). The frechet derivative is a 
  linear map from the differential state \<nu> to reals. 
  *)
-primrec frechet :: "interp \<Rightarrow> trm \<Rightarrow> simple_state \<Rightarrow> simple_state \<Rightarrow> real"
+primrec frechet :: "'a::finite interp \<Rightarrow> 'a trm \<Rightarrow> 'a simple_state \<Rightarrow> 'a simple_state \<Rightarrow> real"
   where "frechet I (Var x) v = (\<lambda>v'. inner v' (basis_vector x))"
   | "frechet I (Function f args) v = 
     (\<lambda>v'. FunctionFrechet I f (vec_lambda (\<lambda>i. sterm_sem I (args i) v))
@@ -231,12 +236,12 @@ primrec frechet :: "interp \<Rightarrow> trm \<Rightarrow> simple_state \<Righta
   | "frechet I (Differential d) v = undefined"
   
  
-fun directional_derivative :: "interp \<Rightarrow> trm \<Rightarrow> state \<Rightarrow> real" 
+fun directional_derivative :: "'a::finite interp \<Rightarrow> 'a trm \<Rightarrow> 'a state \<Rightarrow> real" 
   where "directional_derivative I t = (\<lambda>v. frechet I t (fst v) (snd v))"
 
 (* Sem for terms that are allowed to contain differentials.
    Note there is some duplication with sterm_sem (hence the desire to combine the two).*)
-primrec dterm_sem :: "interp \<Rightarrow> trm \<Rightarrow> state \<Rightarrow> real"
+primrec dterm_sem :: "'a::finite interp \<Rightarrow> 'a trm \<Rightarrow> 'a state \<Rightarrow> real"
   where "dterm_sem I (Var x) = (\<lambda>v. vec_nth (fst v) x)"
   | "dterm_sem I (DiffVar x) = (\<lambda>v. vec_nth (snd v) x)"
   | "dterm_sem I (Function f args) = 
@@ -249,12 +254,12 @@ primrec dterm_sem :: "interp \<Rightarrow> trm \<Rightarrow> state \<Rightarrow>
   | "dterm_sem I (Const c) = (\<lambda>v. c)"
 
 (* repv \<nu> x r replaces the value of (unprimed) variable x in the state \<nu> with r *)
-fun repv :: "state \<Rightarrow> id \<Rightarrow> real \<Rightarrow> state"
+fun repv :: "'a::finite state \<Rightarrow> 'a \<Rightarrow> real \<Rightarrow> 'a state"
   where "repv v x r = 
   (vec_lambda (\<lambda>y. if x = y then r else vec_nth (fst v) y), snd v)"
 
 (* repd \<nu> x' r replaces the value of (primed) variable x' in the state \<nu> with r *)
-fun repd :: "state \<Rightarrow> id \<Rightarrow> real \<Rightarrow> state"
+fun repd :: "'a::finite state \<Rightarrow> 'a \<Rightarrow> real \<Rightarrow> 'a state"
   where "repd v x r = 
   (fst v, vec_lambda (\<lambda>y. if x = y then r else vec_nth (snd v) y))"
 
@@ -262,7 +267,7 @@ fun repd :: "state \<Rightarrow> id \<Rightarrow> real \<Rightarrow> state"
    rhs_sem I \<nu> ODE gives us vector in Rn that contains for each variable
    either the value of the corresponding term in the ODE or 0 if the variable is unbound.
   *)
-fun rhs_sem:: "interp \<Rightarrow> Rn \<Rightarrow> ODE \<Rightarrow> Rn"
+fun rhs_sem:: "'a ::finite interp \<Rightarrow> 'a Rvec \<Rightarrow> 'a ODE \<Rightarrow> 'a Rvec"
   where "rhs_sem I \<nu> ODE = vec_lambda (\<lambda>i. case ODE i of None \<Rightarrow> 0 | Some t \<Rightarrow> sterm_sem I t \<nu>)"
 
 (* ivp I \<nu> ODE gives us an initial-value problem based on ODE in the initial state \<nu>*)
@@ -290,11 +295,11 @@ fun ivp_sem_at::"interp \<Rightarrow> Rn ivp \<Rightarrow> real \<Rightarrow> st
    we can have two formulas \<phi> and \<psi> that have the exact same sem, but where 
    (\<phi>)' and (\<psi>)' differ because \<phi> and \<psi> differ syntactically.
 *)
-fun fml_sem  :: "interp \<Rightarrow> formula \<Rightarrow> state set"
-and diff_formula_sem  :: "interp \<Rightarrow> formula \<Rightarrow> state set"
-and prog_sem :: "interp \<Rightarrow> hp \<Rightarrow> (state * state) set"
-and ivp_sem  :: "interp \<Rightarrow> Rn ivp \<Rightarrow> formula \<Rightarrow> state set"
-and loop_sem :: "interp \<Rightarrow> hp \<Rightarrow> nat \<Rightarrow> (state * state) set"
+fun fml_sem  :: "interp \<Rightarrow> 'a formula \<Rightarrow> state set"
+and diff_formula_sem  :: "interp \<Rightarrow> 'a formula \<Rightarrow> state set"
+and prog_sem :: "interp \<Rightarrow> 'a hp \<Rightarrow> (state * state) set"
+and ivp_sem  :: "interp \<Rightarrow> Rn ivp \<Rightarrow> 'a formula \<Rightarrow> state set"
+and loop_sem :: "interp \<Rightarrow> 'a hp \<Rightarrow> nat \<Rightarrow> (state * state) set"
   where "fml_sem I (Geq t1 t2) = 
         {v. dterm_sem I t1 v \<ge> dterm_sem I t2 v}"
       | "fml_sem I (Prop P terms) =
@@ -378,11 +383,11 @@ text \<open>
 \<close>
         
 lemma inner_prod_eq: 
-  fixes i::id
-  shows "(\<lambda>(v::Rn). inner ((\<lambda>y. y) v) ((\<lambda>_. basis_vector (i::state_dim)) v)) 
+  fixes i::'a
+  shows "(\<lambda>(v::Rn). inner ((\<lambda>y. y) v) ((\<lambda>_. basis_vector (i::'state_dim)) v)) 
     = (\<lambda>(v::Rn). vec_nth v i)"
   proof -
-    have big_and: "\<And>v. inner ((\<lambda>y. y) v) ((\<lambda>_. basis_vector (i::state_dim)) v)
+    have big_and: "\<And>v. inner ((\<lambda>y. y) v) ((\<lambda>_. basis_vector (i::'state_dim)) v)
       = vec_nth v i" 
     proof -
       have 4: "finite {k. k = i}" by (auto)
@@ -443,21 +448,21 @@ lemma inner_prod_eq:
       finally show "\<And>v. ?thesis v" by(auto)
     qed
     from big_and have big_forall:
-    "\<forall>v. (\<lambda>v. inner ((\<lambda>y. y) v) ((\<lambda>_. basis_vector (i::state_dim)) v)) v 
+    "\<forall>v. (\<lambda>v. inner ((\<lambda>y. y) v) ((\<lambda>_. basis_vector (i::'state_dim)) v)) v 
       = (\<lambda>v. vec_nth v i) v" 
     by (rule allI)
-    have 16: "(\<lambda>v. inner ((\<lambda>y. y) v) ((\<lambda>_. basis_vector (i::state_dim)) v)) 
+    have 16: "(\<lambda>v. inner ((\<lambda>y. y) v) ((\<lambda>_. basis_vector (i::'state_dim)) v)) 
       \<in> extensional UNIV" by(auto)
     have 17: "(\<lambda>v. vec_nth v i) \<in> extensional UNIV" by(auto)
     from big_forall and 16 and 17 have 18: 
-    "(\<lambda>v. inner ((\<lambda>y. y) v) ((\<lambda>_. basis_vector (i::state_dim)) v)) 
+    "(\<lambda>v. inner ((\<lambda>y. y) v) ((\<lambda>_. basis_vector (i::'state_dim)) v)) 
     =(\<lambda>v. vec_nth v i)"
       by (auto)
     from 18 show ?thesis by(auto)
 qed
 
 theorem svar_deriv: 
-  fixes x:: id and \<nu>:: "Rn" and F::"real filter"
+  fixes x:: 'a and \<nu>:: "Rn" and F::"real filter"
   shows "((\<lambda>v. vec_nth v x) has_derivative 
     (\<lambda>v'. inner v' (vec_lambda (\<lambda>i. if x = i then 1 else 0)))) (at \<nu>)"
   proof -
@@ -527,9 +532,9 @@ lemma norm_axis: "norm (axis i x) = norm x"
 
 lemma bounded_linear_axis: "bounded_linear (axis i)"
 proof
-  show "axis i (x + y) = axis i x + axis i y" "axis i (r *\<^sub>R x) = r *\<^sub>R axis i x" for x y :: "'a" and r
+  show "axis i (x + y) = axis i x + axis i y" "axis i (r *\<^sub>R x) = r *\<^sub>R axis i x" for x y :: "''state_dim" and r
     by (auto simp: vec_eq_iff axis_def)
-  show "\<exists>K. \<forall>x::'a. norm (axis i x) \<le> norm x * K"
+  show "\<exists>K. \<forall>x::''state_dim. norm (axis i x) \<le> norm x * K"
     by (auto simp add: norm_axis intro!: exI[of _ 1])
 qed
 
@@ -550,7 +555,7 @@ lemma func_lemma2:"\<forall>x i. (Functions I i has_derivative FunctionFrechet I
 proof -
   assume a1: "\<forall>x i. (Functions I i has_derivative FunctionFrechet I i x) (at x)"
   assume a2: "\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> (sterm_sem I \<theta> has_derivative frechet I \<theta> \<nu>) (at \<nu>)"
-  have "\<forall>f fa v. (\<exists>fb. \<not> (f (fb::Enum.finite_5) has_derivative fa fb (v::(real, Enum.finite_5) vec)) (at v)) \<or> ((\<lambda>v. vec_lambda(\<lambda>fa. (f fa v::real))) has_derivative (\<lambda>va. vec_lambda(\<lambda>f. fa f v va))) (at v)"
+  have "\<forall>f fa v. (\<exists>fb. \<not> (f (fb::'state_dim) has_derivative fa fb (v::(real, 'state_dim) vec)) (at v)) \<or> ((\<lambda>v. vec_lambda(\<lambda>fa. (f fa v::real))) has_derivative (\<lambda>va. vec_lambda(\<lambda>f. fa f v va))) (at v)"
     using has_derivative_vec by force
   then have "((\<lambda>v. vec_lambda(\<lambda>f. sterm_sem I (args f) v) )has_derivative (\<lambda>v. vec_lambda(\<lambda>f. frechet I (args f) \<nu> v))) (at \<nu>)"
     using a2 by (meson rangeI)
@@ -560,7 +565,7 @@ qed
 
 lemma func_lemma:"                  
 is_interp I \<Longrightarrow>                 
-(\<And>\<theta> :: trm. \<theta> \<in> range args \<Longrightarrow> (sterm_sem I \<theta> has_derivative 
+(\<And>\<theta> :: 'a trm. \<theta> \<in> range args \<Longrightarrow> (sterm_sem I \<theta> has_derivative 
                  frechet I \<theta> \<nu>) (at \<nu>)) \<Longrightarrow> (sterm_sem I ($f f args) has_derivative 
             frechet I ($f f args) \<nu>) (at \<nu>)"
 apply(simp only: sfunction_case is_interp_def function_case_inner)
@@ -599,13 +604,13 @@ lemma frechet_correctness:
   next        
      fix f 
      fix args :: stuple
-     assume IH:"\<And>\<theta> :: trm. \<theta> \<in> range args \<Longrightarrow> dfree \<theta> \<Longrightarrow> (sterm_sem I \<theta> has_derivative 
+     assume IH:"\<And>\<theta> :: 'a trm. \<theta> \<in> range args \<Longrightarrow> dfree \<theta> \<Longrightarrow> (sterm_sem I \<theta> has_derivative 
                  frechet I \<theta> \<nu>) (at \<nu>)"
      show "dfree ($f f args) \<Longrightarrow> (sterm_sem I ($f f args) has_derivative 
             frechet I ($f f args) \<nu>) (at \<nu>)"
         proof -
           assume a1: "dfree ($f f args)"
-          have "\<forall>t. \<not> dfree t \<or> (\<exists>f. t = trm.Var f) \<or> (\<exists>r. t = Const r) \<or> (\<exists>f. (\<exists>fa. t = $f fa f) \<and> (\<forall>t. t \<notin> range f \<or> dfree t)) \<or> (\<exists>ta tb. t = Plus ta tb \<and> dfree ta \<and> dfree tb) \<or> (\<exists>ta tb. t = Times ta tb \<and> dfree ta \<and> dfree tb)"
+          have "\<forall>t. \<not> dfree t \<or> (\<exists>f. t = 'a trm.Var f) \<or> (\<exists>r. t = Const r) \<or> (\<exists>f. (\<exists>fa. t = $f fa f) \<and> (\<forall>t. t \<notin> range f \<or> dfree t)) \<or> (\<exists>ta tb. t = Plus ta tb \<and> dfree ta \<and> dfree tb) \<or> (\<exists>ta tb. t = Times ta tb \<and> dfree ta \<and> dfree tb)"
           by (metis (no_types) dfree.cases)
           then show ?thesis
           using a1 IH func_lemma good_interp by auto
@@ -643,14 +648,14 @@ text\<open>
   primed variables x'.
   \<close>
 (* The bound variables of an ODE (which will also be included as free variables) *)
-fun ODE_vars :: "ODE \<Rightarrow> (id + id) set"
+fun ODE_vars :: "ODE \<Rightarrow> ('a + 'a) set"
   where "ODE_vars ODE =
     (\<Union>x \<in> ({x. ODE x \<noteq> None}) . ({Inl x, Inr x}))"
 
 (* Bound variables of a formula 
    Bound variables of a program *)
-fun BVF :: "formula \<Rightarrow> (id + id) set"
-and BVP :: "hp \<Rightarrow> (id + id) set"
+fun BVF :: "'a formula \<Rightarrow> ('a + 'a) set"
+and BVP :: "'a hp \<Rightarrow> ('a + 'a) set"
 where
    "BVF (Geq f g) = {}"
  | "BVF (Prop p dfun_args) = {}"
@@ -672,7 +677,7 @@ where
  | "BVP (Loop \<alpha>) = BVP \<alpha>"
 
 (* Must-bound variables (of a program)*)
-fun MBV :: "hp \<Rightarrow> (id + id) set"
+fun MBV :: "'a hp \<Rightarrow> ('a + 'a) set"
   where
    "MBV (Pvar a) = {}"
  | "MBV (Choice \<alpha> \<beta>) = MBV \<alpha> \<inter> MBV \<beta>" 
@@ -680,13 +685,13 @@ fun MBV :: "hp \<Rightarrow> (id + id) set"
  | "MBV (Loop \<alpha>) = {}"
  | "MBV \<alpha> = BVP \<alpha>"
 
-fun primify :: "(id + id) \<Rightarrow> (id + id) set"
+fun primify :: "('a + 'a) \<Rightarrow> ('a + 'a) set"
  where
    "primify (Inl x) = {Inl x, Inr x}"
  | "primify (Inr x) = {Inl x, Inr x}"
 
 (* Free variables of a term *)
-primrec FVT :: "trm \<Rightarrow> (id + id) set"
+primrec FVT :: "'a trm \<Rightarrow> ('a + 'a) set"
 where
    "FVT (Var x) = {Inl x}"
  | "FVT (Const x) = {}"
@@ -696,7 +701,7 @@ where
  | "FVT (Differential f) = (\<Union>x \<in> (FVT f). primify x)"
  | "FVT (DiffVar x) = {Inr x}"
 
-fun FVDiff :: "trm \<Rightarrow> (id + id) set"
+fun FVDiff :: "'a trm \<Rightarrow> ('a + 'a) set"
 where "FVDiff f = (\<Union>x \<in> (FVT f). primify x)"
 
 lemma primify_contains:"x \<in> primify x"
@@ -709,15 +714,15 @@ apply (auto simp add:  primify_contains)
 done
  
 (* Free variables of an ODE includes both the bound variables and the terms *)
-fun FVODE :: "ODE \<Rightarrow> (id + id) set"
+fun FVODE :: "ODE \<Rightarrow> ('a + 'a) set"
   where
    "FVODE ODE = 
      (\<Union>x \<in> {x. Some x \<in> {(ODE y)| y. y = y}}. FVT x)"
 
 (* Free variables of a formula *)
 (* Free variables of a program *)
-fun FVF :: "formula \<Rightarrow> (id + id) set"
-and FVP :: "hp \<Rightarrow> (id + id) set"
+fun FVF :: "'a formula \<Rightarrow> ('a + 'a) set"
+and FVP :: "'a hp \<Rightarrow> ('a + 'a) set"
 where
    "FVF (Geq f g) = FVT f \<union> FVT g"
  | "FVF (Prop p args) = (\<Union>i. FVT (args i))"
@@ -737,7 +742,7 @@ where
  | "FVP (Sequence \<alpha> \<beta>) = (FVP \<alpha> \<union> FVP \<beta>) - (MBV \<alpha>)"
  | "FVP (Loop \<alpha>) = FVP \<alpha>"
 
-primrec SIGT :: "trm \<Rightarrow> id set"
+primrec SIGT :: "'a trm \<Rightarrow> 'a set"
 where
   "SIGT (Var var) = {}"
 | "SIGT (Const r) = {}"
@@ -747,8 +752,8 @@ where
 | "SIGT (DiffVar x) = {}"
 | "SIGT (Differential t) = SIGT t"
    
-primrec SIGP   :: "hp      \<Rightarrow> id set"
-and     SIGF   :: "formula \<Rightarrow> id set"
+primrec SIGP   :: "'a hp      \<Rightarrow> 'a set"
+and     SIGF   :: "'a formula \<Rightarrow> 'a set"
 where
   "SIGP (Pvar var) = {}"
 | "SIGP (Assign var t) = SIGT t"
@@ -769,7 +774,7 @@ where
 | "SIGF (Predicational var) = {var}"
 
 (* TODO: Distinguish identifiers for functions, predicates, etc*)
-definition Iagree :: "interp \<Rightarrow> interp \<Rightarrow> id set \<Rightarrow> bool"
+definition Iagree :: "interp \<Rightarrow> interp \<Rightarrow> 'a set \<Rightarrow> bool"
 where "Iagree I J V \<equiv> 
   (\<forall>i\<in>V.(Functions I i = Functions J i) 
       \<and> (FunctionFrechet I i = FunctionFrechet J i) 
@@ -778,7 +783,7 @@ where "Iagree I J V \<equiv>
       \<and> (Predicationals I i = Predicationals J i)
       \<and> (Programs I i = Programs J i))"
 
-definition Vagree :: "state \<Rightarrow> state \<Rightarrow> (id + id) set \<Rightarrow> bool"
+definition Vagree :: "state \<Rightarrow> state \<Rightarrow> ('a + 'a) set \<Rightarrow> bool"
 where "Vagree \<nu> \<nu>' V \<equiv> 
    (\<forall>i\<in>{v | i v. i = Inl v \<and> i \<in> V}. vec_nth(fst \<nu>) i = vec_nth(fst \<nu>') i)
  \<and> (\<forall>i\<in>{v | i v. i = Inr v \<and> i \<in> V}. vec_nth(snd \<nu>) i = vec_nth(snd \<nu>') i)"
@@ -787,27 +792,6 @@ lemma bound_effect_sterm:"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> s
 apply(induct "\<theta>")
 apply(auto simp add: Vagree_def)
 by (meson rangeI)
-
-
-(* 
-fun primify :: "(id + id) \<Rightarrow> (id + id) set"
- where
-   "primify (Inl x) = {Inl x, Inr x}"
- | "primify (Inr x) = {Inl x, Inr x}"
-
-fun FVDiff :: "trm \<Rightarrow> (id + id) set"
-where "FVDiff f = (\<Union>x \<in> (FVT f). primify x)"
-
- | "FVT (Function f args) = (\<Union>i. FVT (args i))"
- | "FVT (Plus f g) = FVT f \<union> FVT g"
- | "FVT (Times f g) = FVT f \<union> FVT g"
-
-(*
- | "FVT (Function f args) = (\<Union>i. FVT (args i))"
- | "FVT (Plus f g) = FVT f \<union> FVT g"
- | "FVT (Times f g) = FVT f \<union> FVT g"
-*)
-*)
 
 lemma agree_supset:"A \<supseteq> B \<Longrightarrow> Vagree \<nu> \<nu>' A \<Longrightarrow> Vagree \<nu> \<nu>' B"
 apply(auto simp add: Vagree_def)
@@ -870,7 +854,7 @@ proof -
   assume agree:"Vagree \<nu> \<nu>' (FVDiff ($f var args))"
   have agree':"Vagree \<nu> \<nu>' ((\<Union>i. (\<Union>j \<in>(FVT (args i)). primify j)))"
   using fvdiff_plus1 FVDiff.simps agree by (auto)
-  fix i :: state_dim
+  fix i :: 'state_dim
   have "\<And>S. \<not> S \<subseteq> (\<Union>f. UNION (FVT (args f)) primify) \<or> Vagree \<nu> \<nu>' S"
     using agree' agree_supset by blast
   then have "\<And>f. f \<notin> UNIV \<or> Vagree \<nu> \<nu>' (UNION (FVT (args f)) primify)"
@@ -884,7 +868,7 @@ lemma bound_effect_frechet:
   fixes I :: interp and \<nu> :: state and \<nu>'::state
   shows "dfree \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff \<theta>) \<Longrightarrow> frechet I  \<theta> (fst \<nu>) (snd \<nu>) = frechet I  \<theta> (fst \<nu>') (snd \<nu>')"
 proof (induct "\<theta>")
-fix x::id
+fix x::'a
 assume free:"dfree (trm.Var x)"
 assume agree:" Vagree \<nu> \<nu>' (FVDiff (trm.Var x))"
 have useful:"snd \<nu> $ x = snd \<nu>' $ x" using agree Vagree_def by (auto)
@@ -897,7 +881,7 @@ assume agree:"Vagree \<nu> \<nu>' (FVDiff (Const r))"
 show "dfree (Const r) \<Longrightarrow> frechet I (Const r) (fst \<nu>) (snd \<nu>) = frechet I (Const r) (fst \<nu>') (snd \<nu>')" by (auto)
 
 next
-fix var::id and args :: "(id \<Rightarrow> trm)"
+fix var::'a and args :: "('a \<Rightarrow> 'a trm)"
 assume IH:"(\<And>arg. arg \<in> range args \<Longrightarrow> dfree arg \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff arg) \<Longrightarrow> frechet I arg (fst \<nu>) (snd \<nu>) = frechet I arg (fst \<nu>') (snd \<nu>'))"
 assume free:"dfree ($f var args)"
 have frees:"(\<And>i. dfree (args i))" using free by (metis dfree.cases rangeI trm.distinct(13) trm.distinct(23) trm.distinct(25) trm.distinct(4) trm.inject(3))
@@ -910,7 +894,7 @@ using agrees sterms frechets by (auto)
 
 (* smt chokes on the full IH, so simplify things a bit first *)
 next
-fix t1::trm and t2::trm
+fix t1::'a trm and t2::'a trm
 assume IH1:"(dfree t1 \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t1) \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
 assume IH2:"(dfree t2 \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t2) \<Longrightarrow> frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
 assume dfree:"dfree (Plus t1 t2)"
@@ -934,7 +918,7 @@ by (smt FVT.simps(4) IH1'' IH2'' UnCI Vagree_def bound_effect_sterm frechet.simp
 
 (* smt chokes on the full IH, so simplify things a bit first *)
 next
-fix t1::trm and t2::trm
+fix t1::"'a trm" and t2::"'a trm"
 assume IH1:"(dfree t1 \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t1) \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
 assume IH2:"(dfree t2 \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t2) \<Longrightarrow> frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
 assume dfree:"dfree (Times t1 t2)"
@@ -960,13 +944,13 @@ using agree FVDiff_sub almost by (simp add: Vagree_def subset_eq)
 
 (* By contradiction*)
 next
-fix x::id
+fix x::'a
 show "dfree ($' x) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff ($' x)) \<Longrightarrow> frechet I ($' x) (fst \<nu>) (snd \<nu>) = frechet I ($' x) (fst \<nu>') (snd \<nu>')" 
 using dfree_vac1 by (auto)
 
 (* By contradiction*)
 next
-fix \<theta>::trm
+fix \<theta>::"'a trm"
 assume IH:"(dfree \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff \<theta>) \<Longrightarrow> frechet I \<theta> (fst \<nu>) (snd \<nu>) = frechet I \<theta> (fst \<nu>') (snd \<nu>'))"
 show "dfree (Differential \<theta>) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff (Differential \<theta>)) \<Longrightarrow> frechet I (Differential \<theta>) (fst \<nu>) (snd \<nu>) = frechet I (Differential \<theta>) (fst \<nu>') (snd \<nu>')"
 using dfree_vac2 by (auto)
@@ -976,7 +960,7 @@ lemma bound_effect_dterm:
   fixes I :: interp and \<nu> :: state and \<nu>'::state
   shows "dsafe \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> dterm_sem I  \<theta> \<nu> = dterm_sem I \<theta> \<nu>'"
 proof (induct "\<theta>")
-fix x :: id
+fix x :: 'a
 assume safe:"dsafe (trm.Var x)"
 assume agree:"Vagree \<nu> \<nu>' (FVT (trm.Var x))"
 show "dterm_sem I (trm.Var x) \<nu> = dterm_sem I (trm.Var x) \<nu>'" using safe agree Vagree_def rangeI by (auto)
@@ -988,7 +972,7 @@ assume agree:"Vagree \<nu> \<nu>' (FVT (Const r))"
 show "dterm_sem I (Const r) \<nu> = dterm_sem I (Const r) \<nu>'" using safe agree by (auto)
 
 next
-fix f :: id and args :: "id \<Rightarrow> trm"
+fix f :: 'a and args :: "'a \<Rightarrow> "'a trm""
 assume IH:"\<And>arg. arg \<in> range args \<Longrightarrow> dsafe arg \<Longrightarrow> Vagree \<nu> \<nu>' (FVT arg) \<Longrightarrow> dterm_sem I arg \<nu> = dterm_sem I arg \<nu>'"
 assume safe:"dsafe ($f f args)"
 assume agree:"Vagree \<nu> \<nu>' (FVT ($f f args))"
@@ -1002,7 +986,7 @@ show "dterm_sem I ($f f args) \<nu> = dterm_sem I ($f f args) \<nu>'"
 using dterms by (auto)
 
 next
-fix t1 :: trm and t2 :: trm
+fix t1 :: "'a trm" and t2 :: "'a trm"
 assume IH1:"dsafe t1 \<Longrightarrow> Vagree \<nu> \<nu>' (FVT t1) \<Longrightarrow> dterm_sem I t1 \<nu> = dterm_sem I t1 \<nu>'"
 assume IH2:"dsafe t2 \<Longrightarrow> Vagree \<nu> \<nu>' (FVT t2) \<Longrightarrow> dterm_sem I t2 \<nu> = dterm_sem I t2 \<nu>'"
 assume safe:"dsafe (Plus t1 t2)"
@@ -1011,7 +995,7 @@ show "dterm_sem I (Plus t1 t2) \<nu> = dterm_sem I (Plus t1 t2) \<nu>'" using IH
 by (metis FVT.simps(4) UnCI agree_supset dsafe.simps dterm_sem.simps(4) subset_eq trm.distinct(24) trm.distinct(32) trm.distinct(34) trm.inject(4) trm.simps(13) trm.simps(23) trm.simps(43) union_supset1)
 
 next
-fix t1 :: trm and t2 :: trm
+fix t1 :: "'a trm" and t2 :: "'a trm"
 assume IH1:"dsafe t1 \<Longrightarrow> Vagree \<nu> \<nu>' (FVT t1) \<Longrightarrow> dterm_sem I t1 \<nu> = dterm_sem I t1 \<nu>'"
 assume IH2:"dsafe t2 \<Longrightarrow> Vagree \<nu> \<nu>' (FVT t2) \<Longrightarrow> dterm_sem I t2 \<nu> = dterm_sem I t2 \<nu>'"
 assume safe:"dsafe (Times t1 t2)"
@@ -1021,14 +1005,14 @@ using IH1 IH2 safe agree Vagree_def
 by (metis agree_supset subset_eq union_supset1 UnCI FVT.simps(5)  dsafe.simps  dterm_sem.simps(5)  trm.distinct(32)  trm.distinct(37)  trm.distinct(26)  trm.inject(5)  trm.simps(15) trm.simps(25) trm.simps(46))
 
 next
-fix x :: id
+fix x :: 'a
 assume safe:"dsafe ($' x)"
 assume agree:"Vagree \<nu> \<nu>' (FVT ($' x))"
 show "dterm_sem I ($' x) \<nu> = dterm_sem I ($' x) \<nu>'" using safe agree Vagree_def rangeI 
 by (simp)
 
 next
-fix t :: trm
+fix t :: "'a trm"
 assume IH:"dsafe t \<Longrightarrow> Vagree \<nu> \<nu>' (FVT t) \<Longrightarrow> dterm_sem I t \<nu> = dterm_sem I t \<nu>'"
 assume safe:"dsafe (Differential t)"
 assume agree:"Vagree \<nu> \<nu>' (FVT (Differential t))"
@@ -1037,20 +1021,6 @@ show "dterm_sem I (Differential t) \<nu> = dterm_sem I (Differential t) \<nu>'"
 using IH safe agree bound_effect_frechet free by (auto)
 qed
 
-(* 
-
- 6. \<And>x. dsafe ($' x) \<Longrightarrow> Vagree \<nu> \<nu>' (FVT ($' x)) \<Longrightarrow> dterm_sem I ($' x) \<nu> = dterm_sem I ($' x) \<nu>'
- 7. \<And>\<theta>. (dsafe \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta> \<nu>') \<Longrightarrow>
-         dsafe (Differential \<theta>) \<Longrightarrow> Vagree \<nu> \<nu>' (FVT (Differential \<theta>)) \<Longrightarrow> dterm_sem I (Differential \<theta>) \<nu> = dterm_sem I (Differential \<theta>) \<nu>'
-*)
-
-(*
-lemma bound_effect_dterm:"dsafe \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> dterm_sem I  \<theta> \<nu> = dterm_sem I \<theta> \<nu>'"
-apply(induct "\<theta>")
-apply(auto simp add: Vagree_def bound_effect_frechet dfree_is_dsafe)
-apply (meson rangeI bound_effect_frechet dfree_is_dsafe)
-done
-*)
 subsection \<open>Axioms\<close>
 text \<open>
   The uniform substitution calculus is based on a finite list of concrete 
@@ -1061,25 +1031,25 @@ text \<open>
   \<close>
 
 (* Predicates*)
-definition H :: "id" where "H \<equiv> finite_5.a\<^sub>1"
-definition P :: "id" where "P \<equiv> finite_5.a\<^sub>2"
-definition Q :: "id" where "Q \<equiv> finite_5.a\<^sub>3"
+definition H :: "'a" where "H \<equiv> id1"
+definition P :: "'a" where "P \<equiv> id2"
+definition Q :: "'a" where "Q \<equiv> id3"
 
 (* Predicationals *)
-definition PP :: "id" where "PP \<equiv> finite_5.a\<^sub>1"
-definition QQ :: "id" where "QQ \<equiv> finite_5.a\<^sub>2"
+definition PP :: "'a" where "PP \<equiv> id1"
+definition QQ :: "'a" where "QQ \<equiv> id2"
 
 (* Programs *)
-definition a :: "id" where "a \<equiv> finite_5.a\<^sub>1"
-definition b :: "id" where "b \<equiv> finite_5.a\<^sub>2"
+definition a :: "'a" where "a \<equiv> id1"
+definition b :: "'a" where "b \<equiv> id2"
 
 (* Program variables*)
-definition x :: "id" where "x \<equiv> finite_5.a\<^sub>1"
+definition x :: "'a" where "x \<equiv> id1"
 
 (* Functions *)
-definition f :: "id" where "f \<equiv> finite_5.a\<^sub>1"
+definition f :: "'a" where "f \<equiv> id1"
 
-definition valid :: "formula \<Rightarrow> bool" 
+definition valid :: "'a formula \<Rightarrow> bool" 
 where "valid \<phi> \<equiv> (\<forall> I. \<forall> \<nu>. is_interp I \<longrightarrow> \<nu> \<in> fml_sem I \<phi>)" 
 
 (* Arguments for a "nullary" function - a tuple of all-zeros. When we encode 
@@ -1092,75 +1062,75 @@ definition empty :: "dtuple"
   where "empty \<equiv> \<lambda>i.(Const 0)"
 
 (* Function argument tuple where the first argument is arbitrary and the rest are zero.*)
-fun singleton :: "trm \<Rightarrow> dtuple"
-  where "singleton t i = (if i = finite_5.a\<^sub>1 then t else (Const 0))"
+fun singleton :: ""'a trm" \<Rightarrow> dtuple"
+  where "singleton t i = (if i = .a\<^sub>1 then t else (Const 0))"
 
 (* Equivalents of the above for functions over simple terms. *)
 definition sempty :: "stuple"
   where "sempty _ \<equiv> (Const 0)"
 
-fun ssingleton :: "trm \<Rightarrow> stuple"
-  where "ssingleton t finite_5.a\<^sub>1 = t"
+fun ssingleton :: "'a trm \<Rightarrow> stuple"
+  where "ssingleton t .a\<^sub>1 = t"
   | "ssingleton t _ = (Const 0)"
      
-definition assign_axiom :: "formula"
+definition assign_axiom :: "'a formula"
   where "assign_axiom \<equiv> 
     ([[x := ($f f empty)]] (Prop P (singleton (Var x)))) 
       \<leftrightarrow> Prop P (singleton ($f f empty))"
 
-definition loop_iterate_axiom :: "formula"
+definition loop_iterate_axiom :: "'a formula"
   where "loop_iterate_axiom \<equiv> ([[$\<alpha> a**]]Predicational PP) 
     \<leftrightarrow> ((Predicational PP) && ([[$\<alpha> a]][[$\<alpha> a**]]Predicational PP))"
   
-definition test_axiom :: "formula"
+definition test_axiom :: "'a formula"
   where "test_axiom \<equiv> 
     ([[?($\<phi> H empty)]]$\<phi> P empty) \<leftrightarrow> (($\<phi> H empty) \<rightarrow> ($\<phi> P empty))"
    
-definition box_axiom :: "formula"
+definition box_axiom :: "'a formula"
   where "box_axiom \<equiv> (\<langle>$\<alpha> a\<rangle>Predicational PP) \<leftrightarrow> !([[$\<alpha> a]]!(Predicational PP))"
 
-definition choice_axiom :: "formula"
+definition choice_axiom :: "'a formula"
   where "choice_axiom \<equiv> ([[$\<alpha> a \<union>\<union> $\<alpha> b]]Predicational PP) 
     \<leftrightarrow> (([[$\<alpha> a]]Predicational PP) && ([[$\<alpha> b]]Predicational PP))"
  
-definition Kaxiom :: "formula"
+definition Kaxiom :: "'a formula"
   where "Kaxiom \<equiv> ([[$\<alpha> a]]((Predicational PP) \<rightarrow> (Predicational QQ))) 
     \<rightarrow> ([[$\<alpha> a]]Predicational PP) \<rightarrow> ([[$\<alpha> a]]Predicational QQ)"
   
 (*
-definition Ibroken :: "formula"
+definition Ibroken :: "'a formula"
   where "Ibroken \<equiv> ([[$$a]]($P [] \<rightarrow> ([[$$a]]$P [])) 
     \<rightarrow> ($P [] \<rightarrow> ([[($$a)**]]$P [])))"*)
   
-definition Iaxiom :: "formula"
+definition Iaxiom :: "'a formula"
   where "Iaxiom \<equiv> ([[($\<alpha> a)**]](Predicational PP \<rightarrow> ([[$\<alpha> a]]Predicational PP))
     \<rightarrow> (Predicational PP \<rightarrow> ([[($\<alpha> a)**]]Predicational PP)))"
 
-definition Vaxiom :: "formula"
+definition Vaxiom :: "'a formula"
   where "Vaxiom \<equiv> ($\<phi> P empty) \<rightarrow> ([[$\<alpha> a]]($\<phi> P empty))"
   
-definition G_holds :: "formula \<Rightarrow> hp \<Rightarrow> bool"
+definition G_holds :: "'a formula \<Rightarrow> 'a hp \<Rightarrow> bool"
   where "G_holds \<phi> \<alpha> \<equiv> valid \<phi> \<longrightarrow> valid ([[\<alpha>]]\<phi>)"
   
-definition Skolem_holds :: "formula \<Rightarrow> id \<Rightarrow> bool"
+definition Skolem_holds :: "'a formula \<Rightarrow> 'a \<Rightarrow> bool"
   where "Skolem_holds \<phi> var \<equiv> valid \<phi> \<longrightarrow> valid (Forall var \<phi>)"
 
-definition MP_holds :: "formula \<Rightarrow> formula \<Rightarrow> bool"
+definition MP_holds :: "'a formula \<Rightarrow> 'a formula \<Rightarrow> bool"
   where "MP_holds \<phi> \<psi> \<equiv> valid (\<phi> \<rightarrow> \<psi>) \<longrightarrow> valid \<phi> \<longrightarrow> valid \<psi>"
                                                                           
-definition CT_holds :: "id \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> bool"
+definition CT_holds :: "'a \<Rightarrow> 'a trm \<Rightarrow> 'a trm \<Rightarrow> bool"
   where "CT_holds g \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
     \<longrightarrow> valid (Equals (Function g (singleton \<theta>)) (Function g (singleton \<theta>')))"
                                                       
-definition CQ_holds :: "id \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> bool"
+definition CQ_holds :: "'a \<Rightarrow> 'a trm \<Rightarrow> 'a trm \<Rightarrow> bool"
   where "CQ_holds p \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>') 
     \<longrightarrow> valid ((Prop p (singleton \<theta>)) \<leftrightarrow> (Prop p (singleton \<theta>')))"
  
-definition CE_holds :: "id \<Rightarrow> formula \<Rightarrow> formula \<Rightarrow> bool"                           
+definition CE_holds :: "'a \<Rightarrow> 'a formula \<Rightarrow> 'a formula \<Rightarrow> bool"                           
   where "CE_holds var \<phi> \<psi> \<equiv> valid (\<phi> \<leftrightarrow> \<psi>) 
     \<longrightarrow> valid (InContext var \<phi> \<leftrightarrow> InContext var \<psi>)"
  
-definition diff_const_axiom :: "formula"
+definition diff_const_axiom :: "'a formula"
   where "diff_const_axiom \<equiv> Equals (Differential ($f f sempty)) (Const 0)"
 
 theorem test_valid: "valid test_axiom"
@@ -1216,11 +1186,11 @@ apply(auto simp add: singleton_def x_def)
 done
 
 lemma assign_lem1:
-"dterm_sem I (if i = finite_5.a\<^sub>1 then Var x else (Const 0))
+"dterm_sem I (if i = .a\<^sub>1 then Var x else (Const 0))
                    (vec_lambda (\<lambda>y. if x = y then Functions I f 
   (vec_lambda (\<lambda>i. dterm_sem I (dl.empty i) \<nu>)) else  vec_nth (fst \<nu>) y), snd \<nu>)
 =
- dterm_sem I (if i = finite_5.a\<^sub>1 then $f f dl.empty else (Const 0)) \<nu>
+ dterm_sem I (if i = .a\<^sub>1 then $f f dl.empty else (Const 0)) \<nu>
 "
  apply(case_tac "i = x")
  apply(auto simp add: proj_sing1) 
@@ -1344,7 +1314,7 @@ lemma CT_lemma:"\<And>I a b. \<forall>I. is_interp I \<longrightarrow> (\<forall
              Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = a\<^sub>1 then \<theta> else  (Const 0)) (a, b))) =
              Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = a\<^sub>1 then \<theta>' else (Const 0)) (a, b)))"
 proof -
-  fix I :: interp and a :: "(real, Enum.finite_5) vec" and b :: "(real, Enum.finite_5) vec"
+  fix I :: interp and a :: "(real, 'state_dim) vec" and b :: "(real, 'state_dim) vec"
   assume a1: "is_interp I"
   assume "\<forall>I. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b))"
   then have "\<forall>f. dterm_sem I (if f = a\<^sub>1 then \<theta>' else (Const 0)) (a, b) = dterm_sem I (if f = a\<^sub>1 then \<theta> else (Const 0)) (a, b)"
@@ -1366,10 +1336,10 @@ lemma CQ_lemma:"\<And>I \<nu>. \<forall>I \<nu>. is_interp I \<longrightarrow> d
            Predicates I var (vec_lambda(\<lambda>i. dterm_sem I (if i = a\<^sub>1 then \<theta> else  (Const 0)) \<nu>)) =
            Predicates I var (vec_lambda(\<lambda>i. dterm_sem I (if i = a\<^sub>1 then \<theta>' else (Const 0)) \<nu>))"
 proof -
-  fix I :: interp and \<nu> :: "(real, Enum.finite_5) vec \<times> (real, Enum.finite_5) vec"
+  fix I :: interp and \<nu> :: "(real, 'state_dim) vec \<times> (real, 'state_dim) vec"
   assume a1: "\<forall>I \<nu>. is_interp I \<longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta>' \<nu>"
   assume a2: "is_interp I"
-  obtain ff :: "(Enum.finite_5 \<Rightarrow> real) \<Rightarrow> (Enum.finite_5 \<Rightarrow> real) \<Rightarrow> Enum.finite_5" where
+  obtain ff :: "('state_dim \<Rightarrow> real) \<Rightarrow> ('state_dim \<Rightarrow> real) \<Rightarrow> 'state_dim" where
     f3: "\<forall>f fa. f (ff fa f) \<noteq> fa (ff fa f) \<or> vec_lambda f = vec_lambda fa"
     by (meson Cart_lambda_cong)
   have "dterm_sem I \<theta> \<nu> = dterm_sem I \<theta>' \<nu> "
@@ -1433,11 +1403,11 @@ theorem diff_const_axiom_valid: "valid diff_const_axiom"
 section \<open>Unused Lemmas\<close>
 
 lemma sum_unique_nonzero:
- fixes i::id and f::"id \<Rightarrow> real"
- assumes restZero:"\<And>j. j\<in>(UNIV::id set) \<Longrightarrow> j \<noteq> i \<Longrightarrow> f j = 0" 
- shows "(\<Sum>j\<in>(UNIV::id set). f j) = f i"
+ fixes i::'a and f::"'a \<Rightarrow> real"
+ assumes restZero:"\<And>j. j\<in>(UNIV::'a set) \<Longrightarrow> j \<noteq> i \<Longrightarrow> f j = 0" 
+ shows "(\<Sum>j\<in>(UNIV::'a set). f j) = f i"
  proof -
-   let ?U = "UNIV :: id set"
+   let ?U = "UNIV :: 'a set"
    let ?A = "{k \<in> ?U. k = i}"
    let ?B = "{k \<in> ?U. \<not>(k = i)}"
    have finA:"finite ?A" by auto
@@ -1460,4 +1430,5 @@ lemma sum_unique_nonzero:
    from partition union_sum zeroInter Bzero Asingle 
    show ?thesis by auto
  qed
+end
 end
