@@ -619,9 +619,14 @@ lemma frechet_correctness:
     fix x1 x2a
     assume IH1:"dfree x1 \<Longrightarrow> (sterm_sem I x1 has_derivative frechet I x1 \<nu>) (at \<nu>)"
     assume IH2:"dfree x2a \<Longrightarrow> (sterm_sem I x2a has_derivative frechet I x2a \<nu>) (at \<nu>)"
-    show "dfree (Plus x1 x2a) \<Longrightarrow> (sterm_sem I (Plus x1 x2a) has_derivative 
+    assume free:"dfree (Plus x1 x2a)"
+    have free1:"dfree x1" using free splus_case dfree.cases by (blast)
+    have free2:"dfree x2a" using free splus_case dfree.cases by (blast)
+    have sem1:"(sterm_sem I x1 has_derivative frechet I x1 \<nu>) (at \<nu>)" using IH1 free1 by (auto)
+    have sem2:"(sterm_sem I x2a has_derivative frechet I x2a \<nu>) (at \<nu>)" using IH2 free2 by (auto)
+    show "(sterm_sem I (Plus x1 x2a) has_derivative 
           frechet I (Plus x1 x2a) \<nu>) (at \<nu>)"
-      using IH1 IH2 splus_case dfree.cases by (auto)
+      using splus_case dfree.cases sem1 sem2 sterm_sem.simps frechet.simps IH1 IH2 free1 free2 sledgehammer
   next
     fix x1 x2a
     assume IH1:"dfree x1 \<Longrightarrow> (sterm_sem I x1 has_derivative frechet I x1 \<nu>) (at \<nu>)"
@@ -1003,7 +1008,7 @@ assume IH2:"dsafe t2 \<Longrightarrow> Vagree \<nu> \<nu>' (FVT t2) \<Longrighta
 assume safe:"dsafe (Times t1 t2)"
 assume agree:"Vagree \<nu> \<nu>' (FVT (Times t1 t2))"
 show "dterm_sem I (Times t1 t2) \<nu> = dterm_sem I (Times t1 t2) \<nu>'" 
-using IH1 IH2 safe agree Vagree_def
+using IH1 IH2 safe agree
 by (metis agree_supset subset_eq union_supset1 UnCI FVT.simps(5)  dsafe.simps  dterm_sem.simps(5)  trm.distinct(32)  trm.distinct(37)  trm.distinct(26)  trm.inject(5)  trm.simps(15) trm.simps(25) trm.simps(46))
 
 next
