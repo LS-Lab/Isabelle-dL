@@ -122,13 +122,13 @@ where
 
 inductive dsafe :: "'a trm \<Rightarrow> bool"
 where
-  "dsafe (Var i)"
-| "dsafe (Const r)"
-| "(\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> dsafe \<theta>) \<Longrightarrow> dsafe (Function i args)"
-| "dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
-| "dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
-| "dfree \<theta> \<Longrightarrow> dsafe (Differential \<theta>)"
-| "dsafe ($' i)"
+  dsafe_Var: "dsafe (Var i)"
+| dsafe_Const: "dsafe (Const r)"
+| dsafe_Fun: "(\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> dsafe \<theta>) \<Longrightarrow> dsafe (Function i args)"
+| dsafe_Plus: "dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
+| dsafe_Times: "dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
+| dsafe_Diff: "dfree \<theta> \<Longrightarrow> dsafe (Differential \<theta>)"
+| dsafe_DiffVar: "dsafe ($' i)"
 
 lemma dfree_is_dsafe: "dfree \<theta> \<Longrightarrow> dsafe \<theta>"
   by (induction rule: dfree.induct) (auto intro: dsafe.intros)
@@ -822,164 +822,100 @@ lemma  coincidence_frechet :
 next
   case dfree_Const then show ?case
     by auto
-(*next
-  case "(dfree_Fun IH free agree)
-  fix var::"'state_dim::finite" and args :: "('state_dim \<Rightarrow> 'state_dim trm)"
-  (*assume IH:"(\<And>arg. arg \<in> range args \<Longrightarrow> dfree arg \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff arg) \<Longrightarrow> frechet I arg (fst \<nu>) (snd \<nu>) = frechet I arg (fst \<nu>') (snd \<nu>'))"
-  assume free:"dfree ($f var args)"*)
-  have frees:"(\<And>i. dfree (args i))" using free by (metis dfree.cases rangeI trm.distinct(13) trm.distinct(23) trm.distinct(25) trm.distinct(4) trm.inject(3))
-(*  assume agree:"Vagree \<nu> \<nu>' (FVDiff ($f var args))"*)
-  have agrees:"\<And>i. Vagree \<nu> \<nu>' (FVDiff (args i))" using agree agree_func by (blast)
-  have sterms:"\<And>i. sterm_sem I (args i) (fst \<nu>) = sterm_sem I (args i) (fst \<nu>')" using frees agrees coincidence_sterm by (smt FVDiff_sub Vagree_def mem_Collect_eq subset_eq)
-  have frechets:"\<And>i. frechet I (args i) (fst \<nu>) (snd \<nu>) = frechet I (args i) (fst \<nu>') (snd \<nu>')"  using IH agrees frees rangeI by blast
-  show  "frechet I ($f i args) (fst \<nu>) (snd \<nu>) = frechet I ($f i args) (fst \<nu>') (snd \<nu>')"
-  using agrees sterms frechets by (auto)
-*)
-qed
-(* 
-  next
-  fix var::"'state_dim::finite" and args :: "('state_dim \<Rightarrow> 'state_dim trm)"
-  assume IH:"(\<And>arg. arg \<in> range args \<Longrightarrow> dfree arg \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff arg) \<Longrightarrow> frechet I arg (fst \<nu>) (snd \<nu>) = frechet I arg (fst \<nu>') (snd \<nu>'))"
-  assume free:"dfree ($f var args)"
-  have frees:"(\<And>i. dfree (args i))" using free by (metis dfree.cases rangeI trm.distinct(13) trm.distinct(23) trm.distinct(25) trm.distinct(4) trm.inject(3))
+next
+(*  case "(dfree_Fun IH free agree)*)
+  fix  args :: "('state_dim \<Rightarrow> 'state_dim trm)" and var::"'state_dim::finite"
+  assume free:"(\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> dfree \<theta>)"
+  assume IH:"(\<And>arg. arg \<in> range args \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff arg) \<Longrightarrow> frechet I arg (fst \<nu>) (snd \<nu>) = frechet I arg (fst \<nu>') (snd \<nu>'))"
+  have frees:"(\<And>i. dfree (args i))" using free by (auto simp add: rangeI)
   assume agree:"Vagree \<nu> \<nu>' (FVDiff ($f var args))"
   have agrees:"\<And>i. Vagree \<nu> \<nu>' (FVDiff (args i))" using agree agree_func by (blast)
   have sterms:"\<And>i. sterm_sem I (args i) (fst \<nu>) = sterm_sem I (args i) (fst \<nu>')" using frees agrees coincidence_sterm by (smt FVDiff_sub Vagree_def mem_Collect_eq subset_eq)
   have frechets:"\<And>i. frechet I (args i) (fst \<nu>) (snd \<nu>) = frechet I (args i) (fst \<nu>') (snd \<nu>')"  using IH agrees frees rangeI by blast
-  show "frechet I ($f var args) (fst \<nu>) (snd \<nu>) = frechet I ($f var args) (fst \<nu>') (snd \<nu>')"
+  show  "frechet I ($f var args) (fst \<nu>) (snd \<nu>) = frechet I ($f var args) (fst \<nu>') (snd \<nu>')"
   using agrees sterms frechets by (auto)
 
 (* smt chokes on the full IH, so simplify things a bit first *)
 next
   fix t1::"'state_dim::finite trm" and t2::"'state_dim trm"
-  assume IH1:"(dfree t1 \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t1) \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
-  assume IH2:"(dfree t2 \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t2) \<Longrightarrow> frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
-  assume dfree:"dfree (Plus t1 t2)"
-  have dfree1:"dfree t1"
-  using dfree dfree.cases trm.distinct(15) trm.distinct(23) trm.distinct(31) trm.distinct(5) trm.inject(4) by blast
-  have dfree2:"dfree t2"
-  using dfree dfree.cases trm.distinct(15) trm.distinct(23) trm.distinct(31) trm.distinct(5) trm.inject(4) by blast
-  have IH1':"(Vagree \<nu> \<nu>' (FVDiff t1) \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
-  using IH1 dfree1 by (auto)
-  have IH2':"(Vagree \<nu> \<nu>' (FVDiff t2) \<Longrightarrow> frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
-  using IH2 dfree2 by (auto)
+  assume dfree1:"dfree t1"
+  assume IH1:"(Vagree \<nu> \<nu>' (FVDiff t1) \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
+  assume dfree2:"dfree t2"
+  assume IH2:"(Vagree \<nu> \<nu>' (FVDiff t2) \<Longrightarrow> frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
   assume agree:"Vagree \<nu> \<nu>' (FVDiff (Plus t1 t2))"
   have agree1:"Vagree \<nu> \<nu>' (FVDiff t1)" using agree agree_plus1 by (blast)
   have agree2:"Vagree \<nu> \<nu>' (FVDiff t2)" using agree agree_plus2 by (blast)
-  have IH1'':"(frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
-  using IH1' agree1 by (auto)
-  have IH2'':"(frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
-  using IH2' agree2 by (auto)
+  have IH1':"(frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
+  using IH1 agree1 by (auto)
+  have IH2':"(frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
+  using IH2 agree2 by (auto)
   show "frechet I (Plus t1 t2) (fst \<nu>) (snd \<nu>) = frechet I (Plus t1 t2) (fst \<nu>') (snd \<nu>')"
-  by (smt FVT.simps(4) IH1'' IH2'' UnCI Vagree_def coincidence_sterm frechet.simps(3) mem_Collect_eq)
+  by (smt FVT.simps(4) IH1' IH2' UnCI Vagree_def coincidence_sterm frechet.simps(3) mem_Collect_eq)
 
 (* smt chokes on the full IH, so simplify things a bit first *)
 next
   fix t1::"'state_dim trm" and t2::"'state_dim trm"
-  assume IH1:"(dfree t1 \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t1) \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
-  assume IH2:"(dfree t2 \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t2) \<Longrightarrow> frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
-  assume dfree:"dfree (Times t1 t2)"
-  have dfree1:"dfree t1"
-  using dfree dfree.cases trm.distinct(15) trm.distinct(23) trm.distinct(31) trm.distinct(5) trm.inject(4) by blast
-  have dfree2:"dfree t2"
-  using dfree dfree.cases trm.distinct(15) trm.distinct(23) trm.distinct(31) trm.distinct(5) trm.inject(4) by blast
-  have IH1':"(Vagree \<nu> \<nu>' (FVDiff t1) \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
-  using IH1 dfree1 by (auto)
-  have IH2':"(Vagree \<nu> \<nu>' (FVDiff t2) \<Longrightarrow> frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
-  using IH2 dfree2 by (auto)
+  assume dfree1:"dfree t1"
+  assume IH1:"(Vagree \<nu> \<nu>' (FVDiff t1) \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
+  assume dfree2:"dfree t2"
+  assume IH2:"(Vagree \<nu> \<nu>' (FVDiff t2) \<Longrightarrow> frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
   assume agree:"Vagree \<nu> \<nu>' (FVDiff (Times t1 t2))"
   have agree1:"Vagree \<nu> \<nu>' (FVDiff t1)" using agree agree_times1 by blast
   have agree2:"Vagree \<nu> \<nu>' (FVDiff t2)" using agree agree_times2 by blast
-  have IH1'':"(frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
-  using IH1' agree1 by (auto)
-  have IH2'':"(frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
-  using IH2' agree2 by (auto)
+  have IH1':"(frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
+  using IH1 agree1 by (auto)
+  have IH2':"(frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
+  using IH2 agree2 by (auto)
   have almost:"Vagree \<nu> \<nu>' (FVT (Times t1 t2)) \<Longrightarrow> frechet I (Times t1 t2) (fst \<nu>) (snd \<nu>) = frechet I (Times t1 t2) (fst \<nu>') (snd \<nu>')"
-  by (smt FVT.simps(5) IH1'' IH2'' UnCI Vagree_def coincidence_sterm frechet.simps(4)  mem_Collect_eq agree )
+  by (smt FVT.simps(5) IH1' IH2' UnCI Vagree_def coincidence_sterm frechet.simps(4)  mem_Collect_eq agree )
   show "frechet I (Times t1 t2) (fst \<nu>) (snd \<nu>) = frechet I (Times t1 t2) (fst \<nu>') (snd \<nu>')"
   using agree FVDiff_sub almost pointed_finite.agree_supset
   by (metis)
-
-(* By contradiction*)
-next
-  fix x::'state_dim
-  show "dfree ($' x) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff ($' x)) \<Longrightarrow> frechet I ($' x) (fst \<nu>) (snd \<nu>) = frechet I ($' x) (fst \<nu>') (snd \<nu>')"
-  by (auto simp: dfree_vac1)
-
-(* By contradiction*)
-next
-  fix \<theta>::"'state_dim trm"
-  assume IH:"(dfree \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff \<theta>) \<Longrightarrow> frechet I \<theta> (fst \<nu>) (snd \<nu>) = frechet I \<theta> (fst \<nu>') (snd \<nu>'))"
-  show "dfree (Differential \<theta>) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff (Differential \<theta>)) \<Longrightarrow> frechet I (Differential \<theta>) (fst \<nu>) (snd \<nu>) = frechet I (Differential \<theta>) (fst \<nu>') (snd \<nu>')"
-  using dfree_vac2 by (auto)
 qed
-*)
 
 lemma coincidence_dterm:
   fixes I :: "'state_dim::finite interp" and \<nu> :: "'state_dim state" and \<nu>'::"'state_dim state"
   shows "dsafe \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta> \<nu>'"
-proof (induct "\<theta>")
-fix x :: 'state_dim
-assume safe:"dsafe (trm.Var x)"
-assume agree:"Vagree \<nu> \<nu>' (FVT (trm.Var x))"
-show "dterm_sem I (trm.Var x) \<nu> = dterm_sem I (trm.Var x) \<nu>'" using safe agree Vagree_def rangeI
-by (smt insert_iff mem_Collect_eq pointed_finite.FVT.simps(1) pointed_finite.dterm_sem.simps(1))
+proof (induction rule: dsafe.induct)
+  fix x :: 'state_dim
+  assume agree:"Vagree \<nu> \<nu>' (FVT (trm.Var x))"
+  show "dterm_sem I (trm.Var x) \<nu> = dterm_sem I (trm.Var x) \<nu>'" using agree Vagree_def rangeI
+    by (smt insert_iff mem_Collect_eq pointed_finite.FVT.simps(1) pointed_finite.dterm_sem.simps(1))
 
 next
-fix r ::real
-assume safe:"dsafe (Const r)"
-assume agree:"Vagree \<nu> \<nu>' (FVT (Const r))"
-show "dterm_sem I (Const r) \<nu> = dterm_sem I (Const r) \<nu>'" using safe agree by (auto)
+  fix r ::real
+  assume agree:"Vagree \<nu> \<nu>' (FVT (Const r))"
+  show "dterm_sem I (Const r) \<nu> = dterm_sem I (Const r) \<nu>'" using agree by (auto)
 
 next
-fix f :: "'state_dim::finite" and args :: "'state_dim \<Rightarrow> 'state_dim trm"
-assume IH:"\<And>arg. arg \<in> range args \<Longrightarrow> dsafe arg \<Longrightarrow> Vagree \<nu> \<nu>' (FVT arg) \<Longrightarrow> dterm_sem I arg \<nu> = dterm_sem I arg \<nu>'"
-assume safe:"dsafe ($f f args)"
-assume agree:"Vagree \<nu> \<nu>' (FVT ($f f args))"
-have safes:"(\<And>i. dsafe (args i))"
-using safe dsafe.simps rangeI trm.distinct(13) trm.distinct(23) trm.distinct(25) trm.distinct(27) trm.distinct(29) trm.distinct(3) trm.inject(3)
-by (metis (no_types, lifting))
-have agrees:"\<And>i. Vagree \<nu> \<nu>' (FVT (args i))"
-using agree agree_func_fvt by (blast)
-have dterms:"\<And>i. dterm_sem I (args i) \<nu> = dterm_sem I (args i) \<nu>'"
-using safes agrees coincidence_sterm IH rangeI by (simp)
-show "dterm_sem I ($f f args) \<nu> = dterm_sem I ($f f args) \<nu>'"
-using dterms by (auto)
+  fix args :: "'state_dim \<Rightarrow> 'state_dim trm" and f :: "'state_dim::finite"
+  assume safe:"(\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> dsafe \<theta>)"
+  assume IH:"\<And>arg. arg \<in> range args \<Longrightarrow> Vagree \<nu> \<nu>' (FVT arg) \<Longrightarrow> dterm_sem I arg \<nu> = dterm_sem I arg \<nu>'"
+  assume agree:"Vagree \<nu> \<nu>' (FVT ($f f args))"
+  have safes:"(\<And>i. dsafe (args i))" using safe rangeI by (simp)
+  have agrees:"\<And>i. Vagree \<nu> \<nu>' (FVT (args i))"
+    using agree agree_func_fvt by (blast)
+  have dterms:"\<And>i. dterm_sem I (args i) \<nu> = dterm_sem I (args i) \<nu>'"
+    using safes agrees coincidence_sterm IH rangeI by (simp)
+  show "dterm_sem I ($f f args) \<nu> = dterm_sem I ($f f args) \<nu>'"
+    using dterms by (auto)
 
 next
-fix t1 :: "'state_dim trm" and t2 :: "'state_dim trm"
-assume IH1:"dsafe t1 \<Longrightarrow> Vagree \<nu> \<nu>' (FVT t1) \<Longrightarrow> dterm_sem I t1 \<nu> = dterm_sem I t1 \<nu>'"
-assume IH2:"dsafe t2 \<Longrightarrow> Vagree \<nu> \<nu>' (FVT t2) \<Longrightarrow> dterm_sem I t2 \<nu> = dterm_sem I t2 \<nu>'"
-assume safe:"dsafe (Plus t1 t2)"
-assume agree:"Vagree \<nu> \<nu>' (FVT (Plus t1 t2))"
-show "dterm_sem I (Plus t1 t2) \<nu> = dterm_sem I (Plus t1 t2) \<nu>'" using IH1 IH2 safe agree
-by (metis FVT.simps(4) UnCI agree_supset dsafe.simps dterm_sem.simps(4) subset_eq trm.distinct(24) trm.distinct(32) trm.distinct(34) trm.inject(4) trm.simps(13) trm.simps(23) trm.simps(43) union_supset1)
+  case dsafe_Plus then show "?case"
+    by (metis FVT.simps(4) UnCI agree_supset dterm_sem.simps(4) subset_eq  union_supset1)
 
 next
-fix t1 :: "'state_dim trm" and t2 :: "'state_dim trm"
-assume IH1:"dsafe t1 \<Longrightarrow> Vagree \<nu> \<nu>' (FVT t1) \<Longrightarrow> dterm_sem I t1 \<nu> = dterm_sem I t1 \<nu>'"
-assume IH2:"dsafe t2 \<Longrightarrow> Vagree \<nu> \<nu>' (FVT t2) \<Longrightarrow> dterm_sem I t2 \<nu> = dterm_sem I t2 \<nu>'"
-assume safe:"dsafe (Times t1 t2)"
-assume agree:"Vagree \<nu> \<nu>' (FVT (Times t1 t2))"
-show "dterm_sem I (Times t1 t2) \<nu> = dterm_sem I (Times t1 t2) \<nu>'"
-using IH1 IH2 safe agree
-by (metis agree_supset subset_eq union_supset1 UnCI FVT.simps(5)  dsafe.simps  dterm_sem.simps(5)  trm.distinct(32)  trm.distinct(37)  trm.distinct(26)  trm.inject(5)  trm.simps(15) trm.simps(25) trm.simps(46))
+  case dsafe_Times then show "?case"
+    by (metis FVT.simps(5) UnCI agree_supset dterm_sem.simps(5) subset_eq  union_supset1)
+
+next 
+  case dsafe_Diff then show "?case"
+    by (auto simp: directional_derivative_def coincidence_frechet)
 
 next
-fix x :: 'state_dim
-assume safe:"dsafe ($' x)"
-assume agree:"Vagree \<nu> \<nu>' (FVT ($' x))"
-show "dterm_sem I ($' x) \<nu> = dterm_sem I ($' x) \<nu>'" using safe agree Vagree_def rangeI
-by (smt insert_iff mem_Collect_eq pointed_finite.FVT.simps(7) pointed_finite.dterm_sem.simps(2))
+  case dsafe_DiffVar then show "?case"
+    by (smt Vagree_def rangeI insert_iff mem_Collect_eq pointed_finite.FVT.simps(7) pointed_finite.dterm_sem.simps(2))
 
-next
-fix t :: "'state_dim trm"
-assume IH:"dsafe t \<Longrightarrow> Vagree \<nu> \<nu>' (FVT t) \<Longrightarrow> dterm_sem I t \<nu> = dterm_sem I t \<nu>'"
-assume safe:"dsafe (Differential t)"
-assume agree:"Vagree \<nu> \<nu>' (FVT (Differential t))"
-have free:"dfree t" using safe dsafe.cases by (auto)
-show "dterm_sem I (Differential t) \<nu> = dterm_sem I (Differential t) \<nu>'"
-using IH safe agree coincidence_frechet free by (auto simp: directional_derivative_def)
 qed
 
 subsection \<open>Axioms\<close>
