@@ -289,7 +289,7 @@ where "repd v x r = (fst v, (\<chi> y. if x = y then r else vec_nth (snd v) y))"
    either the value of the corresponding term in the ODE or 0 if the variable is unbound.
   *)
 fun rhs_sem:: "'a ::finite interp \<Rightarrow> 'a Rvec \<Rightarrow> 'a ODE \<Rightarrow> 'a Rvec"
-  where "rhs_sem I \<nu> ODE = vec_lambda (\<lambda>i. case ODE i of None \<Rightarrow> 0 | Some t \<Rightarrow> sterm_sem I t \<nu>)"
+  where "rhs_sem I \<nu> ODE = (\<chi> i. case ODE i of None \<Rightarrow> 0 | Some t \<Rightarrow> sterm_sem I t \<nu>)"
 
 (* ivp I \<nu> ODE gives us an initial-value problem based on ODE in the initial state \<nu>*)
 fun ivp :: "'a::finite interp \<Rightarrow> 'a Rvec \<Rightarrow> 'a ODE \<Rightarrow> 'a Rvec ivp"
@@ -322,7 +322,7 @@ fun fml_sem  :: "'a::finite interp \<Rightarrow> 'a formula \<Rightarrow> 'a sta
   ivp_sem  :: "'a::finite interp \<Rightarrow> 'a Rvec ivp \<Rightarrow> 'a formula \<Rightarrow> 'a state set"
 where
   "fml_sem I (Geq t1 t2) = {v. dterm_sem I t1 v \<ge> dterm_sem I t2 v}"
-| "fml_sem I (Prop P terms) = {\<nu>. Predicates I P (vec_lambda (\<lambda>i. dterm_sem I (terms i) \<nu>))}"
+| "fml_sem I (Prop P terms) = {\<nu>. Predicates I P (\<chi> i. dterm_sem I (terms i) \<nu>)}"
 | "fml_sem I (Not \<phi>) = {v. v \<notin> fml_sem I \<phi>}"
 | "fml_sem I (And \<phi> \<psi>) = fml_sem I \<phi> \<inter> fml_sem I \<psi>"
 | "fml_sem I (Forall x \<phi>) = {v. \<forall>r. (repv v x r) \<in> fml_sem I \<phi>}"
@@ -364,7 +364,7 @@ lemma sconst_case:
   by auto
 
 lemma sfunction_case:
-  "sterm_sem I (Function f args) = (\<lambda>v. Functions I f (vec_lambda (\<lambda>i. sterm_sem I (args i) v)))"
+  "sterm_sem I (Function f args) = (\<lambda>v. Functions I f (\<chi> i. sterm_sem I (args i) v))"
   by auto
 
 lemma splus_case:
@@ -413,7 +413,7 @@ proof -
                      (\<lambda>h. inner (?f \<nu>) (?g' h) + inner (?f' h) (?g \<nu>))) (at \<nu>)"
   by (metis (no_types, lifting) UNIV_I has_derivative_transform)
   have deriv_eq: "(\<lambda>h. inner (?f \<nu>) (?g' h) + inner (?f' h) (?g \<nu>))
-    = (\<lambda>v'. inner v' (vec_lambda (\<lambda>i. if x = i then 1 else 0)))"
+    = (\<lambda>v'. inner v' (\<chi> i. if x = i then 1 else 0))"
   by(auto)
   from better_deriv and deriv_eq show ?thesis by (auto)
 qed
@@ -421,26 +421,26 @@ qed
 lemma function_case_inner:
   assumes good_interp:
     "(\<forall>x i. (Functions I i has_derivative FunctionFrechet I i x) (at x))"
-  assumes IH:"((\<lambda>v. vec_lambda(\<lambda>i. sterm_sem I (args i) v))
-             has_derivative (\<lambda> v. vec_lambda(\<lambda>i. frechet I (args i) \<nu> v))) (at \<nu>)"
-  shows  "((\<lambda>v. Functions I f (vec_lambda(\<lambda>i. sterm_sem I (args i) v)))
+  assumes IH:"((\<lambda>v. \<chi> i. sterm_sem I (args i) v)
+             has_derivative (\<lambda> v. (\<chi> i. frechet I (args i) \<nu> v))) (at \<nu>)"
+  shows  "((\<lambda>v. Functions I f (\<chi> i. sterm_sem I (args i) v))
             has_derivative (\<lambda>v. frechet I ($f f args) \<nu> v)) (at \<nu>)"
 proof -
-  let ?h = "(\<lambda>v. Functions I f (vec_lambda(\<lambda>i. sterm_sem I (args i) v)))"
+  let ?h = "(\<lambda>v. Functions I f (\<chi> i. sterm_sem I (args i) v))"
   let ?h' = "frechet I ($f f args) \<nu>"
-  let ?g = "(\<lambda>v. vec_lambda(\<lambda>i. sterm_sem I (args i) v))"
-  let ?g' = "(\<lambda>v. vec_lambda(\<lambda>i. frechet I (args i) \<nu> v))"
+  let ?g = "(\<lambda>v. \<chi> i. sterm_sem I (args i) v)"
+  let ?g' = "(\<lambda>v. \<chi> i. frechet I (args i) \<nu> v)"
   let ?f = "(\<lambda>y. Functions I f y)"
   let ?f' = "FunctionFrechet I f (?g \<nu>)"
   have hEqFG:  "?h  = ?f  o ?g" by (auto)
   have hEqFG': "?h' = ?f' o ?g'"
     proof -
       have frechet_def:"frechet I (Function f args) \<nu>
-          = (\<lambda>v'. FunctionFrechet I f (?g \<nu>) (vec_lambda(\<lambda>i. frechet I (args i) \<nu> v')))"
+          = (\<lambda>v'. FunctionFrechet I f (?g \<nu>) (\<chi> i. frechet I (args i) \<nu> v'))"
       by (auto)
       have composition:
-        "(\<lambda>v'. FunctionFrechet I f (?g \<nu>) (vec_lambda(\<lambda>i. frechet I (args i) \<nu> v')))
-      = (FunctionFrechet I f (?g \<nu>)) o (\<lambda> v'. vec_lambda(\<lambda>i. frechet I (args i) \<nu> v'))"
+        "(\<lambda>v'. FunctionFrechet I f (?g \<nu>) (\<chi> i. frechet I (args i) \<nu> v'))
+      = (FunctionFrechet I f (?g \<nu>)) o (\<lambda> v'. \<chi> i. frechet I (args i) \<nu> v')"
       by (auto)
       from frechet_def and composition show ?thesis by (auto)
     qed
@@ -459,9 +459,9 @@ lemma func_lemma2:"\<forall>x i. (Functions I i has_derivative FunctionFrechet I
 proof -
   assume a1: "\<forall>x i. (Functions I i has_derivative FunctionFrechet I i x) (at x)"
   assume a2: "\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> (sterm_sem I \<theta> has_derivative frechet I \<theta> \<nu>) (at \<nu>)"
-  have "\<forall>f fa v. (\<exists>fb. \<not> (f (fb::'a) has_derivative fa fb (v::(real, 'a) vec)) (at v)) \<or> ((\<lambda>v. vec_lambda(\<lambda>fa. (f fa v::real))) has_derivative (\<lambda>va. vec_lambda(\<lambda>f. fa f v va))) (at v)"
+  have "\<forall>f fa v. (\<exists>fb. \<not> (f (fb::'a) has_derivative fa fb (v::(real, 'a) vec)) (at v)) \<or> ((\<lambda>v. (\<chi> fa. (f fa v::real))) has_derivative (\<lambda>va. (\<chi> f. fa f v va))) (at v)"
     using has_derivative_vec by force
-  then have "((\<lambda>v. vec_lambda(\<lambda>f. sterm_sem I (args f) v) )has_derivative (\<lambda>v. vec_lambda(\<lambda>f. frechet I (args f) \<nu> v))) (at \<nu>)"
+  then have "((\<lambda>v. \<chi> f. sterm_sem I (args f) v) has_derivative (\<lambda>v. \<chi> f. frechet I (args f) \<nu> v)) (at \<nu>)"
     using a2 by (meson rangeI)
   then show "((\<lambda>v. Functions I f (vec_lambda(\<lambda>f. sterm_sem I (args f) v))) has_derivative frechet I ($f f args) \<nu>) (at \<nu>)"
     using a1 function_case_inner by blast
