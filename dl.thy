@@ -1116,35 +1116,34 @@ assumes IS:"\<nu> \<in> fml_sem I ([[$\<alpha> a**]](Predicational PP \<rightarr
 assumes BC:"\<nu> \<in> fml_sem I (Predicational PP)"
 shows "\<nu> \<in> fml_sem I ([[$\<alpha> a**]](Predicational PP))"
 proof -
-  next
-    have IS':"\<And>\<nu>2. (\<nu>, \<nu>2) \<in> (prog_sem I ($\<alpha> a))\<^sup>* \<Longrightarrow> \<nu>2 \<in> fml_sem I (Predicational PP \<rightarrow> [[$\<alpha> a ]](Predicational PP))"
-      using IS by auto
-    have res:"\<And>\<nu>3. ((\<nu>, \<nu>3) \<in> (prog_sem I ($\<alpha> a))\<^sup>*) \<Longrightarrow> \<nu>3 \<in> fml_sem I (Predicational PP)"
+  have IS':"\<And>\<nu>2. (\<nu>, \<nu>2) \<in> (prog_sem I ($\<alpha> a))\<^sup>* \<Longrightarrow> \<nu>2 \<in> fml_sem I (Predicational PP \<rightarrow> [[$\<alpha> a ]](Predicational PP))"
+    using IS by auto
+  have res:"\<And>\<nu>3. ((\<nu>, \<nu>3) \<in> (prog_sem I ($\<alpha> a))\<^sup>*) \<Longrightarrow> \<nu>3 \<in> fml_sem I (Predicational PP)"
+  proof -
+    fix \<nu>3 
+    show "((\<nu>, \<nu>3) \<in> (prog_sem I ($\<alpha> a))\<^sup>*) \<Longrightarrow> \<nu>3 \<in> fml_sem I (Predicational PP)"
+    apply(induction rule:rtrancl_induct)
+    apply(rule BC)
     proof -
-      fix \<nu>3 
-      show "((\<nu>, \<nu>3) \<in> (prog_sem I ($\<alpha> a))\<^sup>*) \<Longrightarrow> \<nu>3 \<in> fml_sem I (Predicational PP)"
-      apply(induction rule:rtrancl_induct)
-      apply(rule BC)
-      proof -
-        fix y z
-        assume vy:"(\<nu>, y) \<in> (prog_sem I ($\<alpha> a))\<^sup>*"
-        assume yz:"(y, z) \<in> prog_sem I ($\<alpha> a)"
-        assume yPP:"y \<in> fml_sem I (Predicational PP)"
-        have imp3:"y \<in> fml_sem I (Predicational PP \<rightarrow> [[$\<alpha> a ]](Predicational PP))"
-          using IS' vy by (simp)
-        have imp4:"y \<in> fml_sem I (Predicational PP) \<Longrightarrow> y \<in> fml_sem I  ([[$\<alpha> a ]](Predicational PP))"
-          using imp3 impl_sem by (auto)
-        have yaPP:"y \<in> fml_sem I ([[$\<alpha> a ]]Predicational PP)" using imp4 yPP by auto
-        have zPP:"z \<in> fml_sem I (Predicational PP)" using yaPP box_sem yz mem_Collect_eq by blast  
-        show "
-          (\<nu>, y) \<in> (prog_sem I ($\<alpha> a))\<^sup>* \<Longrightarrow>
-          (y, z) \<in> prog_sem I ($\<alpha> a) \<Longrightarrow>
-          y \<in> fml_sem I (Predicational PP) \<Longrightarrow>
-          z \<in> fml_sem I (Predicational PP)" using zPP by simp
-      qed
+      fix y z
+      assume vy:"(\<nu>, y) \<in> (prog_sem I ($\<alpha> a))\<^sup>*"
+      assume yz:"(y, z) \<in> prog_sem I ($\<alpha> a)"
+      assume yPP:"y \<in> fml_sem I (Predicational PP)"
+      have imp3:"y \<in> fml_sem I (Predicational PP \<rightarrow> [[$\<alpha> a ]](Predicational PP))"
+        using IS' vy by (simp)
+      have imp4:"y \<in> fml_sem I (Predicational PP) \<Longrightarrow> y \<in> fml_sem I  ([[$\<alpha> a ]](Predicational PP))"
+        using imp3 impl_sem by (auto)
+      have yaPP:"y \<in> fml_sem I ([[$\<alpha> a ]]Predicational PP)" using imp4 yPP by auto
+      have zPP:"z \<in> fml_sem I (Predicational PP)" using yaPP box_sem yz mem_Collect_eq by blast  
+      show "
+        (\<nu>, y) \<in> (prog_sem I ($\<alpha> a))\<^sup>* \<Longrightarrow>
+        (y, z) \<in> prog_sem I ($\<alpha> a) \<Longrightarrow>
+        y \<in> fml_sem I (Predicational PP) \<Longrightarrow>
+        z \<in> fml_sem I (Predicational PP)" using zPP by simp
     qed
-   show "\<nu> \<in> fml_sem I ([[$\<alpha> a**]]Predicational PP)"
-   using res by (simp add: mem_Collect_eq box_sem loop_sem) 
+  qed
+  show "\<nu> \<in> fml_sem I ([[$\<alpha> a**]]Predicational PP)"
+    using res by (simp add: mem_Collect_eq box_sem loop_sem) 
 qed
 
 theorem I_valid: "valid Iaxiom" 
