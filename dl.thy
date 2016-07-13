@@ -170,7 +170,8 @@ and 'a formula =
  (* Nullary quantifier symbols *)
  | Predicational 'a
 
-lemma hp_induct [case_names Assign DiffAssign Test Evolve Choice Compose Star]:"(\<And>x. P ($\<alpha> x)) \<Longrightarrow>
+lemma hp_induct [case_names Var Assign DiffAssign Test Evolve Choice Compose Star]:
+   "(\<And>x. P ($\<alpha> x)) \<Longrightarrow>
     (\<And>x1 x2. P (x1 := x2)) \<Longrightarrow>
     (\<And>x1 x2. P (DiffAssign x1 x2)) \<Longrightarrow>
     (\<And>x. P (? x)) \<Longrightarrow>
@@ -722,77 +723,56 @@ fixes I
 assumes good_interp:"is_interp I"
 shows "\<And>\<nu>. \<And>\<omega>. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<Longrightarrow> Vagree \<nu> \<omega> (- (BVP \<alpha>))"
 proof (induct rule: hp_induct)
-fix x \<nu> \<omega>
-assume sem:"(\<nu>, \<omega>) \<in> prog_sem I ($\<alpha> x)"
-show "Vagree \<nu> \<omega> (- BVP ($\<alpha> x))"
-using agree_nil Compl_UNIV_eq pointed_finite.BVP.simps(1) by fastforce
+  case Var then show "?case" 
+    using agree_nil Compl_UNIV_eq pointed_finite.BVP.simps(1) by fastforce
 
 next
-fix x e \<nu> \<omega>
-assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (x := e)"
-show "Vagree \<nu> \<omega> (- (BVP (x := e)))"
-using  sem 
-by (simp add: Vagree_def)
+  case Assign then show "?case"
+    by (simp add: Vagree_def)
 
 next
-fix x e \<nu> \<omega>
-assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (DiffAssign x e)"
-show "Vagree \<nu> \<omega> (- BVP (DiffAssign x e))" 
-using  sem 
-by (simp add: Vagree_def)
+  case DiffAssign then show "?case"
+    by (simp add: Vagree_def)
 
 next
-fix P::"'a formula" and \<nu>::"'a state" and \<omega>::"'a state"
-assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (? P)"
-have eq:"\<nu> = \<omega>" using sem prog_sem.simps by auto
-
-show "Vagree \<nu> \<omega> (- BVP (? P))" 
- by auto(simp add: agree_refl Compl_UNIV_eq eq Vagree_def)
+  case Test then show "?case"
+    by auto(simp add: agree_refl Compl_UNIV_eq Vagree_def)
 
 next
-fix a b \<nu> \<omega>
-assume IH1:"\<And>\<nu>'. \<And>\<omega>'. ((\<nu>', \<omega>') \<in> prog_sem I a \<Longrightarrow> Vagree \<nu>' \<omega>' (- BVP a))"
-assume IH2:"\<And>\<nu>'. \<And>\<omega>'. ((\<nu>', \<omega>') \<in> prog_sem I b \<Longrightarrow> Vagree \<nu>' \<omega>' (- BVP b))"
-assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (a \<union>\<union> b)"
-have sems:"(\<nu>, \<omega>) \<in> prog_sem I (a) \<or> (\<nu>, \<omega>) \<in> prog_sem I (b)" using sem by auto
-have agrees:"Vagree \<nu> \<omega> (- BVP a) \<or> Vagree \<nu> \<omega> (- BVP b)" using IH1 IH2 sems by blast
-have sub1:"-(BVP a) \<supseteq> (- BVP a \<inter> - BVP b)" by auto
-have sub2:"-(BVP a) \<supseteq> (- BVP a \<inter> - BVP b)" by auto
-have res:"Vagree \<nu> \<omega> (- BVP a \<inter> - BVP b)" using agrees sub1 sub2 agree_supset by blast
-show "Vagree \<nu> \<omega> (- BVP (a \<union>\<union> b))" using res by auto
+  case (Choice a b \<nu> \<omega>)
+    assume IH1:"\<And>\<nu>'. \<And>\<omega>'. ((\<nu>', \<omega>') \<in> prog_sem I a \<Longrightarrow> Vagree \<nu>' \<omega>' (- BVP a))"
+    assume IH2:"\<And>\<nu>'. \<And>\<omega>'. ((\<nu>', \<omega>') \<in> prog_sem I b \<Longrightarrow> Vagree \<nu>' \<omega>' (- BVP b))"
+    assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (a \<union>\<union> b)"
+    have sems:"(\<nu>, \<omega>) \<in> prog_sem I (a) \<or> (\<nu>, \<omega>) \<in> prog_sem I (b)" using sem by auto
+    have agrees:"Vagree \<nu> \<omega> (- BVP a) \<or> Vagree \<nu> \<omega> (- BVP b)" using IH1 IH2 sems by blast
+    have sub1:"-(BVP a) \<supseteq> (- BVP a \<inter> - BVP b)" by auto
+    have sub2:"-(BVP a) \<supseteq> (- BVP a \<inter> - BVP b)" by auto
+    have res:"Vagree \<nu> \<omega> (- BVP a \<inter> - BVP b)" using agrees sub1 sub2 agree_supset by blast
+    then show "?case" by auto
 
 next
-fix a b \<nu> \<omega>
-assume IH1:"\<And>\<nu>'. \<And>\<omega>'. ((\<nu>', \<omega>') \<in> prog_sem I a \<Longrightarrow> Vagree \<nu>' \<omega>' (- BVP a))"
-assume IH2:"\<And>\<nu>'. \<And>\<omega>'. ((\<nu>', \<omega>') \<in> prog_sem I b \<Longrightarrow> Vagree \<nu>' \<omega>' (- BVP b))"
-assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (a ;; b)"
-have sems:"\<exists>\<mu>. (\<nu>, \<mu>) \<in> prog_sem I a  \<and> (\<mu>, \<omega>) \<in> prog_sem I b" using sem by auto
-obtain \<mu> where sems':"(\<nu>, \<mu>) \<in> prog_sem I a  \<and> (\<mu>, \<omega>) \<in> prog_sem I b" using sems by auto
-have agrees1:"Vagree \<nu> \<mu> (- BVP a) " using IH1 sems' by auto
-have agrees2:"Vagree \<mu> \<omega> (- BVP b) " using IH2 sems' by auto
-have agrees:"Vagree \<nu> \<omega> ((- BVP a) \<inter> (- BVP b))" using agrees1 agrees2 agree_trans by blast
-show "Vagree \<nu> \<omega> (- BVP (a ;; b))" using agrees by auto
+  case (Compose a b \<nu> \<omega>) then show "?case" 
+    using agree_trans by fastforce
 
 next
 fix ODE P \<nu> \<omega>
 show "(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))"
 sorry
 
+(* Var Assign DiffAssign Test Evolve Choice Compose Star *)
 next
-(* case Star*)
-fix a \<nu> \<omega>
-
-show "(\<And>\<nu>. \<And> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I a \<Longrightarrow> Vagree \<nu> \<omega> (- BVP a))) \<Longrightarrow> (\<nu>, \<omega>) \<in> prog_sem I (a** ) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (a** ))" 
-apply (simp only:prog_sem.simps)
-apply (erule converse_rtrancl_induct)
-by (auto simp add: Vagree_def)
+  case (Star a \<nu> \<omega>) then
+    show "?case" 
+      apply (simp only: prog_sem.simps)
+      apply (erule converse_rtrancl_induct)
+      by (auto simp add: Vagree_def)
 qed
 
 
 lemma coincidence_sterm:"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> sterm_sem I  \<theta> (fst \<nu>) = sterm_sem I \<theta> (fst \<nu>')"
-apply(induct "\<theta>")
-apply(auto simp add: Vagree_def)
-by (meson rangeI)
+  apply(induct "\<theta>")
+  apply(auto simp add: Vagree_def)
+  by (meson rangeI)
 
 lemma sum_unique_nonzero:
   fixes i::"'state_dim::finite" and f::"'state_dim \<Rightarrow> real"
