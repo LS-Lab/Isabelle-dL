@@ -20,7 +20,7 @@ theory "dl"
 imports
   Complex_Main HOL
   "~~/src/HOL/Multivariate_Analysis/Multivariate_Analysis"
-  "$AFP/Ordinary_Differential_Equations/Ordinary_Differential_Equations"
+  "Ordinary_Differential_Equations/Ordinary_Differential_Equations"
 begin
 
 lemma norm_axis: "norm (axis i x) = norm x"
@@ -169,6 +169,17 @@ and 'a formula =
  | InContext 'a "'a formula"
  (* Nullary quantifier symbols *)
  | Predicational 'a
+
+lemma hp_induct [case_names Assign DiffAssign Test Evolve Choice Compose Star]:"(\<And>x. P ($\<alpha> x)) \<Longrightarrow>
+    (\<And>x1 x2. P (x1 := x2)) \<Longrightarrow>
+    (\<And>x1 x2. P (DiffAssign x1 x2)) \<Longrightarrow>
+    (\<And>x. P (? x)) \<Longrightarrow>
+    (\<And>x1 x2. P (EvolveODE x1 x2)) \<Longrightarrow>
+    (\<And>x1 x2. P x1 \<Longrightarrow> P x2 \<Longrightarrow> P (x1 \<union>\<union> x2)) \<Longrightarrow>
+    (\<And>x1 x2. P x1 \<Longrightarrow> P x2 \<Longrightarrow> P (x1 ;; x2)) \<Longrightarrow>
+    (\<And>x. P x \<Longrightarrow> P x**) \<Longrightarrow>
+     P hp"
+by(induction rule: hp.induct) (auto)
 
 type_synonym 'a stuple = "('a \<Rightarrow> 'a trm)"
 type_synonym 'a dtuple = "('a \<Rightarrow> 'a trm)"
@@ -709,15 +720,16 @@ proof -
 qed
 
 lemma agree_trans:"Vagree \<nu> \<mu> A \<Longrightarrow> Vagree \<mu> \<omega> B \<Longrightarrow> Vagree \<nu> \<omega> (A \<inter> B)"
-apply(auto simp add: Vagree_def)
-done
+by (auto simp add: Vagree_def)
 
-(*
+lemma agree_refl:"Vagree \<nu> \<nu> A"
+by (auto simp add: Vagree_def)
+
 lemma bound_effect:
 fixes I
 assumes good_interp:"is_interp I"
 shows "\<And>\<nu>. \<And>\<omega>. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<Longrightarrow> Vagree \<nu> \<omega> (- (BVP \<alpha>))"
-proof (induct "\<alpha>")
+proof (induct rule: hp_induct)
 fix x \<nu> \<omega>
 assume sem:"(\<nu>, \<omega>) \<in> prog_sem I ($\<alpha> x)"
 show "Vagree \<nu> \<omega> (- BVP ($\<alpha> x))"
@@ -727,19 +739,23 @@ next
 fix x e \<nu> \<omega>
 assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (x := e)"
 show "Vagree \<nu> \<omega> (- (BVP (x := e)))"
-using agree_nil Compl_UNIV_eq pointed_finite.BVP.simps(2) by auto
+using  sem 
+by (simp add: Vagree_def)
 
 next
 fix x e \<nu> \<omega>
 assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (DiffAssign x e)"
-show "Vagree \<nu> \<omega> (- BVP (DiffAssign x e))" by auto
+show "Vagree \<nu> \<omega> (- BVP (DiffAssign x e))" 
+using  sem 
+by (simp add: Vagree_def)
 
 next
-fix ODE P \<nu> \<omega>
-assume agree:"Vagree \<nu> \<omega> (- BVP (? P))"
-assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P)"
-show "Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))"
-by auto
+fix P::"'a formula" and \<nu>::"'a state" and \<omega>::"'a state"
+assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (? P)"
+have eq:"\<nu> = \<omega>" using sem prog_sem.simps by auto
+
+show "Vagree \<nu> \<omega> (- BVP (? P))" 
+ by auto(simp add: agree_refl Compl_UNIV_eq eq Vagree_def)
 
 next
 fix a b \<nu> \<omega>
@@ -765,14 +781,21 @@ have agrees2:"Vagree \<mu> \<omega> (- BVP b) " using IH2 sems' by auto
 have agrees:"Vagree \<nu> \<omega> ((- BVP a) \<inter> (- BVP b))" using agrees1 agrees2 agree_trans by blast
 show "Vagree \<nu> \<omega> (- BVP (a ;; b))" using agrees by auto
 
+next
+fix ODE P \<nu> \<omega>
+show "(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))"
+sorry
 
 next
+(* case Star*)
 fix a \<nu> \<omega>
-assume IH:"((\<nu>, \<omega>) \<in> prog_sem I a \<Longrightarrow> Vagree \<nu> \<omega> (- BVP a))"
-assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (a** )"
-show "Vagree \<nu> \<omega> (- BVP (\<alpha>** ))" by auto
+
+show "(\<And>\<nu>. \<And> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I a \<Longrightarrow> Vagree \<nu> \<omega> (- BVP a))) \<Longrightarrow> (\<nu>, \<omega>) \<in> prog_sem I (a** ) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (a** ))" 
+apply (simp only:prog_sem.simps)
+apply (erule converse_rtrancl_induct)
+by (auto simp add: Vagree_def)
 qed
-*)
+
 
 lemma coincidence_sterm:"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> sterm_sem I  \<theta> (fst \<nu>) = sterm_sem I \<theta> (fst \<nu>')"
 apply(induct "\<theta>")
@@ -793,35 +816,27 @@ qed
 lemma  coincidence_frechet :
   fixes I :: "'state_dim interp" and \<nu> :: "'state_dim state" and \<nu>'::"'state_dim state"
   shows "dfree \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff \<theta>) \<Longrightarrow> frechet I  \<theta> (fst \<nu>) (snd \<nu>) = frechet I  \<theta> (fst \<nu>') (snd \<nu>')"
-(* proof (induction rule: dfree.induct)
+ proof (induction rule: dfree.induct)
   case dfree_Var then show ?case
-    by (auto simp: inner_basis_vector Vagree_def simp del: basis_vector.simps)
+    by (auto simp: inner_prod_eq Vagree_def simp del: basis_vector.simps)
 next
   case dfree_Const then show ?case
     by auto
-next
-  case dfree_Fun then show ?case
-    apply auto
-oops
+(*next
+  case "(dfree_Fun IH free agree)
+  fix var::"'state_dim::finite" and args :: "('state_dim \<Rightarrow> 'state_dim trm)"
+  (*assume IH:"(\<And>arg. arg \<in> range args \<Longrightarrow> dfree arg \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff arg) \<Longrightarrow> frechet I arg (fst \<nu>) (snd \<nu>) = frechet I arg (fst \<nu>') (snd \<nu>'))"
+  assume free:"dfree ($f var args)"*)
+  have frees:"(\<And>i. dfree (args i))" using free by (metis dfree.cases rangeI trm.distinct(13) trm.distinct(23) trm.distinct(25) trm.distinct(4) trm.inject(3))
+(*  assume agree:"Vagree \<nu> \<nu>' (FVDiff ($f var args))"*)
+  have agrees:"\<And>i. Vagree \<nu> \<nu>' (FVDiff (args i))" using agree agree_func by (blast)
+  have sterms:"\<And>i. sterm_sem I (args i) (fst \<nu>) = sterm_sem I (args i) (fst \<nu>')" using frees agrees coincidence_sterm by (smt FVDiff_sub Vagree_def mem_Collect_eq subset_eq)
+  have frechets:"\<And>i. frechet I (args i) (fst \<nu>) (snd \<nu>) = frechet I (args i) (fst \<nu>') (snd \<nu>')"  using IH agrees frees rangeI by blast
+  show  "frechet I ($f i args) (fst \<nu>) (snd \<nu>) = frechet I ($f i args) (fst \<nu>') (snd \<nu>')"
+  using agrees sterms frechets by (auto)
 *)
-proof (induct "\<theta>")
-  fix x::'state_dim
-  assume free:"dfree (trm.Var x)"
-  assume agree:"Vagree \<nu> \<nu>' (FVDiff (trm.Var x))"
-  have agree':"
-     (\<forall>i. Inl i \<in> (FVDiff (trm.Var x)) \<longrightarrow> vec_nth(fst \<nu>) i = vec_nth(fst \<nu>') i)
-   \<and> (\<forall>i. Inr i \<in> (FVDiff (trm.Var x)) \<longrightarrow> vec_nth(snd \<nu>) i = vec_nth(snd \<nu>') i)"
-  using agree Vagree_def by metis
-  have useful:"snd \<nu> $ x = snd \<nu>' $ x" using agree' Vagree_def by (auto)
-  show "frechet I (trm.Var x) (fst \<nu>) (snd \<nu>) = frechet I (trm.Var x) (fst \<nu>') (snd \<nu>')"
-  using sum_unique_nonzero useful inner_prod_eq pointed_finite.frechet.simps(1) pointed_finite.inner_prod_eq useful
-  by (metis (no_types))
-
-next
-  fix r::real
-  assume agree:"Vagree \<nu> \<nu>' (FVDiff (Const r))"
-  show "dfree (Const r) \<Longrightarrow> frechet I (Const r) (fst \<nu>) (snd \<nu>) = frechet I (Const r) (fst \<nu>') (snd \<nu>')" by (auto)
-
+qed
+(* 
   next
   fix var::"'state_dim::finite" and args :: "('state_dim \<Rightarrow> 'state_dim trm)"
   assume IH:"(\<And>arg. arg \<in> range args \<Longrightarrow> dfree arg \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff arg) \<Longrightarrow> frechet I arg (fst \<nu>) (snd \<nu>) = frechet I arg (fst \<nu>') (snd \<nu>'))"
@@ -898,6 +913,7 @@ next
   show "dfree (Differential \<theta>) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff (Differential \<theta>)) \<Longrightarrow> frechet I (Differential \<theta>) (fst \<nu>) (snd \<nu>) = frechet I (Differential \<theta>) (fst \<nu>') (snd \<nu>')"
   using dfree_vac2 by (auto)
 qed
+*)
 
 lemma coincidence_dterm:
   fixes I :: "'state_dim::finite interp" and \<nu> :: "'state_dim state" and \<nu>'::"'state_dim state"
