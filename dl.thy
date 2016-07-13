@@ -795,8 +795,7 @@ next
   case dfree_Const then show ?case
     by auto
 next
-(*  case "(dfree_Fun IH free agree)*)
-  fix  args :: "('state_dim \<Rightarrow> 'state_dim trm)" and var::"'state_dim::finite"
+  case (dfree_Fun args var)
   assume free:"(\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> dfree \<theta>)"
   assume IH:"(\<And>arg. arg \<in> range args \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff arg) \<Longrightarrow> frechet I arg (fst \<nu>) (snd \<nu>) = frechet I arg (fst \<nu>') (snd \<nu>'))"
   have frees:"(\<And>i. dfree (args i))" using free by (auto simp add: rangeI)
@@ -804,12 +803,12 @@ next
   have agrees:"\<And>i. Vagree \<nu> \<nu>' (FVDiff (args i))" using agree agree_func by (blast)
   have sterms:"\<And>i. sterm_sem I (args i) (fst \<nu>) = sterm_sem I (args i) (fst \<nu>')" using frees agrees coincidence_sterm by (smt FVDiff_sub Vagree_def mem_Collect_eq subset_eq)
   have frechets:"\<And>i. frechet I (args i) (fst \<nu>) (snd \<nu>) = frechet I (args i) (fst \<nu>') (snd \<nu>')"  using IH agrees frees rangeI by blast
-  show  "frechet I ($f var args) (fst \<nu>) (snd \<nu>) = frechet I ($f var args) (fst \<nu>') (snd \<nu>')"
+  show  "?case"
   using agrees sterms frechets by (auto)
 
 (* smt chokes on the full IH, so simplify things a bit first *)
 next
-  fix t1::"'state_dim::finite trm" and t2::"'state_dim trm"
+  case (dfree_Plus t1 t2) 
   assume dfree1:"dfree t1"
   assume IH1:"(Vagree \<nu> \<nu>' (FVDiff t1) \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
   assume dfree2:"dfree t2"
@@ -821,12 +820,12 @@ next
   using IH1 agree1 by (auto)
   have IH2':"(frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
   using IH2 agree2 by (auto)
-  show "frechet I (Plus t1 t2) (fst \<nu>) (snd \<nu>) = frechet I (Plus t1 t2) (fst \<nu>') (snd \<nu>')"
+  show "?case"
   by (smt FVT.simps(4) IH1' IH2' UnCI Vagree_def coincidence_sterm frechet.simps(3) mem_Collect_eq)
 
 (* smt chokes on the full IH, so simplify things a bit first *)
 next
-  fix t1::"'state_dim trm" and t2::"'state_dim trm"
+  case (dfree_Times t1 t2) 
   assume dfree1:"dfree t1"
   assume IH1:"(Vagree \<nu> \<nu>' (FVDiff t1) \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
   assume dfree2:"dfree t2"
@@ -840,7 +839,7 @@ next
   using IH2 agree2 by (auto)
   have almost:"Vagree \<nu> \<nu>' (FVT (Times t1 t2)) \<Longrightarrow> frechet I (Times t1 t2) (fst \<nu>) (snd \<nu>) = frechet I (Times t1 t2) (fst \<nu>') (snd \<nu>')"
   by (smt FVT.simps(5) IH1' IH2' UnCI Vagree_def coincidence_sterm frechet.simps(4)  mem_Collect_eq agree )
-  show "frechet I (Times t1 t2) (fst \<nu>) (snd \<nu>) = frechet I (Times t1 t2) (fst \<nu>') (snd \<nu>')"
+  show "?case"
   using agree FVDiff_sub almost pointed_finite.agree_supset
   by (metis)
 qed
@@ -849,28 +848,22 @@ lemma coincidence_dterm:
   fixes I :: "'state_dim::finite interp" and \<nu> :: "'state_dim state" and \<nu>'::"'state_dim state"
   shows "dsafe \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta> \<nu>'"
 proof (induction rule: dsafe.induct)
-  fix x :: 'state_dim
-  assume agree:"Vagree \<nu> \<nu>' (FVT (trm.Var x))"
-  show "dterm_sem I (trm.Var x) \<nu> = dterm_sem I (trm.Var x) \<nu>'" using agree Vagree_def rangeI
+  case dsafe_Var then show "?case" using Vagree_def rangeI 
     by (smt insert_iff mem_Collect_eq pointed_finite.FVT.simps(1) pointed_finite.dterm_sem.simps(1))
 
 next
-  fix r ::real
-  assume agree:"Vagree \<nu> \<nu>' (FVT (Const r))"
-  show "dterm_sem I (Const r) \<nu> = dterm_sem I (Const r) \<nu>'" using agree by (auto)
+  case dsafe_Const then show "?case"
+    by (auto)
 
 next
-  fix args :: "'state_dim \<Rightarrow> 'state_dim trm" and f :: "'state_dim::finite"
-  assume safe:"(\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> dsafe \<theta>)"
-  assume IH:"\<And>arg. arg \<in> range args \<Longrightarrow> Vagree \<nu> \<nu>' (FVT arg) \<Longrightarrow> dterm_sem I arg \<nu> = dterm_sem I arg \<nu>'"
-  assume agree:"Vagree \<nu> \<nu>' (FVT ($f f args))"
-  have safes:"(\<And>i. dsafe (args i))" using safe rangeI by (simp)
-  have agrees:"\<And>i. Vagree \<nu> \<nu>' (FVT (args i))"
-    using agree agree_func_fvt by (blast)
-  have dterms:"\<And>i. dterm_sem I (args i) \<nu> = dterm_sem I (args i) \<nu>'"
-    using safes agrees coincidence_sterm IH rangeI by (simp)
-  show "dterm_sem I ($f f args) \<nu> = dterm_sem I ($f f args) \<nu>'"
-    using dterms by (auto)
+  case (dsafe_Fun args f)
+    assume safe:"(\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> dsafe \<theta>)"
+    assume IH:"\<And>arg. arg \<in> range args \<Longrightarrow> Vagree \<nu> \<nu>' (FVT arg) \<Longrightarrow> dterm_sem I arg \<nu> = dterm_sem I arg \<nu>'"
+    assume agree:"Vagree \<nu> \<nu>' (FVT ($f f args))"
+    then have "\<And>i. Vagree \<nu> \<nu>' (FVT (args i))"
+      using agree_func_fvt by (blast)
+    then show "?case"
+      using safe coincidence_sterm IH rangeI by (auto)
 
 next
   case dsafe_Plus then show "?case"
@@ -971,8 +964,9 @@ definition Ibroken :: "'state_dim formula"
     \<rightarrow> ($P [] \<rightarrow> ([[($$a)**]]$P [])))"*)
 
 definition Iaxiom :: "'state_dim formula"
-  where "Iaxiom \<equiv> ([[($\<alpha> a)**]](Predicational PP \<rightarrow> ([[$\<alpha> a]]Predicational PP))
-    \<rightarrow> (Predicational PP \<rightarrow> ([[($\<alpha> a)**]]Predicational PP)))"
+  where "Iaxiom \<equiv> 
+  ([[($\<alpha> a)**]](Predicational PP \<rightarrow> ([[$\<alpha> a]]Predicational PP)))
+    \<rightarrow>((Predicational PP \<rightarrow> ([[($\<alpha> a)**]]Predicational PP)))"
 
 definition Vaxiom :: "'state_dim formula"
   where "Vaxiom \<equiv> ($\<phi> P empty) \<rightarrow> ([[$\<alpha> a]]($\<phi> P empty))"
@@ -1010,6 +1004,12 @@ lemma or_sem [simp]:
 
 lemma iff_sem [simp]: "(\<nu> \<in> fml_sem I (A \<leftrightarrow> B))
   \<longleftrightarrow> ((\<nu> \<in> fml_sem I A) \<longleftrightarrow> (\<nu> \<in> fml_sem I B))"
+  by (auto)
+
+lemma box_sem:"fml_sem I (Box \<alpha> \<phi>) = {\<nu>. \<forall> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<longrightarrow> \<omega> \<in> fml_sem I \<phi>}"
+  by (auto)
+
+lemma loop_sem:"prog_sem I (Loop \<alpha>) = (prog_sem I \<alpha>)\<^sup>*"
   by (auto)
 
 lemma impl_sem [simp]: "(\<nu> \<in> fml_sem I (A \<rightarrow> B))
@@ -1108,11 +1108,50 @@ theorem K_valid: "valid Kaxiom"
   apply(auto)
 done
 
-theorem I_valid: "valid Iaxiom"
-  apply(simp only: valid_def Iaxiom_def fml_sem.simps
-    prog_sem.simps iff_sem impl_sem mem_Collect_eq)
-  apply(rule allI | rule impI)+
-sorry
+lemma I_axiom_lemma:
+fixes I::"'state_dim interp" and \<nu>
+assumes "is_interp I"
+assumes IS:"\<nu> \<in> fml_sem I ([[$\<alpha> a**]](Predicational PP \<rightarrow>
+                          [[$\<alpha> a]]Predicational PP))"
+assumes BC:"\<nu> \<in> fml_sem I (Predicational PP)"
+shows "\<nu> \<in> fml_sem I ([[$\<alpha> a**]](Predicational PP))"
+proof -
+  next
+    have IS':"\<And>\<nu>2. (\<nu>, \<nu>2) \<in> (prog_sem I ($\<alpha> a))\<^sup>* \<Longrightarrow> \<nu>2 \<in> fml_sem I (Predicational PP \<rightarrow> [[$\<alpha> a ]](Predicational PP))"
+      using IS by auto
+    have res:"\<And>\<nu>3. ((\<nu>, \<nu>3) \<in> (prog_sem I ($\<alpha> a))\<^sup>*) \<Longrightarrow> \<nu>3 \<in> fml_sem I (Predicational PP)"
+    proof -
+      fix \<nu>3 
+      show "((\<nu>, \<nu>3) \<in> (prog_sem I ($\<alpha> a))\<^sup>*) \<Longrightarrow> \<nu>3 \<in> fml_sem I (Predicational PP)"
+      apply(induction rule:rtrancl_induct)
+      apply(rule BC)
+      proof -
+        fix y z
+        assume vy:"(\<nu>, y) \<in> (prog_sem I ($\<alpha> a))\<^sup>*"
+        assume yz:"(y, z) \<in> prog_sem I ($\<alpha> a)"
+        assume yPP:"y \<in> fml_sem I (Predicational PP)"
+        have imp3:"y \<in> fml_sem I (Predicational PP \<rightarrow> [[$\<alpha> a ]](Predicational PP))"
+          using IS' vy by (simp)
+        have imp4:"y \<in> fml_sem I (Predicational PP) \<Longrightarrow> y \<in> fml_sem I  ([[$\<alpha> a ]](Predicational PP))"
+          using imp3 impl_sem by (auto)
+        have yaPP:"y \<in> fml_sem I ([[$\<alpha> a ]]Predicational PP)" using imp4 yPP by auto
+        have zPP:"z \<in> fml_sem I (Predicational PP)" using yaPP box_sem yz mem_Collect_eq by blast  
+        show "
+          (\<nu>, y) \<in> (prog_sem I ($\<alpha> a))\<^sup>* \<Longrightarrow>
+          (y, z) \<in> prog_sem I ($\<alpha> a) \<Longrightarrow>
+          y \<in> fml_sem I (Predicational PP) \<Longrightarrow>
+          z \<in> fml_sem I (Predicational PP)" using zPP by simp
+      qed
+    qed
+   show "\<nu> \<in> fml_sem I ([[$\<alpha> a**]]Predicational PP)"
+   using res by (simp add: mem_Collect_eq box_sem loop_sem) 
+qed
+
+theorem I_valid: "valid Iaxiom" 
+  apply(unfold Iaxiom_def valid_def)
+  apply(rule impI | rule allI)+
+  apply(simp only: impl_sem)
+  using I_axiom_lemma by blast
 
 theorem V_valid: "valid Vaxiom"
   apply(simp only: valid_def Vaxiom_def impl_sem)
