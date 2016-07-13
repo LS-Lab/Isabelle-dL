@@ -562,13 +562,10 @@ fun FVDiff :: "'a trm \<Rightarrow> ('a + 'a) set"
 where "FVDiff f = (\<Union>x \<in> (FVT f). primify x)"
 
 lemma primify_contains:"x \<in> primify x"
-apply(cases "x")
-apply(auto)
-done
+by (cases "x") auto
 
 lemma FVDiff_sub:"FVT f \<subseteq> FVDiff f"
-apply (auto simp add:  primify_contains)
-done
+by (auto simp add:  primify_contains)
 
 (* Free variables of an ODE includes both the bound variables and the terms *)
 fun FVODE :: "'a ODE \<Rightarrow> ('a + 'a) set"
@@ -646,24 +643,19 @@ where "Vagree \<nu> \<nu>' V \<equiv>
  \<and> (\<forall>i. Inr i \<in> V \<longrightarrow> snd \<nu> $ i = snd \<nu>' $ i)"
 
 lemma agree_nil:"Vagree \<nu> \<omega> {}"
-apply(auto simp add: Vagree_def)
-done
+by (auto simp add: Vagree_def)
 
 lemma agree_supset:"A \<supseteq> B \<Longrightarrow> Vagree \<nu> \<nu>' A \<Longrightarrow> Vagree \<nu> \<nu>' B"
-apply(auto simp add: Vagree_def)
-done
+by (auto simp add: Vagree_def)
 
 lemma union_supset1:"A \<union> B \<supseteq> A"
-apply(auto)
-done
+by (auto)
 
 lemma fvdiff_plus1:"FVDiff (Plus t1 t2) = FVDiff t1 \<union> FVDiff t2"
-apply (auto)
-done
+by (auto)
 
 lemma agree_func_fvt:"Vagree \<nu> \<nu>' (FVT (Function f args)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVT (args i))"
-apply(auto simp add: union_supset1 agree_supset Vagree_def)
-done
+by (auto simp add: union_supset1 agree_supset Vagree_def)
 
 lemma agree_plus1:"Vagree \<nu> \<nu>' (FVDiff (Plus t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t1)"
 proof -
@@ -1030,52 +1022,41 @@ definition diff_const_axiom :: "'state_dim formula"
   where "diff_const_axiom \<equiv> Equals (Differential ($f f sempty)) (Const 0)"
 
 theorem test_valid: "valid test_axiom"
-  apply(simp only: valid_def test_axiom_def)
-  apply(auto)
-done
+  by (auto simp add: valid_def test_axiom_def)
 
 lemma or_sem [simp]:
   "fml_sem I (Or \<phi> \<psi>) = fml_sem I \<phi> \<union> fml_sem I \<psi>"
-  apply(auto)
-done
+  by (auto)
 
 lemma iff_sem [simp]: "(\<nu> \<in> fml_sem I (A \<leftrightarrow> B))
   \<longleftrightarrow> ((\<nu> \<in> fml_sem I A) \<longleftrightarrow> (\<nu> \<in> fml_sem I B))"
-  apply (auto)
-done
+  by (auto)
 
 lemma impl_sem [simp]: "(\<nu> \<in> fml_sem I (A \<rightarrow> B))
   = ((\<nu> \<in> fml_sem I A) \<longrightarrow> (\<nu> \<in> fml_sem I B))"
-  apply (auto)
-done
+  by (auto)
 
 lemma equals_sem [simp]: "(\<nu> \<in> fml_sem I (Equals \<theta> \<theta>'))
   = (dterm_sem I \<theta> \<nu> = dterm_sem I \<theta>' \<nu>)"
-  apply(auto)
-done
+  by (auto)
 
 lemma diamond_sem [simp]: "fml_sem I (Diamond \<alpha> \<phi>)
   = {\<nu>. \<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<and> \<omega> \<in> fml_sem I \<phi>}"
-  apply(auto)
-done
+  by (auto)
 
 lemma iff_to_impl: "((\<nu> \<in> fml_sem I A) \<longleftrightarrow> (\<nu> \<in> fml_sem I B))
   \<longleftrightarrow> (((\<nu> \<in> fml_sem I A) \<longrightarrow> (\<nu> \<in> fml_sem I B))
      \<and> ((\<nu> \<in> fml_sem I B) \<longrightarrow> (\<nu> \<in> fml_sem I A)))"
-apply (auto)
-done
+by (auto)
 
 lemma vec_extensionality:"(\<forall>i. v$i = w$i) \<Longrightarrow> (v = w)"
-  apply(simp add: vec_eq_iff)
- done
+  by (simp add: vec_eq_iff)
 
 lemma proj_sing1:"(singleton \<theta> x) = \<theta>"
-apply(auto simp add: singleton_def x_def)
-done
+  by (auto simp add: singleton_def x_def)
 
 lemma proj_sing2:"x \<noteq> y  \<Longrightarrow> (singleton \<theta> y) = (Const 0)"
-apply(auto simp add: singleton_def x_def)
-done
+  by (auto simp add: singleton_def x_def)
 
 lemma assign_lem1:
 "dterm_sem I (if i = id1 then Var x else (Const 0))
@@ -1084,18 +1065,14 @@ lemma assign_lem1:
 =
  dterm_sem I (if i = id1 then $f f empty else (Const 0)) \<nu>
 "
- apply(case_tac "i = x")
- apply(auto simp add: proj_sing1)
- done
+ by (case_tac "i = x") (auto simp add: proj_sing1)
 
 lemma assign_lem:
 "dterm_sem I (singleton (Var x) i)
    (vec_lambda (\<lambda>y. if y = x  then Functions I f (vec_lambda (\<lambda>i. dterm_sem I (empty i) \<nu>)) else vec_nth (fst \<nu>) y), snd \<nu>)
                    =
  dterm_sem I (singleton ($f f empty) i) \<nu>"
- apply(case_tac "i = x ")
- apply(auto simp add: proj_sing1)
- done
+ by (case_tac "i = x ") (auto simp add: proj_sing1)
 
 theorem assign_valid: "valid assign_axiom"
   apply(simp only: valid_def assign_axiom_def)
@@ -1106,16 +1083,14 @@ theorem assign_valid: "valid assign_axiom"
   done
 
 lemma mem_to_nonempty: "\<omega> \<in> S \<Longrightarrow> (S \<noteq> {})"
-apply (auto)
-done
+  by (auto)
 
 lemma loop_forward: "\<nu> \<in> fml_sem I ([[$\<alpha> a**]]Predicational PP)
   \<longrightarrow> \<nu> \<in> fml_sem I (Predicational PP&&[[$\<alpha> a]][[$\<alpha> a**]]Predicational PP)"
   by (cases \<nu>) (auto intro: converse_rtrancl_into_rtrancl)
 
 lemma nat_case: "\<forall>n::nat. (n = 0) \<or> (\<exists>m. n = Suc m)"
-  apply(rule Nat.nat.nchotomy)
-  done
+  by (rule Nat.nat.nchotomy)
 
 lemma loop_backward:
  "\<nu> \<in> fml_sem I (Predicational PP && [[$\<alpha> a]][[$\<alpha> a**]]Predicational PP)
@@ -1140,9 +1115,7 @@ theorem box_valid: "valid box_axiom"
 done
 
 theorem choice_valid: "valid choice_axiom"
-  apply(simp only: valid_def choice_axiom_def)
-  apply(auto)
-done
+  by (auto simp add: valid_def choice_axiom_def)
 
 theorem K_valid: "valid Kaxiom"
   apply(simp only: valid_def Kaxiom_def)
@@ -1168,17 +1141,13 @@ theorem V_valid: "valid Vaxiom"
 done
 
 theorem G_sound: "G_holds \<phi> \<alpha>"
-  apply(simp add: G_holds_def valid_def)
-done
+  by (simp add: G_holds_def valid_def)
 
 theorem Skolem_sound: "Skolem_holds \<phi> var"
-  apply(simp add: Skolem_holds_def valid_def)
-done
+  by (simp add: Skolem_holds_def valid_def)
 
 theorem MP_sound: "MP_holds \<phi> \<psi>"
-  apply(simp only: MP_holds_def valid_def)
-  apply(auto)
-done
+  by (auto simp add: MP_holds_def valid_def)
 
 lemma CT_lemma:"\<And>I a b. \<forall>I. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b)) \<Longrightarrow>
              is_interp I \<Longrightarrow>
@@ -1232,9 +1201,7 @@ done
 
 theorem CE_sound: "CE_holds var \<phi> \<psi>"
   apply(simp only: CE_holds_def valid_def iff_sem)
-  apply(rule impI)
-  apply(rule allI)
-  apply(rule allI)
+  apply(rule allI | rule impI)+
   apply(simp)
   apply(metis subsetI subset_antisym surj_pair)
 done
@@ -1267,7 +1234,7 @@ theorem diff_const_axiom_valid: "valid diff_const_axiom"
   apply(simp only: valid_def diff_const_axiom_def equals_sem)
   apply(rule allI | rule impI)+
   apply(simp only: dterm_sem.simps constant_deriv_zero sterm_sem.simps)
-  done
+done
 
 end
 end
