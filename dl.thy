@@ -139,23 +139,17 @@ datatype('a) ODE =
 | OSing 'a "'a trm"
 | OProd "'a ODE" "'a ODE"
   
-fun ODE_dom::"'a::finite interp \<Rightarrow> 'a ODE \<Rightarrow> 'a set"
+fun ODE_dom::"'a ODE \<Rightarrow> 'a set"
 where 
-  (* For ODE variables, determine the domain semantically:
-   * a program variable is bound if it is ever non-zero.
-   * for singletons and products, define syntactically. 
-   * If this turns out to be annoying, we can define the variable case "syntactically"
-   * by making the domain an explicit part of the interpretation and having the interpretation
-   * validity condition specify that it matches up with the semantics of the ODE. *)
-  "ODE_dom I (OVar c) =  {i. \<exists>t. \<exists>\<nu>. ODEs I c t \<nu> $ i \<noteq> 0}"
-| "ODE_dom I (OSing x \<theta>) = {x}"
-| "ODE_dom I (OProd ODE1 ODE2) = ODE_dom I ODE1 \<union> ODE_dom I ODE2"
+  "ODE_dom (OVar c) =  {}"
+| "ODE_dom (OSing x \<theta>) = {x}"
+| "ODE_dom (OProd ODE1 ODE2) = ODE_dom ODE1 \<union> ODE_dom ODE2"
  
-inductive osafe:: "'a::finite interp \<Rightarrow> 'a ODE \<Rightarrow> bool"
+inductive osafe:: "'a ODE \<Rightarrow> bool"
 where
-  osafe_Var:"osafe I (OVar c)"
-| osafe_Sing:"dfree \<theta> \<Longrightarrow> osafe I (OSing x \<theta>)"
-| osafe_Prod:"osafe I ODE1 \<Longrightarrow> osafe I ODE2 \<Longrightarrow> ODE_dom I ODE1 \<inter> ODE_dom I ODE2 = {} \<Longrightarrow> osafe I (OProd ODE1 ODE2)"
+  osafe_Var:"osafe (OVar c)"
+| osafe_Sing:"dfree \<theta> \<Longrightarrow> osafe (OSing x \<theta>)"
+| osafe_Prod:"osafe ODE1 \<Longrightarrow> osafe ODE2 \<Longrightarrow> ODE_dom ODE1 \<inter> ODE_dom ODE2 = {} \<Longrightarrow> osafe (OProd ODE1 ODE2)"
   
 datatype ('a) hp =
    Pvar 'a                           ("$\<alpha>")
@@ -182,6 +176,50 @@ and 'a formula =
  (* Nullary quantifier symbols *)
  | Predicational 'a
 
+inductive hpfree:: "'a hp \<Rightarrow> bool"
+and ffree::        "'a formula \<Rightarrow> bool"
+where
+ "hpfree (Pvar x)"
+| "dfree e \<Longrightarrow> hpfree (Assign x e)"
+(* TODO: Not sure whether this should be allowed  *)
+| "dfree e \<Longrightarrow> hpfree (DiffAssign x e)"
+| "ffree P \<Longrightarrow> hpfree (Test P)" 
+(* TODO: Not sure whether this should be allowed  *)
+| "osafe ODE \<Longrightarrow> ffree P \<Longrightarrow> hpfree (EvolveODE ODE P)"
+| "hpfree a \<Longrightarrow> hpfree b \<Longrightarrow> hpfree (Choice a b )"
+| "hpfree a \<Longrightarrow> hpfree b \<Longrightarrow> hpfree (Sequence a b)"
+| "hpfree a \<Longrightarrow> hpfree (Loop a)"
+| "ffree f \<Longrightarrow> ffree (InContext C f)"
+| "(\<And>arg. arg \<in> range args \<Longrightarrow> dfree arg) \<Longrightarrow> ffree (Prop p args)"
+| "ffree p \<Longrightarrow> ffree (Not p)"
+| "ffree p \<Longrightarrow> ffree q \<Longrightarrow> ffree (And p q)"
+| "ffree p \<Longrightarrow> ffree (Forall x p)"
+| "hpfree a \<Longrightarrow> ffree p \<Longrightarrow> ffree (Box a p)"
+| "ffree (Predicational P)"
+| "dfree t1 \<Longrightarrow> dfree t2 \<Longrightarrow> ffree (Geq t1 t2)"
+
+inductive hpsafe:: "'a hp \<Rightarrow> bool"
+and fsafe:: "'a formula \<Rightarrow> bool"
+where
+   "hpsafe (Pvar x)"
+ | "dsafe e \<Longrightarrow> hpsafe (Assign x e)"
+ | "dsafe e \<Longrightarrow> hpsafe (DiffAssign x e)"
+ | "fsafe P \<Longrightarrow> hpsafe (Test P)" 
+ | "osafe ODE \<Longrightarrow> fsafe P \<Longrightarrow> hpsafe (EvolveODE ODE P)"
+ | "hpsafe a \<Longrightarrow> hpsafe b \<Longrightarrow> hpsafe (Choice a b )"
+ | "hpsafe a \<Longrightarrow> hpsafe b \<Longrightarrow> hpsafe (Sequence a b)"
+ | "hpsafe a \<Longrightarrow> hpsafe (Loop a)"
+
+ | "dsafe t1 \<Longrightarrow> dsafe t2 \<Longrightarrow> fsafe (Geq t1 t2)"
+ | "(\<And>arg. arg \<in> range args \<Longrightarrow> dsafe arg) \<Longrightarrow> fsafe (Prop p args)"
+ | "fsafe p \<Longrightarrow> fsafe (Not p)"
+ | "fsafe p \<Longrightarrow> fsafe q \<Longrightarrow> fsafe (And p q)"
+ | "fsafe p \<Longrightarrow> fsafe (Forall x p)"
+ | "hpsafe a \<Longrightarrow> fsafe p \<Longrightarrow> fsafe (Box a p)"
+ | "ffree p \<Longrightarrow> fsafe (DiffFormula p)"
+ | "fsafe f \<Longrightarrow> fsafe (InContext C f)"
+ | "fsafe (Predicational P)"
+  
 lemma hp_induct [case_names Var Assign DiffAssign Test Evolve Choice Compose Star]:
    "(\<And>x. P ($\<alpha> x)) \<Longrightarrow>
     (\<And>x1 x2. P (x1 := x2)) \<Longrightarrow>
@@ -322,7 +360,7 @@ fun ODE_sem:: "'a ::finite interp \<Rightarrow> 'a ODE \<Rightarrow> real \<Righ
 fun ivp_sem_at::"'a::finite interp \<Rightarrow> 'a simple_state \<Rightarrow> 'a ODE \<Rightarrow> real \<Rightarrow> 'a state"
 where "ivp_sem_at I \<nu>0 ODE t = 
   (ll_on_open.flow UNIV (ODE_sem I ODE) UNIV 0 \<nu>0 t,
-   rhs_sem I (ll_on_open.flow UNIV (ODE_sem I ODE) UNIV 0 \<nu>0 t) ODE)"  
+   ODE_sem I ODE t (ll_on_open.flow UNIV (ODE_sem I ODE) UNIV 0 \<nu>0 t))"  
   
 (* Sem for formulas, differential formulas, programs, initial-value problems and loops.
    Loops and IVP's do not strictly have to have their own notion of sem, but for loops
@@ -523,7 +561,10 @@ text\<open>
   \<close>
 (* The bound variables of an ODE (which will also be included as free variables) *)
 fun ODE_vars :: "'a ODE \<Rightarrow> ('a + 'a) set"
-where "ODE_vars ODE = (\<Union>x \<in> {x. ODE x \<noteq> None} . {Inl x, Inr x})"
+where 
+  "ODE_vars (OVar c) = UNIV"
+| "ODE_vars (OSing x \<theta>) = {Inl x, Inr x}"
+| "ODE_vars (OProd ODE1 ODE2) = ODE_vars ODE1 \<union> ODE_vars ODE2"
 
 (* Bound variables of a formula
    Bound variables of a program *)
@@ -584,10 +625,11 @@ lemma FVDiff_sub:"FVT f \<subseteq> FVDiff f"
 by (auto simp add:  primify_contains)
 
 (* Free variables of an ODE includes both the bound variables and the terms *)
-fun FVODE :: "'a ODE \<Rightarrow> ('a + 'a) set"
+fun FVO :: "'a ODE \<Rightarrow> ('a + 'a) set"
   where
-   "FVODE ODE =
-     (\<Union>x \<in> {x. Some x \<in> {(ODE y)| y. y = y}}. FVT x)"
+  "FVO (OVar c) = {}"
+| "FVO (OSing x \<theta>) = FVT \<theta>"
+| "FVO (OProd ODE1 ODE2) = FVO ODE1 \<union> FVO ODE2"
 
 (* Free variables of a formula *)
 (* Free variables of a program *)
@@ -607,7 +649,7 @@ where
  | "FVP (Assign x \<theta>) = FVT \<theta>"
  | "FVP (DiffAssign x \<theta>) = FVT \<theta>"
  | "FVP (Test \<phi>) = FVF \<phi>"
- | "FVP (EvolveODE ODE \<phi>) = ODE_vars ODE \<union> FVODE ODE \<union> FVF \<phi>"
+ | "FVP (EvolveODE ODE \<phi>) = ODE_vars ODE \<union> FVO ODE \<union> FVF \<phi>"
  | "FVP (Choice \<alpha> \<beta>) = FVP \<alpha> \<union> FVP \<beta>"
  | "FVP (Sequence \<alpha> \<beta>) = (FVP \<alpha> \<union> FVP \<beta>) - (MBV \<alpha>)"
  | "FVP (Loop \<alpha>) = FVP \<alpha>"
@@ -622,6 +664,12 @@ where
 | "SIGT (DiffVar x) = {}"
 | "SIGT (Differential t) = SIGT t"
 
+primrec SIGO   :: "'a ODE \<Rightarrow> 'a set"
+where
+  "SIGO (OVar c) = {c}"
+| "SIGO (OSing x \<theta>) = SIGT \<theta>"
+| "SIGO (OProd ODE1 ODE2) = SIGO ODE1 \<union> SIGO ODE2"
+  
 primrec SIGP   :: "'a hp      \<Rightarrow> 'a set"
 and     SIGF   :: "'a formula \<Rightarrow> 'a set"
 where
@@ -629,7 +677,7 @@ where
 | "SIGP (Assign var t) = SIGT t"
 | "SIGP (DiffAssign var t) = SIGT t"
 | "SIGP (Test p) = SIGF p"
-| "SIGP (EvolveODE ODE p) = SIGF p \<union> (\<Union>i. (case ODE i of None \<Rightarrow> {} | Some t \<Rightarrow> SIGT t))"
+| "SIGP (EvolveODE ODE p) = SIGF p \<union> SIGO ODE"
 | "SIGP (Choice a b) = SIGP a \<union> SIGP b"
 | "SIGP (Sequence a b) = SIGP a \<union> SIGP b"
 | "SIGP (Loop a) = SIGP a"
