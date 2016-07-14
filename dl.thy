@@ -62,6 +62,7 @@ record ('a) interp =
   Contexts        :: "'a \<Rightarrow> 'a state set \<Rightarrow> 'a state set"
   Predicationals  :: "'a \<Rightarrow> 'a state set"
   Programs        :: "'a \<Rightarrow> ('a state * 'a state) set"
+  ODEs            :: "'a \<Rightarrow> real \<Rightarrow> 'a simple_state \<Rightarrow> 'a simple_state"
 
 context pointed_finite
 begin
@@ -133,18 +134,29 @@ where
 lemma dfree_is_dsafe: "dfree \<theta> \<Longrightarrow> dsafe \<theta>"
   by (induction rule: dfree.induct) (auto intro: dsafe.intros)
 
-(* My first attempt at encoding ODE systems to write them as a function which
- for every variable specifies either the RHS of the ODE (a differential-free term)
- or explicitly says that variable is not bound by the ODE (None)
-
- NOTE: After discussing this, I am going to try a different representation of ODE's
- which are built up recursively as either atomic ODE's that bind one variable or
- product ODE's that are the product of two smaller ODE systems. This makes some
- bogus ODE's well-typed, so we will need another predicate to rule out e.g. ODE's
- that bind the same variable to two different terms.
- *)
-type_synonym ('a) ODE =  "'a \<Rightarrow> ('a trm option)"
-
+datatype('a) ODE =
+  OVar 'a
+| OSing 'a "'a trm"
+| OProd "'a ODE" "'a ODE"
+  
+fun ODE_dom::"'a::finite interp \<Rightarrow> 'a ODE \<Rightarrow> 'a set"
+where 
+  (* For ODE variables, determine the domain semantically:
+   * a program variable is bound if it is ever non-zero.
+   * for singletons and products, define syntactically. 
+   * If this turns out to be annoying, we can define the variable case "syntactically"
+   * by making the domain an explicit part of the interpretation and having the interpretation
+   * validity condition specify that it matches up with the semantics of the ODE. *)
+  "ODE_dom I (OVar c) =  {i. \<exists>t. \<exists>\<nu>. ODEs I c t \<nu> $ i \<noteq> 0}"
+| "ODE_dom I (OSing x \<theta>) = {x}"
+| "ODE_dom I (OProd ODE1 ODE2) = ODE_dom I ODE1 \<union> ODE_dom I ODE2"
+ 
+inductive osafe:: "'a::finite interp \<Rightarrow> 'a ODE \<Rightarrow> bool"
+where
+  osafe_Var:"osafe I (OVar c)"
+| osafe_Sing:"dfree \<theta> \<Longrightarrow> osafe I (OSing x \<theta>)"
+| osafe_Prod:"osafe I ODE1 \<Longrightarrow> osafe I ODE2 \<Longrightarrow> ODE_dom I ODE1 \<inter> ODE_dom I ODE2 = {} \<Longrightarrow> osafe I (OProd ODE1 ODE2)"
+  
 datatype ('a) hp =
    Pvar 'a                           ("$\<alpha>")
  | Assign 'a "(('a) trm)"                (infixr ":=" 10)
@@ -224,8 +236,6 @@ text \<open>
   FunctionFrechet.
   \<close>
 
-
-
 definition is_interp :: "('a::finite) interp \<Rightarrow> bool"
   where "is_interp I \<equiv>
     \<forall>x. \<forall>i. (FDERIV (Functions I i) x :> (FunctionFrechet I i x))"
@@ -288,8 +298,17 @@ where "repd v x r = (fst v, (\<chi> y. if x = y then r else vec_nth (snd v) y))"
    rhs_sem I \<nu> ODE gives us vector in Rn that contains for each variable
    either the value of the corresponding term in the ODE or 0 if the variable is unbound.
   *)
-fun rhs_sem:: "'a ::finite interp \<Rightarrow> 'a Rvec \<Rightarrow> 'a ODE \<Rightarrow> 'a Rvec"
-  where "rhs_sem I \<nu> ODE = (\<chi> i. case ODE i of None \<Rightarrow> 0 | Some t \<Rightarrow> sterm_sem I t \<nu>)"
+  (*
+  fun ode_sem::"'a::finite interp \<Rightarrow> 'a ODE \<Rightarrow> real \<Rightarrow> 'a simple_state \<Rightarrow> 'a simple_state"
+where
+  "ode_sem I (OVar x) = ODEs I x"
+| "ode_sem I (OSing x \<theta>) = (\<lambda>_. \<lambda>\<nu>. basis_vector x)"
+*)
+fun ODE_sem:: "'a ::finite interp \<Rightarrow> 'a ODE \<Rightarrow> real \<Rightarrow> 'a Rvec \<Rightarrow> 'a Rvec"
+  where 
+  "ODE_sem I (OVar x) = ODEs I x"
+| "ODE_sem I (OSing x \<theta>) =  (\<lambda>_. \<lambda>\<nu>. (\<chi> i. if i = x then sterm_sem I \<theta> \<nu> else 0))"
+| "ODE_sem I (OProd ODE1 ODE2) = (\<lambda>t. \<lambda>\<nu>. ODE_sem I ODE1 t \<nu> + ODE_sem I ODE2 t \<nu>)"
 
 (* flow T f X t0 x0 :: "real set \<Rightarrow> (real \<Rightarrow> 'b \<Rightarrow> 'b) \<Rightarrow> 'b set \<Rightarrow> real \<Rightarrow> 'b \<Rightarrow> real \<Rightarrow> 'b"
   where 'b::{banach, heine_borel}
@@ -302,8 +321,8 @@ fun rhs_sem:: "'a ::finite interp \<Rightarrow> 'a Rvec \<Rightarrow> 'a ODE \<R
   *)
 fun ivp_sem_at::"'a::finite interp \<Rightarrow> 'a simple_state \<Rightarrow> 'a ODE \<Rightarrow> real \<Rightarrow> 'a state"
 where "ivp_sem_at I \<nu>0 ODE t = 
-  (ll_on_open.flow UNIV (\<lambda>_. \<lambda>\<nu>. rhs_sem I \<nu> ODE) UNIV 0 \<nu>0 t,
-   rhs_sem I (ll_on_open.flow UNIV (\<lambda>_. \<lambda>\<nu>. rhs_sem I \<nu> ODE) UNIV 0 \<nu>0 t) ODE)"  
+  (ll_on_open.flow UNIV (ODE_sem I ODE) UNIV 0 \<nu>0 t,
+   rhs_sem I (ll_on_open.flow UNIV (ODE_sem I ODE) UNIV 0 \<nu>0 t) ODE)"  
   
 (* Sem for formulas, differential formulas, programs, initial-value problems and loops.
    Loops and IVP's do not strictly have to have their own notion of sem, but for loops
@@ -1025,7 +1044,7 @@ lemma iff_to_impl: "((\<nu> \<in> fml_sem I A) \<longleftrightarrow> (\<nu> \<in
      \<and> ((\<nu> \<in> fml_sem I B) \<longrightarrow> (\<nu> \<in> fml_sem I A)))"
 by (auto)
 
-lemma vec_extensionality:"(\<forall>i. v$i = w$i) \<Longrightarrow> (v = w)"
+lemma vec_extensionality:"(\<And>i. v$i = w$i) \<Longrightarrow> (v = w)"
   by (simp add: vec_eq_iff)
 
 lemma proj_sing1:"(singleton \<theta> x) = \<theta>"
