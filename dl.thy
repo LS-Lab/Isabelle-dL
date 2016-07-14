@@ -20,7 +20,7 @@ theory "dl"
 imports
   Complex_Main HOL
   "~~/src/HOL/Multivariate_Analysis/Multivariate_Analysis"
-  "Ordinary_Differential_Equations/Ordinary_Differential_Equations"
+  "../afp/thys/Ordinary_Differential_Equations/Ordinary_Differential_Equations"
 begin
 
 lemma norm_axis: "norm (axis i x) = norm x"
@@ -291,21 +291,20 @@ where "repd v x r = (fst v, (\<chi> y. if x = y then r else vec_nth (snd v) y))"
 fun rhs_sem:: "'a ::finite interp \<Rightarrow> 'a Rvec \<Rightarrow> 'a ODE \<Rightarrow> 'a Rvec"
   where "rhs_sem I \<nu> ODE = (\<chi> i. case ODE i of None \<Rightarrow> 0 | Some t \<Rightarrow> sterm_sem I t \<nu>)"
 
-(* ivp I \<nu> ODE gives us an initial-value problem based on ODE in the initial state \<nu>*)
-fun ivp :: "'a::finite interp \<Rightarrow> 'a Rvec \<Rightarrow> 'a ODE \<Rightarrow> 'a Rvec ivp"
-where "ivp I \<nu>0 ODE =
-  \<lparr>ivp_f = (\<lambda>t\<nu>. rhs_sem I  (snd t\<nu>) ODE),
-   ivp_t0 = 0,
-   ivp_x0 = \<nu>0,
-   ivp_T = UNIV,
-   ivp_X = UNIV \<rparr>"
-
-(* ivp_sem_at I IVP t gives the state produced by
- following IVP for t time. *)
-fun ivp_sem_at::"'a::finite interp \<Rightarrow> 'a Rvec ivp \<Rightarrow> real \<Rightarrow> 'a state"
-where "ivp_sem_at I IVP t =
-    (ivp.solution IVP t, ivp_f IVP (t, (ivp.solution IVP t)))"
-
+(* flow T f X t0 x0 :: "real set \<Rightarrow> (real \<Rightarrow> 'b \<Rightarrow> 'b) \<Rightarrow> 'b set \<Rightarrow> real \<Rightarrow> 'b \<Rightarrow> real \<Rightarrow> 'b"
+  where 'b::{banach, heine_borel}
+  T:: real set is an open time interval
+  f:: (real \<Rightarrow> 'b \<Rightarrow> 'b) is a function of time and state
+  and f is the function being integrated
+  X :: real set is an open set on R\<^sup>n
+  t0 chosen time
+  x0 chosen state
+  *)
+fun ivp_sem_at::"'a::finite interp \<Rightarrow> 'a simple_state \<Rightarrow> 'a ODE \<Rightarrow> real \<Rightarrow> 'a state"
+where "ivp_sem_at I \<nu>0 ODE t = 
+  (ll_on_open.flow UNIV (\<lambda>_. \<lambda>\<nu>. rhs_sem I \<nu> ODE) UNIV 0 \<nu>0 t,
+   rhs_sem I (ll_on_open.flow UNIV (\<lambda>_. \<lambda>\<nu>. rhs_sem I \<nu> ODE) UNIV 0 \<nu>0 t) ODE)"  
+  
 (* Sem for formulas, differential formulas, programs, initial-value problems and loops.
    Loops and IVP's do not strictly have to have their own notion of sem, but for loops
    it was helpful to describe the sem recursively and for IVP's it was convenient to
@@ -318,8 +317,7 @@ where "ivp_sem_at I IVP t =
 *)
 fun fml_sem  :: "'a::finite interp \<Rightarrow> 'a formula \<Rightarrow> 'a state set" and
   diff_formula_sem  :: "'a::finite interp \<Rightarrow> 'a formula \<Rightarrow> 'a state set" and
-  prog_sem :: "'a::finite interp \<Rightarrow> 'a hp \<Rightarrow> ('a state * 'a state) set" and
-  ivp_sem  :: "'a::finite interp \<Rightarrow> 'a Rvec ivp \<Rightarrow> 'a formula \<Rightarrow> 'a state set"
+  prog_sem :: "'a::finite interp \<Rightarrow> 'a hp \<Rightarrow> ('a state * 'a state) set"
 where
   "fml_sem I (Geq t1 t2) = {v. dterm_sem I t1 v \<ge> dterm_sem I t2 v}"
 | "fml_sem I (Prop P terms) = {\<nu>. Predicates I P (\<chi> i. dterm_sem I (terms i) \<nu>)}"
@@ -343,9 +341,7 @@ where
 | "prog_sem I (Choice \<alpha> \<beta>) = prog_sem I \<alpha> \<union> prog_sem I \<beta>"
 | "prog_sem I (Sequence \<alpha> \<beta>) = prog_sem I \<alpha> O prog_sem I \<beta>"
 | "prog_sem I (Loop \<alpha>) = (prog_sem I \<alpha>)\<^sup>*"
-| "prog_sem I (EvolveODE ODE \<phi>) =  {(\<nu>, \<mu>). \<mu> \<in> ivp_sem I (ivp I (fst \<nu>) ODE) \<phi>}"
-
-| "ivp_sem I IVP \<phi> = {ivp_sem_at I IVP t | t. \<forall>s\<in>{0..t}. ivp_sem_at I IVP s \<in> fml_sem I \<phi> }"
+| "prog_sem I (EvolveODE ODE \<phi>) =  {(\<nu>, \<mu>). \<mu> \<in> {ivp_sem_at I (fst \<nu>) ODE t | t. \<forall>s\<in>{0..t}. (ivp_sem_at I (fst \<nu>) ODE s) \<in> fml_sem I \<phi> }}"
 
 subsection \<open>Trivial Simplification Lemmas\<close>
 text \<open>
