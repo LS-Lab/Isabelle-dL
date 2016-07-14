@@ -362,9 +362,83 @@ where "ivp_sem_at I \<nu>0 ODE t =
   (ll_on_open.flow UNIV (ODE_sem I ODE) UNIV 0 \<nu>0 t,
    ODE_sem I ODE t (ll_on_open.flow UNIV (ODE_sem I ODE) UNIV 0 \<nu>0 t))"  
   
-lemma example:
-  shows "x = ll_on_open.flow UNIV (\<lambda>t. \<lambda>x. 0) UNIV 0 x t"
-  sorry
+  
+lemma
+  has_vector_derivative_zero_constant:
+  assumes "convex s"
+  assumes "\<And>x. x \<in> s \<Longrightarrow> (f has_vector_derivative 0) (at x within s)"
+  obtains c where "\<And>x. x \<in> s \<Longrightarrow> f x = c"
+  using has_derivative_zero_constant[of s f] assms
+  by (auto simp: has_vector_derivative_def)
+
+lemma
+  has_vderiv_on_zero_constant:
+  assumes "convex s"
+  assumes "(f has_vderiv_on (\<lambda>h. 0)) s"
+  obtains c where "\<And>x. x \<in> s \<Longrightarrow> f x = c"
+  using has_vector_derivative_zero_constant[of s f] assms
+  by (auto simp: has_vderiv_on_def)
+
+lemma constant_when_zero:
+  fixes v::"real \<Rightarrow> (real, 'i::finite) vec"
+  assumes x0: "(v t) $ i = x0"
+  assumes sol: "(v solves_ode f) {t .. s} UNIV"
+  assumes f0: "\<And>t x. f t x $ i = 0"
+  assumes "t \<le> s"
+  shows "v s $ i = x0"
+proof -
+  from solves_odeD[OF sol]
+  have deriv: "(v has_vderiv_on (\<lambda>t. f t (v t))) {t..s}" by simp
+  then have "((\<lambda>t. v t $ i) has_vderiv_on (\<lambda>t. 0)) {t..s}"
+    using f0
+    by (auto simp: has_vderiv_on_def has_vector_derivative_def cart_eq_inner_axis
+      intro!: derivative_eq_intros)
+  from has_vderiv_on_zero_constant[OF convex_closed_interval this]
+  obtain c where "\<And>x. x \<in> {t .. s} \<Longrightarrow> v x $ i = c" by blast
+  with x0 have "c = x0" "v s $ i = c"using \<open>t \<le> s\<close> by auto
+  then show ?thesis by simp
+qed  
+
+lemma example:"\<And>x::real. \<And> t::real. t > 0 \<Longrightarrow>
+x = (ll_on_open.flow UNIV (\<lambda>t. \<lambda>x. \<chi> i. 0) UNIV 0 (\<chi> i. x) t) $ i"
+proof -
+  fix x::real
+  fix t::real
+  assume ge:"t > 0"
+  let ?T = UNIV
+  let ?f = "(\<lambda>t. \<lambda>x. \<chi> i. 0)"
+  let ?X = UNIV
+  let ?t0.0 = 0
+  let ?x0.0 = "\<chi> i. x"
+  interpret ll: ll_on_open "UNIV" "(\<lambda>t x. \<chi> i. 0)" UNIV
+    apply(unfold ll_on_open_def)
+    apply(rule conjI)
+    apply(auto simp: interval_def)
+    apply(auto simp: ll_on_open_axioms_def)
+    apply(auto simp: continuous_on_def)
+    apply(auto simp: local_lipschitz_def)
+    using gt_ex lipschitz_constI by blast
+  have foo1:"?t0.0 \<in> ?T" by auto
+  have foo2:"?x0.0 \<in> ?X" by auto
+  have hyp:"P \<Longrightarrow> P" by auto
+  let ?v = "ll.flow  ?t0.0 ?x0.0"
+  (* (ll.existence_ivl  ?t0.0 ?x0.0) *)
+  (*"t0 \<in> T \<Longrightarrow> x0 \<in> X \<Longrightarrow> (flow t0 x0 solves_ode f) (existence_ivl t0 x0) X"*)
+  from hyp ll.flow_solves_ode[OF foo1 foo2]
+  have solves:"(ll.flow  ?t0.0 ?x0.0 solves_ode ?f) (ll.existence_ivl  ?t0.0 ?x0.0) ?X" 
+    apply(auto)
+    sorry
+  then have solves:"(?v solves_ode ?f) (ll.existence_ivl  ?t0.0 ?x0.0) ?X" by auto
+  have thex0: "(?v ?t0.0) $ i = x" by auto
+  have sol_help: "(?v solves_ode ?f) (ll.existence_ivl  ?t0.0 ?x0.0) ?X" using solves by auto
+  then have sol: "(?v solves_ode ?f) {?t0.0 .. t} ?X" using solves sorry
+  have thef0: "\<And>t x. ?f t x $ i = 0" by auto
+  have gre:"?t0.0 \<le> t" using ge by auto
+  from constant_when_zero [OF thex0 sol thef0 gre] have "?v t $ i = x"
+    by auto
+  thus "?thesis x t" by auto
+  
+
 (* Sem for formulas, differential formulas, programs, initial-value problems and loops.
    Loops and IVP's do not strictly have to have their own notion of sem, but for loops
    it was helpful to describe the sem recursively and for IVP's it was convenient to
