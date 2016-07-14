@@ -362,6 +362,9 @@ where "ivp_sem_at I \<nu>0 ODE t =
   (ll_on_open.flow UNIV (ODE_sem I ODE) UNIV 0 \<nu>0 t,
    ODE_sem I ODE t (ll_on_open.flow UNIV (ODE_sem I ODE) UNIV 0 \<nu>0 t))"  
   
+lemma example:
+  shows "x = ll_on_open.flow UNIV (\<lambda>t. \<lambda>x. 0) UNIV 0 x t"
+  sorry
 (* Sem for formulas, differential formulas, programs, initial-value problems and loops.
    Loops and IVP's do not strictly have to have their own notion of sem, but for loops
    it was helpful to describe the sem recursively and for IVP's it was convenient to
@@ -820,7 +823,23 @@ next
 next
 fix ODE P \<nu> \<omega>
 show "(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))"
-sorry
+proof (induction "ODE")
+  show "\<And>x. (\<nu>, \<omega>) \<in> prog_sem I (EvolveODE (OVar x) P) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (EvolveODE (OVar x) P))"
+    by (simp only: BVP.simps ODE_vars.simps Compl_UNIV_eq agree_nil)
+next
+  show 
+  "\<And>x1a x2.
+       (\<nu>, \<omega>) \<in> prog_sem I (EvolveODE (OSing x1a x2) P) \<Longrightarrow>
+       Vagree \<nu> \<omega> (- BVP (EvolveODE (OSing x1a x2) P))"
+    sorry
+next
+  fix ODE1 ODE2
+  assume IH1:"((\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE1 P) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (EvolveODE ODE1 P)))"
+  assume IH2:"((\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE2 P) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (EvolveODE ODE2 P)))"
+  assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE (OProd ODE1 ODE2) P)"
+  show "Vagree \<nu> \<omega> (- BVP (EvolveODE (OProd ODE1 ODE2) P))"
+  sorry
+qed
 
 (* Var Assign DiffAssign Test Evolve Choice Compose Star *)
 next
@@ -1250,7 +1269,7 @@ theorem CT_sound: "CT_holds var \<theta> \<theta>'"
   apply(simp)
   apply(rule allI | rule impI)+
   apply(simp add: CT_lemma)
-  done
+done
 
 lemma CQ_lemma:"\<And>I \<nu>. \<forall>I \<nu>. is_interp I \<longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta>' \<nu> \<Longrightarrow>
            is_interp I \<Longrightarrow>
@@ -1291,7 +1310,6 @@ lemma constant_deriv_inner:
  assumes interp:"\<forall>x i. (Functions I i has_derivative FunctionFrechet I i x) (at x)"
  shows "FunctionFrechet I f (vec_lambda (\<lambda>i. sterm_sem I (sempty i) (fst \<nu>))) (vec_lambda(\<lambda>i. frechet I (sempty i) (fst \<nu>) (snd \<nu>)))= 0"
   proof -
-
     have empty_zero:"(vec_lambda(\<lambda>i. frechet I (sempty i) (fst \<nu>) (snd \<nu>))) = 0"
     using sempty_def Cart_lambda_cong frechet.simps(5) zero_vec_def
     by fastforce
