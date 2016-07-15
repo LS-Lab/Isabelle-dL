@@ -16,7 +16,7 @@ text \<open>
   volume 9195 of LNCS, pages 467-481. Springer, 2015.
 \<close>
 
-theory "dl"
+theory "dl" (* Theory names with Capital Letters! *)
 imports
   Complex_Main HOL
   "~~/src/HOL/Multivariate_Analysis/Multivariate_Analysis"
@@ -397,28 +397,22 @@ proof -
   obtain c where "\<And>x. x \<in> UNIV \<Longrightarrow> v x $ i = c" by blast
   with x0 have "c = x0" "v t $ i = c"using \<open>0 \<le> t\<close> by auto
   then show ?thesis by simp
-qed  
+qed
 
-lemma example:"\<And>x::real. \<And> t::real. \<And> i::'state_dim. t > 0 \<Longrightarrow>
-x = (ll_on_open.flow UNIV (\<lambda>t. \<lambda>x. \<chi> (i::'state_dim). 0) UNIV 0 (\<chi> i. x) t) $ i"
+lemma example:
+  fixes x t::real and i::'state_dim
+  assumes "t > 0"
+  shows "x = (ll_on_open.flow UNIV (\<lambda>t. \<lambda>x. \<chi> (i::'state_dim). 0) UNIV 0 (\<chi> i. x) t) $ i"
 proof -
-  fix x::real
-  fix t::real
-  fix i::'state_dim
-  assume ge:"t > 0"
   let ?T = UNIV
   let ?f = "(\<lambda>t. \<lambda>x. \<chi> i::'state_dim. 0)"
   let ?X = UNIV
   let ?t0.0 = 0
   let ?x0.0 = "\<chi> i::'state_dim. x"
   interpret ll: ll_on_open "UNIV" "(\<lambda>t x. \<chi> i::'state_dim. 0)" UNIV
-    apply(unfold ll_on_open_def)
-    apply(rule conjI)
-    apply(auto simp: interval_def)
-    apply(auto simp: ll_on_open_axioms_def)
-    apply(auto simp: continuous_on_def)
-    apply(auto simp: local_lipschitz_def)
-    using gt_ex lipschitz_constI by blast
+    apply unfold_locales
+    using gt_ex lipschitz_constI
+    by (force simp: interval_def continuous_on_def local_lipschitz_def)+
   have foo1:"?t0.0 \<in> ?T" by auto
   have foo2:"?x0.0 \<in> ?X" by auto
   let ?v = "ll.flow  ?t0.0 ?x0.0"
@@ -427,37 +421,15 @@ proof -
   then have solves:"(?v solves_ode ?f) (ll.existence_ivl  ?t0.0 ?x0.0) ?X" by auto
   have thex0: "(?v ?t0.0) $ (i::'state_dim) = x" by auto
   have sol_help: "(?v solves_ode ?f) (ll.existence_ivl  ?t0.0 ?x0.0) ?X" using solves by auto
-  have ivl_lemma:"\<And>xa. \<exists>a. a 0 = (\<chi> i::'state_dim. x) \<and> (\<exists>b. (a solves_ode (\<lambda>a b. \<chi> i. 0)) {0--b} UNIV \<and> xa \<in> {0--b})"
-  proof -
-    fix xa::real
-    obtain a where eq:"a=(\<lambda>t::real. \<chi> (i::'state_dim). (x::real))" by auto
-    have lhs:"a 0 = (\<chi> i. x)" using eq by auto
-    obtain c::real where eqC:"c = xa" by simp
-    from solves
-    have mid:"(a solves_ode (\<lambda>a b. \<chi> i. 0)) {0--c} UNIV" 
-      unfolding solves_ode_def has_vderiv_on_def has_vector_derivative_def apply(auto simp add: derivative_eq_intros eq)
-      apply(unfold has_derivative_def)
-      sorry
-    have rhs:" xa \<in> {0--c}" using eqC by auto
-    hence exB:"\<exists>b. (a solves_ode (\<lambda>a b. \<chi> i. 0)) {0--b} UNIV \<and> xa \<in> {0--b}"
-      using mid rhs eqC by auto
-    have b:"a 0 = (\<chi> i. x) \<and> (\<exists>b. (a solves_ode (\<lambda>a b. \<chi> i. 0)) {0--b} UNIV \<and> xa \<in> {0--b})" 
-      using eq lhs exB by auto
-    
-    from b have exA:"\<exists>a. a 0 = (\<chi> (i::'state_dim). x) \<and> (\<exists>b. (a solves_ode (\<lambda>a b. \<chi> i. 0)) {0--b} UNIV \<and> xa \<in> {0--b})"
-      using exI[where x="a"] by simp
-    thus "\<exists>a. a 0 = (\<chi> (i::'state_dim). x) \<and> (\<exists>b. (a solves_ode (\<lambda>a b. \<chi> i. 0)) {0--b} UNIV \<and> xa \<in> {0--b})" by simp    
-    qed
-  have ivl:"ll.existence_ivl  ?t0.0 ?x0.0 = UNIV" 
-    apply (auto simp add: ll.existence_ivl_def ll.csols_def)
-    apply(rule ivl_lemma)
-    done
+  have ivl:"ll.existence_ivl ?t0.0 ?x0.0 = UNIV"
+    by (rule ll.existence_ivl_eq_domain)
+     (auto intro!: exI[where x=0] simp: vec_eq_iff)
   have sol: "(?v solves_ode ?f) UNIV ?X" using solves ivl by auto
   have thef0: "\<And>t x. ?f t x $ i = 0" by auto
-  have gre:"0 \<le> t" using ge by auto
+  have gre:"0 \<le> t" using \<open>0 < t\<close> by auto
   from constant_when_zero [OF thex0 sol thef0 gre] have "?v t $ i = x"
     by auto
-  thus "?thesis x t i" by auto
+  thus ?thesis by auto
  qed
 
 (* Sem for formulas, differential formulas, programs, initial-value problems and loops.
@@ -496,7 +468,7 @@ where
 | "prog_sem I (Choice \<alpha> \<beta>) = prog_sem I \<alpha> \<union> prog_sem I \<beta>"
 | "prog_sem I (Sequence \<alpha> \<beta>) = prog_sem I \<alpha> O prog_sem I \<beta>"
 | "prog_sem I (Loop \<alpha>) = (prog_sem I \<alpha>)\<^sup>*"
-| "prog_sem I (EvolveODE ODE \<phi>) =  {(\<nu>, \<mu>). \<mu> \<in> {ivp_sem_at I (fst \<nu>) ODE t | t. \<forall>s\<in>{0..t}. (ivp_sem_at I (fst \<nu>) ODE s) \<in> fml_sem I \<phi> }}"
+| "prog_sem I (EvolveODE ODE \<phi>) =  {(\<nu>, \<mu>). \<mu> \<in> {ivp_sem_at I (fst \<nu>) ODE t | t. t \<in> ll_on_open.existence_ivl UNIV (ODE_sem I ODE) UNIV 0 ((fst \<nu>)) \<and> (\<forall>s\<in>{0..t}. (ivp_sem_at I (fst \<nu>) ODE s) \<in> fml_sem I \<phi>) }}"
 
 subsection \<open>Trivial Simplification Lemmas\<close>
 text \<open>
