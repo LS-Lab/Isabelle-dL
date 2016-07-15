@@ -347,75 +347,6 @@ fun ODE_sem:: "'a ::finite interp \<Rightarrow> 'a ODE \<Rightarrow> 'a Rvec \<R
 | "ODE_sem I (OSing x \<theta>) =  (\<lambda>\<nu>. (\<chi> i. if i = x then sterm_sem I \<theta> \<nu> else 0))"
 | "ODE_sem I (OProd ODE1 ODE2) = (\<lambda>\<nu>. ODE_sem I ODE1 \<nu> + ODE_sem I ODE2 \<nu>)"
 
-lemma
-  has_vector_derivative_zero_constant:
-  assumes "convex s"
-  assumes "\<And>x. x \<in> s \<Longrightarrow> (f has_vector_derivative 0) (at x within s)"
-  obtains c where "\<And>x. x \<in> s \<Longrightarrow> f x = c"
-  using has_derivative_zero_constant[of s f] assms
-  by (auto simp: has_vector_derivative_def)
-
-lemma
-  has_vderiv_on_zero_constant:
-  assumes "convex s"
-  assumes "(f has_vderiv_on (\<lambda>h. 0)) s"
-  obtains c where "\<And>x. x \<in> s \<Longrightarrow> f x = c"
-  using has_vector_derivative_zero_constant[of s f] assms
-  by (auto simp: has_vderiv_on_def)
-
-lemma constant_when_zero:
-  fixes v::"real \<Rightarrow> (real, 'i::finite) vec"
-  assumes x0: "(v 0) $ i = x0"
-  assumes sol: "(v solves_ode f) UNIV UNIV"
-  assumes f0: "\<And>t x. f t x $ i = 0"
-  assumes "0 \<le> t"
-  shows "v t $ i = x0"
-proof -
-  from solves_odeD[OF sol]
-  have deriv: "(v has_vderiv_on (\<lambda>t. f t (v t))) UNIV" by simp
-  then have "((\<lambda>t. v t $ i) has_vderiv_on (\<lambda>t. 0)) UNIV"
-    using f0
-    by (auto simp: has_vderiv_on_def has_vector_derivative_def cart_eq_inner_axis
-      intro!: derivative_eq_intros)
-  from has_vderiv_on_zero_constant[OF convex_UNIV this]
-  obtain c where "\<And>x. x \<in> UNIV \<Longrightarrow> v x $ i = c" by blast
-  with x0 have "c = x0" "v t $ i = c"using \<open>0 \<le> t\<close> by auto
-  then show ?thesis by simp
-qed
-
-lemma example:
-  fixes x t::real and i::'state_dim
-  assumes "t > 0"
-  shows "x = (ll_on_open.flow UNIV (\<lambda>t. \<lambda>x. \<chi> (i::'state_dim). 0) UNIV 0 (\<chi> i. x) t) $ i"
-proof -
-  let ?T = UNIV
-  let ?f = "(\<lambda>t. \<lambda>x. \<chi> i::'state_dim. 0)"
-  let ?X = UNIV
-  let ?t0.0 = 0
-  let ?x0.0 = "\<chi> i::'state_dim. x"
-  interpret ll: ll_on_open "UNIV" "(\<lambda>t x. \<chi> i::'state_dim. 0)" UNIV
-    apply unfold_locales
-    using gt_ex lipschitz_constI
-    by (force simp: interval_def continuous_on_def local_lipschitz_def)+
-  have foo1:"?t0.0 \<in> ?T" by auto
-  have foo2:"?x0.0 \<in> ?X" by auto
-  let ?v = "ll.flow  ?t0.0 ?x0.0"
-  from ll.flow_solves_ode[OF foo1 foo2]
-  have solves:"(ll.flow  ?t0.0 ?x0.0 solves_ode ?f) (ll.existence_ivl  ?t0.0 ?x0.0) ?X"  by (auto)
-  then have solves:"(?v solves_ode ?f) (ll.existence_ivl  ?t0.0 ?x0.0) ?X" by auto
-  have thex0: "(?v ?t0.0) $ (i::'state_dim) = x" by auto
-  have sol_help: "(?v solves_ode ?f) (ll.existence_ivl  ?t0.0 ?x0.0) ?X" using solves by auto
-  have ivl:"ll.existence_ivl ?t0.0 ?x0.0 = UNIV"
-    by (rule ll.existence_ivl_eq_domain)
-     (auto intro!: exI[where x=0] simp: vec_eq_iff)
-  have sol: "(?v solves_ode ?f) UNIV ?X" using solves ivl by auto
-  have thef0: "\<And>t x. ?f t x $ i = 0" by auto
-  have gre:"0 \<le> t" using \<open>0 < t\<close> by auto
-  from constant_when_zero [OF thex0 sol thef0 gre] have "?v t $ i = x"
-    by auto
-  thus ?thesis by auto
- qed
-
 (* Sem for formulas, differential formulas, programs, initial-value problems and loops.
    Loops and IVP's do not strictly have to have their own notion of sem, but for loops
    it was helpful to describe the sem recursively and for IVP's it was convenient to
@@ -426,6 +357,19 @@ proof -
    we can have two formulas \<phi> and \<psi> that have the exact same sem, but where
    (\<phi>)' and (\<psi>)' differ because \<phi> and \<psi> differ syntactically.
 *)
+definition Vagree :: "'a::finite state \<Rightarrow> 'a state \<Rightarrow> ('a + 'a) set \<Rightarrow> bool"
+where "Vagree \<nu> \<nu>' V \<equiv>
+   (\<forall>i. Inl i \<in> V \<longrightarrow> fst \<nu> $ i = fst \<nu>' $ i)
+ \<and> (\<forall>i. Inr i \<in> V \<longrightarrow> snd \<nu> $ i = snd \<nu>' $ i)"
+
+(* The bound variables of an ODE (which will also be included as free variables) *)
+fun ODE_vars :: "'a ODE \<Rightarrow> ('a + 'a) set"
+where 
+  "ODE_vars (OVar c) = UNIV"
+| "ODE_vars (OSing x \<theta>) = {Inl x, Inr x}"
+| "ODE_vars (OProd ODE1 ODE2) = ODE_vars ODE1 \<union> ODE_vars ODE2"
+
+  
 fun fml_sem  :: "'a::finite interp \<Rightarrow> 'a formula \<Rightarrow> 'a state set" and
   diff_formula_sem  :: "'a::finite interp \<Rightarrow> 'a formula \<Rightarrow> 'a state set" and
   prog_sem :: "'a::finite interp \<Rightarrow> 'a hp \<Rightarrow> ('a state * 'a state) set"
@@ -457,7 +401,11 @@ where
       ode = ODE_sem I ODE;
       xode = \<lambda>x. (x, ode x)
     in
-    {(\<nu>, xode (sol t)) | \<nu> sol t.
+    {(\<nu>, \<omega>) | \<nu> \<mu> \<omega> sol t.
+      t \<ge> 0 \<and>
+      \<mu> = xode (sol t) \<and>
+      (Vagree \<nu> \<omega> (-ODE_vars ODE)) \<and>
+      (Vagree \<nu> \<mu> (ODE_vars ODE)) \<and> 
       (sol solves_ode (\<lambda>_. ode)) {0 .. t} {x. xode x \<in> fml_sem I \<phi>} \<and>
       sol 0 = fst \<nu>})"
 
@@ -620,12 +568,6 @@ text\<open>
   where all the (Inl x) elements are unprimed variables x and all the (Inr x) elements are
   primed variables x'.
   \<close>
-(* The bound variables of an ODE (which will also be included as free variables) *)
-fun ODE_vars :: "'a ODE \<Rightarrow> ('a + 'a) set"
-where 
-  "ODE_vars (OVar c) = UNIV"
-| "ODE_vars (OSing x \<theta>) = {Inl x, Inr x}"
-| "ODE_vars (OProd ODE1 ODE2) = ODE_vars ODE1 \<union> ODE_vars ODE2"
 
 (* Bound variables of a formula
    Bound variables of a program *)
@@ -762,11 +704,6 @@ where "Iagree I J V \<equiv>
       \<and> (Predicationals I i = Predicationals J i)
       \<and> (Programs I i = Programs J i))"
 
-definition Vagree :: "'a::finite state \<Rightarrow> 'a state \<Rightarrow> ('a + 'a) set \<Rightarrow> bool"
-where "Vagree \<nu> \<nu>' V \<equiv>
-   (\<forall>i. Inl i \<in> V \<longrightarrow> fst \<nu> $ i = fst \<nu>' $ i)
- \<and> (\<forall>i. Inr i \<in> V \<longrightarrow> snd \<nu> $ i = snd \<nu>' $ i)"
-
 lemma agree_nil:"Vagree \<nu> \<omega> {}"
 by (auto simp add: Vagree_def)
 
@@ -842,10 +779,80 @@ by (auto simp add: Vagree_def)
 lemma agree_refl:"Vagree \<nu> \<nu> A"
 by (auto simp add: Vagree_def)
 
+
+lemma
+  has_vector_derivative_zero_constant:
+  assumes "convex s"
+  assumes "\<And>x. x \<in> s \<Longrightarrow> (f has_vector_derivative 0) (at x within s)"
+  obtains c where "\<And>x. x \<in> s \<Longrightarrow> f x = c"
+  using has_derivative_zero_constant[of s f] assms
+  by (auto simp: has_vector_derivative_def)
+
+lemma
+  has_vderiv_on_zero_constant:
+  assumes "convex s"
+  assumes "(f has_vderiv_on (\<lambda>h. 0)) s"
+  obtains c where "\<And>x. x \<in> s \<Longrightarrow> f x = c"
+  using has_vector_derivative_zero_constant[of s f] assms
+  by (auto simp: has_vderiv_on_def)
+
+lemma constant_when_zero:
+  fixes v::"real \<Rightarrow> (real, 'i::finite) vec"
+  assumes x0: "(v 0) $ i = x0"
+  assumes sol: "(v solves_ode f) UNIV UNIV"
+  assumes f0: "\<And>t x. f t x $ i = 0"
+  assumes "0 \<le> t"
+  shows "v t $ i = x0"
+proof -
+  from solves_odeD[OF sol]
+  have deriv: "(v has_vderiv_on (\<lambda>t. f t (v t))) UNIV" by simp
+  then have "((\<lambda>t. v t $ i) has_vderiv_on (\<lambda>t. 0)) UNIV"
+    using f0
+    by (auto simp: has_vderiv_on_def has_vector_derivative_def cart_eq_inner_axis
+      intro!: derivative_eq_intros)
+  from has_vderiv_on_zero_constant[OF convex_UNIV this]
+  obtain c where "\<And>x. x \<in> UNIV \<Longrightarrow> v x $ i = c" by blast
+  with x0 have "c = x0" "v t $ i = c"using \<open>0 \<le> t\<close> by auto
+  then show ?thesis by simp
+qed
+
+lemma example:
+  fixes x t::real and i::'state_dim
+  assumes "t > 0"
+  shows "x = (ll_on_open.flow UNIV (\<lambda>t. \<lambda>x. \<chi> (i::'state_dim). 0) UNIV 0 (\<chi> i. x) t) $ i"
+proof -
+  let ?T = UNIV
+  let ?f = "(\<lambda>t. \<lambda>x. \<chi> i::'state_dim. 0)"
+  let ?X = UNIV
+  let ?t0.0 = 0
+  let ?x0.0 = "\<chi> i::'state_dim. x"
+  interpret ll: ll_on_open "UNIV" "(\<lambda>t x. \<chi> i::'state_dim. 0)" UNIV
+    apply unfold_locales
+    using gt_ex lipschitz_constI
+    by (force simp: interval_def continuous_on_def local_lipschitz_def)+
+  have foo1:"?t0.0 \<in> ?T" by auto
+  have foo2:"?x0.0 \<in> ?X" by auto
+  let ?v = "ll.flow  ?t0.0 ?x0.0"
+  from ll.flow_solves_ode[OF foo1 foo2]
+  have solves:"(ll.flow  ?t0.0 ?x0.0 solves_ode ?f) (ll.existence_ivl  ?t0.0 ?x0.0) ?X"  by (auto)
+  then have solves:"(?v solves_ode ?f) (ll.existence_ivl  ?t0.0 ?x0.0) ?X" by auto
+  have thex0: "(?v ?t0.0) $ (i::'state_dim) = x" by auto
+  have sol_help: "(?v solves_ode ?f) (ll.existence_ivl  ?t0.0 ?x0.0) ?X" using solves by auto
+  have ivl:"ll.existence_ivl ?t0.0 ?x0.0 = UNIV"
+    by (rule ll.existence_ivl_eq_domain)
+     (auto intro!: exI[where x=0] simp: vec_eq_iff)
+  have sol: "(?v solves_ode ?f) UNIV ?X" using solves ivl by auto
+  have thef0: "\<And>t x. ?f t x $ i = 0" by auto
+  have gre:"0 \<le> t" using \<open>0 < t\<close> by auto
+  from constant_when_zero [OF thex0 sol thef0 gre] have "?v t $ i = x"
+    by auto
+  thus ?thesis by auto
+ qed
+
 lemma bound_effect:
 fixes I
 assumes good_interp:"is_interp I"
-shows "\<And>\<nu>. \<And>\<omega>. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<Longrightarrow> Vagree \<nu> \<omega> (- (BVP \<alpha>))"
+shows "\<And>\<nu> :: 'state_dim state. \<And>\<omega> ::'state_dim state. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<Longrightarrow> Vagree \<nu> \<omega> (- (BVP \<alpha>))"
 proof (induct rule: hp_induct)
   case Var then show "?case" 
     using agree_nil Compl_UNIV_eq pointed_finite.BVP.simps(1) by fastforce
@@ -889,14 +896,15 @@ next
   "\<And>x1a x2.
        (\<nu>, \<omega>) \<in> prog_sem I (EvolveODE (OSing x1a x2) P) \<Longrightarrow>
        Vagree \<nu> \<omega> (- BVP (EvolveODE (OSing x1a x2) P))"
-    sorry
+  proof auto qed
 next
   fix ODE1 ODE2
   assume IH1:"((\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE1 P) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (EvolveODE ODE1 P)))"
   assume IH2:"((\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE2 P) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (EvolveODE ODE2 P)))"
   assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE (OProd ODE1 ODE2) P)"
   show "Vagree \<nu> \<omega> (- BVP (EvolveODE (OProd ODE1 ODE2) P))"
-  sorry
+    apply(auto simp add: Vagree_def)
+    done
 qed
 
 (* Var Assign DiffAssign Test Evolve Choice Compose Star *)
