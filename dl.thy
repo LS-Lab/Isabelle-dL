@@ -381,36 +381,37 @@ lemma
 
 lemma constant_when_zero:
   fixes v::"real \<Rightarrow> (real, 'i::finite) vec"
-  assumes x0: "(v t) $ i = x0"
-  assumes sol: "(v solves_ode f) {t .. s} UNIV"
+  assumes x0: "(v 0) $ i = x0"
+  assumes sol: "(v solves_ode f) UNIV UNIV"
   assumes f0: "\<And>t x. f t x $ i = 0"
-  assumes "t \<le> s"
-  shows "v s $ i = x0"
+  assumes "0 \<le> t"
+  shows "v t $ i = x0"
 proof -
   from solves_odeD[OF sol]
-  have deriv: "(v has_vderiv_on (\<lambda>t. f t (v t))) {t..s}" by simp
-  then have "((\<lambda>t. v t $ i) has_vderiv_on (\<lambda>t. 0)) {t..s}"
+  have deriv: "(v has_vderiv_on (\<lambda>t. f t (v t))) UNIV" by simp
+  then have "((\<lambda>t. v t $ i) has_vderiv_on (\<lambda>t. 0)) UNIV"
     using f0
     by (auto simp: has_vderiv_on_def has_vector_derivative_def cart_eq_inner_axis
       intro!: derivative_eq_intros)
-  from has_vderiv_on_zero_constant[OF convex_closed_interval this]
-  obtain c where "\<And>x. x \<in> {t .. s} \<Longrightarrow> v x $ i = c" by blast
-  with x0 have "c = x0" "v s $ i = c"using \<open>t \<le> s\<close> by auto
+  from has_vderiv_on_zero_constant[OF convex_UNIV this]
+  obtain c where "\<And>x. x \<in> UNIV \<Longrightarrow> v x $ i = c" by blast
+  with x0 have "c = x0" "v t $ i = c"using \<open>0 \<le> t\<close> by auto
   then show ?thesis by simp
 qed  
 
-lemma example:"\<And>x::real. \<And> t::real. t > 0 \<Longrightarrow>
-x = (ll_on_open.flow UNIV (\<lambda>t. \<lambda>x. \<chi> i. 0) UNIV 0 (\<chi> i. x) t) $ i"
+lemma example:"\<And>x::real. \<And> t::real. \<And> i::'state_dim. t > 0 \<Longrightarrow>
+x = (ll_on_open.flow UNIV (\<lambda>t. \<lambda>x. \<chi> (i::'state_dim). 0) UNIV 0 (\<chi> i. x) t) $ i"
 proof -
   fix x::real
   fix t::real
+  fix i::'state_dim
   assume ge:"t > 0"
   let ?T = UNIV
-  let ?f = "(\<lambda>t. \<lambda>x. \<chi> i. 0)"
+  let ?f = "(\<lambda>t. \<lambda>x. \<chi> i::'state_dim. 0)"
   let ?X = UNIV
   let ?t0.0 = 0
-  let ?x0.0 = "\<chi> i. x"
-  interpret ll: ll_on_open "UNIV" "(\<lambda>t x. \<chi> i. 0)" UNIV
+  let ?x0.0 = "\<chi> i::'state_dim. x"
+  interpret ll: ll_on_open "UNIV" "(\<lambda>t x. \<chi> i::'state_dim. 0)" UNIV
     apply(unfold ll_on_open_def)
     apply(rule conjI)
     apply(auto simp: interval_def)
@@ -420,24 +421,43 @@ proof -
     using gt_ex lipschitz_constI by blast
   have foo1:"?t0.0 \<in> ?T" by auto
   have foo2:"?x0.0 \<in> ?X" by auto
-  have hyp:"P \<Longrightarrow> P" by auto
   let ?v = "ll.flow  ?t0.0 ?x0.0"
-  (* (ll.existence_ivl  ?t0.0 ?x0.0) *)
-  (*"t0 \<in> T \<Longrightarrow> x0 \<in> X \<Longrightarrow> (flow t0 x0 solves_ode f) (existence_ivl t0 x0) X"*)
-  from hyp ll.flow_solves_ode[OF foo1 foo2]
-  have solves:"(ll.flow  ?t0.0 ?x0.0 solves_ode ?f) (ll.existence_ivl  ?t0.0 ?x0.0) ?X" 
-    apply(auto)
-    sorry
+  from ll.flow_solves_ode[OF foo1 foo2]
+  have solves:"(ll.flow  ?t0.0 ?x0.0 solves_ode ?f) (ll.existence_ivl  ?t0.0 ?x0.0) ?X"  by (auto)
   then have solves:"(?v solves_ode ?f) (ll.existence_ivl  ?t0.0 ?x0.0) ?X" by auto
-  have thex0: "(?v ?t0.0) $ i = x" by auto
+  have thex0: "(?v ?t0.0) $ (i::'state_dim) = x" by auto
   have sol_help: "(?v solves_ode ?f) (ll.existence_ivl  ?t0.0 ?x0.0) ?X" using solves by auto
-  then have sol: "(?v solves_ode ?f) {?t0.0 .. t} ?X" using solves sorry
+  have ivl_lemma:"\<And>xa. \<exists>a. a 0 = (\<chi> i::'state_dim. x) \<and> (\<exists>b. (a solves_ode (\<lambda>a b. \<chi> i. 0)) {0--b} UNIV \<and> xa \<in> {0--b})"
+  proof -
+    fix xa::real
+    obtain a where eq:"a=(\<lambda>t::real. \<chi> (i::'state_dim). (x::real))" by auto
+    have lhs:"a 0 = (\<chi> i. x)" using eq by auto
+    obtain c::real where eqC:"c = xa" by simp
+    from solves
+    have mid:"(a solves_ode (\<lambda>a b. \<chi> i. 0)) {0--c} UNIV" 
+      unfolding solves_ode_def has_vderiv_on_def has_vector_derivative_def apply(auto simp add: derivative_eq_intros eq)
+      apply(unfold has_derivative_def)
+      sorry
+    have rhs:" xa \<in> {0--c}" using eqC by auto
+    hence exB:"\<exists>b. (a solves_ode (\<lambda>a b. \<chi> i. 0)) {0--b} UNIV \<and> xa \<in> {0--b}"
+      using mid rhs eqC by auto
+    have b:"a 0 = (\<chi> i. x) \<and> (\<exists>b. (a solves_ode (\<lambda>a b. \<chi> i. 0)) {0--b} UNIV \<and> xa \<in> {0--b})" 
+      using eq lhs exB by auto
+    
+    from b have exA:"\<exists>a. a 0 = (\<chi> (i::'state_dim). x) \<and> (\<exists>b. (a solves_ode (\<lambda>a b. \<chi> i. 0)) {0--b} UNIV \<and> xa \<in> {0--b})"
+      using exI[where x="a"] by simp
+    thus "\<exists>a. a 0 = (\<chi> (i::'state_dim). x) \<and> (\<exists>b. (a solves_ode (\<lambda>a b. \<chi> i. 0)) {0--b} UNIV \<and> xa \<in> {0--b})" by simp    
+    qed
+  have ivl:"ll.existence_ivl  ?t0.0 ?x0.0 = UNIV" 
+    apply (auto simp add: ll.existence_ivl_def ll.csols_def)
+    apply(rule ivl_lemma)
+    done
+  have sol: "(?v solves_ode ?f) UNIV ?X" using solves ivl by auto
   have thef0: "\<And>t x. ?f t x $ i = 0" by auto
-  have gre:"?t0.0 \<le> t" using ge by auto
+  have gre:"0 \<le> t" using ge by auto
   from constant_when_zero [OF thex0 sol thef0 gre] have "?v t $ i = x"
     by auto
-  thus "?thesis x t" by auto
-  
+  thus "?thesis x t i" by auto
 
 (* Sem for formulas, differential formulas, programs, initial-value problems and loops.
    Loops and IVP's do not strictly have to have their own notion of sem, but for loops
