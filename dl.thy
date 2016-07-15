@@ -1078,26 +1078,6 @@ text \<open>
   metavariables.
   \<close>
 
-(* Predicates*)
-(*
-definition H :: "'state_dim" where "H \<equiv> id1"
-definition P :: "'state_dim" where "P \<equiv> id2"
-definition Q :: "'state_dim" where "Q \<equiv> id3"
-
-(* Predicationals *)
-definition PP :: "'state_dim" where "PP \<equiv> id1"
-definition QQ :: "'state_dim" where "QQ \<equiv> id2"
-
-(* Programs *)
-definition a :: "'state_dim" where "a \<equiv> id1"
-definition b :: "'state_dim" where "b \<equiv> id2"
-
-(* Program variables*)
-definition x :: "'state_dim" where "x \<equiv> id1"
-
-(* Functions *)
-definition f :: "'state_dim" where "f \<equiv> id1"
-*)
 definition valid :: "'state_dim formula \<Rightarrow> bool"
 where "valid \<phi> \<equiv> (\<forall> I. \<forall> \<nu>. is_interp I \<longrightarrow> \<nu> \<in> fml_sem I \<phi>)"
 
