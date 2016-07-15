@@ -55,6 +55,7 @@ locale pointed_finite =
   type_synonym 'a state = "'a Rvec \<times> 'a Rvec"
   type_synonym 'a simple_state = "'a Rvec"
   type_synonym 'a func_domain = "real^('a::finite)"
+
 record ('a) interp =
   Functions       :: "'a \<Rightarrow> 'a func_domain \<Rightarrow> real"
   FunctionFrechet :: "'a \<Rightarrow> 'a Rvec \<Rightarrow> 'a func_domain \<Rightarrow> real"
@@ -63,6 +64,56 @@ record ('a) interp =
   Predicationals  :: "'a \<Rightarrow> 'a state set"
   Programs        :: "'a \<Rightarrow> ('a state * 'a state) set"
   ODEs            :: "'a \<Rightarrow> real \<Rightarrow> 'a simple_state \<Rightarrow> 'a simple_state"
+
+datatype ('a) trm =
+ (* Program variable *)
+  Var 'a
+(* N.B. This is technically more expressive than true dL since most reals
+ can't be written down. *)
+| Const real
+| Function 'a "'a \<Rightarrow> 'a trm" ("$f")
+| Plus "'a trm" "'a trm"
+| Times "'a trm" "'a trm"
+| DiffVar 'a ("$'")
+| Differential "'a trm"
+
+datatype('a) ODE =
+  OVar 'a
+| OSing 'a "'a trm"
+| OProd "'a ODE" "'a ODE"
+
+datatype ('a) hp =
+ Pvar 'a                           ("$\<alpha>")
+| Assign 'a "(('a) trm)"                (infixr ":=" 10)
+| DiffAssign 'a "('a) trm"
+| Test "'a formula"                 ("?")
+(* An ODE program is an ODE system with some evolution domain. *)
+| EvolveODE "'a ODE" "'a formula"
+| Choice "'a hp" "'a hp"            (infixl "\<union>\<union>" 10)
+| Sequence "'a hp"  "'a hp"         (infixr ";;" 8)
+| Loop "'a hp"                      ("_**")
+
+and 'a formula =
+ Geq "'a trm" "'a trm"
+| Prop 'a "'a \<Rightarrow> 'a trm"      ("$\<phi>")
+| Not "'a formula"            ("!")
+| And "'a formula" "'a formula"    (infixl "&&" 8)
+| Forall 'a "'a formula"
+| Box "'a hp" "'a formula"         ("([[_]]_)" 10)
+(* DiffFormula \<phi> gives us the invariant for proving \<phi> by differential induction. *)
+| DiffFormula "'a formula"
+(* Unary quantifier symbols *)
+| InContext 'a "'a formula"
+(* Nullary quantifier symbols *)
+| Predicational 'a
+
+record ('a) subst =
+  SFunctions       :: "'a \<Rightarrow> ('a func_domain \<Rightarrow> 'a trm) \<Rightarrow> 'a trm"
+  SPredicates      :: "'a \<Rightarrow> ('a func_domain \<Rightarrow> 'a trm) \<Rightarrow> 'a formula"
+  SContexts        :: "'a \<Rightarrow> ('a formula \<Rightarrow> 'a formula) \<Rightarrow> 'a formula"
+  SPredicationals  :: "'a \<Rightarrow> 'a formula"
+  SPrograms        :: "'a \<Rightarrow> 'a hp"
+  SODEs            :: "'a \<Rightarrow> 'a ODE"
 
 context pointed_finite
 begin
@@ -101,18 +152,6 @@ text \<open>
   constructs are implemented as derived forms to reduce the soundness burden.
 \<close>
 
-datatype ('a) trm =
-   (* Program variable *)
-   Var 'a
- (* N.B. This is technically more expressive than true dL since most reals
-   can't be written down. *)
- | Const real
- | Function 'a "'a \<Rightarrow> 'a trm" ("$f")
- | Plus "'a trm" "'a trm"
- | Times "'a trm" "'a trm"
- | DiffVar 'a ("$'")
- | Differential "'a trm"
-
 inductive dfree :: "'a trm \<Rightarrow> bool"
 where
   dfree_Var: "dfree (Var i)"
@@ -133,11 +172,6 @@ where
 
 lemma dfree_is_dsafe: "dfree \<theta> \<Longrightarrow> dsafe \<theta>"
   by (induction rule: dfree.induct) (auto intro: dsafe.intros)
-
-datatype('a) ODE =
-  OVar 'a
-| OSing 'a "'a trm"
-| OProd "'a ODE" "'a ODE"
   
 fun ODE_dom::"'a ODE \<Rightarrow> 'a set"
 where 
@@ -151,31 +185,6 @@ where
 | osafe_Sing:"dfree \<theta> \<Longrightarrow> osafe (OSing x \<theta>)"
 | osafe_Prod:"osafe ODE1 \<Longrightarrow> osafe ODE2 \<Longrightarrow> ODE_dom ODE1 \<inter> ODE_dom ODE2 = {} \<Longrightarrow> osafe (OProd ODE1 ODE2)"
   
-datatype ('a) hp =
-   Pvar 'a                           ("$\<alpha>")
- | Assign 'a "(('a) trm)"                (infixr ":=" 10)
- | DiffAssign 'a "('a) trm"
- | Test "'a formula"                 ("?")
- (* An ODE program is an ODE system with some evolution domain. *)
- | EvolveODE "'a ODE" "'a formula"
- | Choice "'a hp" "'a hp"            (infixl "\<union>\<union>" 10)
- | Sequence "'a hp"  "'a hp"         (infixr ";;" 8)
- | Loop "'a hp"                      ("_**")
-
-and 'a formula =
-   Geq "'a trm" "'a trm"
- | Prop 'a "'a \<Rightarrow> 'a trm"      ("$\<phi>")
- | Not "'a formula"            ("!")
- | And "'a formula" "'a formula"    (infixl "&&" 8)
- | Forall 'a "'a formula"
- | Box "'a hp" "'a formula"         ("([[_]]_)" 10)
- (* DiffFormula \<phi> gives us the invariant for proving \<phi> by differential induction. *)
- | DiffFormula "'a formula"
- (* Unary quantifier symbols *)
- | InContext 'a "'a formula"
- (* Nullary quantifier symbols *)
- | Predicational 'a
-
 inductive hpfree:: "'a hp \<Rightarrow> bool"
 and ffree::        "'a formula \<Rightarrow> bool"
 where
@@ -1429,6 +1438,8 @@ theorem diff_const_axiom_valid: "valid diff_const_axiom"
   apply(rule allI | rule impI)+
   apply(simp only: dterm_sem.simps constant_deriv_zero sterm_sem.simps)
 done
+
+section Substitution
 
 end
 end
