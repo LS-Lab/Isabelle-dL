@@ -62,7 +62,7 @@ record ('a) interp =
   Contexts        :: "'a \<Rightarrow> 'a state set \<Rightarrow> 'a state set"
   Predicationals  :: "'a \<Rightarrow> 'a state set"
   Programs        :: "'a \<Rightarrow> ('a state * 'a state) set"
-  ODEs            :: "'a \<Rightarrow> real \<Rightarrow> 'a simple_state \<Rightarrow> 'a simple_state"
+  ODEs            :: "'a \<Rightarrow> 'a simple_state \<Rightarrow> 'a simple_state"
 
 context pointed_finite
 begin
@@ -138,19 +138,19 @@ datatype('a) ODE =
   OVar 'a
 | OSing 'a "'a trm"
 | OProd "'a ODE" "'a ODE"
-  
+
 fun ODE_dom::"'a ODE \<Rightarrow> 'a set"
 where 
   "ODE_dom (OVar c) =  {}"
 | "ODE_dom (OSing x \<theta>) = {x}"
 | "ODE_dom (OProd ODE1 ODE2) = ODE_dom ODE1 \<union> ODE_dom ODE2"
- 
+
 inductive osafe:: "'a ODE \<Rightarrow> bool"
 where
   osafe_Var:"osafe (OVar c)"
 | osafe_Sing:"dfree \<theta> \<Longrightarrow> osafe (OSing x \<theta>)"
 | osafe_Prod:"osafe ODE1 \<Longrightarrow> osafe ODE2 \<Longrightarrow> ODE_dom ODE1 \<inter> ODE_dom ODE2 = {} \<Longrightarrow> osafe (OProd ODE1 ODE2)"
-  
+
 datatype ('a) hp =
    Pvar 'a                           ("$\<alpha>")
  | Assign 'a "(('a) trm)"                (infixr ":=" 10)
@@ -342,11 +342,11 @@ where
   "ode_sem I (OVar x) = ODEs I x"
 | "ode_sem I (OSing x \<theta>) = (\<lambda>_. \<lambda>\<nu>. basis_vector x)"
 *)
-fun ODE_sem:: "'a ::finite interp \<Rightarrow> 'a ODE \<Rightarrow> real \<Rightarrow> 'a Rvec \<Rightarrow> 'a Rvec"
-  where 
+fun ODE_sem:: "'a ::finite interp \<Rightarrow> 'a ODE \<Rightarrow> 'a Rvec \<Rightarrow> 'a Rvec"
+  where
   "ODE_sem I (OVar x) = ODEs I x"
-| "ODE_sem I (OSing x \<theta>) =  (\<lambda>_. \<lambda>\<nu>. (\<chi> i. if i = x then sterm_sem I \<theta> \<nu> else 0))"
-| "ODE_sem I (OProd ODE1 ODE2) = (\<lambda>t. \<lambda>\<nu>. ODE_sem I ODE1 t \<nu> + ODE_sem I ODE2 t \<nu>)"
+| "ODE_sem I (OSing x \<theta>) =  (\<lambda>\<nu>. (\<chi> i. if i = x then sterm_sem I \<theta> \<nu> else 0))"
+| "ODE_sem I (OProd ODE1 ODE2) = (\<lambda>\<nu>. ODE_sem I ODE1 \<nu> + ODE_sem I ODE2 \<nu>)"
 
 (* flow T f X t0 x0 :: "real set \<Rightarrow> (real \<Rightarrow> 'b \<Rightarrow> 'b) \<Rightarrow> 'b set \<Rightarrow> real \<Rightarrow> 'b \<Rightarrow> real \<Rightarrow> 'b"
   where 'b::{banach, heine_borel}
@@ -357,12 +357,7 @@ fun ODE_sem:: "'a ::finite interp \<Rightarrow> 'a ODE \<Rightarrow> real \<Righ
   t0 chosen time
   x0 chosen state
   *)
-fun ivp_sem_at::"'a::finite interp \<Rightarrow> 'a simple_state \<Rightarrow> 'a ODE \<Rightarrow> real \<Rightarrow> 'a state"
-where "ivp_sem_at I \<nu>0 ODE t = 
-  (ll_on_open.flow UNIV (ODE_sem I ODE) UNIV 0 \<nu>0 t,
-   ODE_sem I ODE t (ll_on_open.flow UNIV (ODE_sem I ODE) UNIV 0 \<nu>0 t))"  
-  
-  
+
 lemma
   has_vector_derivative_zero_constant:
   assumes "convex s"
@@ -468,7 +463,15 @@ where
 | "prog_sem I (Choice \<alpha> \<beta>) = prog_sem I \<alpha> \<union> prog_sem I \<beta>"
 | "prog_sem I (Sequence \<alpha> \<beta>) = prog_sem I \<alpha> O prog_sem I \<beta>"
 | "prog_sem I (Loop \<alpha>) = (prog_sem I \<alpha>)\<^sup>*"
-| "prog_sem I (EvolveODE ODE \<phi>) =  {(\<nu>, \<mu>). \<mu> \<in> {ivp_sem_at I (fst \<nu>) ODE t | t. t \<in> ll_on_open.existence_ivl UNIV (ODE_sem I ODE) UNIV 0 ((fst \<nu>)) \<and> (\<forall>s\<in>{0..t}. (ivp_sem_at I (fst \<nu>) ODE s) \<in> fml_sem I \<phi>) }}"
+| "prog_sem I (EvolveODE ODE \<phi>) =
+    (let
+      ode = ODE_sem I ODE;
+      xode = \<lambda>x. (x, ode x)
+    in
+    {(\<nu>, xode (sol t)) | \<nu> sol t.
+      (sol solves_ode (\<lambda>_. ode)) {0 .. t} {x. xode x \<in> fml_sem I \<phi>} \<and>
+      sol 0 = fst \<nu>})"
+
 
 subsection \<open>Trivial Simplification Lemmas\<close>
 text \<open>
