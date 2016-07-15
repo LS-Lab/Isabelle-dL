@@ -108,8 +108,8 @@ and 'a formula =
 | Predicational 'a
 
 record ('a) subst =
-  SFunctions       :: "'a \<Rightarrow> ('a func_domain \<Rightarrow> 'a trm) \<Rightarrow> 'a trm"
-  SPredicates      :: "'a \<Rightarrow> ('a func_domain \<Rightarrow> 'a trm) \<Rightarrow> 'a formula"
+  SFunctions       :: "'a \<Rightarrow> ('a \<Rightarrow> 'a trm) \<Rightarrow> 'a trm"
+  SPredicates      :: "'a \<Rightarrow> ('a \<Rightarrow> 'a trm) \<Rightarrow> 'a formula"
   SContexts        :: "'a \<Rightarrow> ('a formula \<Rightarrow> 'a formula) \<Rightarrow> 'a formula"
   SPredicationals  :: "'a \<Rightarrow> 'a formula"
   SPrograms        :: "'a \<Rightarrow> 'a hp"
@@ -1079,6 +1079,7 @@ text \<open>
   \<close>
 
 (* Predicates*)
+(*
 definition H :: "'state_dim" where "H \<equiv> id1"
 definition P :: "'state_dim" where "P \<equiv> id2"
 definition Q :: "'state_dim" where "Q \<equiv> id3"
@@ -1096,7 +1097,7 @@ definition x :: "'state_dim" where "x \<equiv> id1"
 
 (* Functions *)
 definition f :: "'state_dim" where "f \<equiv> id1"
-
+*)
 definition valid :: "'state_dim formula \<Rightarrow> bool"
 where "valid \<phi> \<equiv> (\<forall> I. \<forall> \<nu>. is_interp I \<longrightarrow> \<nu> \<in> fml_sem I \<phi>)"
 
@@ -1122,27 +1123,27 @@ fun ssingleton :: "'state_dim trm \<Rightarrow> 'state_dim stuple"
 
 definition assign_axiom :: "'state_dim formula"
   where "assign_axiom \<equiv>
-    ([[x := ($f f empty)]] (Prop P (singleton (Var x))))
-      \<leftrightarrow> Prop P (singleton ($f f empty))"
+    ([[id1 := ($f id1 empty)]] (Prop id1 (singleton (Var id1))))
+      \<leftrightarrow> Prop id1 (singleton ($f id1 empty))"
 
 definition loop_iterate_axiom :: "'state_dim formula"
-  where "loop_iterate_axiom \<equiv> ([[$\<alpha> a**]]Predicational PP)
-    \<leftrightarrow> ((Predicational PP) && ([[$\<alpha> a]][[$\<alpha> a**]]Predicational PP))"
+  where "loop_iterate_axiom \<equiv> ([[$\<alpha> id1**]]Predicational id1)
+    \<leftrightarrow> ((Predicational id1) && ([[$\<alpha> id1]][[$\<alpha> id1**]]Predicational id1))"
 
 definition test_axiom :: "'state_dim formula"
   where "test_axiom \<equiv>
-    ([[?($\<phi> H empty)]]$\<phi> P empty) \<leftrightarrow> (($\<phi> H empty) \<rightarrow> ($\<phi> P empty))"
+    ([[?($\<phi> id2 empty)]]$\<phi> id1 empty) \<leftrightarrow> (($\<phi> id2 empty) \<rightarrow> ($\<phi> id1 empty))"
 
 definition box_axiom :: "'state_dim formula"
-  where "box_axiom \<equiv> (\<langle>$\<alpha> a\<rangle>Predicational PP) \<leftrightarrow> !([[$\<alpha> a]]!(Predicational PP))"
+  where "box_axiom \<equiv> (\<langle>$\<alpha> id1\<rangle>Predicational id1) \<leftrightarrow> !([[$\<alpha> id1]]!(Predicational id1))"
 
 definition choice_axiom :: "'state_dim formula"
-  where "choice_axiom \<equiv> ([[$\<alpha> a \<union>\<union> $\<alpha> b]]Predicational PP)
-    \<leftrightarrow> (([[$\<alpha> a]]Predicational PP) && ([[$\<alpha> b]]Predicational PP))"
+  where "choice_axiom \<equiv> ([[$\<alpha> id1 \<union>\<union> $\<alpha> id2]]Predicational id1)
+    \<leftrightarrow> (([[$\<alpha> id1]]Predicational id1) && ([[$\<alpha> id2]]Predicational id1))"
 
 definition Kaxiom :: "'state_dim formula"
-  where "Kaxiom \<equiv> ([[$\<alpha> a]]((Predicational PP) \<rightarrow> (Predicational QQ)))
-    \<rightarrow> ([[$\<alpha> a]]Predicational PP) \<rightarrow> ([[$\<alpha> a]]Predicational QQ)"
+  where "Kaxiom \<equiv> ([[$\<alpha> id1]]((Predicational id1) \<rightarrow> (Predicational id2)))
+    \<rightarrow> ([[$\<alpha> id1]]Predicational id1) \<rightarrow> ([[$\<alpha> id1]]Predicational id2)"
 
 (*
 definition Ibroken :: "'state_dim formula"
@@ -1151,11 +1152,11 @@ definition Ibroken :: "'state_dim formula"
 
 definition Iaxiom :: "'state_dim formula"
   where "Iaxiom \<equiv> 
-  ([[($\<alpha> a)**]](Predicational PP \<rightarrow> ([[$\<alpha> a]]Predicational PP)))
-    \<rightarrow>((Predicational PP \<rightarrow> ([[($\<alpha> a)**]]Predicational PP)))"
+  ([[($\<alpha> id1)**]](Predicational id1 \<rightarrow> ([[$\<alpha> id1]]Predicational id1)))
+    \<rightarrow>((Predicational id1 \<rightarrow> ([[($\<alpha> id1)**]]Predicational id1)))"
 
 definition Vaxiom :: "'state_dim formula"
-  where "Vaxiom \<equiv> ($\<phi> P empty) \<rightarrow> ([[$\<alpha> a]]($\<phi> P empty))"
+  where "Vaxiom \<equiv> ($\<phi> id1 empty) \<rightarrow> ([[$\<alpha> id1]]($\<phi> id1 empty))"
 
 definition G_holds :: "'state_dim formula \<Rightarrow> 'state_dim hp \<Rightarrow> bool"
   where "G_holds \<phi> \<alpha> \<equiv> valid \<phi> \<longrightarrow> valid ([[\<alpha>]]\<phi>)"
@@ -1179,7 +1180,7 @@ definition CE_holds :: "'state_dim \<Rightarrow> 'state_dim formula \<Rightarrow
     \<longrightarrow> valid (InContext var \<phi> \<leftrightarrow> InContext var \<psi>)"
 
 definition diff_const_axiom :: "'state_dim formula"
-  where "diff_const_axiom \<equiv> Equals (Differential ($f f sempty)) (Const 0)"
+  where "diff_const_axiom \<equiv> Equals (Differential ($f id1 sempty)) (Const 0)"
 
 theorem test_valid: "valid test_axiom"
   by (auto simp add: valid_def test_axiom_def)
@@ -1218,27 +1219,27 @@ by (auto)
 lemma vec_extensionality:"(\<And>i. v$i = w$i) \<Longrightarrow> (v = w)"
   by (simp add: vec_eq_iff)
 
-lemma proj_sing1:"(singleton \<theta> x) = \<theta>"
-  by (auto simp add: singleton_def x_def)
+lemma proj_sing1:"(singleton \<theta> id1) = \<theta>"
+  by (auto simp add: singleton_def)
 
-lemma proj_sing2:"x \<noteq> y  \<Longrightarrow> (singleton \<theta> y) = (Const 0)"
-  by (auto simp add: singleton_def x_def)
+lemma proj_sing2:"id1 \<noteq> y  \<Longrightarrow> (singleton \<theta> y) = (Const 0)"
+  by (auto simp add: singleton_def)
 
 lemma assign_lem1:
-"dterm_sem I (if i = id1 then Var x else (Const 0))
-                   (vec_lambda (\<lambda>y. if x = y then Functions I f
+"dterm_sem I (if i = id1 then Var id1 else (Const 0))
+                   (vec_lambda (\<lambda>y. if id1 = y then Functions I id1
   (vec_lambda (\<lambda>i. dterm_sem I (empty i) \<nu>)) else  vec_nth (fst \<nu>) y), snd \<nu>)
 =
- dterm_sem I (if i = id1 then $f f empty else (Const 0)) \<nu>
+ dterm_sem I (if i = id1 then $f id1 empty else (Const 0)) \<nu>
 "
- by (case_tac "i = x") (auto simp add: proj_sing1)
+ by (case_tac "i = id1") (auto simp add: proj_sing1)
 
 lemma assign_lem:
-"dterm_sem I (singleton (Var x) i)
-   (vec_lambda (\<lambda>y. if y = x  then Functions I f (vec_lambda (\<lambda>i. dterm_sem I (empty i) \<nu>)) else vec_nth (fst \<nu>) y), snd \<nu>)
+"dterm_sem I (singleton (Var id1) i)
+   (vec_lambda (\<lambda>y. if y = id1  then Functions I id1 (vec_lambda (\<lambda>i. dterm_sem I (empty i) \<nu>)) else vec_nth (fst \<nu>) y), snd \<nu>)
                    =
- dterm_sem I (singleton ($f f empty) i) \<nu>"
- by (case_tac "i = x ") (auto simp add: proj_sing1)
+ dterm_sem I (singleton ($f id1 empty) i) \<nu>"
+ by (case_tac "i = id1 ") (auto simp add: proj_sing1)
 
 theorem assign_valid: "valid assign_axiom"
   apply(simp only: valid_def assign_axiom_def)
@@ -1251,16 +1252,16 @@ theorem assign_valid: "valid assign_axiom"
 lemma mem_to_nonempty: "\<omega> \<in> S \<Longrightarrow> (S \<noteq> {})"
   by (auto)
 
-lemma loop_forward: "\<nu> \<in> fml_sem I ([[$\<alpha> a**]]Predicational PP)
-  \<longrightarrow> \<nu> \<in> fml_sem I (Predicational PP&&[[$\<alpha> a]][[$\<alpha> a**]]Predicational PP)"
+lemma loop_forward: "\<nu> \<in> fml_sem I ([[$\<alpha> id1**]]Predicational id1)
+  \<longrightarrow> \<nu> \<in> fml_sem I (Predicational id1&&[[$\<alpha> id1]][[$\<alpha> id1**]]Predicational id1)"
   by (cases \<nu>) (auto intro: converse_rtrancl_into_rtrancl)
 
 lemma nat_case: "\<forall>n::nat. (n = 0) \<or> (\<exists>m. n = Suc m)"
   by (rule Nat.nat.nchotomy)
 
 lemma loop_backward:
- "\<nu> \<in> fml_sem I (Predicational PP && [[$\<alpha> a]][[$\<alpha> a**]]Predicational PP)
-  \<longrightarrow> \<nu> \<in> fml_sem I ([[$\<alpha> a**]]Predicational PP)"
+ "\<nu> \<in> fml_sem I (Predicational id1 && [[$\<alpha> id1]][[$\<alpha> id1**]]Predicational id1)
+  \<longrightarrow> \<nu> \<in> fml_sem I ([[$\<alpha> id1**]]Predicational id1)"
   by (auto elim: converse_rtranclE)
 
 theorem loop_valid: "valid loop_iterate_axiom"
@@ -1297,38 +1298,38 @@ done
 lemma I_axiom_lemma:
 fixes I::"'state_dim interp" and \<nu>
 assumes "is_interp I"
-assumes IS:"\<nu> \<in> fml_sem I ([[$\<alpha> a**]](Predicational PP \<rightarrow>
-                          [[$\<alpha> a]]Predicational PP))"
-assumes BC:"\<nu> \<in> fml_sem I (Predicational PP)"
-shows "\<nu> \<in> fml_sem I ([[$\<alpha> a**]](Predicational PP))"
+assumes IS:"\<nu> \<in> fml_sem I ([[$\<alpha> id1**]](Predicational id1 \<rightarrow>
+                          [[$\<alpha> id1]]Predicational id1))"
+assumes BC:"\<nu> \<in> fml_sem I (Predicational id1)"
+shows "\<nu> \<in> fml_sem I ([[$\<alpha> id1**]](Predicational id1))"
 proof -
-  have IS':"\<And>\<nu>2. (\<nu>, \<nu>2) \<in> (prog_sem I ($\<alpha> a))\<^sup>* \<Longrightarrow> \<nu>2 \<in> fml_sem I (Predicational PP \<rightarrow> [[$\<alpha> a ]](Predicational PP))"
+  have IS':"\<And>\<nu>2. (\<nu>, \<nu>2) \<in> (prog_sem I ($\<alpha> id1))\<^sup>* \<Longrightarrow> \<nu>2 \<in> fml_sem I (Predicational id1 \<rightarrow> [[$\<alpha> id1]](Predicational id1))"
     using IS by auto
-  have res:"\<And>\<nu>3. ((\<nu>, \<nu>3) \<in> (prog_sem I ($\<alpha> a))\<^sup>*) \<Longrightarrow> \<nu>3 \<in> fml_sem I (Predicational PP)"
+  have res:"\<And>\<nu>3. ((\<nu>, \<nu>3) \<in> (prog_sem I ($\<alpha> id1))\<^sup>*) \<Longrightarrow> \<nu>3 \<in> fml_sem I (Predicational id1)"
   proof -
     fix \<nu>3 
-    show "((\<nu>, \<nu>3) \<in> (prog_sem I ($\<alpha> a))\<^sup>*) \<Longrightarrow> \<nu>3 \<in> fml_sem I (Predicational PP)"
+    show "((\<nu>, \<nu>3) \<in> (prog_sem I ($\<alpha> id1))\<^sup>*) \<Longrightarrow> \<nu>3 \<in> fml_sem I (Predicational id1)"
     apply(induction rule:rtrancl_induct)
     apply(rule BC)
     proof -
       fix y z
-      assume vy:"(\<nu>, y) \<in> (prog_sem I ($\<alpha> a))\<^sup>*"
-      assume yz:"(y, z) \<in> prog_sem I ($\<alpha> a)"
-      assume yPP:"y \<in> fml_sem I (Predicational PP)"
-      have imp3:"y \<in> fml_sem I (Predicational PP \<rightarrow> [[$\<alpha> a ]](Predicational PP))"
+      assume vy:"(\<nu>, y) \<in> (prog_sem I ($\<alpha> id1))\<^sup>*"
+      assume yz:"(y, z) \<in> prog_sem I ($\<alpha> id1)"
+      assume yPP:"y \<in> fml_sem I (Predicational id1)"
+      have imp3:"y \<in> fml_sem I (Predicational id1 \<rightarrow> [[$\<alpha> id1 ]](Predicational id1))"
         using IS' vy by (simp)
-      have imp4:"y \<in> fml_sem I (Predicational PP) \<Longrightarrow> y \<in> fml_sem I  ([[$\<alpha> a ]](Predicational PP))"
+      have imp4:"y \<in> fml_sem I (Predicational id1) \<Longrightarrow> y \<in> fml_sem I  ([[$\<alpha> id1]](Predicational id1))"
         using imp3 impl_sem by (auto)
-      have yaPP:"y \<in> fml_sem I ([[$\<alpha> a ]]Predicational PP)" using imp4 yPP by auto
-      have zPP:"z \<in> fml_sem I (Predicational PP)" using yaPP box_sem yz mem_Collect_eq by blast  
+      have yaPP:"y \<in> fml_sem I ([[$\<alpha> id1]]Predicational id1)" using imp4 yPP by auto
+      have zPP:"z \<in> fml_sem I (Predicational id1)" using yaPP box_sem yz mem_Collect_eq by blast  
       show "
-        (\<nu>, y) \<in> (prog_sem I ($\<alpha> a))\<^sup>* \<Longrightarrow>
-        (y, z) \<in> prog_sem I ($\<alpha> a) \<Longrightarrow>
-        y \<in> fml_sem I (Predicational PP) \<Longrightarrow>
-        z \<in> fml_sem I (Predicational PP)" using zPP by simp
+        (\<nu>, y) \<in> (prog_sem I ($\<alpha> id1))\<^sup>* \<Longrightarrow>
+        (y, z) \<in> prog_sem I ($\<alpha> id1) \<Longrightarrow>
+        y \<in> fml_sem I (Predicational id1) \<Longrightarrow>
+        z \<in> fml_sem I (Predicational id1)" using zPP by simp
     qed
   qed
-  show "\<nu> \<in> fml_sem I ([[$\<alpha> a**]]Predicational PP)"
+  show "\<nu> \<in> fml_sem I ([[$\<alpha> id1**]]Predicational id1)"
     using res by (simp add: mem_Collect_eq box_sem loop_sem) 
 qed
 
@@ -1412,22 +1413,22 @@ done
 
 lemma constant_deriv_inner:
  assumes interp:"\<forall>x i. (Functions I i has_derivative FunctionFrechet I i x) (at x)"
- shows "FunctionFrechet I f (vec_lambda (\<lambda>i. sterm_sem I (sempty i) (fst \<nu>))) (vec_lambda(\<lambda>i. frechet I (sempty i) (fst \<nu>) (snd \<nu>)))= 0"
+ shows "FunctionFrechet I id1 (vec_lambda (\<lambda>i. sterm_sem I (sempty i) (fst \<nu>))) (vec_lambda(\<lambda>i. frechet I (sempty i) (fst \<nu>) (snd \<nu>)))= 0"
   proof -
     have empty_zero:"(vec_lambda(\<lambda>i. frechet I (sempty i) (fst \<nu>) (snd \<nu>))) = 0"
     using sempty_def Cart_lambda_cong frechet.simps(5) zero_vec_def
     by fastforce
     let ?x = "(vec_lambda (\<lambda>i. sterm_sem I (sempty i) (fst \<nu>)))"
     from interp
-    have has_deriv:"(Functions I f has_derivative FunctionFrechet I f ?x) (at ?x)"
+    have has_deriv:"(Functions I id1 has_derivative FunctionFrechet I id1 ?x) (at ?x)"
     by auto
-    then have f_linear:"linear (FunctionFrechet I f ?x)"
+    then have f_linear:"linear (FunctionFrechet I id1 ?x)"
     using Deriv.has_derivative_linear by auto
     then
     show ?thesis using empty_zero f_linear Linear_Algebra.linear_0 by (auto)
   qed
 
-lemma constant_deriv_zero:"is_interp I \<Longrightarrow> directional_derivative I ($f f sempty) \<nu> = 0"
+lemma constant_deriv_zero:"is_interp I \<Longrightarrow> directional_derivative I ($f id1 sempty) \<nu> = 0"
   apply(simp only: is_interp_def directional_derivative_def frechet.simps frechet_correctness)
   apply(rule constant_deriv_inner)
   apply(auto)
@@ -1440,6 +1441,59 @@ theorem diff_const_axiom_valid: "valid diff_const_axiom"
 done
 
 section Substitution
+(*
+record ('a) subst =
+  SFunctions       :: "'a \<Rightarrow> ('a func_domain \<Rightarrow> 'a trm) \<Rightarrow> 'a trm"
+  SPredicates      :: "'a \<Rightarrow> ('a func_domain \<Rightarrow> 'a trm) \<Rightarrow> 'a formula"
+  SContexts        :: "'a \<Rightarrow> ('a formula \<Rightarrow> 'a formula) \<Rightarrow> 'a formula"
+  SPredicationals  :: "'a \<Rightarrow> 'a formula"
+  SPrograms        :: "'a \<Rightarrow> 'a hp"
+  SODEs            :: "'a \<Rightarrow> 'a ODE"
+
+datatype ('a) trm =
+ (* Program variable *)
+
+datatype('a) ODE =
+  OVar 'a
+| OSing 'a "'a trm"
+| OProd "'a ODE" "'a ODE"
+
+datatype ('a) hp =
+ Pvar 'a                           ("$\<alpha>")
+| Assign 'a "(('a) trm)"                (infixr ":=" 10)
+| DiffAssign 'a "('a) trm"
+| Test "'a formula"                 ("?")
+(* An ODE program is an ODE system with some evolution domain. *)
+| EvolveODE "'a ODE" "'a formula"
+| Choice "'a hp" "'a hp"            (infixl "\<union>\<union>" 10)
+| Sequence "'a hp"  "'a hp"         (infixr ";;" 8)
+| Loop "'a hp"                      ("_**")
+
+and 'a formula =
+ Geq "'a trm" "'a trm"
+| Prop 'a "'a \<Rightarrow> 'a trm"      ("$\<phi>")
+| Not "'a formula"            ("!")
+| And "'a formula" "'a formula"    (infixl "&&" 8)
+| Forall 'a "'a formula"
+| Box "'a hp" "'a formula"         ("([[_]]_)" 10)
+(* DiffFormula \<phi> gives us the invariant for proving \<phi> by differential induction. *)
+| DiffFormula "'a formula"
+(* Unary quantifier symbols *)
+| InContext 'a "'a formula"
+(* Nullary quantifier symbols *)
+| Predicational 'a
+
+*)
+
+primrec Tsubst::"'state_dim trm \<Rightarrow> 'state_dim subst \<Rightarrow> 'state_dim trm"
+where
+  "Tsubst (Var x) \<sigma> = Var x"
+| "Tsubst (DiffVar x) \<sigma> = DiffVar x"  
+| "Tsubst (Const r) \<sigma> = Const r"  
+| "Tsubst (Function f args) \<sigma> = SFunctions \<sigma> f (\<lambda> i. Tsubst (args i) \<sigma>)"  
+| "Tsubst (Plus \<theta>1 \<theta>2) \<sigma> = Plus (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"  
+| "Tsubst (Times \<theta>1 \<theta>2) \<sigma> = Times (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"  
+| "Tsubst (Differential \<theta>) \<sigma> = Differential (Tsubst \<theta> \<sigma>)"
 
 end
 end
