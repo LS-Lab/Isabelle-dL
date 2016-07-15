@@ -63,7 +63,7 @@ record ('a) interp =
   Contexts        :: "'a \<Rightarrow> 'a state set \<Rightarrow> 'a state set"
   Predicationals  :: "'a \<Rightarrow> 'a state set"
   Programs        :: "'a \<Rightarrow> ('a state * 'a state) set"
-  ODEs            :: "'a \<Rightarrow> 'a simple_state \<Rightarrow> real \<Rightarrow> 'a simple_state"
+  ODEs            :: "'a \<Rightarrow> real \<Rightarrow> 'a simple_state \<Rightarrow> 'a simple_state"
 
 datatype ('a) trm =
  (* Program variable *)
@@ -410,16 +410,16 @@ proof -
   thus ?thesis by auto
  qed
 
- fun ODE_sem:: "'a ::finite interp \<Rightarrow> 'a ODE \<Rightarrow> 'a Rvec \<Rightarrow> real  \<Rightarrow> 'a Rvec"
+ fun ODE_sem:: "'a ::finite interp \<Rightarrow> 'a ODE \<Rightarrow> real \<Rightarrow> 'a Rvec \<Rightarrow> 'a Rvec"
   where 
   "ODE_sem I (OVar x) = ODEs I x"
-| "ODE_sem I (OSing x \<theta>) =  (\<lambda>\<nu>. \<lambda>_.(\<chi> i. if i = x then sterm_sem I \<theta> \<nu> else 0))"
-| "ODE_sem I (OProd ODE1 ODE2) = (\<lambda>\<nu>. \<lambda>t. ODE_sem I ODE1 \<nu> t + ODE_sem I ODE2 \<nu> t)"
+| "ODE_sem I (OSing x \<theta>) =  (\<lambda>_ \<nu>.(\<chi> i. if i = x then sterm_sem I \<theta> \<nu> else 0))"
+| "ODE_sem I (OProd ODE1 ODE2) = (\<lambda>t \<nu>. ODE_sem I ODE1 t \<nu> + ODE_sem I ODE2 t \<nu>)"
 
 fun ivp_sem_at::
 "'a::finite interp \<Rightarrow> 'a simple_state \<Rightarrow> 'a ODE \<Rightarrow> 
   ('a simple_state \<Rightarrow> real \<Rightarrow> 'a simple_state) \<Rightarrow> real \<Rightarrow> 'a state"
-where "ivp_sem_at I \<nu>0 ODE \<rho> t =  (\<rho> \<nu>0 t, ODE_sem I ODE (\<rho> \<nu>0 t) t)" 
+where "ivp_sem_at I \<nu>0 ODE \<rho> t =  (\<rho> \<nu>0 t, ODE_sem I ODE t (\<rho> \<nu>0 t))" 
 
  
 (* Sem for formulas, differential formulas, programs, initial-value problems and loops.
@@ -460,9 +460,8 @@ where
 | "prog_sem I (Loop \<alpha>) = (prog_sem I \<alpha>)\<^sup>*"
 | "prog_sem I (EvolveODE ODE \<phi>) =  
   {(\<nu>, \<mu>). \<mu> \<in> {ivp_sem_at I (fst \<nu>) ODE \<rho> t 
-  | \<rho> t. t \<in> ll_on_open.existence_ivl UNIV (\<lambda> t \<nu>. ODE_sem I ODE \<nu> t) UNIV 0 (fst \<nu>) 
-  \<and> (\<rho> (fst \<nu>) solves_ode (\<lambda> t \<nu>.  ODE_sem I ODE \<nu> t)) 
-     (ll_on_open.existence_ivl UNIV (\<lambda> t \<nu>. ODE_sem I ODE \<nu> t) UNIV 0 (fst \<nu>)) UNIV
+  | \<rho> t. t \<in> ll_on_open.existence_ivl UNIV (ODE_sem I ODE) UNIV 0 (fst \<nu>) 
+  \<and> (\<rho> (fst \<nu>) solves_ode (ODE_sem I ODE) {0 .. t})
   \<and> (\<forall>s\<in>{0..t}. (ivp_sem_at I (fst \<nu>) ODE \<rho> s) \<in> fml_sem I \<phi>) }}"
 
 subsection \<open>Trivial Simplification Lemmas\<close>
@@ -1417,7 +1416,6 @@ where
 | "Fsubst (DiffFormula \<phi>) \<sigma> = DiffFormula (Fsubst \<phi> \<sigma>)"
 | "Fsubst (InContext C \<phi>) \<sigma> = SContexts \<sigma> C (Fsubst \<phi> \<sigma>)"
 | "Fsubst (Predicational P) \<sigma> = SPredicationals \<sigma> P"
-  
 
 end
 end
