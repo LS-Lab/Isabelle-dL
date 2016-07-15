@@ -888,25 +888,14 @@ next
 next
 fix ODE P \<nu> \<omega>
 show "(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))"
-proof (induction "ODE")
-  show "\<And>x. (\<nu>, \<omega>) \<in> prog_sem I (EvolveODE (OVar x) P) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (EvolveODE (OVar x) P))"
-    by (simp only: BVP.simps ODE_vars.simps Compl_UNIV_eq agree_nil)
-next
-  show 
-  "\<And>x1a x2.
-       (\<nu>, \<omega>) \<in> prog_sem I (EvolveODE (OSing x1a x2) P) \<Longrightarrow>
-       Vagree \<nu> \<omega> (- BVP (EvolveODE (OSing x1a x2) P))"
-  proof auto qed
-next
-  fix ODE1 ODE2
-  assume IH1:"((\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE1 P) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (EvolveODE ODE1 P)))"
-  assume IH2:"((\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE2 P) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (EvolveODE ODE2 P)))"
-  assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE (OProd ODE1 ODE2) P)"
-  show "Vagree \<nu> \<omega> (- BVP (EvolveODE (OProd ODE1 ODE2) P))"
-    apply(auto simp add: Vagree_def)
-    done
-qed
-
+  proof -
+  fix \<nu> \<omega>
+  assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P)"
+  from sem have agree:"Vagree \<nu> \<omega> (- ODE_vars ODE)" 
+    by (auto simp only: prog_sem.simps Let_def)
+    (* fstI mem_Collect_eq snd_conv*)
+  thus "Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))" by auto
+  qed
 (* Var Assign DiffAssign Test Evolve Choice Compose Star *)
 next
   case (Star a \<nu> \<omega>) then
