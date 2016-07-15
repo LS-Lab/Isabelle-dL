@@ -63,7 +63,7 @@ record ('a) interp =
   Contexts        :: "'a \<Rightarrow> 'a state set \<Rightarrow> 'a state set"
   Predicationals  :: "'a \<Rightarrow> 'a state set"
   Programs        :: "'a \<Rightarrow> ('a state * 'a state) set"
-  ODEs            :: "'a \<Rightarrow> real \<Rightarrow> 'a simple_state \<Rightarrow> 'a simple_state"
+  ODEs            :: "'a \<Rightarrow> 'a simple_state \<Rightarrow> real \<Rightarrow> 'a simple_state"
 
 datatype ('a) trm =
  (* Program variable *)
@@ -339,38 +339,7 @@ where "repv v x r = ((\<chi> y. if x = y then r else vec_nth (fst v) y), snd v)"
 
 (* repd \<nu> x' r replaces the value of (primed) variable x' in the state \<nu> with r *)
 fun repd :: "'a::finite state \<Rightarrow> 'a \<Rightarrow> real \<Rightarrow> 'a state"
-where "repd v x r = (fst v, (\<chi> y. if x = y then r else vec_nth (snd v) y))"
-
-(* rhs_sem gives us the "sem for the right hand side of an ODE"
-   rhs_sem I \<nu> ODE gives us vector in Rn that contains for each variable
-   either the value of the corresponding term in the ODE or 0 if the variable is unbound.
-  *)
-  (*
-  fun ode_sem::"'a::finite interp \<Rightarrow> 'a ODE \<Rightarrow> real \<Rightarrow> 'a simple_state \<Rightarrow> 'a simple_state"
-where
-  "ode_sem I (OVar x) = ODEs I x"
-| "ode_sem I (OSing x \<theta>) = (\<lambda>_. \<lambda>\<nu>. basis_vector x)"
-*)
-fun ODE_sem:: "'a ::finite interp \<Rightarrow> 'a ODE \<Rightarrow> real \<Rightarrow> 'a Rvec \<Rightarrow> 'a Rvec"
-  where 
-  "ODE_sem I (OVar x) = ODEs I x"
-| "ODE_sem I (OSing x \<theta>) =  (\<lambda>_. \<lambda>\<nu>. (\<chi> i. if i = x then sterm_sem I \<theta> \<nu> else 0))"
-| "ODE_sem I (OProd ODE1 ODE2) = (\<lambda>t. \<lambda>\<nu>. ODE_sem I ODE1 t \<nu> + ODE_sem I ODE2 t \<nu>)"
-
-(* flow T f X t0 x0 :: "real set \<Rightarrow> (real \<Rightarrow> 'b \<Rightarrow> 'b) \<Rightarrow> 'b set \<Rightarrow> real \<Rightarrow> 'b \<Rightarrow> real \<Rightarrow> 'b"
-  where 'b::{banach, heine_borel}
-  T:: real set is an open time interval
-  f:: (real \<Rightarrow> 'b \<Rightarrow> 'b) is a function of time and state
-  and f is the function being integrated
-  X :: real set is an open set on R\<^sup>n
-  t0 chosen time
-  x0 chosen state
-  *)
-fun ivp_sem_at::"'a::finite interp \<Rightarrow> 'a simple_state \<Rightarrow> 'a ODE \<Rightarrow> real \<Rightarrow> 'a state"
-where "ivp_sem_at I \<nu>0 ODE t = 
-  (ll_on_open.flow UNIV (ODE_sem I ODE) UNIV 0 \<nu>0 t,
-   ODE_sem I ODE t (ll_on_open.flow UNIV (ODE_sem I ODE) UNIV 0 \<nu>0 t))"  
-  
+where "repd v x r = (fst v, (\<chi> y. if x = y then r else vec_nth (snd v) y))"  
   
 lemma
   has_vector_derivative_zero_constant:
@@ -441,6 +410,18 @@ proof -
   thus ?thesis by auto
  qed
 
+ fun ODE_sem:: "'a ::finite interp \<Rightarrow> 'a ODE \<Rightarrow> 'a Rvec \<Rightarrow> real  \<Rightarrow> 'a Rvec"
+  where 
+  "ODE_sem I (OVar x) = ODEs I x"
+| "ODE_sem I (OSing x \<theta>) =  (\<lambda>\<nu>. \<lambda>_.(\<chi> i. if i = x then sterm_sem I \<theta> \<nu> else 0))"
+| "ODE_sem I (OProd ODE1 ODE2) = (\<lambda>\<nu>. \<lambda>t. ODE_sem I ODE1 \<nu> t + ODE_sem I ODE2 \<nu> t)"
+
+fun ivp_sem_at::
+"'a::finite interp \<Rightarrow> 'a simple_state \<Rightarrow> 'a ODE \<Rightarrow> 
+  ('a simple_state \<Rightarrow> real \<Rightarrow> 'a simple_state) \<Rightarrow> real \<Rightarrow> 'a state"
+where "ivp_sem_at I \<nu>0 ODE \<rho> t =  (\<rho> \<nu>0 t, ODE_sem I ODE (\<rho> \<nu>0 t) t)" 
+
+ 
 (* Sem for formulas, differential formulas, programs, initial-value problems and loops.
    Loops and IVP's do not strictly have to have their own notion of sem, but for loops
    it was helpful to describe the sem recursively and for IVP's it was convenient to
@@ -477,7 +458,11 @@ where
 | "prog_sem I (Choice \<alpha> \<beta>) = prog_sem I \<alpha> \<union> prog_sem I \<beta>"
 | "prog_sem I (Sequence \<alpha> \<beta>) = prog_sem I \<alpha> O prog_sem I \<beta>"
 | "prog_sem I (Loop \<alpha>) = (prog_sem I \<alpha>)\<^sup>*"
-| "prog_sem I (EvolveODE ODE \<phi>) =  {(\<nu>, \<mu>). \<mu> \<in> {ivp_sem_at I (fst \<nu>) ODE t | t. t \<in> ll_on_open.existence_ivl UNIV (ODE_sem I ODE) UNIV 0 ((fst \<nu>)) \<and> (\<forall>s\<in>{0..t}. (ivp_sem_at I (fst \<nu>) ODE s) \<in> fml_sem I \<phi>) }}"
+| "prog_sem I (EvolveODE ODE \<phi>) =  
+  {(\<nu>, \<mu>). \<mu> \<in> {ivp_sem_at I (fst \<nu>) ODE \<rho> t 
+  | \<rho> t. t \<in> ll_on_open.existence_ivl UNIV (ODE_sem I ODE) UNIV 0 (fst \<nu>) 
+  \<and> (\<rho> solves_ode (ODE_sem I ODE)) (ll_on_open.existence_ivl UNIV (\<lambda> t \<nu>. ODE_sem I ODE \<nu> t) UNIV 0 (fst \<nu>)) UNIV
+  \<and> (\<forall>s\<in>{0..t}. (ivp_sem_at I (fst \<nu>) ODE \<rho> s) \<in> fml_sem I \<phi>) }}"
 
 subsection \<open>Trivial Simplification Lemmas\<close>
 text \<open>
