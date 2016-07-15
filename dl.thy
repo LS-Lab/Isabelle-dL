@@ -1421,15 +1421,6 @@ theorem diff_const_axiom_valid: "valid diff_const_axiom"
 done
 
 section Substitution
-(*
-record ('a) subst =
-  SFunctions       :: "'a \<Rightarrow> ('a func_domain \<Rightarrow> 'a trm) \<Rightarrow> 'a trm"
-  SPredicates      :: "'a \<Rightarrow> ('a func_domain \<Rightarrow> 'a trm) \<Rightarrow> 'a formula"
-  SContexts        :: "'a \<Rightarrow> ('a formula \<Rightarrow> 'a formula) \<Rightarrow> 'a formula"
-  SPredicationals  :: "'a \<Rightarrow> 'a formula"
-  SPrograms        :: "'a \<Rightarrow> 'a hp"
-  SODEs            :: "'a \<Rightarrow> 'a ODE"
-*)
 
 primrec Tsubst::"'state_dim trm \<Rightarrow> 'state_dim subst \<Rightarrow> 'state_dim trm"
 where
