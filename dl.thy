@@ -460,8 +460,9 @@ where
 | "prog_sem I (Loop \<alpha>) = (prog_sem I \<alpha>)\<^sup>*"
 | "prog_sem I (EvolveODE ODE \<phi>) =  
   {(\<nu>, \<mu>). \<mu> \<in> {ivp_sem_at I (fst \<nu>) ODE \<rho> t 
-  | \<rho> t. t \<in> ll_on_open.existence_ivl UNIV (ODE_sem I ODE) UNIV 0 (fst \<nu>) 
-  \<and> (\<rho> solves_ode (ODE_sem I ODE)) (ll_on_open.existence_ivl UNIV (\<lambda> t \<nu>. ODE_sem I ODE \<nu> t) UNIV 0 (fst \<nu>)) UNIV
+  | \<rho> t. t \<in> ll_on_open.existence_ivl UNIV (\<lambda> t \<nu>. ODE_sem I ODE \<nu> t) UNIV 0 (fst \<nu>) 
+  \<and> (\<rho> (fst \<nu>) solves_ode (\<lambda> t \<nu>.  ODE_sem I ODE \<nu> t)) 
+     (ll_on_open.existence_ivl UNIV (\<lambda> t \<nu>. ODE_sem I ODE \<nu> t) UNIV 0 (fst \<nu>)) UNIV
   \<and> (\<forall>s\<in>{0..t}. (ivp_sem_at I (fst \<nu>) ODE \<rho> s) \<in> fml_sem I \<phi>) }}"
 
 subsection \<open>Trivial Simplification Lemmas\<close>
