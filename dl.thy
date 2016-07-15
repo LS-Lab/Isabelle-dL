@@ -110,7 +110,7 @@ and 'a formula =
 record ('a) subst =
   SFunctions       :: "'a \<Rightarrow> ('a \<Rightarrow> 'a trm) \<Rightarrow> 'a trm"
   SPredicates      :: "'a \<Rightarrow> ('a \<Rightarrow> 'a trm) \<Rightarrow> 'a formula"
-  SContexts        :: "'a \<Rightarrow> ('a formula \<Rightarrow> 'a formula) \<Rightarrow> 'a formula"
+  SContexts        :: "'a \<Rightarrow> 'a formula \<Rightarrow> 'a formula"
   SPredicationals  :: "'a \<Rightarrow> 'a formula"
   SPrograms        :: "'a \<Rightarrow> 'a hp"
   SODEs            :: "'a \<Rightarrow> 'a ODE"
@@ -1429,40 +1429,6 @@ record ('a) subst =
   SPredicationals  :: "'a \<Rightarrow> 'a formula"
   SPrograms        :: "'a \<Rightarrow> 'a hp"
   SODEs            :: "'a \<Rightarrow> 'a ODE"
-
-datatype ('a) trm =
- (* Program variable *)
-
-datatype('a) ODE =
-  OVar 'a
-| OSing 'a "'a trm"
-| OProd "'a ODE" "'a ODE"
-
-datatype ('a) hp =
- Pvar 'a                           ("$\<alpha>")
-| Assign 'a "(('a) trm)"                (infixr ":=" 10)
-| DiffAssign 'a "('a) trm"
-| Test "'a formula"                 ("?")
-(* An ODE program is an ODE system with some evolution domain. *)
-| EvolveODE "'a ODE" "'a formula"
-| Choice "'a hp" "'a hp"            (infixl "\<union>\<union>" 10)
-| Sequence "'a hp"  "'a hp"         (infixr ";;" 8)
-| Loop "'a hp"                      ("_**")
-
-and 'a formula =
- Geq "'a trm" "'a trm"
-| Prop 'a "'a \<Rightarrow> 'a trm"      ("$\<phi>")
-| Not "'a formula"            ("!")
-| And "'a formula" "'a formula"    (infixl "&&" 8)
-| Forall 'a "'a formula"
-| Box "'a hp" "'a formula"         ("([[_]]_)" 10)
-(* DiffFormula \<phi> gives us the invariant for proving \<phi> by differential induction. *)
-| DiffFormula "'a formula"
-(* Unary quantifier symbols *)
-| InContext 'a "'a formula"
-(* Nullary quantifier symbols *)
-| Predicational 'a
-
 *)
 
 primrec Tsubst::"'state_dim trm \<Rightarrow> 'state_dim subst \<Rightarrow> 'state_dim trm"
@@ -1474,6 +1440,35 @@ where
 | "Tsubst (Plus \<theta>1 \<theta>2) \<sigma> = Plus (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"  
 | "Tsubst (Times \<theta>1 \<theta>2) \<sigma> = Times (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"  
 | "Tsubst (Differential \<theta>) \<sigma> = Differential (Tsubst \<theta> \<sigma>)"
+
+primrec Osubst::"'state_dim ODE \<Rightarrow> 'state_dim subst \<Rightarrow> 'state_dim ODE"
+where
+  "Osubst (OVar c) \<sigma> = SODEs \<sigma> c"
+| "Osubst (OSing x \<theta>) \<sigma> = OSing x (Tsubst \<theta> \<sigma>)"
+| "Osubst (OProd ODE1 ODE2) \<sigma> = OProd (Osubst ODE1 \<sigma>) (Osubst ODE2 \<sigma>)"
+    
+fun Psubst::"'state_dim hp \<Rightarrow> 'state_dim subst \<Rightarrow> 'state_dim hp"
+and Fsubst::"'state_dim formula \<Rightarrow> 'state_dim subst \<Rightarrow> 'state_dim formula"
+where
+  "Psubst (Pvar a) \<sigma> = SPrograms \<sigma> a"
+| "Psubst (Assign x \<theta>) \<sigma> = Assign x (Tsubst \<theta> \<sigma>)"
+| "Psubst (DiffAssign x \<theta>) \<sigma> = DiffAssign x (Tsubst \<theta> \<sigma>)"
+| "Psubst (Test \<phi>) \<sigma> = Test (Fsubst \<phi> \<sigma>)"
+| "Psubst (EvolveODE ODE \<phi>) \<sigma> = EvolveODE (Osubst ODE \<sigma>) (Fsubst \<phi> \<sigma>)"
+| "Psubst (Choice \<alpha> \<beta>) \<sigma> = Choice (Psubst \<alpha> \<sigma>) (Psubst \<beta> \<sigma>)"
+| "Psubst (Sequence \<alpha> \<beta>) \<sigma> = Sequence (Psubst \<alpha> \<sigma>) (Psubst \<beta> \<sigma>)"
+| "Psubst (Loop \<alpha>) \<sigma> = Loop (Psubst \<alpha> \<sigma>)"
+
+| "Fsubst (Geq \<theta>1 \<theta>2) \<sigma> = Geq (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"
+| "Fsubst (Prop p args) \<sigma> = SPredicates \<sigma> p (\<lambda>i. Tsubst (args i) \<sigma>)"
+| "Fsubst (Not \<phi>) \<sigma> = Not (Fsubst \<phi> \<sigma>)"
+| "Fsubst (And \<phi> \<psi>) \<sigma> = And (Fsubst \<phi> \<sigma>) (Fsubst \<psi> \<sigma>)"
+| "Fsubst (Forall x \<phi>) \<sigma> = Forall x (Fsubst \<phi> \<sigma>)"
+| "Fsubst (Box \<alpha> \<phi>) \<sigma> = Box (Psubst \<alpha> \<sigma>) (Fsubst \<phi> \<sigma>)"
+| "Fsubst (DiffFormula \<phi>) \<sigma> = DiffFormula (Fsubst \<phi> \<sigma>)"
+| "Fsubst (InContext C \<phi>) \<sigma> = SContexts \<sigma> C (Fsubst \<phi> \<sigma>)"
+| "Fsubst (Predicational P) \<sigma> = SPredicationals \<sigma> P"
+  
 
 end
 end
