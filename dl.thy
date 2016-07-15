@@ -458,6 +458,7 @@ proof -
   from constant_when_zero [OF thex0 sol thef0 gre] have "?v t $ i = x"
     by auto
   thus "?thesis x t i" by auto
+ qed
 
 (* Sem for formulas, differential formulas, programs, initial-value problems and loops.
    Loops and IVP's do not strictly have to have their own notion of sem, but for loops
