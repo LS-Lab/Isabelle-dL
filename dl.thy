@@ -106,6 +106,7 @@ and 'a formula =
 | InContext 'a "'a formula"
 (* Nullary quantifier symbols *)
 | Predicational 'a
+| Hack "'a state set"
 
 (* TODO:
 (1) Have different identifiers for Functions, Predicates, etc. I think it is actually safe
@@ -143,7 +144,7 @@ record ('a) subst =
   SPrograms        :: "'a \<Rightarrow> 'a hp"
   SDomPg           :: "'a set"
   SODEs            :: "'a \<Rightarrow> 'a ODE"
-  SDomO           :: "'a set"
+  SDomO            :: "'a set"
 
 context pointed_finite
 begin
@@ -413,6 +414,7 @@ where
 | "fml_sem I (InContext c \<phi>) = Contexts I c (fml_sem I \<phi>)"
 | "fml_sem I (Predicational p) = Predicationals I p"
 | "fml_sem I (DiffFormula p) = diff_formula_sem I p"
+| "fml_sem I (Hack S) = S"
 
 | "diff_formula_sem I (Geq f g) = {v. dterm_sem I (Differential f) v \<ge> dterm_sem I (Differential g) v}"
 | "diff_formula_sem I (Not p) = diff_formula_sem I p"
@@ -1499,41 +1501,14 @@ where
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> Padmit \<sigma> a \<Longrightarrow> FUadmit \<sigma> \<phi> (BVP a) \<Longrightarrow> Fadmit \<sigma> (Box a \<phi>)"
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> UNIV \<Longrightarrow> Fadmit \<sigma> (InContext C \<phi>)"
   
-(*record ('a) interp =
-  Functions       :: "'a \<Rightarrow> 'a func_domain \<Rightarrow> real"
-  FunctionFrechet :: "'a \<Rightarrow> 'a Rvec \<Rightarrow> 'a func_domain \<Rightarrow> real"
-  Predicates      :: "'a \<Rightarrow> 'a Rvec \<Rightarrow> bool"
-  Contexts        :: "'a \<Rightarrow> 'a state set \<Rightarrow> 'a state set"
-  Predicationals  :: "'a \<Rightarrow> 'a state set"
-  Programs        :: "'a \<Rightarrow> ('a state * 'a state) set"
-  ODEs            :: "'a \<Rightarrow> 'a simple_state \<Rightarrow> 'a simple_state"
-*)
 fun adjoint :: "'state_dim interp \<Rightarrow> 'state_dim subst \<Rightarrow> 'state_dim state \<Rightarrow> 'state_dim interp" 
-where "adjoint \<lparr>Functions = F, FunctionFrechet = FF, Predicates = P, Contexts = C,
-  Predicationals = Pl, Programs = Pg, ODEs = ODE\<rparr> \<sigma> \<nu>=
-
-\<lparr> Functions = (\<lambda>f. if f \<in> SDomF \<sigma> then (\<lambda> args. (dterm_sem I (SFunctions \<sigma> f (\<lambda> i. Const (args $ i))) \<nu>)) else F f),
-  FunctionFrechet = undefined, (*(\<lambda>f. if f \<in> SDomF \<sigma> then SFunctions \<sigma> f else FF f); *)
-  Predicates = (\<lambda>p. if p \<in> SDomP \<sigma> then SPredicates \<sigma> f else P f),
-  Contexts = (\<lambda>c. if c \<in> SDomF \<sigma> then SContexts \<sigma> f else C c), 
-  Predicationals = (\<lambda>p. if p \<in> SDomPl \<sigma> then SPredicationals \<sigma> p else Pl p),
-  Programs = (\<lambda>a. if a \<in> SDomPg \<sigma> then SPrograms \<sigma> a else Pg a),
-  ODEs = (\<lambda>ode. if ode \<in> SDomO \<sigma> then SODEs \<sigma> ode else ODE ode) \<rparr>"
-
-(*
-  SFV              :: "'a \<Rightarrow> ('a + 'a) set"
-  SFunctions       :: "'a \<Rightarrow> ('a \<Rightarrow> 'a trm) \<Rightarrow> 'a trm"
-  SDomF            :: "'a set"
-  SPredicates      :: "'a \<Rightarrow> ('a \<Rightarrow> 'a trm) \<Rightarrow> 'a formula"
-  SDomP            :: "'a set"
-  SContexts        :: "'a \<Rightarrow> 'a formula \<Rightarrow> 'a formula"
-  SDomC            :: "'a set"
-  SPredicationals  :: "'a \<Rightarrow> 'a formula"
-  SDomPl           :: "'a set"
-  SPrograms        :: "'a \<Rightarrow> 'a hp"
-  SDomPg           :: "'a set"
-  SODEs            :: "'a \<Rightarrow> 'a ODE"
-  SDomO           :: "'a set"
-*)
+where "adjoint I \<sigma> \<nu> =
+\<lparr>Functions =       (\<lambda>f. if f \<in> SDomF \<sigma> then (\<lambda> args. (dterm_sem I (SFunctions \<sigma> f (\<lambda> i. Const (args $ i))) \<nu>)) else Functions I f),
+ FunctionFrechet = (\<lambda>f. if f \<in> SDomF \<sigma> then (\<lambda> args args'. (frechet I (SFunctions \<sigma> f (\<lambda> i. Const (args $ i))) (fst \<nu>) (snd \<nu>))) else FunctionFrechet I f ),
+ Predicates =      (\<lambda>p. if p \<in> SDomP \<sigma> then (\<lambda> args. \<nu> \<in> (fml_sem I (SPredicates \<sigma> p (\<lambda> i. Const (args $ i))))) else Predicates I p),
+ Contexts =        (\<lambda>c. if c \<in> SDomF \<sigma> then (\<lambda> R. fml_sem I (SContexts \<sigma> c (Hack R))) else Contexts I c),
+ Predicationals =  (\<lambda>p. if p \<in> SDomPl \<sigma> then fml_sem I (SPredicationals \<sigma> p) else Predicationals I p),
+ Programs =        (\<lambda>a. if a \<in> SDomPg \<sigma> then prog_sem I (SPrograms \<sigma> a) else Programs I a),
+ ODEs =          (\<lambda>ode. if ode \<in> SDomO \<sigma> then ODE_sem I (SODEs \<sigma> ode) else ODEs I ode)\<rparr>"
 end
 end
