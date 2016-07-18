@@ -132,8 +132,10 @@ happens if a predicate substitution introduces a reference to Predicational x wh
 only allowed to introduce Var x?
   *)
 record ('a) subst =
-  SFV              :: "'a \<Rightarrow> ('a + 'a) set"
+  (* Free variables introduced by the RHS for a given identifier *)
+  SFV              :: "'a \<Rightarrow> ('a + 'a) set" 
   SFunctions       :: "'a \<Rightarrow> ('a \<Rightarrow> 'a trm) \<Rightarrow> 'a trm"
+  (* Set of formula identifiers for which the substitution does something (and so on)*)
   SDomF            :: "'a set"
   SPredicates      :: "'a \<Rightarrow> ('a \<Rightarrow> 'a trm) \<Rightarrow> 'a formula"
   SDomP            :: "'a set"
