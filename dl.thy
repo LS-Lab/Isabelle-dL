@@ -58,12 +58,14 @@ locale pointed_finite =
 
 record ('a) interp =
   Functions       :: "'a \<Rightarrow> 'a func_domain \<Rightarrow> real"
-  FunctionFrechet :: "'a \<Rightarrow> 'a Rvec \<Rightarrow> 'a func_domain \<Rightarrow> real"
   Predicates      :: "'a \<Rightarrow> 'a Rvec \<Rightarrow> bool"
   Contexts        :: "'a \<Rightarrow> 'a state set \<Rightarrow> 'a state set"
   Predicationals  :: "'a \<Rightarrow> 'a state set"
   Programs        :: "'a \<Rightarrow> ('a state * 'a state) set"
   ODEs            :: "'a \<Rightarrow> 'a simple_state \<Rightarrow> 'a simple_state"
+
+fun FunctionFrechet :: "'a::finite interp \<Rightarrow> 'a \<Rightarrow> 'a Rvec \<Rightarrow> 'a func_domain \<Rightarrow> real"
+where "FunctionFrechet I i = (THE f'. \<forall> x. (Functions I i has_derivative f' x) (at x))"
 
 datatype ('a) trm =
  (* Program variable *)
@@ -1469,7 +1471,6 @@ where
 fun adjoint :: "'state_dim interp \<Rightarrow> 'state_dim subst \<Rightarrow> 'state_dim state \<Rightarrow> 'state_dim interp" 
 where "adjoint I \<sigma> \<nu> =
 \<lparr>Functions =       (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda> args. (dterm_sem I (f' (\<lambda> i. Const (args $ i))) \<nu>)) | None => Functions I f),
- FunctionFrechet = (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda> args args'. (frechet I (f' (\<lambda> i. Const (args $ i))) (fst \<nu>) (snd \<nu>))) | None \<Rightarrow> FunctionFrechet I f),
  Predicates =      (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda> args. \<nu> \<in> (fml_sem I (p' (\<lambda> i. Const (args $ i))))) | None \<Rightarrow> Predicates I p),
  Contexts =        (\<lambda>c. case SContexts \<sigma> c of Some c' \<Rightarrow> (\<lambda> R. fml_sem I (c' (ConstP R))) | None \<Rightarrow> Contexts I c),
  Predicationals =  (\<lambda>p. case SPredicationals \<sigma> p of Some p' \<Rightarrow> fml_sem I p' | None \<Rightarrow> Predicationals I p),
