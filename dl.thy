@@ -106,47 +106,17 @@ and 'a formula =
 | InContext 'a "'a formula"
 (* Nullary quantifier symbols *)
 | Predicational 'a
-| Hack "'a state set"
+| ConstP "'a state set"
 
-(* TODO:
-(1) Have different identifiers for Functions, Predicates, etc. I think it is actually safe
-  not to make such a distinction, but if we take that route we should add more identifiers
-  to the locale for this theory so we can make all the axioms use different identifiers for
-  functions vs. predicates vs. etc.
-
-(2) Representation choices:
- Represent RHS of (individual) substitution as a function, or as a term/whatever
- with a modified identifier set that allows arguments as identifiers?  Functions seemed
- simpler at first, but with the second representation we automatically capture the fact
- that substituting a context can delete free variables (by introducing a binder).
- Furthermore we would not have to prove lemmas showing that the substitution function
- actually behaves like a substitution, and it would make the predicational case less 
- different from the others.
-
- If I take this option, I need to change all the types to have two type arguments, one for
- differential variables and one for non-differential variables, since only the 
- type for non-diff variables changes.
-
-But wait, there's more! Currently I use the same identifier set for all classes, so what 
-happens if a predicate substitution introduces a reference to Predicational x when it's
-only allowed to introduce Var x?
-  *)
 record ('a) subst =
   (* Free variables introduced by the RHS for a given identifier *)
   SFV              :: "'a \<Rightarrow> ('a + 'a) set" 
-  SFunctions       :: "'a \<Rightarrow> ('a \<Rightarrow> 'a trm) \<Rightarrow> 'a trm"
-  (* Set of formula identifiers for which the substitution does something (and so on)*)
-  SDomF            :: "'a set"
-  SPredicates      :: "'a \<Rightarrow> ('a \<Rightarrow> 'a trm) \<Rightarrow> 'a formula"
-  SDomP            :: "'a set"
-  SContexts        :: "'a \<Rightarrow> 'a formula \<Rightarrow> 'a formula"
-  SDomC            :: "'a set"
-  SPredicationals  :: "'a \<Rightarrow> 'a formula"
-  SDomPl           :: "'a set"
-  SPrograms        :: "'a \<Rightarrow> 'a hp"
-  SDomPg           :: "'a set"
-  SODEs            :: "'a \<Rightarrow> 'a ODE"
-  SDomO            :: "'a set"
+  SFunctions       :: "'a \<rightharpoonup> (('a \<Rightarrow> 'a trm) \<Rightarrow> 'a trm)"
+  SPredicates      :: "'a \<rightharpoonup> (('a \<Rightarrow> 'a trm) \<Rightarrow> 'a formula)"
+  SContexts        :: "'a \<rightharpoonup> ('a formula \<Rightarrow> 'a formula)"
+  SPredicationals  :: "'a \<rightharpoonup> 'a formula"
+  SPrograms        :: "'a \<rightharpoonup> 'a hp"
+  SODEs            :: "'a \<rightharpoonup> 'a ODE"
 
 context pointed_finite
 begin
@@ -416,7 +386,7 @@ where
 | "fml_sem I (InContext c \<phi>) = Contexts I c (fml_sem I \<phi>)"
 | "fml_sem I (Predicational p) = Predicationals I p"
 | "fml_sem I (DiffFormula p) = diff_formula_sem I p"
-| "fml_sem I (Hack S) = S"
+| "fml_sem I (ConstP S) = S"
 
 | "diff_formula_sem I (Geq f g) = {v. dterm_sem I (Differential f) v \<ge> dterm_sem I (Differential g) v}"
 | "diff_formula_sem I (Not p) = diff_formula_sem I p"
@@ -1412,21 +1382,21 @@ where
   "Tsubst (Var x) \<sigma> = Var x"
 | "Tsubst (DiffVar x) \<sigma> = DiffVar x"  
 | "Tsubst (Const r) \<sigma> = Const r"  
-| "Tsubst (Function f args) \<sigma> = (if f \<in> SDomF \<sigma> then SFunctions \<sigma> else Function) f (\<lambda> i. Tsubst (args i) \<sigma>)"  
+| "Tsubst (Function f args) \<sigma> = (case SFunctions \<sigma> f of Some f' \<Rightarrow> f' | None \<Rightarrow> Function f) (\<lambda> i. Tsubst (args i) \<sigma>)"  
 | "Tsubst (Plus \<theta>1 \<theta>2) \<sigma> = Plus (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"  
 | "Tsubst (Times \<theta>1 \<theta>2) \<sigma> = Times (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"  
 | "Tsubst (Differential \<theta>) \<sigma> = Differential (Tsubst \<theta> \<sigma>)"
 
 primrec Osubst::"'state_dim ODE \<Rightarrow> 'state_dim subst \<Rightarrow> 'state_dim ODE"
 where
-  "Osubst (OVar c) \<sigma> = (if c \<in> SDomO \<sigma> then SODEs \<sigma> c else (OVar c))"
+  "Osubst (OVar c) \<sigma> = (case SODEs \<sigma> c of Some c' \<Rightarrow> c' | None \<Rightarrow> OVar c)"
 | "Osubst (OSing x \<theta>) \<sigma> = OSing x (Tsubst \<theta> \<sigma>)"
 | "Osubst (OProd ODE1 ODE2) \<sigma> = OProd (Osubst ODE1 \<sigma>) (Osubst ODE2 \<sigma>)"
     
 fun Psubst::"'state_dim hp \<Rightarrow> 'state_dim subst \<Rightarrow> 'state_dim hp"
 and Fsubst::"'state_dim formula \<Rightarrow> 'state_dim subst \<Rightarrow> 'state_dim formula"
 where
-  "Psubst (Pvar a) \<sigma> = (if a \<in> SDomPg \<sigma> then SPrograms \<sigma> a else Pvar a)"
+  "Psubst (Pvar a) \<sigma> = (case SPrograms \<sigma> a of Some a' \<Rightarrow> a' | None \<Rightarrow> Pvar a)"
 | "Psubst (Assign x \<theta>) \<sigma> = Assign x (Tsubst \<theta> \<sigma>)"
 | "Psubst (DiffAssign x \<theta>) \<sigma> = DiffAssign x (Tsubst \<theta> \<sigma>)"
 | "Psubst (Test \<phi>) \<sigma> = Test (Fsubst \<phi> \<sigma>)"
@@ -1436,29 +1406,29 @@ where
 | "Psubst (Loop \<alpha>) \<sigma> = Loop (Psubst \<alpha> \<sigma>)"
 
 | "Fsubst (Geq \<theta>1 \<theta>2) \<sigma> = Geq (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"
-| "Fsubst (Prop p args) \<sigma> = (if p \<in> SDomP \<sigma> then SPredicates \<sigma> p else Prop p) (\<lambda>i. Tsubst (args i) \<sigma>)"
+| "Fsubst (Prop p args) \<sigma> = (case SPredicates \<sigma> p of Some p' \<Rightarrow> p' | None \<Rightarrow> Prop p) (\<lambda>i. Tsubst (args i) \<sigma>)"
 | "Fsubst (Not \<phi>) \<sigma> = Not (Fsubst \<phi> \<sigma>)"
 | "Fsubst (And \<phi> \<psi>) \<sigma> = And (Fsubst \<phi> \<sigma>) (Fsubst \<psi> \<sigma>)"
 | "Fsubst (Forall x \<phi>) \<sigma> = Forall x (Fsubst \<phi> \<sigma>)"
 | "Fsubst (Box \<alpha> \<phi>) \<sigma> = Box (Psubst \<alpha> \<sigma>) (Fsubst \<phi> \<sigma>)"
 | "Fsubst (DiffFormula \<phi>) \<sigma> = DiffFormula (Fsubst \<phi> \<sigma>)"
-| "Fsubst (InContext C \<phi>) \<sigma> = (if C \<in> SDomC \<sigma> then SContexts \<sigma> C else InContext C) (Fsubst \<phi> \<sigma>)"
-| "Fsubst (Predicational P) \<sigma> = (if P \<in> SDomPl \<sigma> then SPredicationals \<sigma> P else Predicational P)"
+| "Fsubst (InContext C \<phi>) \<sigma> = (case SContexts \<sigma> C of Some C' \<Rightarrow> C' | None \<Rightarrow>  InContext C) (Fsubst \<phi> \<sigma>)"
+| "Fsubst (Predicational P) \<sigma> = (case SPredicationals \<sigma> P of Some P' \<Rightarrow> P' | None \<Rightarrow> Predicational P)"
 
 definition FVA :: "('a \<Rightarrow> 'a trm) \<Rightarrow> ('a + 'a) set"
 where "FVA args = (\<Union> \<theta> \<in> range args. FVT \<theta>)"
   
 definition Svalid :: "'a subst \<Rightarrow> bool"
 where "Svalid \<sigma> \<longleftrightarrow>
-  (\<forall> i args. i \<in> SDomF \<sigma> \<longrightarrow> FVT (SFunctions \<sigma> i args)  \<subseteq> SFV \<sigma> i \<union> FVA args) \<and>
-  (\<forall> i args. i \<in> SDomP \<sigma> \<longrightarrow> FVF (SPredicates \<sigma> i args) \<subseteq> SFV \<sigma> i \<union> FVA args) \<and>
-  (\<forall> i \<phi>.    i \<in> SDomC \<sigma> \<longrightarrow> FVF (SContexts \<sigma> i \<phi>)      \<subseteq> SFV \<sigma> i \<union> FVF \<phi>)"
+  (\<forall> i args f. SFunctions \<sigma> i = Some f \<longrightarrow> FVT (f args)  \<subseteq> SFV \<sigma> i \<union> FVA args) \<and>
+  (\<forall> i args p. SPredicates \<sigma> i = Some p \<longrightarrow> FVF (p args) \<subseteq> SFV \<sigma> i \<union> FVA args) \<and>
+  (\<forall> i \<phi> C.    SContexts \<sigma> i = Some C \<longrightarrow> FVF (C \<phi>)      \<subseteq> SFV \<sigma> i \<union> FVF \<phi>)"
 
 definition SDom :: "'a subst \<Rightarrow> 'a set"
-where "SDom \<sigma> = SDomF \<sigma> \<union> SDomP \<sigma> \<union>SDomC \<sigma> \<union> SDomPg \<sigma> \<union> SDomPl \<sigma>"
+where "SDom \<sigma> = dom (SFunctions \<sigma>) \<union> dom (SPredicates \<sigma>) \<union> dom (SContexts \<sigma>) \<union> dom (SPrograms \<sigma>) \<union> dom (SPredicationals \<sigma>)"
   
 definition TUadmit :: "'a subst \<Rightarrow> 'a trm \<Rightarrow> ('a + 'a) set \<Rightarrow> bool"
-where "TUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> (SDomF \<sigma> \<inter> SIGT \<theta>).  SFV \<sigma> i) \<inter> U) = {}"
+where "TUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> (SDom \<sigma> \<inter> SIGT \<theta>).  SFV \<sigma> i) \<inter> U) = {}"
 
 definition FUadmit :: "'a subst \<Rightarrow> 'a formula \<Rightarrow> ('a + 'a) set \<Rightarrow> bool"
 where "FUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> (SDom \<sigma> \<inter> SIGF \<theta>).  SFV \<sigma> i) \<inter> U) = {}"
@@ -1469,7 +1439,7 @@ where "PUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> (SDo
 inductive Tadmit :: "'a subst \<Rightarrow> 'a trm \<Rightarrow> bool"
 where 
   "Tadmit \<sigma> \<theta> \<Longrightarrow> TUadmit \<sigma> \<theta> UNIV \<Longrightarrow> Tadmit \<sigma> (Differential \<theta>)"
-| "(\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> Tadmit \<sigma> \<theta>) \<Longrightarrow> Tadmit \<sigma> (Function f args)"
+| "(\<And>i. Tadmit \<sigma> (args i)) \<Longrightarrow> Tadmit \<sigma> (Function f args)"
 | "Tadmit \<sigma> \<theta>1 \<Longrightarrow> Tadmit \<sigma> \<theta>2 \<Longrightarrow> Tadmit \<sigma> (Plus \<theta>1 \<theta>2)"
 | "Tadmit \<sigma> \<theta>1 \<Longrightarrow> Tadmit \<sigma> \<theta>2 \<Longrightarrow> Tadmit \<sigma> (Times \<theta>1 \<theta>2)"
 | "Tadmit \<sigma> (DiffVar x)"
@@ -1505,12 +1475,12 @@ where
   
 fun adjoint :: "'state_dim interp \<Rightarrow> 'state_dim subst \<Rightarrow> 'state_dim state \<Rightarrow> 'state_dim interp" 
 where "adjoint I \<sigma> \<nu> =
-\<lparr>Functions =       (\<lambda>f. if f \<in> SDomF \<sigma> then (\<lambda> args. (dterm_sem I (SFunctions \<sigma> f (\<lambda> i. Const (args $ i))) \<nu>)) else Functions I f),
- FunctionFrechet = (\<lambda>f. if f \<in> SDomF \<sigma> then (\<lambda> args args'. (frechet I (SFunctions \<sigma> f (\<lambda> i. Const (args $ i))) (fst \<nu>) (snd \<nu>))) else FunctionFrechet I f ),
- Predicates =      (\<lambda>p. if p \<in> SDomP \<sigma> then (\<lambda> args. \<nu> \<in> (fml_sem I (SPredicates \<sigma> p (\<lambda> i. Const (args $ i))))) else Predicates I p),
- Contexts =        (\<lambda>c. if c \<in> SDomF \<sigma> then (\<lambda> R. fml_sem I (SContexts \<sigma> c (Hack R))) else Contexts I c),
- Predicationals =  (\<lambda>p. if p \<in> SDomPl \<sigma> then fml_sem I (SPredicationals \<sigma> p) else Predicationals I p),
- Programs =        (\<lambda>a. if a \<in> SDomPg \<sigma> then prog_sem I (SPrograms \<sigma> a) else Programs I a),
- ODEs =          (\<lambda>ode. if ode \<in> SDomO \<sigma> then ODE_sem I (SODEs \<sigma> ode) else ODEs I ode)\<rparr>"
+\<lparr>Functions =       (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda> args. (dterm_sem I (f' (\<lambda> i. Const (args $ i))) \<nu>)) | None => Functions I f),
+ FunctionFrechet = (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda> args args'. (frechet I (f' (\<lambda> i. Const (args $ i))) (fst \<nu>) (snd \<nu>))) | None \<Rightarrow> FunctionFrechet I f),
+ Predicates =      (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda> args. \<nu> \<in> (fml_sem I (p' (\<lambda> i. Const (args $ i))))) | None \<Rightarrow> Predicates I p),
+ Contexts =        (\<lambda>c. case SContexts \<sigma> c of Some c' \<Rightarrow> (\<lambda> R. fml_sem I (c' (ConstP R))) | None \<Rightarrow> Contexts I c),
+ Predicationals =  (\<lambda>p. case SPredicationals \<sigma> p of Some p' \<Rightarrow> fml_sem I p' | None \<Rightarrow> Predicationals I p),
+ Programs =        (\<lambda>a. case SPrograms \<sigma> a of Some a' \<Rightarrow> prog_sem I a' | None \<Rightarrow> Programs I a),
+ ODEs =          (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_sem I ode' | None \<Rightarrow> ODEs I ode)\<rparr>"
 end
 end
