@@ -110,7 +110,6 @@ and 'a formula =
 
 fun Predicational :: "'a \<Rightarrow> 'a formula"
 where "Predicational P = InContext P (ConstP UNIV)"
-
   
 record ('a) subst =
   (* Free variables introduced by the RHS for a given identifier *)
@@ -1410,6 +1409,9 @@ where
 definition FVA :: "('a \<Rightarrow> 'a trm) \<Rightarrow> ('a + 'a) set"
 where "FVA args = (\<Union> \<theta> \<in> range args. FVT \<theta>)"
   
+definition FVS :: "'a subst \<Rightarrow> ('a + 'a) set"
+where "FVS \<sigma> = (\<Union>i::'a. SFV \<sigma> i)"
+  
 definition Svalid :: "'a subst \<Rightarrow> bool"
 where "Svalid \<sigma> \<longleftrightarrow>
   (\<forall> i args f. SFunctions \<sigma> i = Some f \<longrightarrow> FVT (f args)  \<subseteq> SFV \<sigma> i \<union> FVA args) \<and>
@@ -1472,5 +1474,20 @@ where "adjoint I \<sigma> \<nu> =
  Contexts =        (\<lambda>c. case SContexts \<sigma> c of Some c' \<Rightarrow> (\<lambda> R. fml_sem I (c' (ConstP R))) | None \<Rightarrow> Contexts I c),
  Programs =        (\<lambda>a. case SPrograms \<sigma> a of Some a' \<Rightarrow> prog_sem I a' | None \<Rightarrow> Programs I a),
  ODEs =          (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_sem I ode' | None \<Rightarrow> ODEs I ode)\<rparr>"
+  
+(* Properties of adjoints *)
+lemma adjoint_consequence:" Vagree \<nu> \<omega> (FVS \<sigma>) \<Longrightarrow> adjoint I \<sigma> \<nu> = adjoint I \<sigma> \<omega>"
+  sorry
+
+lemma uadmit_sterm_adjoint:"TUadmit \<sigma> \<theta> U \<Longrightarrow> Vagree \<nu> \<omega> U \<Longrightarrow> sterm_sem (adjoint I \<sigma> \<nu>) \<theta> = sterm_sem (adjoint I \<sigma> \<omega>) \<theta>"
+  sorry
+
+lemma uadmit_dterm_adjoint:"TUadmit \<sigma> \<theta> U \<Longrightarrow> Vagree \<nu> \<omega> U \<Longrightarrow> dterm_sem (adjoint I \<sigma> \<nu>) \<theta> = dterm_sem (adjoint I \<sigma> \<omega>) \<theta>"
+  sorry
+
+lemma uadmit_prog_adjoint:"PUadmit \<sigma> a U \<Longrightarrow> Vagree \<nu> \<omega> U \<Longrightarrow> prog_sem (adjoint I \<sigma> \<nu>) a = prog_sem (adjoint I \<sigma> \<omega>) a"
+and   uadmit_fml_sem:"FUadmit \<sigma> \<phi> U \<Longrightarrow> Vagree \<nu> \<omega> U \<Longrightarrow> fml_sem (adjoint I \<sigma> \<nu>) \<phi> = fml_sem (adjoint I \<sigma> \<omega>) \<phi>"
+  sorry
+
 end
 end
