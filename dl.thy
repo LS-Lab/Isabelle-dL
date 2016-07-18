@@ -60,7 +60,6 @@ record ('a) interp =
   Functions       :: "'a \<Rightarrow> 'a func_domain \<Rightarrow> real"
   Predicates      :: "'a \<Rightarrow> 'a Rvec \<Rightarrow> bool"
   Contexts        :: "'a \<Rightarrow> 'a state set \<Rightarrow> 'a state set"
-  Predicationals  :: "'a \<Rightarrow> 'a state set"
   Programs        :: "'a \<Rightarrow> ('a state * 'a state) set"
   ODEs            :: "'a \<Rightarrow> 'a simple_state \<Rightarrow> 'a simple_state"
 
@@ -107,16 +106,18 @@ and 'a formula =
 (* Unary quantifier symbols *)
 | InContext 'a "'a formula"
 (* Nullary quantifier symbols *)
-| Predicational 'a
 | ConstP "'a state set"
 
+fun Predicational :: "'a \<Rightarrow> 'a formula"
+where "Predicational P = InContext P (ConstP UNIV)"
+
+  
 record ('a) subst =
   (* Free variables introduced by the RHS for a given identifier *)
   SFV              :: "'a \<Rightarrow> ('a + 'a) set" 
   SFunctions       :: "'a \<rightharpoonup> (('a \<Rightarrow> 'a trm) \<Rightarrow> 'a trm)"
   SPredicates      :: "'a \<rightharpoonup> (('a \<Rightarrow> 'a trm) \<Rightarrow> 'a formula)"
   SContexts        :: "'a \<rightharpoonup> ('a formula \<Rightarrow> 'a formula)"
-  SPredicationals  :: "'a \<rightharpoonup> 'a formula"
   SPrograms        :: "'a \<rightharpoonup> 'a hp"
   SODEs            :: "'a \<rightharpoonup> 'a ODE"
 
@@ -379,7 +380,6 @@ where
 | "fml_sem I (Forall x \<phi>) = {v. \<forall>r. (repv v x r) \<in> fml_sem I \<phi>}"
 | "fml_sem I (Box \<alpha> \<phi>) = {\<nu>. \<forall> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<longrightarrow> \<omega> \<in> fml_sem I \<phi>}"
 | "fml_sem I (InContext c \<phi>) = Contexts I c (fml_sem I \<phi>)"
-| "fml_sem I (Predicational p) = Predicationals I p"
 | "fml_sem I (DiffFormula p) = diff_formula_sem I p"
 | "fml_sem I (ConstP S) = S"
 
@@ -581,7 +581,6 @@ where
 | "BVF (Box \<alpha> p) = BVP \<alpha> \<union> BVF p"
 | "BVF (DiffFormula p) = BVF p"
 | "BVF (InContext C p) = UNIV"
-| "BVF (Predicational P) = UNIV"
 
 | "BVP (Pvar a) = UNIV"
 | "BVP (Assign x \<theta>) = {Inl x}"
@@ -646,7 +645,7 @@ where
  | "FVF (Box \<alpha> p) =   FVF p - MBV \<alpha>"
  | "FVF (DiffFormula p) = FVF p"
  | "FVF (InContext C p) = UNIV"
- | "FVF (Predicational P) = UNIV"
+ | "FVF (ConstP P) = {}"
  | "FVP (Pvar a) = UNIV"
  | "FVP (Assign x \<theta>) = FVT \<theta>"
  | "FVP (DiffAssign x \<theta>) = FVT \<theta>"
@@ -691,16 +690,14 @@ where
 | "SIGF (Box a p) = SIGP a \<union> SIGF p"
 | "SIGF (DiffFormula p) = SIGF p"
 | "SIGF (InContext var p) = {var} \<union> SIGF p"
-| "SIGF (Predicational var) = {var}"
+| "SIGF (ConstP S) = {}"
 
 (* TODO: Distinguish identifiers for functions, predicates, etc*)
 definition Iagree :: "'a::finite interp \<Rightarrow> 'a::finite interp \<Rightarrow> 'a set \<Rightarrow> bool"
 where "Iagree I J V \<equiv>
   (\<forall>i\<in>V.(Functions I i = Functions J i)
-      \<and> (FunctionFrechet I i = FunctionFrechet J i)
       \<and> (Predicates I i = Predicates J i)
       \<and> (Contexts I i = Contexts J i)
-      \<and> (Predicationals I i = Predicationals J i)
       \<and> (Programs I i = Programs J i))"
 
 lemma agree_nil:"Vagree \<nu> \<omega> {}"
@@ -1408,7 +1405,7 @@ where
 | "Fsubst (Box \<alpha> \<phi>) \<sigma> = Box (Psubst \<alpha> \<sigma>) (Fsubst \<phi> \<sigma>)"
 | "Fsubst (DiffFormula \<phi>) \<sigma> = DiffFormula (Fsubst \<phi> \<sigma>)"
 | "Fsubst (InContext C \<phi>) \<sigma> = (case SContexts \<sigma> C of Some C' \<Rightarrow> C' | None \<Rightarrow>  InContext C) (Fsubst \<phi> \<sigma>)"
-| "Fsubst (Predicational P) \<sigma> = (case SPredicationals \<sigma> P of Some P' \<Rightarrow> P' | None \<Rightarrow> Predicational P)"
+| "Fsubst (ConstP S) \<sigma> = ConstP S"
 
 definition FVA :: "('a \<Rightarrow> 'a trm) \<Rightarrow> ('a + 'a) set"
 where "FVA args = (\<Union> \<theta> \<in> range args. FVT \<theta>)"
@@ -1420,7 +1417,7 @@ where "Svalid \<sigma> \<longleftrightarrow>
   (\<forall> i \<phi> C.    SContexts \<sigma> i = Some C \<longrightarrow> FVF (C \<phi>)      \<subseteq> SFV \<sigma> i \<union> FVF \<phi>)"
 
 definition SDom :: "'a subst \<Rightarrow> 'a set"
-where "SDom \<sigma> = dom (SFunctions \<sigma>) \<union> dom (SPredicates \<sigma>) \<union> dom (SContexts \<sigma>) \<union> dom (SPrograms \<sigma>) \<union> dom (SPredicationals \<sigma>)"
+where "SDom \<sigma> = dom (SFunctions \<sigma>) \<union> dom (SPredicates \<sigma>) \<union> dom (SContexts \<sigma>) \<union> dom (SPrograms \<sigma>)"
   
 definition TUadmit :: "'a subst \<Rightarrow> 'a trm \<Rightarrow> ('a + 'a) set \<Rightarrow> bool"
 where "TUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> (SDom \<sigma> \<inter> SIGT \<theta>).  SFV \<sigma> i) \<inter> U) = {}"
@@ -1463,7 +1460,6 @@ where
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> Fadmit \<sigma> (Not \<phi>)"
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> Fadmit \<sigma> \<psi> \<Longrightarrow> Fadmit \<sigma> (And \<phi> \<psi>)"
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> Fadmit \<sigma> (DiffFormula \<phi>)"
-| "Fadmit \<sigma> (Predicational P)"
 | "Fadmit \<sigma> (ConstP P)"
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> {Inl x} \<Longrightarrow> Fadmit \<sigma> (Forall x \<phi>)"
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> Padmit \<sigma> a \<Longrightarrow> FUadmit \<sigma> \<phi> (BVP a) \<Longrightarrow> Fadmit \<sigma> (Box a \<phi>)"
@@ -1474,7 +1470,6 @@ where "adjoint I \<sigma> \<nu> =
 \<lparr>Functions =       (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda> args. (dterm_sem I (f' (\<lambda> i. Const (args $ i))) \<nu>)) | None => Functions I f),
  Predicates =      (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda> args. \<nu> \<in> (fml_sem I (p' (\<lambda> i. Const (args $ i))))) | None \<Rightarrow> Predicates I p),
  Contexts =        (\<lambda>c. case SContexts \<sigma> c of Some c' \<Rightarrow> (\<lambda> R. fml_sem I (c' (ConstP R))) | None \<Rightarrow> Contexts I c),
- Predicationals =  (\<lambda>p. case SPredicationals \<sigma> p of Some p' \<Rightarrow> fml_sem I p' | None \<Rightarrow> Predicationals I p),
  Programs =        (\<lambda>a. case SPrograms \<sigma> a of Some a' \<Rightarrow> prog_sem I a' | None \<Rightarrow> Programs I a),
  ODEs =          (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_sem I ode' | None \<Rightarrow> ODEs I ode)\<rparr>"
 end
