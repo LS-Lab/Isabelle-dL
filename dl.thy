@@ -1498,5 +1498,42 @@ where
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> {Inl x} \<Longrightarrow> Fadmit \<sigma> (Forall x \<phi>)"
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> Padmit \<sigma> a \<Longrightarrow> FUadmit \<sigma> \<phi> (BVP a) \<Longrightarrow> Fadmit \<sigma> (Box a \<phi>)"
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> UNIV \<Longrightarrow> Fadmit \<sigma> (InContext C \<phi>)"
+  
+(*record ('a) interp =
+  Functions       :: "'a \<Rightarrow> 'a func_domain \<Rightarrow> real"
+  FunctionFrechet :: "'a \<Rightarrow> 'a Rvec \<Rightarrow> 'a func_domain \<Rightarrow> real"
+  Predicates      :: "'a \<Rightarrow> 'a Rvec \<Rightarrow> bool"
+  Contexts        :: "'a \<Rightarrow> 'a state set \<Rightarrow> 'a state set"
+  Predicationals  :: "'a \<Rightarrow> 'a state set"
+  Programs        :: "'a \<Rightarrow> ('a state * 'a state) set"
+  ODEs            :: "'a \<Rightarrow> 'a simple_state \<Rightarrow> 'a simple_state"
+*)
+fun adjoint :: "'state_dim interp \<Rightarrow> 'state_dim subst \<Rightarrow> 'state_dim state \<Rightarrow> 'state_dim interp" 
+where "adjoint \<lparr>Functions = F, FunctionFrechet = FF, Predicates = P, Contexts = C,
+  Predicationals = Pl, Programs = Pg, ODEs = ODE\<rparr> \<sigma> \<nu>=
+
+\<lparr> Functions = (\<lambda>f. if f \<in> SDomF \<sigma> then (\<lambda> args. (dterm_sem I (SFunctions \<sigma> f (\<lambda> i. Const (args $ i))) \<nu>)) else F f),
+  FunctionFrechet = undefined, (*(\<lambda>f. if f \<in> SDomF \<sigma> then SFunctions \<sigma> f else FF f); *)
+  Predicates = (\<lambda>p. if p \<in> SDomP \<sigma> then SPredicates \<sigma> f else P f),
+  Contexts = (\<lambda>c. if c \<in> SDomF \<sigma> then SContexts \<sigma> f else C c), 
+  Predicationals = (\<lambda>p. if p \<in> SDomPl \<sigma> then SPredicationals \<sigma> p else Pl p),
+  Programs = (\<lambda>a. if a \<in> SDomPg \<sigma> then SPrograms \<sigma> a else Pg a),
+  ODEs = (\<lambda>ode. if ode \<in> SDomO \<sigma> then SODEs \<sigma> ode else ODE ode) \<rparr>"
+
+(*
+  SFV              :: "'a \<Rightarrow> ('a + 'a) set"
+  SFunctions       :: "'a \<Rightarrow> ('a \<Rightarrow> 'a trm) \<Rightarrow> 'a trm"
+  SDomF            :: "'a set"
+  SPredicates      :: "'a \<Rightarrow> ('a \<Rightarrow> 'a trm) \<Rightarrow> 'a formula"
+  SDomP            :: "'a set"
+  SContexts        :: "'a \<Rightarrow> 'a formula \<Rightarrow> 'a formula"
+  SDomC            :: "'a set"
+  SPredicationals  :: "'a \<Rightarrow> 'a formula"
+  SDomPl           :: "'a set"
+  SPrograms        :: "'a \<Rightarrow> 'a hp"
+  SDomPg           :: "'a set"
+  SODEs            :: "'a \<Rightarrow> 'a ODE"
+  SDomO           :: "'a set"
+*)
 end
 end
