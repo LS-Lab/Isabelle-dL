@@ -140,14 +140,7 @@ text \<open>
   We define the syntax of dL terms, formulas and hybrid programs. We deviate
   slightly from the definitions given in CADE'15, which allows arbitrarily
   nested differentials, but with a surprising sem (e.g. (x')' is zero in
-  every state). We restrict the differential operator to what we call simple
-  terms \<theta>_s, which may not contain any further differentials. We also explicitly
-  represent the arguments to functions (and their simple term equivalents),
-  which morally speaking should be vectors \<theta>^m and \<theta>_s^m, respectively. However
-  since \<theta>^m is simply an abbreviation for m => \<theta>  it's not clear how to prove
-  that any recursive functions over terms would terminate in this
-  representation. Thus they are currently represented as tuples, but finding a
-  way to switch to vectors would make this theory significantly more general.
+  every state). 
 
   In keeping with the CADE'15 presentation we currently make the simplifying
   assumption that all terms are smooth, and thus division and arbitrary
