@@ -115,11 +115,13 @@ fun Predicational :: "'a \<Rightarrow> ('a, 'b) formula"
 where "Predicational P = InContext P (ConstP UNIV)"
   
 record ('a, 'b) subst =
-  (* Free variables introduced by the RHS for a given identifier *)
-  SFV              :: "'a \<Rightarrow> ('b + 'b) set" 
-  SFunctions       :: "'a \<rightharpoonup> (('a \<Rightarrow> ('a, 'b) trm) \<Rightarrow> ('a, 'b) trm)"
-  SPredicates      :: "'a \<rightharpoonup> (('a \<Rightarrow> ('a, 'b) trm) \<Rightarrow> ('a, 'b) formula)"
+  (* The RHS of a function or predicate substitution is a term or formula
+   * with extra variables, which are used to refer to arguments. *)
+  SFunctions       :: "'a \<rightharpoonup> ('a, 'b + 'a) trm"
+  SPredicates      :: "'a \<rightharpoonup> ('a, 'b + 'a) formula"
   SContexts        :: "'a \<rightharpoonup> (('a, 'b) formula \<Rightarrow> ('a, 'b) formula)"
+  (* Free variables introduced by the RHS for a given context *)
+  SContextFV       :: "'a \<rightharpoonup> ('b + 'b) set"
   SPrograms        :: "'a \<rightharpoonup> ('a, 'b) hp"
   SODEs            :: "'a \<rightharpoonup> ('a, 'b) ODE"
 
@@ -1382,22 +1384,63 @@ done
 
 section Substitution
 
+primrec NTsubst::"('a, 'b + 'c) trm \<Rightarrow> ('c \<Rightarrow> ('a, 'b) trm) \<Rightarrow> ('a, 'b) trm"
+where
+  "NTsubst (Var v) \<sigma> = (case v of Inl x \<Rightarrow> Var x | Inr x \<Rightarrow> \<sigma> x)"
+| "NTsubst (DiffVar v) \<sigma> = (case v of Inl x \<Rightarrow> DiffVar x | Inr x \<Rightarrow> Differential(\<sigma> x))"
+| "NTsubst (Const r) \<sigma> = Const r"  
+| "NTsubst (Function f args) \<sigma> = Function f (\<lambda>i. NTsubst (args i) \<sigma>)"  
+| "NTsubst (Plus \<theta>1 \<theta>2) \<sigma> = Plus (NTsubst \<theta>1 \<sigma>) (NTsubst \<theta>2 \<sigma>)"  
+| "NTsubst (Times \<theta>1 \<theta>2) \<sigma> = Times (NTsubst \<theta>1 \<sigma>) (NTsubst \<theta>2 \<sigma>)"  
+| "NTsubst (Differential \<theta>) \<sigma> = Differential (NTsubst \<theta> \<sigma>)"
+
 primrec Tsubst::"('si, 'sv) trm \<Rightarrow> ('si, 'sv) subst \<Rightarrow> ('si, 'sv) trm"
 where
   "Tsubst (Var x) \<sigma> = Var x"
 | "Tsubst (DiffVar x) \<sigma> = DiffVar x"  
 | "Tsubst (Const r) \<sigma> = Const r"  
-| "Tsubst (Function f args) \<sigma> = (case SFunctions \<sigma> f of Some f' \<Rightarrow> f' | None \<Rightarrow> Function f) (\<lambda> i. Tsubst (args i) \<sigma>)"  
+| "Tsubst (Function f args) \<sigma> = (case SFunctions \<sigma> f of Some f' \<Rightarrow> NTsubst f' | None \<Rightarrow> Function f) (\<lambda> i. Tsubst (args i) \<sigma>)"  
 | "Tsubst (Plus \<theta>1 \<theta>2) \<sigma> = Plus (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"  
 | "Tsubst (Times \<theta>1 \<theta>2) \<sigma> = Times (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"  
 | "Tsubst (Differential \<theta>) \<sigma> = Differential (Tsubst \<theta> \<sigma>)"
+
+primrec NOsubst::"('a, 'b + 'c) ODE \<Rightarrow> ('c \<Rightarrow> ('a, 'b) trm) \<Rightarrow> ('a, 'b) ODE"
+where
+  "NOsubst (OVar c) \<sigma> = OVar c"
+(* NOTE: For this to make any sense, need to know the 'cs are not bound variables of the ODE *)
+| "NOsubst (OSing x \<theta>) \<sigma> = (case x of Inl x \<Rightarrow> OSing x (NTsubst \<theta> \<sigma>) | Inr x \<Rightarrow> undefined)"
+| "NOsubst (OProd ODE1 ODE2) \<sigma> = OProd (NOsubst ODE1 \<sigma>) (NOsubst ODE2 \<sigma>)"
 
 primrec Osubst::"('si, 'sv) ODE \<Rightarrow> ('si, 'sv) subst \<Rightarrow> ('si, 'sv) ODE"
 where
   "Osubst (OVar c) \<sigma> = (case SODEs \<sigma> c of Some c' \<Rightarrow> c' | None \<Rightarrow> OVar c)"
 | "Osubst (OSing x \<theta>) \<sigma> = OSing x (Tsubst \<theta> \<sigma>)"
 | "Osubst (OProd ODE1 ODE2) \<sigma> = OProd (Osubst ODE1 \<sigma>) (Osubst ODE2 \<sigma>)"
-    
+
+fun NPsubst::"('a, 'b + 'c) hp \<Rightarrow> ('c \<Rightarrow> ('a, 'b) trm) \<Rightarrow> ('a, 'b) hp"
+and NFsubst::"('a, 'b + 'c) formula \<Rightarrow> ('c \<Rightarrow> ('a, 'b) trm) \<Rightarrow> ('a, 'b) formula"
+where
+  "NPsubst (Pvar a) \<sigma> = Pvar a"
+| "NPsubst (Assign x \<theta>) \<sigma> = (case x of Inl x' \<Rightarrow> Assign x' (NTsubst \<theta> \<sigma>) | Inr _ \<Rightarrow> undefined)"
+| "NPsubst (DiffAssign x \<theta>) \<sigma> = (case x of Inl x' \<Rightarrow> DiffAssign x' (NTsubst \<theta> \<sigma>) | Inr _ \<Rightarrow> undefined)"
+| "NPsubst (Test \<phi>) \<sigma> = Test (NFsubst \<phi> \<sigma>)"
+| "NPsubst (EvolveODE ODE \<phi>) \<sigma> = EvolveODE (NOsubst ODE \<sigma>) (NFsubst \<phi> \<sigma>)"
+| "NPsubst (Choice \<alpha> \<beta>) \<sigma> = Choice (NPsubst \<alpha> \<sigma>) (NPsubst \<beta> \<sigma>)"
+| "NPsubst (Sequence \<alpha> \<beta>) \<sigma> = Sequence (NPsubst \<alpha> \<sigma>) (NPsubst \<beta> \<sigma>)"
+| "NPsubst (Loop \<alpha>) \<sigma> = Loop (NPsubst \<alpha> \<sigma>)"
+
+| "NFsubst (Geq \<theta>1 \<theta>2) \<sigma> = Geq (NTsubst \<theta>1 \<sigma>) (NTsubst \<theta>2 \<sigma>)"
+| "NFsubst (Prop p args) \<sigma> = Prop p (\<lambda>i. NTsubst (args i) \<sigma>)"
+| "NFsubst (Not \<phi>) \<sigma> = Not (NFsubst \<phi> \<sigma>)"
+| "NFsubst (And \<phi> \<psi>) \<sigma> = And (NFsubst \<phi> \<sigma>) (NFsubst \<psi> \<sigma>)"
+| "NFsubst (Forall x \<phi>) \<sigma> = (case x of Inl x' \<Rightarrow> Forall x' (NFsubst \<phi> \<sigma>)  | Inr _ \<Rightarrow> undefined)"
+| "NFsubst (Box \<alpha> \<phi>) \<sigma> = Box (NPsubst \<alpha> \<sigma>) (NFsubst \<phi> \<sigma>)"
+| "NFsubst (DiffFormula \<phi>) \<sigma> = DiffFormula (NFsubst \<phi> \<sigma>)"
+| "NFsubst (InContext C \<phi>) \<sigma> = InContext C (NFsubst \<phi> \<sigma>)"
+  (* TODO: I think substitution actually doesn't make sense for this one. Try to remove it from the
+   * logic completely. *)
+| "NFsubst (ConstP S) \<sigma> = undefined"
+
 fun Psubst::"('si, 'sv) hp \<Rightarrow> ('si, 'sv) subst \<Rightarrow> ('si, 'sv) hp"
 and Fsubst::"('si, 'sv) formula \<Rightarrow> ('si, 'sv) subst \<Rightarrow> ('si, 'sv) formula"
 where
@@ -1411,7 +1454,7 @@ where
 | "Psubst (Loop \<alpha>) \<sigma> = Loop (Psubst \<alpha> \<sigma>)"
 
 | "Fsubst (Geq \<theta>1 \<theta>2) \<sigma> = Geq (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"
-| "Fsubst (Prop p args) \<sigma> = (case SPredicates \<sigma> p of Some p' \<Rightarrow> p' | None \<Rightarrow> Prop p) (\<lambda>i. Tsubst (args i) \<sigma>)"
+| "Fsubst (Prop p args) \<sigma> = (case SPredicates \<sigma> p of Some p' \<Rightarrow> NFsubst p' | None \<Rightarrow> Prop p) (\<lambda>i. Tsubst (args i) \<sigma>)"
 | "Fsubst (Not \<phi>) \<sigma> = Not (Fsubst \<phi> \<sigma>)"
 | "Fsubst (And \<phi> \<psi>) \<sigma> = And (Fsubst \<phi> \<sigma>) (Fsubst \<psi> \<sigma>)"
 | "Fsubst (Forall x \<phi>) \<sigma> = Forall x (Fsubst \<phi> \<sigma>)"
@@ -1422,21 +1465,24 @@ where
 
 definition FVA :: "('a \<Rightarrow> ('a, 'b) trm) \<Rightarrow> ('b + 'b) set"
 where "FVA args = (\<Union> \<theta> \<in> range args. FVT \<theta>)"
+
+(*
+definition SFV :: "('a,'b) subst \<Rightarrow> 'a \<Rightarrow> ('b + 'b) set"
+where "SFV \<sigma> i = "
   
 definition FVS :: "('a,'b) subst \<Rightarrow> ('b + 'b) set"
 where "FVS \<sigma> = (\<Union>i::'a. SFV \<sigma> i)"
-  
+*)
 definition Svalid :: "('a,'b) subst \<Rightarrow> bool"
 where "Svalid \<sigma> \<longleftrightarrow>
-  (\<forall> i args f. SFunctions \<sigma> i = Some f \<longrightarrow> FVT (f args)  \<subseteq> SFV \<sigma> i \<union> FVA args) \<and>
-  (\<forall> i args p. SPredicates \<sigma> i = Some p \<longrightarrow> FVF (p args) \<subseteq> SFV \<sigma> i \<union> FVA args) \<and>
-  (\<forall> i \<phi> C.    SContexts \<sigma> i = Some C \<longrightarrow> FVF (C \<phi>)      \<subseteq> SFV \<sigma> i \<union> FVF \<phi>)"
+  (\<forall> i \<phi> C.    SContexts \<sigma> i = Some C \<longrightarrow> (\<exists>S. SContextFV \<sigma> i = Some S \<and> FVF (C \<phi>) \<subseteq> S \<union> FVF \<phi>))"
 
 definition SDom :: "('a, 'b) subst \<Rightarrow> 'a set"
 where "SDom \<sigma> = dom (SFunctions \<sigma>) \<union> dom (SPredicates \<sigma>) \<union> dom (SContexts \<sigma>) \<union> dom (SPrograms \<sigma>)"
   
+(*
 definition TUadmit :: "('a, 'b) subst \<Rightarrow> ('a, 'b) trm \<Rightarrow> ('b + 'b) set \<Rightarrow> bool"
-where "TUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> (SDom \<sigma> \<inter> SIGT \<theta>).  SFV \<sigma> i) \<inter> U) = {}"
+where "TUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> SIGT \<theta>. (case SFunctions \<sigma> i of Some f' \<Rightarrow> FVT f')) \<inter> U) = {}"
 
 definition FUadmit :: "('a, 'b) subst \<Rightarrow> ('a, 'b) formula \<Rightarrow> ('b + 'b) set \<Rightarrow> bool"
 where "FUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> (SDom \<sigma> \<inter> SIGF \<theta>).  SFV \<sigma> i) \<inter> U) = {}"
@@ -1562,5 +1608,6 @@ side conditions everywhere. *)
       done
     
 qed (auto simp add: frechet_correctness rangeI)  
+*)
 end
 end
