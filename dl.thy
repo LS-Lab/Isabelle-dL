@@ -245,8 +245,8 @@ lemma hp_induct [case_names Var Assign DiffAssign Test Evolve Choice Compose Sta
      P hp"
 by(induction rule: hp.induct) (auto)
 
-type_synonym ('a, 'b, 'c) stuple = "('a \<Rightarrow> ('a, 'c) trm)"
-type_synonym ('a, 'b, 'c) dtuple = "('a \<Rightarrow> ('a, 'c) trm)"
+type_synonym ('a, 'c) stuple = "('c \<Rightarrow> ('a, 'c) trm)"
+type_synonym ('a, 'c) dtuple = "('c \<Rightarrow> ('a, 'c) trm)"
 
 (* Derived forms *)
 fun Or :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" (infixl "||" 7)
@@ -668,39 +668,40 @@ where
 | "SIGT (DiffVar x) = {}"
 | "SIGT (Differential t) = SIGT t"
 
-primrec SIGO   :: "('a, 'c) ODE \<Rightarrow> 'a set"
+primrec SIGO   :: "('a, 'c) ODE \<Rightarrow> ('a + 'c) set"
 where
-  "SIGO (OVar c) = {c}"
-| "SIGO (OSing x \<theta>) = SIGT \<theta>"
+  "SIGO (OVar c) = {Inr c}"
+| "SIGO (OSing x \<theta>) =  {Inl x| x. x \<in> SIGT \<theta>}"
 | "SIGO (OProd ODE1 ODE2) = SIGO ODE1 \<union> SIGO ODE2"
   
-primrec SIGP   :: "('a, 'b, 'c) hp      \<Rightarrow> 'a set"
-and     SIGF   :: "('a, 'b, 'c) formula \<Rightarrow> 'a set"
+primrec SIGP   :: "('a, 'b, 'c) hp      \<Rightarrow> ('a + 'b + 'c) set"
+and     SIGF   :: "('a, 'b, 'c) formula \<Rightarrow> ('a + 'b + 'c) set"
 where
   "SIGP (Pvar var) = {}"
-| "SIGP (Assign var t) = SIGT t"
-| "SIGP (DiffAssign var t) = SIGT t"
+| "SIGP (Assign var t) = {Inl x | x. x \<in> SIGT t}"
+| "SIGP (DiffAssign var t) = {Inl x | x. x \<in> SIGT t}"
 | "SIGP (Test p) = SIGF p"
-| "SIGP (EvolveODE ODE p) = SIGF p \<union> SIGO ODE"
+| "SIGP (EvolveODE ODE p) = SIGF p \<union> {Inl x | x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) | x. Inr x \<in> SIGO ODE}"
 | "SIGP (Choice a b) = SIGP a \<union> SIGP b"
 | "SIGP (Sequence a b) = SIGP a \<union> SIGP b"
 | "SIGP (Loop a) = SIGP a"
-| "SIGF (Geq t1 t2) = SIGT t1 \<union> SIGT t2"
-| "SIGF (Prop var args) = {var} \<union> (\<Union>i. SIGT (args i))"
+| "SIGF (Geq t1 t2) = {Inl x | x. x \<in> SIGT t1 \<union> SIGT t2}"
+| "SIGF (Prop var args) = {Inr (Inl var)} \<union> {Inl x | x. x \<in> (\<Union>i. SIGT (args i))}"
 | "SIGF (Not p) = SIGF p"
 | "SIGF (And p1 p2) = SIGF p1 \<union> SIGF p2"
 | "SIGF (Forall var p) = SIGF p"
 | "SIGF (Box a p) = SIGP a \<union> SIGF p"
 | "SIGF (DiffFormula p) = SIGF p"
-| "SIGF (InContext var p) = {var} \<union> SIGF p"
+| "SIGF (InContext var p) = {Inr (Inr var)} \<union> SIGF p"
 
 (* TODO: Distinguish identifiers for functions, predicates, etc*)
-definition Iagree :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> 'a set \<Rightarrow> bool"
+definition Iagree :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a + 'b + 'c) set \<Rightarrow> bool"
 where "Iagree I J V \<equiv>
-  (\<forall>i\<in>V.(Functions I i = Functions J i)
-      \<and> (Predicates I i = Predicates J i)
-      \<and> (Contexts I i = Contexts J i)
-      \<and> (Programs I i = Programs J i))"
+  (\<forall>i\<in>V.
+    (\<exists>x. i = Inl x \<longrightarrow> Functions I x = Functions J x) \<and>
+    (\<exists>x. i = Inr (Inl x) \<longrightarrow> Predicates I x = Predicates J x) \<and>
+    (\<exists>x. i = Inr (Inr x) \<longrightarrow> Contexts I x = Contexts J x) \<and>
+    (\<exists>x. i = Inr (Inr x) \<longrightarrow> Programs I x = Programs J x))"
 
 lemma agree_nil:"Vagree \<nu> \<omega> {}"
 by (auto simp add: Vagree_def)
@@ -762,7 +763,7 @@ proof -
   assume agree:"Vagree \<nu> \<nu>' (FVDiff ($f var args))"
   have agree':"Vagree \<nu> \<nu>' ((\<Union>i. (\<Union>j \<in>(FVT (args i)). primify j)))"
   using fvdiff_plus1 FVDiff.simps agree by (auto)
-  fix i :: 'b
+  fix i :: 'a
   have "\<And>S. \<not> S \<subseteq> (\<Union>f. UNION (FVT (args f)) primify) \<or> Vagree \<nu> \<nu>' S"
     using agree' agree_supset by blast
   then have "\<And>f. f \<notin> UNIV \<or> Vagree \<nu> \<nu>' (UNION (FVT (args f)) primify)"
@@ -815,16 +816,16 @@ proof -
 qed
 
 lemma example:
-  fixes x t::real and i::'sv
+  fixes x t::real and i::'sz
   assumes "t > 0"
-  shows "x = (ll_on_open.flow UNIV (\<lambda>t. \<lambda>x. \<chi> (i::'sv). 0) UNIV 0 (\<chi> i. x) t) $ i"
+  shows "x = (ll_on_open.flow UNIV (\<lambda>t. \<lambda>x. \<chi> (i::'sz). 0) UNIV 0 (\<chi> i. x) t) $ i"
 proof -
   let ?T = UNIV
-  let ?f = "(\<lambda>t. \<lambda>x. \<chi> i::'sv. 0)"
+  let ?f = "(\<lambda>t. \<lambda>x. \<chi> i::'sz. 0)"
   let ?X = UNIV
   let ?t0.0 = 0
-  let ?x0.0 = "\<chi> i::'sv. x"
-  interpret ll: ll_on_open "UNIV" "(\<lambda>t x. \<chi> i::'sv. 0)" UNIV
+  let ?x0.0 = "\<chi> i::'sz. x"
+  interpret ll: ll_on_open "UNIV" "(\<lambda>t x. \<chi> i::'sz. 0)" UNIV
     apply unfold_locales
     using gt_ex lipschitz_constI
     by (force simp: interval_def continuous_on_def local_lipschitz_def)+
@@ -834,7 +835,7 @@ proof -
   from ll.flow_solves_ode[OF foo1 foo2]
   have solves:"(ll.flow  ?t0.0 ?x0.0 solves_ode ?f) (ll.existence_ivl  ?t0.0 ?x0.0) ?X"  by (auto)
   then have solves:"(?v solves_ode ?f) (ll.existence_ivl  ?t0.0 ?x0.0) ?X" by auto
-  have thex0: "(?v ?t0.0) $ (i::'sv) = x" by auto
+  have thex0: "(?v ?t0.0) $ (i::'sz) = x" by auto
   have sol_help: "(?v solves_ode ?f) (ll.existence_ivl  ?t0.0 ?x0.0) ?X" using solves by auto
   have ivl:"ll.existence_ivl ?t0.0 ?x0.0 = UNIV"
     by (rule ll.existence_ivl_eq_domain)
@@ -850,7 +851,7 @@ proof -
 lemma bound_effect:
 fixes I
 assumes good_interp:"is_interp I"
-shows "\<And>\<nu> :: 'sv state. \<And>\<omega> ::'sv state. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<Longrightarrow> Vagree \<nu> \<omega> (- (BVP \<alpha>))"
+shows "\<And>\<nu> :: 'sz state. \<And>\<omega> ::'sz state. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<Longrightarrow> Vagree \<nu> \<omega> (- (BVP \<alpha>))"
 proof (induct rule: hp_induct)
   case Var then show "?case" 
     using agree_nil Compl_UNIV_eq pointed_finite.BVP.simps(1) by fastforce
@@ -921,7 +922,7 @@ proof -
 qed
 
 lemma  coincidence_frechet :
-  fixes I :: "('sf, 'sp, 'sz) interp" and \<nu> :: "'sv state" and \<nu>'::"'sv state"
+  fixes I :: "('sf, 'sp, 'sz) interp" and \<nu> :: "'sz state" and \<nu>'::"'sz state"
   shows "dfree \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff \<theta>) \<Longrightarrow> frechet I  \<theta> (fst \<nu>) (snd \<nu>) = frechet I  \<theta> (fst \<nu>') (snd \<nu>')"
  proof (induction rule: dfree.induct)
   case dfree_Var then show ?case
@@ -980,7 +981,7 @@ next
 qed
 
 lemma coincidence_dterm:
-  fixes I :: "('sf::finite, 'sp::finite, 'sz::finite) interp" and \<nu> :: "'sv state" and \<nu>'::"'sv state"
+  fixes I :: "('sf::finite, 'sp::finite, 'sz::finite) interp" and \<nu> :: "'sz state" and \<nu>'::"'sz state"
   shows "dsafe \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta> \<nu>'"
 proof (induction rule: dsafe.induct)
   case dsafe_Var then show "?case" using Vagree_def rangeI 
@@ -1036,43 +1037,43 @@ where "valid \<phi> \<equiv> (\<forall> I. \<forall> \<nu>. is_interp I \<longri
   enforce that the interpretation of the function "doesnt care" about an argument,
   but if we never use that argument at more than one value there's no way to "notice"
   that the extra arguments exist *)
-definition empty :: "('sf, 'sp, 'sz) dtuple"
+definition empty :: "('sf, 'sz) dtuple"
   where "empty \<equiv> \<lambda>i.(Const 0)"
 
 (* Function argument tuple where the first argument is arbitrary and the rest are zero.*)
-fun singleton :: "('sf, 'sp, 'sz) trm \<Rightarrow> ('sf, 'sp, 'sz) dtuple"
-  where "singleton t i = (if i = iid1 then t else (Const 0))"
+fun singleton :: "('sf, 'sz) trm \<Rightarrow> ('sf, 'sz) dtuple"
+  where "singleton t i = (if i = vid1 then t else (Const 0))"
 
 (* Equivalents of the above for functions over simple terms. *)
-definition sempty :: "('sf, 'sp, 'sz) stuple"
+definition sempty :: "('sf, 'sz) stuple"
   where "sempty _ \<equiv> (Const 0)"
 
-fun ssingleton :: "('sf, 'sp, 'sz) trm \<Rightarrow> ('sf, 'sp, 'sz) stuple"
-  where "ssingleton t var = (if var = iid1 then t else (Const 0))"
+fun ssingleton :: "('sf, 'sz) trm \<Rightarrow> ('sf, 'sz) stuple"
+  where "ssingleton t var = (if var = vid1 then t else (Const 0))"
 
 definition assign_axiom :: "('sf, 'sp, 'sz) formula"
   where "assign_axiom \<equiv>
-    ([[vid1 := ($f iid1 empty)]] (Prop iid1 (singleton (Var vid1))))
-      \<leftrightarrow> Prop iid1 (singleton ($f iid1 empty))"
+    ([[vid1 := ($f fid1 empty)]] (Prop pid1 (singleton (Var vid1))))
+      \<leftrightarrow> Prop pid1 (singleton ($f fid1 empty))"
 
 definition loop_iterate_axiom :: "('sf, 'sp, 'sz) formula"
-  where "loop_iterate_axiom \<equiv> ([[$\<alpha> iid1**]]Predicational iid1)
-    \<leftrightarrow> ((Predicational iid1) && ([[$\<alpha> iid1]][[$\<alpha> iid1**]]Predicational iid1))"
+  where "loop_iterate_axiom \<equiv> ([[$\<alpha> vid1**]]Predicational vid1)
+    \<leftrightarrow> ((Predicational vid1) && ([[$\<alpha> vid1]][[$\<alpha> vid1**]]Predicational vid1))"
 
 definition test_axiom :: "('sf, 'sp, 'sz) formula"
   where "test_axiom \<equiv>
-    ([[?($\<phi> iid2 empty)]]$\<phi> iid1 empty) \<leftrightarrow> (($\<phi> iid2 empty) \<rightarrow> ($\<phi> iid1 empty))"
+    ([[?($\<phi> pid2 empty)]]$\<phi> pid1 empty) \<leftrightarrow> (($\<phi> pid2 empty) \<rightarrow> ($\<phi> pid1 empty))"
 
 definition box_axiom :: "('sf, 'sp, 'sz) formula"
-  where "box_axiom \<equiv> (\<langle>$\<alpha> iid1\<rangle>Predicational iid1) \<leftrightarrow> !([[$\<alpha> iid1]]!(Predicational iid1))"
+  where "box_axiom \<equiv> (\<langle>$\<alpha> vid1\<rangle>Predicational vid1) \<leftrightarrow> !([[$\<alpha> vid1]]!(Predicational vid1))"
 
 definition choice_axiom :: "('sf, 'sp, 'sz) formula"
-  where "choice_axiom \<equiv> ([[$\<alpha> iid1 \<union>\<union> $\<alpha> iid2]]Predicational iid1)
-    \<leftrightarrow> (([[$\<alpha> iid1]]Predicational iid1) && ([[$\<alpha> iid2]]Predicational iid1))"
+  where "choice_axiom \<equiv> ([[$\<alpha> vid1 \<union>\<union> $\<alpha> vid2]]Predicational vid1)
+    \<leftrightarrow> (([[$\<alpha> vid1]]Predicational vid1) && ([[$\<alpha> vid2]]Predicational vid1))"
 
 definition Kaxiom :: "('sf, 'sp, 'sz) formula"
-  where "Kaxiom \<equiv> ([[$\<alpha> iid1]]((Predicational iid1) \<rightarrow> (Predicational iid2)))
-    \<rightarrow> ([[$\<alpha> iid1]]Predicational iid1) \<rightarrow> ([[$\<alpha> iid1]]Predicational iid2)"
+  where "Kaxiom \<equiv> ([[$\<alpha> vid1]]((Predicational vid1) \<rightarrow> (Predicational vid2)))
+    \<rightarrow> ([[$\<alpha> vid1]]Predicational vid1) \<rightarrow> ([[$\<alpha> vid1]]Predicational vid2)"
 
 (*
 definition Ibroken :: "('sf, 'sp, 'sz) formula"
@@ -1081,35 +1082,35 @@ definition Ibroken :: "('sf, 'sp, 'sz) formula"
 
 definition Iaxiom :: "('sf, 'sp, 'sz) formula"
   where "Iaxiom \<equiv> 
-  ([[($\<alpha> iid1)**]](Predicational iid1 \<rightarrow> ([[$\<alpha> iid1]]Predicational iid1)))
-    \<rightarrow>((Predicational iid1 \<rightarrow> ([[($\<alpha> iid1)**]]Predicational iid1)))"
+  ([[($\<alpha> vid1)**]](Predicational vid1 \<rightarrow> ([[$\<alpha> vid1]]Predicational vid1)))
+    \<rightarrow>((Predicational vid1 \<rightarrow> ([[($\<alpha> vid1)**]]Predicational vid1)))"
 
 definition Vaxiom :: "('sf, 'sp, 'sz) formula"
-  where "Vaxiom \<equiv> ($\<phi> iid1 empty) \<rightarrow> ([[$\<alpha> iid1]]($\<phi> iid1 empty))"
+  where "Vaxiom \<equiv> ($\<phi> pid1 empty) \<rightarrow> ([[$\<alpha> vid1]]($\<phi> pid1 empty))"
 
 definition G_holds :: "('sf, 'sp, 'sz) formula \<Rightarrow> ('sf, 'sp, 'sz) hp \<Rightarrow> bool"
   where "G_holds \<phi> \<alpha> \<equiv> valid \<phi> \<longrightarrow> valid ([[\<alpha>]]\<phi>)"
 
-definition Skolem_holds :: "('sf, 'sp, 'sz) formula \<Rightarrow> 'sv \<Rightarrow> bool"
+definition Skolem_holds :: "('sf, 'sp, 'sz) formula \<Rightarrow> 'sz \<Rightarrow> bool"
   where "Skolem_holds \<phi> var \<equiv> valid \<phi> \<longrightarrow> valid (Forall var \<phi>)"
 
 definition MP_holds :: "('sf, 'sp, 'sz) formula \<Rightarrow> ('sf, 'sp, 'sz) formula \<Rightarrow> bool"
   where "MP_holds \<phi> \<psi> \<equiv> valid (\<phi> \<rightarrow> \<psi>) \<longrightarrow> valid \<phi> \<longrightarrow> valid \<psi>"
 
-definition CT_holds :: "'si \<Rightarrow> ('sf, 'sp, 'sz) trm \<Rightarrow> ('sf, 'sp, 'sz) trm \<Rightarrow> bool"
+definition CT_holds :: "'sf \<Rightarrow> ('sf, 'sz) trm \<Rightarrow> ('sf, 'sz) trm \<Rightarrow> bool"
   where "CT_holds g \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>')
     \<longrightarrow> valid (Equals (Function g (singleton \<theta>)) (Function g (singleton \<theta>')))"
 
-definition CQ_holds :: "'si \<Rightarrow> ('sf, 'sp, 'sz) trm \<Rightarrow> ('sf, 'sp, 'sz) trm \<Rightarrow> bool"
+definition CQ_holds :: "'sp \<Rightarrow> ('sf, 'sz) trm \<Rightarrow> ('sf, 'sz) trm \<Rightarrow> bool"
   where "CQ_holds p \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>')
     \<longrightarrow> valid ((Prop p (singleton \<theta>)) \<leftrightarrow> (Prop p (singleton \<theta>')))"
 
-definition CE_holds :: "'si \<Rightarrow> ('sf, 'sp, 'sz) formula \<Rightarrow> ('sf, 'sp, 'sz) formula \<Rightarrow> bool"
+definition CE_holds :: "'sz \<Rightarrow> ('sf, 'sp, 'sz) formula \<Rightarrow> ('sf, 'sp, 'sz) formula \<Rightarrow> bool"
   where "CE_holds var \<phi> \<psi> \<equiv> valid (\<phi> \<leftrightarrow> \<psi>)
     \<longrightarrow> valid (InContext var \<phi> \<leftrightarrow> InContext var \<psi>)"
 
 definition diff_const_axiom :: "('sf, 'sp, 'sz) formula"
-  where "diff_const_axiom \<equiv> Equals (Differential ($f iid1 sempty)) (Const 0)"
+  where "diff_const_axiom \<equiv> Equals (Differential ($f fid1 sempty)) (Const 0)"
 
 theorem test_valid: "valid test_axiom"
   by (auto simp add: valid_def test_axiom_def)
@@ -1148,27 +1149,27 @@ by (auto)
 lemma vec_extensionality:"(\<And>i. v$i = w$i) \<Longrightarrow> (v = w)"
   by (simp add: vec_eq_iff)
 
-lemma proj_sing1:"(singleton \<theta> iid1) = \<theta>"
+lemma proj_sing1:"(singleton \<theta> vid1) = \<theta>"
   by (auto simp add: singleton_def)
 
-lemma proj_sing2:"iid1 \<noteq> y  \<Longrightarrow> (singleton \<theta> y) = (Const 0)"
+lemma proj_sing2:"vid1 \<noteq> y  \<Longrightarrow> (singleton \<theta> y) = (Const 0)"
   by (auto simp add: singleton_def)
 
 lemma assign_lem1:
-"dterm_sem I (if i = iid1 then Var vid1 else (Const 0))
-                   (vec_lambda (\<lambda>y. if vid1 = y then Functions I iid1
+"dterm_sem I (if i = vid1 then Var vid1 else (Const 0))
+                   (vec_lambda (\<lambda>y. if vid1 = y then Functions I fid1
   (vec_lambda (\<lambda>i. dterm_sem I (empty i) \<nu>)) else  vec_nth (fst \<nu>) y), snd \<nu>)
 =
- dterm_sem I (if i = iid1 then $f iid1 empty else (Const 0)) \<nu>
+ dterm_sem I (if i = vid1 then $f fid1 empty else (Const 0)) \<nu>
 "
- by (case_tac "i = iid1") (auto simp add: proj_sing1)
+ by (case_tac "i = vid1") (auto simp add: proj_sing1)
 
 lemma assign_lem:
 "dterm_sem I (singleton (Var vid1) i)
-   (vec_lambda (\<lambda>y. if y = vid1  then Functions I iid1 (vec_lambda (\<lambda>i. dterm_sem I (empty i) \<nu>)) else vec_nth (fst \<nu>) y), snd \<nu>)
+   (vec_lambda (\<lambda>y. if y = vid1  then Functions I fid1 (vec_lambda (\<lambda>i. dterm_sem I (empty i) \<nu>)) else vec_nth (fst \<nu>) y), snd \<nu>)
                    =
- dterm_sem I (singleton ($f iid1 empty) i) \<nu>"
- by (case_tac "i = iid1 ") (auto simp add: proj_sing1)
+ dterm_sem I (singleton ($f fid1 empty) i) \<nu>"
+ by (case_tac "i = vid1 ") (auto simp add: proj_sing1)
 
 theorem assign_valid: "valid assign_axiom"
   apply(simp only: valid_def assign_axiom_def)
@@ -1225,7 +1226,7 @@ theorem K_valid: "valid Kaxiom"
 done
 
 lemma I_axiom_lemma:
-fixes I::"('si,'sv) interp" and \<nu>
+fixes I::"('sf,'sp,'sz) interp" and \<nu>
 assumes "is_interp I"
 assumes IS:"\<nu> \<in> fml_sem I ([[$\<alpha> id1**]](Predicational id1 \<rightarrow>
                           [[$\<alpha> id1]]Predicational id1))"
@@ -1283,18 +1284,19 @@ theorem Skolem_sound: "Skolem_holds \<phi> var"
 theorem MP_sound: "MP_holds \<phi> \<psi>"
   by (auto simp add: MP_holds_def valid_def)
 
-lemma CT_lemma:"\<And>I a b. \<forall>I::('si,'sv)interp. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b)) \<Longrightarrow>
+lemma CT_lemma:"\<And>I::('sf::finite, 'sp::finite, 'sz::finite) interp. \<And> a::(real, 'sz) vec. \<And> b::(real, 'sz) vec. \<forall>I::('sf,'sp,'sz) interp. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b)) \<Longrightarrow>
              is_interp I \<Longrightarrow>
-             Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = iid1 then \<theta> else  (Const 0)) (a, b))) =
-             Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = iid1 then \<theta>' else (Const 0)) (a, b)))"
+             Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = vid1 then \<theta> else  (Const 0)) (a, b))) =
+             Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = vid1 then \<theta>' else (Const 0)) (a, b)))"
 proof -
-  fix I :: "('sf::finite, 'sp::finite, 'sz::finite) interp" and a :: "(real, 'sv) vec" and b :: "(real, 'sv) vec"
+  fix I :: "('sf::finite, 'sp::finite, 'sz::finite) interp" and a :: "(real, 'sz) vec" and b :: "(real, 'sz) vec"
   assume a1: "is_interp I"
-  assume "\<forall>I. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b))"
-  then have "\<forall>f. dterm_sem I (if f = iid1 then \<theta>' else (Const 0)) (a, b) = dterm_sem I (if f = iid1 then \<theta> else (Const 0)) (a, b)"
+  (* NOTE: example of type annotation sadness here *)
+  assume "\<forall>I::('sf,'sp,'sz) interp. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b))"
+  then have "\<forall>i. dterm_sem I (if i = vid1 then \<theta>' else (Const 0)) (a, b) = dterm_sem I (if i = vid1 then \<theta> else (Const 0)) (a, b)"
     using a1 by presburger
-  then show "Functions I var (vec_lambda (\<lambda>f. dterm_sem I (if f = iid1 then \<theta> else (Const 0)) (a, b)))
- = Functions I var (vec_lambda (\<lambda>f. dterm_sem I (if f = iid1 then \<theta>' else (Const 0)) (a, b)))"
+  then show "Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = vid1 then \<theta> else (Const 0)) (a, b)))
+           = Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = vid1 then \<theta>' else (Const 0)) (a, b)))"
     by presburger
 qed
 
@@ -1305,15 +1307,15 @@ theorem CT_sound: "CT_holds var \<theta> \<theta>'"
   apply(simp add: CT_lemma)
 done
 
-lemma CQ_lemma:"\<And>I \<nu>. \<forall>I::('si,'sv)interp. \<forall>\<nu>. is_interp I \<longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta>' \<nu> \<Longrightarrow>
+lemma CQ_lemma:"\<And>I \<nu>. \<forall>I::('sf,'sp,'sz) interp. \<forall>\<nu>. is_interp I \<longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta>' \<nu> \<Longrightarrow>
            is_interp I \<Longrightarrow>
-           Predicates I (var::'si) (vec_lambda(\<lambda>i. dterm_sem I (if i = iid1 then \<theta> else  (Const 0)) \<nu>)) =
-           Predicates I var (vec_lambda(\<lambda>i. dterm_sem I (if i = iid1 then \<theta>' else (Const 0)) \<nu>))"
+           Predicates I (var::'sp) (vec_lambda(\<lambda>i. dterm_sem I (if i = vid1 then \<theta> else  (Const 0)) \<nu>)) =
+           Predicates I var (vec_lambda(\<lambda>i. dterm_sem I (if i = vid1 then \<theta>' else (Const 0)) \<nu>))"
 proof -
-  fix I :: "('si,'sv) interp" and \<nu> :: "(real, 'sv) vec \<times> (real, 'sv) vec"
-  assume a1: "\<forall>I \<nu>. is_interp I \<longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta>' \<nu>"
+  fix I :: "('sf,'sp,'sz) interp" and \<nu> :: "(real, 'sz) vec \<times> (real, 'sz) vec"
+  assume a1: "\<forall>I::('sf,'sp,'sz) interp. \<forall> \<nu>. is_interp I \<longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta>' \<nu>"
   assume a2: "is_interp I"
-  obtain ff :: "('sv \<Rightarrow> real) \<Rightarrow> ('sv \<Rightarrow> real) \<Rightarrow> 'sv" where
+  obtain ff :: "('sz \<Rightarrow> real) \<Rightarrow> ('sz \<Rightarrow> real) \<Rightarrow> 'sz" where
     f3: "\<forall>f fa. f (ff fa f) \<noteq> fa (ff fa f) \<or> vec_lambda f = vec_lambda fa"
     by (meson Cart_lambda_cong)
   have "dterm_sem I \<theta> \<nu> = dterm_sem I \<theta>' \<nu> "
@@ -1322,15 +1324,15 @@ proof -
     by simp
   then have "(vec_lambda(\<lambda>f. dterm_sem I (if f = vid1 then \<theta> else (Const 0)) \<nu>)) = (vec_lambda(\<lambda>f. dterm_sem I (if f = vid1 then \<theta>' else  (Const 0)) \<nu>))"
     using f3 by meson
-  then show "Predicates I var (vec_lambda(\<lambda>f. dterm_sem I (if f = iid1 then \<theta> else (Const 0)) \<nu>)) = Predicates I var (vec_lambda(\<lambda>f. dterm_sem I (if f = iid1 then \<theta>' else  (Const 0)) \<nu>))"
+  then show "Predicates I var (vec_lambda(\<lambda>f. dterm_sem I (if f = vid1 then \<theta> else (Const 0)) \<nu>)) = Predicates I var (vec_lambda(\<lambda>f. dterm_sem I (if f = vid1 then \<theta>' else  (Const 0)) \<nu>))"
   (* TODO: Simplify. This subproof used to be a one-line "by presburger" *)
   proof -
-    obtain ss :: "('si \<Rightarrow> real) \<Rightarrow> ('si \<Rightarrow> real) \<Rightarrow> 'si" where
+    obtain ss :: "('sz \<Rightarrow> real) \<Rightarrow> ('sz \<Rightarrow> real) \<Rightarrow> 'sz" where
       f1: "\<forall>f fa. f (ss fa f) \<noteq> fa (ss fa f) \<or> vec_lambda f = vec_lambda fa"
       by (meson Cart_lambda_cong)
-    have "dterm_sem I (if ss (\<lambda>s. dterm_sem I (if s = iid1 then \<theta>' else Const 0) \<nu>) (\<lambda>s. dterm_sem I (if s = iid1 then \<theta> else Const 0) \<nu>) = iid1 then \<theta> else Const 0) \<nu> \<noteq> dterm_sem I (if ss (\<lambda>s. dterm_sem I (if s = iid1 then \<theta>' else Const 0) \<nu>) (\<lambda>s. dterm_sem I (if s = iid1 then \<theta> else Const 0) \<nu>) = iid1 then \<theta>' else Const 0) \<nu> \<longrightarrow> dterm_sem I (if ss (\<lambda>s. dterm_sem I (if s = iid1 then \<theta>' else Const 0) \<nu>) (\<lambda>s. dterm_sem I (if s = iid1 then \<theta> else Const 0) \<nu>) = iid1 then \<theta> else Const 0) \<nu> = dterm_sem I (if ss (\<lambda>s. dterm_sem I (if s = iid1 then \<theta>' else Const 0) \<nu>) (\<lambda>s. dterm_sem I (if s = iid1 then \<theta> else Const 0) \<nu>) = iid1 then \<theta>' else Const 0) \<nu>"
+    have "dterm_sem I (if ss (\<lambda>s. dterm_sem I (if s = vid1 then \<theta>' else Const 0) \<nu>) (\<lambda>s. dterm_sem I (if s = vid1 then \<theta> else Const 0) \<nu>) = vid1 then \<theta> else Const 0) \<nu> \<noteq> dterm_sem I (if ss (\<lambda>s. dterm_sem I (if s = vid1 then \<theta>' else Const 0) \<nu>) (\<lambda>s. dterm_sem I (if s = vid1 then \<theta> else Const 0) \<nu>) = vid1 then \<theta>' else Const 0) \<nu> \<longrightarrow> dterm_sem I (if ss (\<lambda>s. dterm_sem I (if s = vid1 then \<theta>' else Const 0) \<nu>) (\<lambda>s. dterm_sem I (if s = vid1 then \<theta> else Const 0) \<nu>) = vid1 then \<theta> else Const 0) \<nu> = dterm_sem I (if ss (\<lambda>s. dterm_sem I (if s = vid1 then \<theta>' else Const 0) \<nu>) (\<lambda>s. dterm_sem I (if s = vid1 then \<theta> else Const 0) \<nu>) = vid1 then \<theta>' else Const 0) \<nu>"
       using \<open>dterm_sem I \<theta> \<nu> = dterm_sem I \<theta>' \<nu>\<close> by presburger
-    then have "(\<chi> s. dterm_sem I (if s = iid1 then \<theta> else Const 0) \<nu>) = (\<chi> s. dterm_sem I (if s = iid1 then \<theta>' else Const 0) \<nu>)"
+    then have "(\<chi> s. dterm_sem I (if s = vid1 then \<theta> else Const 0) \<nu>) = (\<chi> s. dterm_sem I (if s = vid1 then \<theta>' else Const 0) \<nu>)"
       using f1 by meson
     then show ?thesis
       by simp
@@ -1382,17 +1384,18 @@ done
 
 section Substitution
 
-primrec NTsubst::"('a, 'b + 'c) trm \<Rightarrow> ('c \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'c) trm"
+primrec NTsubst::"('a + 'b, 'c) trm \<Rightarrow> ('b \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'c) trm"
 where
-  "NTsubst (Var v) \<sigma> = (case v of Inl x \<Rightarrow> Var x | Inr x \<Rightarrow> \<sigma> x)"
-| "NTsubst (DiffVar v) \<sigma> = (case v of Inl x \<Rightarrow> DiffVar x | Inr x \<Rightarrow> Differential(\<sigma> x))"
+  "NTsubst (Var v) \<sigma> = Var v"
+| "NTsubst (DiffVar v) \<sigma> = DiffVar v"
 | "NTsubst (Const r) \<sigma> = Const r"  
-| "NTsubst (Function f args) \<sigma> = Function f (\<lambda>i. NTsubst (args i) \<sigma>)"  
+| "NTsubst (Function f args) \<sigma> = 
+    (case f of Inl f' \<Rightarrow> Function f' (\<lambda>i. NTsubst (args i) \<sigma>) | Inr f' \<Rightarrow> \<sigma> f')"  
 | "NTsubst (Plus \<theta>1 \<theta>2) \<sigma> = Plus (NTsubst \<theta>1 \<sigma>) (NTsubst \<theta>2 \<sigma>)"  
 | "NTsubst (Times \<theta>1 \<theta>2) \<sigma> = Times (NTsubst \<theta>1 \<sigma>) (NTsubst \<theta>2 \<sigma>)"  
 | "NTsubst (Differential \<theta>) \<sigma> = Differential (NTsubst \<theta> \<sigma>)"
 
-primrec Tsubst::"('sf, 'sp, 'sz) trm \<Rightarrow> ('sf, 'sp, 'sz) subst \<Rightarrow> ('sf, 'sp, 'sz) trm"
+primrec Tsubst::"('sf, 'sz) trm \<Rightarrow> ('sf, 'sp, 'sz) subst \<Rightarrow> ('sf, 'sz) trm"
 where
   "Tsubst (Var x) \<sigma> = Var x"
 | "Tsubst (DiffVar x) \<sigma> = DiffVar x"  
@@ -1402,25 +1405,24 @@ where
 | "Tsubst (Times \<theta>1 \<theta>2) \<sigma> = Times (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"  
 | "Tsubst (Differential \<theta>) \<sigma> = Differential (Tsubst \<theta> \<sigma>)"
 
-primrec NOsubst::"('a, 'b + 'c) ODE \<Rightarrow> ('c \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'c) ODE"
+primrec NOsubst::"('a + 'b, 'c) ODE \<Rightarrow> ('b \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'c) ODE"
 where
   "NOsubst (OVar c) \<sigma> = OVar c"
-(* NOTE: For this to make any sense, need to know the 'cs are not bound variables of the ODE *)
-| "NOsubst (OSing x \<theta>) \<sigma> = (case x of Inl x \<Rightarrow> OSing x (NTsubst \<theta> \<sigma>) | Inr x \<Rightarrow> undefined)"
+| "NOsubst (OSing x \<theta>) \<sigma> = OSing x (NTsubst \<theta> \<sigma>)"
 | "NOsubst (OProd ODE1 ODE2) \<sigma> = OProd (NOsubst ODE1 \<sigma>) (NOsubst ODE2 \<sigma>)"
 
-primrec Osubst::"('sf, 'sp, 'sz) ODE \<Rightarrow> ('sf, 'sp, 'sz) subst \<Rightarrow> ('sf, 'sp, 'sz) ODE"
+primrec Osubst::"('sf, 'sz) ODE \<Rightarrow> ('sf, 'sp, 'sz) subst \<Rightarrow> ('sf, 'sz) ODE"
 where
   "Osubst (OVar c) \<sigma> = (case SODEs \<sigma> c of Some c' \<Rightarrow> c' | None \<Rightarrow> OVar c)"
 | "Osubst (OSing x \<theta>) \<sigma> = OSing x (Tsubst \<theta> \<sigma>)"
 | "Osubst (OProd ODE1 ODE2) \<sigma> = OProd (Osubst ODE1 \<sigma>) (Osubst ODE2 \<sigma>)"
 
-fun NPsubst::"('a, 'b + 'c) hp \<Rightarrow> ('c \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'b, 'c) hp"
-and NFsubst::"('a, 'b + 'c) formula \<Rightarrow> ('c \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'b, 'c) formula"
+fun NPsubst::"('a + 'd, 'b, 'c) hp \<Rightarrow> ('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'b, 'c) hp"
+and NFsubst::"('a + 'd, 'b, 'c) formula \<Rightarrow> ('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'b, 'c) formula"
 where
   "NPsubst (Pvar a) \<sigma> = Pvar a"
-| "NPsubst (Assign x \<theta>) \<sigma> = (case x of Inl x' \<Rightarrow> Assign x' (NTsubst \<theta> \<sigma>) | Inr _ \<Rightarrow> undefined)"
-| "NPsubst (DiffAssign x \<theta>) \<sigma> = (case x of Inl x' \<Rightarrow> DiffAssign x' (NTsubst \<theta> \<sigma>) | Inr _ \<Rightarrow> undefined)"
+| "NPsubst (Assign x \<theta>) \<sigma> = Assign x (NTsubst \<theta> \<sigma>)"
+| "NPsubst (DiffAssign x \<theta>) \<sigma> = DiffAssign x (NTsubst \<theta> \<sigma>)"
 | "NPsubst (Test \<phi>) \<sigma> = Test (NFsubst \<phi> \<sigma>)"
 | "NPsubst (EvolveODE ODE \<phi>) \<sigma> = EvolveODE (NOsubst ODE \<sigma>) (NFsubst \<phi> \<sigma>)"
 | "NPsubst (Choice \<alpha> \<beta>) \<sigma> = Choice (NPsubst \<alpha> \<sigma>) (NPsubst \<beta> \<sigma>)"
@@ -1431,11 +1433,33 @@ where
 | "NFsubst (Prop p args) \<sigma> = Prop p (\<lambda>i. NTsubst (args i) \<sigma>)"
 | "NFsubst (Not \<phi>) \<sigma> = Not (NFsubst \<phi> \<sigma>)"
 | "NFsubst (And \<phi> \<psi>) \<sigma> = And (NFsubst \<phi> \<sigma>) (NFsubst \<psi> \<sigma>)"
-| "NFsubst (Forall x \<phi>) \<sigma> = (case x of Inl x' \<Rightarrow> Forall x' (NFsubst \<phi> \<sigma>)  | Inr _ \<Rightarrow> undefined)"
+| "NFsubst (Forall x \<phi>) \<sigma> = Forall x (NFsubst \<phi> \<sigma>)"
 | "NFsubst (Box \<alpha> \<phi>) \<sigma> = Box (NPsubst \<alpha> \<sigma>) (NFsubst \<phi> \<sigma>)"
 | "NFsubst (DiffFormula \<phi>) \<sigma> = DiffFormula (NFsubst \<phi> \<sigma>)"
 | "NFsubst (InContext C \<phi>) \<sigma> = InContext C (NFsubst \<phi> \<sigma>)"
 
+fun PPsubst::"('a, 'b + 'd, 'c) hp \<Rightarrow> ('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b, 'c) hp"
+and PFsubst::"('a, 'b + 'd, 'c) formula \<Rightarrow> ('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b, 'c) formula"
+where
+  "PPsubst (Pvar a) \<sigma> = Pvar a"
+| "PPsubst (Assign x \<theta>) \<sigma> = Assign x \<theta>"
+| "PPsubst (DiffAssign x \<theta>) \<sigma> = DiffAssign x \<theta>"
+| "PPsubst (Test \<phi>) \<sigma> = Test (PFsubst \<phi> \<sigma>)"
+| "PPsubst (EvolveODE ODE \<phi>) \<sigma> = EvolveODE ODE (PFsubst \<phi> \<sigma>)"
+| "PPsubst (Choice \<alpha> \<beta>) \<sigma> = Choice (PPsubst \<alpha> \<sigma>) (PPsubst \<beta> \<sigma>)"
+| "PPsubst (Sequence \<alpha> \<beta>) \<sigma> = Sequence (PPsubst \<alpha> \<sigma>) (PPsubst \<beta> \<sigma>)"
+| "PPsubst (Loop \<alpha>) \<sigma> = Loop (PPsubst \<alpha> \<sigma>)"
+
+| "PFsubst (Geq \<theta>1 \<theta>2) \<sigma> = (Geq \<theta>1 \<theta>2)"
+| "PFsubst (Prop p args) \<sigma> = (case p of Inl p' \<Rightarrow> Prop p' args | Inr p' \<Rightarrow> \<sigma> p')"
+| "PFsubst (Not \<phi>) \<sigma> = Not (PFsubst \<phi> \<sigma>)"
+| "PFsubst (And \<phi> \<psi>) \<sigma> = And (PFsubst \<phi> \<sigma>) (PFsubst \<psi> \<sigma>)"
+| "PFsubst (Forall x \<phi>) \<sigma> = Forall x (PFsubst \<phi> \<sigma>)"
+| "PFsubst (Box \<alpha> \<phi>) \<sigma> = Box (PPsubst \<alpha> \<sigma>) (PFsubst \<phi> \<sigma>)"
+| "PFsubst (DiffFormula \<phi>) \<sigma> = DiffFormula (PFsubst \<phi> \<sigma>)"
+| "PFsubst (InContext C \<phi>) \<sigma> = InContext C (PFsubst \<phi> \<sigma>)"
+
+  
 fun Psubst::"('sf, 'sp, 'sz) hp \<Rightarrow> ('sf, 'sp, 'sz) subst \<Rightarrow> ('sf, 'sp, 'sz) hp"
 and Fsubst::"('sf, 'sp, 'sz) formula \<Rightarrow> ('sf, 'sp, 'sz) subst \<Rightarrow> ('sf, 'sp, 'sz) formula"
 where
@@ -1449,14 +1473,13 @@ where
 | "Psubst (Loop \<alpha>) \<sigma> = Loop (Psubst \<alpha> \<sigma>)"
 
 | "Fsubst (Geq \<theta>1 \<theta>2) \<sigma> = Geq (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"
-| "Fsubst (Prop p args) \<sigma> = (case SPredicates \<sigma> p of Some p' \<Rightarrow> NFsubst p' | None \<Rightarrow> Prop p) (\<lambda>i. Tsubst (args i) \<sigma>)"
+| "Fsubst (Prop p args) \<sigma> = undefined(*(case SPredicates \<sigma> p of Some p' \<Rightarrow> NFsubst p' (\<lambda>i. Tsubst (args i) \<sigma>) | None \<Rightarrow> Prop p (\<lambda>i. Tsubst (args i) \<sigma>)) *)"
 | "Fsubst (Not \<phi>) \<sigma> = Not (Fsubst \<phi> \<sigma>)"
 | "Fsubst (And \<phi> \<psi>) \<sigma> = And (Fsubst \<phi> \<sigma>) (Fsubst \<psi> \<sigma>)"
 | "Fsubst (Forall x \<phi>) \<sigma> = Forall x (Fsubst \<phi> \<sigma>)"
 | "Fsubst (Box \<alpha> \<phi>) \<sigma> = Box (Psubst \<alpha> \<sigma>) (Fsubst \<phi> \<sigma>)"
 | "Fsubst (DiffFormula \<phi>) \<sigma> = DiffFormula (Fsubst \<phi> \<sigma>)"
-| "Fsubst (InContext C \<phi>) \<sigma> = (case SContexts \<sigma> C of Some C' \<Rightarrow> C' | None \<Rightarrow>  InContext C) (Fsubst \<phi> \<sigma>)"
-| "Fsubst (ConstP S) \<sigma> = ConstP S"
+| "Fsubst (InContext C \<phi>) \<sigma> = (case SContexts \<sigma> C of Some C' \<Rightarrow> PFsubst C' (\<lambda>(). (Fsubst \<phi> \<sigma>)) | None \<Rightarrow>  InContext C (Fsubst \<phi> \<sigma>))"
 
 definition FVA :: "('a \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('c + 'c) set"
 where "FVA args = (\<Union> \<theta> \<in> range args. FVT \<theta>)"
@@ -1468,13 +1491,10 @@ where "SFV \<sigma> i = "
 definition FVS :: "('a,'b) subst \<Rightarrow> ('c + 'c) set"
 where "FVS \<sigma> = (\<Union>i::'a. SFV \<sigma> i)"
 *)
-definition Svalid :: "('a,'b) subst \<Rightarrow> bool"
-where "Svalid \<sigma> \<longleftrightarrow>
-  (\<forall> i \<phi> C.    SContexts \<sigma> i = Some C \<longrightarrow> (\<exists>S. SContextFV \<sigma> i = Some S \<and> FVF (C \<phi>) \<subseteq> S \<union> FVF \<phi>))"
 
-definition SDom :: "('a, 'b, 'c) subst \<Rightarrow> 'a set"
+(*definition SDom :: "('a, 'b, 'c) subst \<Rightarrow> 'a set"
 where "SDom \<sigma> = dom (SFunctions \<sigma>) \<union> dom (SPredicates \<sigma>) \<union> dom (SContexts \<sigma>) \<union> dom (SPrograms \<sigma>)"
-  
+  *)
 (*
 definition TUadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
 where "TUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> SIGT \<theta>. (case SFunctions \<sigma> i of Some f' \<Rightarrow> FVT f')) \<inter> U) = {}"
@@ -1522,7 +1542,7 @@ where
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> Padmit \<sigma> a \<Longrightarrow> FUadmit \<sigma> \<phi> (BVP a) \<Longrightarrow> Fadmit \<sigma> (Box a \<phi>)"
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> UNIV \<Longrightarrow> Fadmit \<sigma> (InContext C \<phi>)"
 *)  
-fun adjoint :: "('sf, 'sp, 'sz) interp \<Rightarrow> ('sf, 'sp, 'sz) subst \<Rightarrow> 'sv state \<Rightarrow> ('sf, 'sp, 'sz) interp" 
+fun adjoint :: "('sf, 'sp, 'sz) interp \<Rightarrow> ('sf, 'sp, 'sz) subst \<Rightarrow> 'sz state \<Rightarrow> ('sf, 'sp, 'sz) interp" 
 where "adjoint I \<sigma> (\<nu>, \<nu>') =
 \<lparr>Functions =       (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. dterm_sem I f' ((\<chi> x. case x of Inl x' \<Rightarrow> \<nu> $ x' | Inr x' \<Rightarrow> args $ x'), (\<chi> x. case x of Inl x' \<Rightarrow> \<nu>' $ x' | Inr x' \<Rightarrow> args $ x'))) | None => Functions I f),
  Predicates =      (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda> args. \<nu> \<in> (fml_sem I (p' (\<lambda> i. Const (args $ i))))) | None \<Rightarrow> Predicates I p),
@@ -1547,7 +1567,7 @@ and   uadmit_fml_sem:"FUadmit \<sigma> \<phi> U \<Longrightarrow> Vagree \<nu> \
 lemma usubst_sterm:"Tadmit \<sigma> \<theta> \<Longrightarrow> Svalid \<sigma> \<Longrightarrow> dfree \<theta> \<Longrightarrow> sterm_sem I (Tsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
 proof (induct rule: Tadmit.induct)
   case Tadmit_Func
-    fix \<sigma> :: "('sf, 'sp, 'sz) subst" and args :: "'si \<Rightarrow> ('sf, 'sp, 'sz) trm" and f :: 'si
+    fix \<sigma> :: "('sf, 'sp, 'sz) subst" and args :: "'si \<Rightarrow> ('sf, 'sz) trm" and f :: 'si
     assume admit:"\<And>i. Tadmit \<sigma> (args i)"
     assume IH:   "\<And>i. Svalid \<sigma> \<Longrightarrow> dfree (args i) \<Longrightarrow> sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) =
                    sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)"
