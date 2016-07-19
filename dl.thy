@@ -47,8 +47,10 @@ proof -
 qed
 
 locale pointed_finite =
+  (* NOTE: Doesn't have to be finite *)
   fixes foo :: "'sf::finite"
   fixes bar :: "'sp::finite"
+
   fixes bat :: "'sz::finite"
   fixes vid1 :: 'sz
   fixes vid2 :: 'sz
@@ -1482,7 +1484,7 @@ where
 | "Fsubst (InContext C \<phi>) \<sigma> = (case SContexts \<sigma> C of Some C' \<Rightarrow> PFsubst C' (\<lambda>(). (Fsubst \<phi> \<sigma>)) | None \<Rightarrow>  InContext C (Fsubst \<phi> \<sigma>))"
 
 definition FVA :: "('a \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('c + 'c) set"
-where "FVA args = (\<Union> \<theta> \<in> range args. FVT \<theta>)"
+where "FVA args = (\<Union> i. FVT (args i))"
 
 (*
 definition SFV :: "('a,'b) subst \<Rightarrow> 'a \<Rightarrow> ('c + 'c) set"
@@ -1542,13 +1544,30 @@ where
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> Padmit \<sigma> a \<Longrightarrow> FUadmit \<sigma> \<phi> (BVP a) \<Longrightarrow> Fadmit \<sigma> (Box a \<phi>)"
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> UNIV \<Longrightarrow> Fadmit \<sigma> (InContext C \<phi>)"
 *)  
+fun extendf :: "('sf, 'sp, 'sz) interp \<Rightarrow> 'sz Rvec \<Rightarrow> ('sf + 'sz, 'sp, 'sz) interp"
+where "extendf I R =
+\<lparr>Functions = (\<lambda>f. case f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> (\<lambda>_. R $ f')),
+ Predicates = Predicates I,
+ Contexts = Contexts I,
+ Programs = Programs I,
+ ODEs = ODEs I\<rparr>"
+
+fun extendp :: "('sf, 'sp, 'sz) interp \<Rightarrow> 'sz Rvec set \<Rightarrow> ('sf, 'sp + unit, 'sz) interp"
+where "extendp I R =
+\<lparr>Functions =  Functions I,
+ Predicates = (\<lambda>p. case p of Inl p' \<Rightarrow> Predicates I p' | Inr () \<Rightarrow> (\<lambda>\<nu>. \<nu> \<in>f R)),
+ Contexts = Contexts I,
+ Programs = Programs I,
+ ODEs = ODEs I\<rparr>"
+
+(* TODO: Adjoint for contexts needs to introduce new CONTEXT (predicational symbol) not new PREDICATE *)
 fun adjoint :: "('sf, 'sp, 'sz) interp \<Rightarrow> ('sf, 'sp, 'sz) subst \<Rightarrow> 'sz state \<Rightarrow> ('sf, 'sp, 'sz) interp" 
-where "adjoint I \<sigma> (\<nu>, \<nu>') =
-\<lparr>Functions =       (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. dterm_sem I f' ((\<chi> x. case x of Inl x' \<Rightarrow> \<nu> $ x' | Inr x' \<Rightarrow> args $ x'), (\<chi> x. case x of Inl x' \<Rightarrow> \<nu>' $ x' | Inr x' \<Rightarrow> args $ x'))) | None => Functions I f),
- Predicates =      (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda> args. \<nu> \<in> (fml_sem I (p' (\<lambda> i. Const (args $ i))))) | None \<Rightarrow> Predicates I p),
- Contexts =        (\<lambda>c. case SContexts \<sigma> c of Some c' \<Rightarrow> (\<lambda> R. fml_sem I (c' (ConstP R))) | None \<Rightarrow> Contexts I c),
- Programs =        (\<lambda>a. case SPrograms \<sigma> a of Some a' \<Rightarrow> prog_sem I a' | None \<Rightarrow> Programs I a),
- ODEs =          (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_sem I ode' | None \<Rightarrow> ODEs I ode)\<rparr>"
+where "adjoint I \<sigma> \<nu> =
+\<lparr>Functions =       (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. dterm_sem (extendf I R) f' \<nu>) | None \<Rightarrow> Functions I f),
+ Predicates =      (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda>R. \<nu> \<in>fml_sem (extendf I R) p') | None \<Rightarrow> Predicates I p),
+ Contexts =        (\<lambda>c. case SContexts \<sigma> c of Some c' \<Rightarrow> (\<lambda>R. fml_sem (extendp I R) c') | None \<Rightarrow> Contexts I c),
+ Programs =        (\<lambda>a. case SPrograms \<sigma> a of Some a' \<Rightarrow> prog_sem I a' \<nu> | None \<Rightarrow> Programs I a),
+ ODEs =          (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_sem I ode' \<nu> | None \<Rightarrow> ODEs I ode)\<rparr>"
 (*
 (* Properties of adjoints *)
 lemma adjoint_consequence:" Vagree \<nu> \<omega> (FVS \<sigma>) \<Longrightarrow> adjoint I \<sigma> \<nu> = adjoint I \<sigma> \<omega>"
