@@ -163,7 +163,7 @@ inductive dfree :: "('a, 'c) trm \<Rightarrow> bool"
 where
   dfree_Var: "dfree (Var i)"
 | dfree_Const: "dfree (Const r)"
-| dfree_Fun: "(\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> dfree \<theta>) \<Longrightarrow> dfree (Function i args)"
+| dfree_Fun: "(\<And>i. dfree (args i)) \<Longrightarrow> dfree (Function i args)"
 | dfree_Plus: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dfree_Times: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
 
@@ -171,7 +171,7 @@ inductive dsafe :: "('a, 'c) trm \<Rightarrow> bool"
 where
   dsafe_Var: "dsafe (Var i)"
 | dsafe_Const: "dsafe (Const r)"
-| dsafe_Fun: "(\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> dsafe \<theta>) \<Longrightarrow> dsafe (Function i args)"
+| dsafe_Fun: "(\<And>i. dsafe (args i)) \<Longrightarrow> dsafe (Function i args)"
 | dsafe_Plus: "dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dsafe_Times: "dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dsafe_Diff: "dfree \<theta> \<Longrightarrow> dsafe (Differential \<theta>)"
@@ -935,8 +935,8 @@ next
     by auto
 next
   case (dfree_Fun args var)
-  assume free:"(\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> dfree \<theta>)"
-  assume IH:"(\<And>arg. arg \<in> range args \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff arg) \<Longrightarrow> frechet I arg (fst \<nu>) (snd \<nu>) = frechet I arg (fst \<nu>') (snd \<nu>'))"
+  assume free:"(\<And>i. dfree (args i))"
+  assume IH:"(\<And>i. Vagree \<nu> \<nu>' (FVDiff (args i)) \<Longrightarrow> frechet I (args i) (fst \<nu>) (snd \<nu>) = frechet I (args i) (fst \<nu>') (snd \<nu>'))"
   have frees:"(\<And>i. dfree (args i))" using free by (auto simp add: rangeI)
   assume agree:"Vagree \<nu> \<nu>' (FVDiff ($f var args))"
   have agrees:"\<And>i. Vagree \<nu> \<nu>' (FVDiff (args i))" using agree agree_func by metis
@@ -996,8 +996,8 @@ next
 
 next
   case (dsafe_Fun args f)
-    assume safe:"(\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> dsafe \<theta>)"
-    assume IH:"\<And>arg. arg \<in> range args \<Longrightarrow> Vagree \<nu> \<nu>' (FVT arg) \<Longrightarrow> dterm_sem I arg \<nu> = dterm_sem I arg \<nu>'"
+    assume safe:"(\<And>i. dsafe (args i))"
+    assume IH:"\<And>i. Vagree \<nu> \<nu>' (FVT (args i)) \<Longrightarrow> dterm_sem I (args i) \<nu> = dterm_sem I (args i) \<nu>'"
     assume agree:"Vagree \<nu> \<nu>' (FVT ($f f args))"
     then have "\<And>i. Vagree \<nu> \<nu>' (FVT (args i))"
       using agree_func_fvt by (metis)
@@ -1388,6 +1388,19 @@ done
 
 section Substitution
 
+definition NTUadmit :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'c) trm \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
+where "NTUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i. FVT (\<sigma> i)) \<inter> U) = {}"
+
+inductive NTadmit :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'c) trm \<Rightarrow> bool"
+where 
+  NTadmit_Diff:"NTadmit \<sigma> \<theta> \<Longrightarrow> NTUadmit \<sigma> \<theta> UNIV \<Longrightarrow> NTadmit \<sigma> (Differential \<theta>)"
+| NTadmit_Func:"(\<And>i. NTadmit \<sigma> (args i)) \<Longrightarrow> NTadmit \<sigma> (Function f args)"
+| NTadmit_Plus:"NTadmit \<sigma> \<theta>1 \<Longrightarrow> NTadmit \<sigma> \<theta>2 \<Longrightarrow> NTadmit \<sigma> (Plus \<theta>1 \<theta>2)"
+| NTadmit_Times:"NTadmit \<sigma> \<theta>1 \<Longrightarrow> NTadmit \<sigma> \<theta>2 \<Longrightarrow> NTadmit \<sigma> (Times \<theta>1 \<theta>2)"
+| NTadmit_DiffVar:"NTadmit \<sigma> (DiffVar x)"
+| NTadmit_Var:"NTadmit \<sigma> (Var x)"
+| NTadmit_Const:"NTadmit \<sigma> (Const r)"
+
 primrec NTsubst::"('a + 'b, 'c) trm \<Rightarrow> ('b \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'c) trm"
 where
   "NTsubst (Var v) \<sigma> = Var v"
@@ -1455,13 +1468,13 @@ where
 | "PPsubst (Loop \<alpha>) \<sigma> = Loop (PPsubst \<alpha> \<sigma>)"
 
 | "PFsubst (Geq \<theta>1 \<theta>2) \<sigma> = (Geq \<theta>1 \<theta>2)"
-| "PFsubst (Prop p args) \<sigma> = (case p of Inl p' \<Rightarrow> Prop p' args | Inr p' \<Rightarrow> \<sigma> p')"
+| "PFsubst (Prop p args) \<sigma> = Prop p args"
 | "PFsubst (Not \<phi>) \<sigma> = Not (PFsubst \<phi> \<sigma>)"
 | "PFsubst (And \<phi> \<psi>) \<sigma> = And (PFsubst \<phi> \<sigma>) (PFsubst \<psi> \<sigma>)"
 | "PFsubst (Forall x \<phi>) \<sigma> = Forall x (PFsubst \<phi> \<sigma>)"
 | "PFsubst (Box \<alpha> \<phi>) \<sigma> = Box (PPsubst \<alpha> \<sigma>) (PFsubst \<phi> \<sigma>)"
 | "PFsubst (DiffFormula \<phi>) \<sigma> = DiffFormula (PFsubst \<phi> \<sigma>)"
-| "PFsubst (InContext C \<phi>) \<sigma> = InContext C (PFsubst \<phi> \<sigma>)"
+| "PFsubst (InContext C \<phi>) \<sigma> = (case C of Inl C' \<Rightarrow> InContext C' (PFsubst \<phi> \<sigma>) | Inr p' \<Rightarrow> \<sigma> p')"
 
   
 fun Psubst::"('sf, 'sc, 'sz) hp \<Rightarrow> ('sf, 'sc, 'sz) subst \<Rightarrow> ('sf, 'sc, 'sz) hp"
@@ -1477,7 +1490,7 @@ where
 | "Psubst (Loop \<alpha>) \<sigma> = Loop (Psubst \<alpha> \<sigma>)"
 
 | "Fsubst (Geq \<theta>1 \<theta>2) \<sigma> = Geq (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"
-| "Fsubst (Prop p args) \<sigma> = undefined(*(case SPredicates \<sigma> p of Some p' \<Rightarrow> NFsubst p' (\<lambda>i. Tsubst (args i) \<sigma>) | None \<Rightarrow> Prop p (\<lambda>i. Tsubst (args i) \<sigma>)) *)"
+| "Fsubst (Prop p args) \<sigma> = (case SPredicates \<sigma> p of Some p' \<Rightarrow> NFsubst p' (\<lambda>i. Tsubst (args i) \<sigma>) | None \<Rightarrow> Prop p (\<lambda>i. Tsubst (args i) \<sigma>))"
 | "Fsubst (Not \<phi>) \<sigma> = Not (Fsubst \<phi> \<sigma>)"
 | "Fsubst (And \<phi> \<psi>) \<sigma> = And (Fsubst \<phi> \<sigma>) (Fsubst \<psi> \<sigma>)"
 | "Fsubst (Forall x \<phi>) \<sigma> = Forall x (Fsubst \<phi> \<sigma>)"
@@ -1488,26 +1501,23 @@ where
 definition FVA :: "('a \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('c + 'c) set"
 where "FVA args = (\<Union> i. FVT (args i))"
 
-(*
-definition SFV :: "('a,'b) subst \<Rightarrow> 'a \<Rightarrow> ('c + 'c) set"
-where "SFV \<sigma> i = "
-  
-definition FVS :: "('a,'b) subst \<Rightarrow> ('c + 'c) set"
-where "FVS \<sigma> = (\<Union>i::'a. SFV \<sigma> i)"
-*)
+fun SFV :: "('a, 'b, 'c) subst \<Rightarrow> ('a + 'b + 'c) \<Rightarrow> ('c + 'c) set"
+where "SFV \<sigma> (Inl i) = (case SFunctions \<sigma> i of Some f' \<Rightarrow> FVT f' | None \<Rightarrow> {})"
+| "SFV \<sigma> (Inr (Inl i)) = (case SContexts \<sigma> i of Some C' \<Rightarrow> FVF C' | None \<Rightarrow> {})"
+| "SFV \<sigma> (Inr (Inr i)) = (case SPredicates \<sigma> i of Some p' \<Rightarrow> FVF p' | None \<Rightarrow> {})"
 
-(*definition SDom :: "('a, 'b, 'c) subst \<Rightarrow> 'a set"
-where "SDom \<sigma> = dom (SFunctions \<sigma>) \<union> dom (SPredicates \<sigma>) \<union> dom (SContexts \<sigma>) \<union> dom (SPrograms \<sigma>)"
-  *)
-(*
+definition FVS :: "('a, 'b, 'c) subst \<Rightarrow> ('c + 'c) set"
+where "FVS \<sigma> = (\<Union>i. SFV \<sigma> i)"
+
+definition SDom :: "('a, 'b, 'c) subst \<Rightarrow> ('a + 'b + 'c) set"
+where "SDom \<sigma> = 
+ {Inl x | x. x \<in> dom (SFunctions \<sigma>)}
+ \<union> {Inr (Inl x) | x. x \<in> dom (SContexts \<sigma>)}
+ \<union> {Inr (Inr x) | x. x \<in> dom (SPredicates \<sigma>)} 
+ \<union> {Inr (Inr x) | x. x \<in> dom (SPrograms \<sigma>)}"
+
 definition TUadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
 where "TUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> SIGT \<theta>. (case SFunctions \<sigma> i of Some f' \<Rightarrow> FVT f')) \<inter> U) = {}"
-
-definition FUadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
-where "FUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> (SDom \<sigma> \<inter> SIGF \<theta>).  SFV \<sigma> i) \<inter> U) = {}"
-
-definition PUadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) hp \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
-where "PUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> (SDom \<sigma> \<inter> SIGP \<theta>).  SFV \<sigma> i) \<inter> U) = {}"
 
 inductive Tadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) trm \<Rightarrow> bool"
 where 
@@ -1524,6 +1534,12 @@ where
   "OUadmit \<sigma> (OVar c) U"
 | "TUadmit \<sigma> \<theta> U \<Longrightarrow> OUadmit \<sigma> (OSing x \<theta>) U"
 | "OUadmit \<sigma> ODE1 U \<Longrightarrow> OUadmit \<sigma> ODE2 U \<Longrightarrow> OUadmit \<sigma> (OProd ODE1 ODE2) U"
+
+definition PUadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) hp \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
+where "PUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> (SDom \<sigma> \<inter> SIGP \<theta>).  SFV \<sigma> i) \<inter> U) = {}"
+
+definition FUadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
+where "FUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> (SDom \<sigma> \<inter> SIGF \<theta>).  SFV \<sigma> i) \<inter> U) = {}"
  
 inductive Padmit:: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) hp \<Rightarrow> bool"
 and Fadmit:: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> bool"
@@ -1541,11 +1557,10 @@ where
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> Fadmit \<sigma> (Not \<phi>)"
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> Fadmit \<sigma> \<psi> \<Longrightarrow> Fadmit \<sigma> (And \<phi> \<psi>)"
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> Fadmit \<sigma> (DiffFormula \<phi>)"
-| "Fadmit \<sigma> (ConstP P)"
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> {Inl x} \<Longrightarrow> Fadmit \<sigma> (Forall x \<phi>)"
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> Padmit \<sigma> a \<Longrightarrow> FUadmit \<sigma> \<phi> (BVP a) \<Longrightarrow> Fadmit \<sigma> (Box a \<phi>)"
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> UNIV \<Longrightarrow> Fadmit \<sigma> (InContext C \<phi>)"
-*)  
+  
 fun extendf :: "('sf, 'sc, 'sz) interp \<Rightarrow> 'sz Rvec \<Rightarrow> ('sf + 'sz, 'sc, 'sz) interp"
 where "extendf I R =
 \<lparr>Functions = (\<lambda>f. case f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> (\<lambda>_. R $ f')),
@@ -1562,15 +1577,14 @@ where "extendc I R =
  Programs = Programs I,
  ODEs = ODEs I\<rparr>"
 
-(* TODO: Adjoint for contexts needs to introduce new CONTEXT (predicational symbol) not new PREDICATE *)
 fun adjoint :: "('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sc, 'sz) subst \<Rightarrow> 'sz state \<Rightarrow> ('sf, 'sc, 'sz) interp" 
 where "adjoint I \<sigma> \<nu> =
-\<lparr>Functions =       (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. dterm_sem (extendf I R) f' \<nu>) | None \<Rightarrow> Functions I f),
- Predicates =      (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda>R. \<nu> \<in>fml_sem (extendf I R) p') | None \<Rightarrow> Predicates I p),
- Contexts =        (\<lambda>c. case SContexts \<sigma> c of Some c' \<Rightarrow> (\<lambda>R. fml_sem (extendc I R) c') | None \<Rightarrow> Contexts I c),
- Programs =        (\<lambda>a. case SPrograms \<sigma> a of Some a' \<Rightarrow> prog_sem I a' | None \<Rightarrow> Programs I a),
- ODEs =          (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_sem I ode' | None \<Rightarrow> ODEs I ode)\<rparr>"
-(*
+\<lparr>Functions =   (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. dterm_sem (extendf I R) f' \<nu>) | None \<Rightarrow> Functions I f),
+ Predicates = (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda>R. \<nu> \<in>fml_sem (extendf I R) p') | None \<Rightarrow> Predicates I p),
+ Contexts =   (\<lambda>c. case SContexts \<sigma> c of Some c' \<Rightarrow> (\<lambda>R. fml_sem (extendc I R) c') | None \<Rightarrow> Contexts I c),
+ Programs =   (\<lambda>a. case SPrograms \<sigma> a of Some a' \<Rightarrow> prog_sem I a' | None \<Rightarrow> Programs I a),
+ ODEs =     (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_sem I ode' | None \<Rightarrow> ODEs I ode)\<rparr>"
+
 (* Properties of adjoints *)
 lemma adjoint_consequence:" Vagree \<nu> \<omega> (FVS \<sigma>) \<Longrightarrow> adjoint I \<sigma> \<nu> = adjoint I \<sigma> \<omega>"
   sorry
@@ -1585,6 +1599,59 @@ lemma uadmit_prog_adjoint:"PUadmit \<sigma> a U \<Longrightarrow> Vagree \<nu> \
 and   uadmit_fml_sem:"FUadmit \<sigma> \<phi> U \<Longrightarrow> Vagree \<nu> \<omega> U \<Longrightarrow> fml_sem (adjoint I \<sigma> \<nu>) \<phi> = fml_sem (adjoint I \<sigma> \<omega>) \<phi>"
   sorry
 
+fun NTadjoint::"('sf, 'sc, 'sz) interp \<Rightarrow> ('d::finite \<Rightarrow> ('sf, 'sz) trm) \<Rightarrow> 'sz state \<Rightarrow> ('sf + 'd, 'sc, 'sz) interp" 
+where "NTadjoint I \<sigma> \<nu> =
+\<lparr>Functions =   (\<lambda>f. case f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> (\<lambda>R. dterm_sem I (\<sigma> f') \<nu>)),
+ Predicates = Predicates I,
+ Contexts = Contexts I,
+ Programs = Programs I,
+ ODEs = ODEs I\<rparr>"
+
+  
+(*   NTadmit_Diff:"NTadmit \<sigma> \<theta> \<Longrightarrow> NTUadmit \<sigma> \<theta> UNIV \<Longrightarrow> NTadmit \<sigma> (Differential \<theta>)"
+| NTadmit_Func:"(\<And>i. NTadmit \<sigma> (args i)) \<Longrightarrow> NTadmit \<sigma> (Function f args)"
+| NTadmit_Plus:"NTadmit \<sigma> \<theta>1 \<Longrightarrow> NTadmit \<sigma> \<theta>2 \<Longrightarrow> NTadmit \<sigma> (Plus \<theta>1 \<theta>2)"
+| NTadmit_Times:"NTadmit \<sigma> \<theta>1 \<Longrightarrow> NTadmit \<sigma> \<theta>2 \<Longrightarrow> NTadmit \<sigma> (Times \<theta>1 \<theta>2)"
+| NTadmit_DiffVar:"NTadmit \<sigma> (DiffVar x)"
+| NTadmit_Var:"NTadmit \<sigma> (Var x)"
+| NTadmit_Const:"NTadmit \<sigma> (Const r)"
+*)
+lemma nsubst_sterm:
+shows "NTadmit \<sigma> \<theta> \<Longrightarrow> dfree \<theta> \<Longrightarrow> sterm_sem I (NTsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
+proof (induct rule: NTadmit.induct)
+  case NTadmit_Func
+    fix \<sigma> :: "'d::finite \<Rightarrow> ('sf, 'sz) trm" 
+    and args::"'sz \<Rightarrow> ('sf + 'd, 'sz) trm" 
+    and f::"'sf + 'd" 
+    and I :: "('sf, 'sc, 'sz) interp"
+    and \<nu> :: "'sz state"
+    and \<theta>::"('sf + 'd,'sz) trm"
+
+    assume admits:"(\<And>i. NTadmit \<sigma> (args i))"
+    assume IH:"(\<And>i. dfree (args i) \<Longrightarrow>
+          sterm_sem I (NTsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) (args i) (fst \<nu>))"
+    assume free: "dfree ($f f args)"
+    (* inductive dfree :: "('a, 'c) trm \<Rightarrow> bool"
+    where
+  dfree_Var: "dfree (Var i)"
+| dfree_Const: "dfree (Const r)"
+| dfree_Fun: "(\<And>i. dfree (args i)) \<Longrightarrow> dfree (Function i args)"
+| dfree_Plus: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
+| dfree_Times: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
+*)
+    
+   (* TODO really no idea why this is not proved by auto. *)
+    have frees: "(\<And>i. dfree (args i))" using free proof (induct rule: dfree.induct( by auto
+    hence IH':"(\<And>i. sterm_sem I (NTsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) (args i) (fst \<nu>))" using IH frees sorry
+    show "?case" using admits IH
+      sorry
+next
+  case NTadmit_Plus then show "?case" sorry
+next
+  case NTadmit_Times then show "?case" sorry
+  qed (auto)
+
+(*
 lemma usubst_sterm:"Tadmit \<sigma> \<theta> \<Longrightarrow> Svalid \<sigma> \<Longrightarrow> dfree \<theta> \<Longrightarrow> sterm_sem I (Tsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
 proof (induct rule: Tadmit.induct)
   case Tadmit_Func
@@ -1644,6 +1711,7 @@ side conditions everywhere. *)
       done
     
 qed (auto simp add: frechet_correctness rangeI)  
-*)
+*) 
+
 end
 end
