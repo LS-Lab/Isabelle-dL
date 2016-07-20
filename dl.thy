@@ -1657,42 +1657,26 @@ lemma NTadjoint_free:"(\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (NTadjoint
 lemma nsubst_sterm:
 fixes I::"('sf, 'sc, 'sz) interp"
 fixes \<nu>::"'sz state"
-shows "NTadmit \<sigma> (\<theta>::('sf + ('d::finite), 'sz) trm) \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> dfree \<theta> \<Longrightarrow> sterm_sem I (NTsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
-proof (induct rule: NTadmit.induct)
-  case (NTadmit_Func \<sigma> args f)
-    hence admits:"(\<And>i. NTadmit \<sigma> (args i))" 
-    and IH:"(\<And>i. dfree (args i) \<Longrightarrow>
-          sterm_sem I (NTsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) (args i) (fst \<nu>))"
-    and free: "dfree ($f f args)"
-    and ssafe:"\<And>i. dfree (\<sigma> i)"
-      by auto
-    have frees: "(\<And>i. dfree (args i))" using free by (rule dfree.cases) (auto)
+shows "dfree \<theta> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> sterm_sem I (NTsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
+proof (induction rule: dfree.induct)
+  case (dfree_Fun args f) then
     show "?case" 
-      by(cases "f") (auto simp add: frees IH NTadjoint_free[OF ssafe])
-    
-next
-  case (NTadmit_Plus \<sigma> \<theta>1 \<theta>2)  
-    hence IH1:"(\<And>i. dfree \<theta>1 \<Longrightarrow>
-          sterm_sem I (NTsubst \<theta>1 \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta>1 (fst \<nu>))"
-    and IH2:"(\<And>i. dfree \<theta>2 \<Longrightarrow>
-          sterm_sem I (NTsubst \<theta>2 \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta>2 (fst \<nu>))"
-    and free: "dfree (Plus \<theta>1 \<theta>2)"
-      by auto
-    have free1:"dfree \<theta>1" using free by (rule dfree.cases) (auto)
-    have free2:"dfree \<theta>2" using free by (rule dfree.cases) (auto)
-    show "?case" by (auto simp add: IH1[OF free1] IH2[OF free2])
-next
-  case (NTadmit_Times \<sigma> \<theta>1 \<theta>2)
-    hence IH1:"(\<And>i. dfree \<theta>1 \<Longrightarrow>
-          sterm_sem I (NTsubst \<theta>1 \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta>1 (fst \<nu>))"
-    and IH2:"(\<And>i. dfree \<theta>2 \<Longrightarrow>
-          sterm_sem I (NTsubst \<theta>2 \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta>2 (fst \<nu>))"
-    and free: "dfree (Times \<theta>1 \<theta>2)"
-      by auto
-    have free1:"dfree \<theta>1" using free by (rule dfree.cases) (auto)
-    have free2:"dfree \<theta>2" using free by (rule dfree.cases) (auto)
-    show "?case" by (auto simp add: IH1[OF free1] IH2[OF free2])
+      by(cases "f") (auto simp add:  NTadjoint_free)
 qed (auto)
+
+lemma ntsubst_preserves_free:
+"dfree \<theta> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> dfree(NTsubst \<theta> \<sigma>)"
+proof (induction rule: dfree.induct) 
+  case (dfree_Fun args i) then show "?case"
+    by (cases "i") (auto intro:dfree.intros)
+qed (auto intro: dfree.intros)
+
+lemma tsubst_preserves_free:
+"dfree \<theta> \<Longrightarrow>  (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> dfree(Tsubst \<theta> \<sigma>)"
+proof (induction rule: dfree.induct) 
+  case (dfree_Fun args i) then show "?case" 
+    by (cases "SFunctions \<sigma> i") (auto intro:dfree.intros ntsubst_preserves_free)
+qed (auto intro: dfree.intros)
 
 lemma subst_sterm:
 fixes I::"('sf, 'sc, 'sz) interp"
@@ -1702,99 +1686,32 @@ shows "
   (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> 
    sterm_sem I (Tsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
 proof (induction rule: dfree.induct)
-  (*   (\<And>i. Tadmit \<sigma> (args i)) \<Longrightarrow>
-       (\<And>i. (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow>
-             dfree (args i) \<Longrightarrow>
-             sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (local.adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)) \<Longrightarrow>
-       (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow>
-       dfree ($f f args) \<Longrightarrow>
-       sterm_sem I (Tsubst ($f f args) \<sigma>) (fst \<nu>) = sterm_sem (local.adjoint I \<sigma> \<nu>) ($f f args) (fst \<nu>)*)
-
   case (dfree_Fun args f) 
-    hence IH:"(\<And>i. dfree (args i) \<Longrightarrow>
-          sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>))" sorry
-    have frees: "(\<And>i. dfree (args i))" using dfree_Fun.prems by auto
-    and ssafe:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
-      by auto
+    note frees = dfree_Fun.hyps(1) and sfree = dfree_Fun.prems(1)
+    have IH:"(\<And>i. dfree (args i) \<Longrightarrow>
+        sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>))" 
+      using  dfree_Fun.prems dfree_Fun.IH by auto
     have eqs:"\<And>i. sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)"
       by (auto simp add: IH frees)
     show "?case" proof
       (cases "SFunctions \<sigma> f")
-        fix a
-        assume foo:"SFunctions \<sigma> f = Some a" 
+        fix f'
+        assume some:"SFunctions \<sigma> f = Some f'" 
         let ?sub = "(\<lambda> i. Tsubst (args i) \<sigma>)"
-        have fact:"sterm_sem I (NTsubst a ?sub) (fst \<nu>) = sterm_sem (NTadjoint I ?sub \<nu>) a (fst \<nu>)"
-          (*by (auto simp add: nsubst_sterm)*) sorry
-        have fact2:"(\<And>i. dfree (?sub i))" sorry
+        have subFree:"(\<And>i. dfree (?sub i))" using tsubst_preserves_free[OF frees sfree] by simp
+        have IH2:"sterm_sem I (NTsubst f' ?sub) (fst \<nu>) = sterm_sem (NTadjoint I ?sub \<nu>) f' (fst \<nu>)"
+          using nsubst_sterm frees subFree by (smt some sfree)
+        have fn_eq:"(\<lambda>f. case f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> \<lambda>R. sterm_sem I (Tsubst (args f') \<sigma>) (fst \<nu>))
+                 = (\<lambda>f. case f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> \<lambda>R. sterm_sem (adjoint I \<sigma> \<nu>) (args f') (fst \<nu>))"
+          using IH frees by (simp add: IH frees)
         show "?thesis" 
-          apply (auto simp add: eqs adjoint_free[OF ssafe] fact NTadjoint_free[OF fact2] foo)
-          apply (auto simp add: nsubst_sterm )
-      qed 
-
+          apply (auto simp add: eqs adjoint_free[OF sfree] IH2 NTadjoint_free[OF subFree] some fn_eq)
+          using adjoint_free sfree by presburger
+      next
+        assume none:"SFunctions \<sigma> f = None" 
+        show "?thesis" by (auto simp add: none IH adjoint_def vec_extensionality frees)
+      qed
     qed auto
-    
-    oops
-(*
-lemma usubst_sterm:"Tadmit \<sigma> \<theta> \<Longrightarrow> Svalid \<sigma> \<Longrightarrow> dfree \<theta> \<Longrightarrow> sterm_sem I (Tsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
-proof (induct rule: Tadmit.induct)
-  case Tadmit_Func
-    fix \<sigma> :: "('sf, 'sc, 'sz) subst" and args :: "'si \<Rightarrow> ('sf, 'sz) trm" and f :: 'si
-    assume admit:"\<And>i. Tadmit \<sigma> (args i)"
-    assume IH:   "\<And>i. Svalid \<sigma> \<Longrightarrow> dfree (args i) \<Longrightarrow> sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) =
-                   sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)"
-    assume valid:"Svalid \<sigma>"
-    assume free:"dfree (Function f args)"
-    hence frees:"\<And>i. dfree (args i)" sorry
-    from IH valid frees have IH':"\<And>i. sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) =
-                   sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)" by auto
-    
-    show "sterm_sem I (Tsubst ($f f args) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) ($f f args) (fst \<nu>)"
-    proof (cases "SFunctions \<sigma> f = None")
-      show "SFunctions \<sigma> f = None \<Longrightarrow>
-        sterm_sem I (Tsubst ($f f args) \<sigma>) (fst \<nu>) = sterm_sem (local.adjoint I \<sigma> \<nu>) ($f f args) (fst \<nu>)"
-        by (auto simp add: Case_def IH' )
-      assume notNone:"SFunctions \<sigma> f \<noteq> None"
-      then obtain \<sigma>f where sf:"SFunctions \<sigma> f = Some \<sigma>f" by auto      
-      hence "sterm_sem I (Tsubst ($f f args) \<sigma>) (fst \<nu>) = sterm_sem I (\<sigma>f (\<lambda> i. Tsubst (args i) \<sigma>)) (fst \<nu>)"
-        by auto
-      (* "\<And>i. sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) =
-                   sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)*)
-      (*dterm_sem I
-          (y (\<lambda>i. Const (sterm_sem
-                          I*
-                          (args i) (fst \<nu>))))
-          \<nu> =*)
-      have "sterm_sem (adjoint I \<sigma> \<nu>) ($f f args) (fst \<nu>) =
-        dterm_sem I (\<sigma>f (\<lambda>i. Const (sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)))) \<nu>"
-        using notNone by (auto simp add: notNone sf)
-      (* This is a lemma that should mostly be true with dfree plus possibly extremely frustrating
-side conditions everywhere. *)
-      hence "sterm_sem (adjoint I \<sigma> \<nu>) ($f f args) (fst \<nu>) =
-        sterm_sem I (\<sigma>f (\<lambda>i. Const (sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)))) (fst \<nu>)" sorry
-(* This probably needs to be an assumption, or maybe could be taken care of by better chosing the
-   representation. *)
-      have \<sigma>f_respects: "\<And>args1 args2. (\<And>i. sterm_sem I (args1 i) (fst \<nu>) = sterm_sem I (args2 i) (fst \<nu>))
-        \<Longrightarrow> \<sigma>f args1 = \<sigma>f args2" sorry
-      let ?args1 = "(\<lambda>i. Const (sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)))"
-      let ?args2 = "(\<lambda>i. Tsubst (args i) \<sigma>)"
-      have "\<And>i. sterm_sem I (?args1 i) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)" by auto
-      hence "\<And>i. sterm_sem I (?args1 i) (fst \<nu>) = sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>)" using IH' by auto
-      hence all_eq:"\<And>i. sterm_sem I (?args1 i) (fst \<nu>) = sterm_sem I (?args2 i) (fst \<nu>)" by auto
-      have "\<sigma>f ?args1 = \<sigma>f ?args2" using \<sigma>f_respects[OF all_eq] by simp
-      hence "sterm_sem I (\<sigma>f (\<lambda>i. Const (sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)))) (fst \<nu>) =
-            sterm_sem I (\<sigma>f (\<lambda>i. Tsubst (args i) \<sigma>)) (fst \<nu>)" by simp
-      
-(*      hence "sterm_sem I (\<sigma>f (\<lambda>i. Tsubst (args i) \<sigma>)) (fst \<nu>) = "
-      have "sterm_sem I (Tsubst ($f f args) \<sigma>) (fst \<nu>) = "
-      "sterm_sem I (Tsubst ($f f args) \<sigma>) (fst \<nu>) = sterm_sem (local.adjoint I \<sigma> \<nu>) ($f f args) (fst \<nu>)"*)
-    qed
-      apply(auto simp del: adjoint.simps)
-      apply(cases "SFunctions \<sigma> f = None")
-      apply(auto simp add: Case_def IH' del: local.adjoint.simps)
-      done
-    
-qed (auto simp add: frechet_correctness rangeI)  
-*) 
 end
 
 (*
