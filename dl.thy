@@ -1697,12 +1697,11 @@ qed (auto)
 lemma subst_sterm:
 fixes I::"('sf, 'sc, 'sz) interp"
 fixes \<nu>::"'sz state"
-shows "Tadmit \<sigma> (\<theta>::('sf, 'sz) trm) \<Longrightarrow> 
-     (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> 
-      dfree \<theta> \<Longrightarrow> 
-     sterm_sem I (Tsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
-proof (induct rule: Tadmit.induct)
-  case (Tadmit_Func \<sigma> args f)
+shows "
+  dfree \<theta> \<Longrightarrow>
+  (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> 
+   sterm_sem I (Tsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
+proof (induction rule: dfree.induct)
   (*   (\<And>i. Tadmit \<sigma> (args i)) \<Longrightarrow>
        (\<And>i. (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow>
              dfree (args i) \<Longrightarrow>
@@ -1710,15 +1709,13 @@ proof (induct rule: Tadmit.induct)
        (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow>
        dfree ($f f args) \<Longrightarrow>
        sterm_sem I (Tsubst ($f f args) \<sigma>) (fst \<nu>) = sterm_sem (local.adjoint I \<sigma> \<nu>) ($f f args) (fst \<nu>)*)
-  
-    qed
-    hence admits:"(\<And>i. Tadmit \<sigma> (args i))" 
-    and IH:"(\<And>i. dfree (args i) \<Longrightarrow>
-          sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>))"
-    and free: "dfree ($f f args)"
+
+  case (dfree_Fun args f) 
+    hence IH:"(\<And>i. dfree (args i) \<Longrightarrow>
+          sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>))" sorry
+    have frees: "(\<And>i. dfree (args i))" using dfree_Fun.prems by auto
     and ssafe:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
       by auto
-    have frees: "(\<And>i. dfree (args i))" using free by (rule dfree.cases) (auto)
     have eqs:"\<And>i. sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)"
       by (auto simp add: IH frees)
     show "?case" proof
@@ -1730,10 +1727,13 @@ proof (induct rule: Tadmit.induct)
           (*by (auto simp add: nsubst_sterm)*) sorry
         have fact2:"(\<And>i. dfree (?sub i))" sorry
         show "?thesis" 
-          using eqs adjoint_free[OF ssafe] fact nsubst_sterm NTadjoint_free[OF fact2] foo sledgehammer
+          apply (auto simp add: eqs adjoint_free[OF ssafe] fact NTadjoint_free[OF fact2] foo)
+          apply (auto simp add: nsubst_sterm )
       qed 
 
-qed auto
+    qed auto
+    
+    oops
 (*
 lemma usubst_sterm:"Tadmit \<sigma> \<theta> \<Longrightarrow> Svalid \<sigma> \<Longrightarrow> dfree \<theta> \<Longrightarrow> sterm_sem I (Tsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
 proof (induct rule: Tadmit.induct)
@@ -1803,11 +1803,16 @@ print_codesetup
 export_code dl.pointed_finite.NTsubst in Haskell
 module_name Example file "examples/"
 *)
-(*definition x::Enum.finite_5 where "x = finite_5.a\<^sub>1"
-global_interpretation ddl:pointed_finite x x x x x x x x x done
 
-code_thms "ddl.Tsubst"
-export_code "ddl.Tsubst"*)
+definition x::Enum.finite_5 where "x = finite_5.a\<^sub>1"
+global_interpretation ddl:pointed_finite x x x x x x x x x
+  defines Tsubst = ddl.Tsubst
+  done
+
+term ddl.Tsubst
+
+
+export_code "ddl.Tsubst" in SML
 (*  fixes foo :: "'sf::finite"
   fixes bar :: "'sc::finite"
 
