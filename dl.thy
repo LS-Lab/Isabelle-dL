@@ -1617,20 +1617,27 @@ where "NTadjoint I \<sigma> \<nu> =
 | NTadmit_Const:"NTadmit \<sigma> (Const r)"
 *)
 lemma nsubst_sterm:
-shows "NTadmit \<sigma> \<theta> \<Longrightarrow> dfree \<theta> \<Longrightarrow> sterm_sem I (NTsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
+fixes blah::"('d::finite)"
+fixes \<sigma>::"'d \<Rightarrow> ('sf, 'sz) trm"
+(*fixes \<theta>::"('sf + 'd,'sz) trm" *)
+fixes I::"('sf, 'sc, 'sz) interp"
+fixes \<nu>::"'sz state"
+shows "NTadmit \<sigma> (\<theta>::('sf + 'd, 'sz) trm) \<Longrightarrow> dfree \<theta> \<Longrightarrow> sterm_sem I (NTsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
 proof (induct rule: NTadmit.induct)
-  case NTadmit_Func
-    fix \<sigma> :: "'d::finite \<Rightarrow> ('sf, 'sz) trm" 
-    and args::"'sz \<Rightarrow> ('sf + 'd, 'sz) trm" 
-    and f::"'sf + 'd" 
-    and I :: "('sf, 'sc, 'sz) interp"
-    and \<nu> :: "'sz state"
-    and \<theta>::"('sf + 'd,'sz) trm"
-
-    assume admits:"(\<And>i. NTadmit \<sigma> (args i))"
+  case (NTadmit_Func \<sigma> args f)
+(*    fix args::"'sz \<Rightarrow> ('sf + 'd, 'sz) trm"
+    and f::"'sf + 'd" *)
+    have admits:"(\<And>i. NTadmit \<sigma> (args i))" from hyps(1) by auto
     assume IH:"(\<And>i. dfree (args i) \<Longrightarrow>
           sterm_sem I (NTsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) (args i) (fst \<nu>))"
     assume free: "dfree ($f f args)"
+   (* TODO really no idea why this is not proved by auto. *)
+    have frees: "(\<And>i. dfree (args i))" using free by auto (*proof (induct rule: dfree.induct) qed auto*)
+    hence IH':"(\<And>i. sterm_sem I (NTsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) (args i) (fst \<nu>))" using IH frees sorry
+
+    thus "sterm_sem I (NTsubst (Function f args) \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) (Function f args) (fst \<nu>)"
+      by auto
+
     (* inductive dfree :: "('a, 'c) trm \<Rightarrow> bool"
     where
   dfree_Var: "dfree (Var i)"
@@ -1640,13 +1647,17 @@ proof (induct rule: NTadmit.induct)
 | dfree_Times: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
 *)
     
-   (* TODO really no idea why this is not proved by auto. *)
-    have frees: "(\<And>i. dfree (args i))" using free proof (induct rule: dfree.induct( by auto
-    hence IH':"(\<And>i. sterm_sem I (NTsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) (args i) (fst \<nu>))" using IH frees sorry
-    show "?case" using admits IH
-      sorry
 next
-  case NTadmit_Plus then show "?case" sorry
+  case NTadmit_Plus  show "?case" done
+    assume admit1:"NTadmit \<sigma> \<theta>1"
+    assume IH1:"dfree \<theta>1 \<Longrightarrow> sterm_sem I (NTsubst \<theta>1 \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta>1 (fst \<nu>)"
+    assume admit2:"NTadmit \<sigma> \<theta>2"
+    assume IH2:"dfree \<theta>2 \<Longrightarrow> sterm_sem I (NTsubst \<theta>2 \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta>2 (fst \<nu>)"
+    assume free:"dfree (Plus \<theta>1 \<theta>2)"
+    have free1:"dfree \<theta>1" sorry
+    have free2:"dfree \<theta>2" sorry
+    show "sterm_sem I (NTsubst (Plus \<theta>1 \<theta>2) \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) (Plus \<theta>1 \<theta>2) (fst \<nu>)" 
+      using admit1 admit2 IH1 IH2 free1 free2 by auto
 next
   case NTadmit_Times then show "?case" sorry
   qed (auto)
