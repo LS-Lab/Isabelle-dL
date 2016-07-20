@@ -46,21 +46,6 @@ proof -
     by (intro has_derivative_setsum bounded_linear.has_derivative[OF bounded_linear_axis] assms)
 qed
 
-locale pointed_finite =
-  (* NOTE: Doesn't have to be finite *)
-  fixes foo :: "'sf::finite"
-  fixes bar :: "'sc::finite"
-
-  fixes bat :: "'sz::finite"
-  fixes vid1 :: 'sz
-  fixes vid2 :: 'sz
-  fixes vid3 :: 'sz
-  fixes fid1 :: 'sf
-  fixes fid2 :: 'sf
-  fixes fid3 :: 'sf
-  fixes pid1 :: 'sc
-  fixes pid2 :: 'sc
-  fixes pid3 :: 'sc
   type_synonym 'a Rvec = "real^('a::finite)"
   type_synonym 'a state = "'a Rvec \<times> 'a Rvec"
   type_synonym 'a simple_state = "'a Rvec"
@@ -128,6 +113,22 @@ record ('a, 'b, 'c) subst =
   SContexts        :: "'b \<rightharpoonup> ('a, 'b + unit, 'c) formula"
   SPrograms        :: "'c \<rightharpoonup> ('a, 'b, 'c) hp"
   SODEs            :: "'c \<rightharpoonup> ('a, 'c) ODE"
+
+locale pointed_finite =
+  (* NOTE: Doesn't have to be finite *)
+(*  fixes foo :: "'sf::finite"
+  fixes bar :: "'sc::finite"
+
+  fixes bat :: "'sz::finite"*)
+  fixes vid1 :: "('sz::finite)"
+  fixes vid2 :: 'sz
+  fixes vid3 :: 'sz
+  fixes fid1 :: "('sf::finite)"
+  fixes fid2 :: 'sf
+  fixes fid3 :: 'sf
+  fixes pid1 :: "('sc::finite)"
+  fixes pid2 :: 'sc
+  fixes pid3 :: 'sc
 
 context pointed_finite
 begin
@@ -1454,7 +1455,7 @@ where
 | "NFsubst (Box \<alpha> \<phi>) \<sigma> = Box (NPsubst \<alpha> \<sigma>) (NFsubst \<phi> \<sigma>)"
 | "NFsubst (DiffFormula \<phi>) \<sigma> = DiffFormula (NFsubst \<phi> \<sigma>)"
 | "NFsubst (InContext C \<phi>) \<sigma> = InContext C (NFsubst \<phi> \<sigma>)"
-
+  
 fun PPsubst::"('a, 'b + 'd, 'c) hp \<Rightarrow> ('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b, 'c) hp"
 and PFsubst::"('a, 'b + 'd, 'c) formula \<Rightarrow> ('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b, 'c) formula"
 where
@@ -1535,6 +1536,7 @@ where
 | "TUadmit \<sigma> \<theta> U \<Longrightarrow> OUadmit \<sigma> (OSing x \<theta>) U"
 | "OUadmit \<sigma> ODE1 U \<Longrightarrow> OUadmit \<sigma> ODE2 U \<Longrightarrow> OUadmit \<sigma> (OProd ODE1 ODE2) U"
 
+  
 definition PUadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) hp \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
 where "PUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> (SDom \<sigma> \<inter> SIGP \<theta>).  SFV \<sigma> i) \<inter> U) = {}"
 
@@ -1577,7 +1579,7 @@ where "extendc I R =
  Programs = Programs I,
  ODEs = ODEs I\<rparr>"
 
-fun adjoint :: "('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sc, 'sz) subst \<Rightarrow> 'sz state \<Rightarrow> ('sf, 'sc, 'sz) interp" 
+definition adjoint :: "('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sc, 'sz) subst \<Rightarrow> 'sz state \<Rightarrow> ('sf, 'sc, 'sz) interp" 
 where "adjoint I \<sigma> \<nu> =
 \<lparr>Functions =   (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. dterm_sem (extendf I R) f' \<nu>) | None \<Rightarrow> Functions I f),
  Predicates = (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda>R. \<nu> \<in>fml_sem (extendf I R) p') | None \<Rightarrow> Predicates I p),
@@ -1599,7 +1601,7 @@ lemma uadmit_prog_adjoint:"PUadmit \<sigma> a U \<Longrightarrow> Vagree \<nu> \
 and   uadmit_fml_sem:"FUadmit \<sigma> \<phi> U \<Longrightarrow> Vagree \<nu> \<omega> U \<Longrightarrow> fml_sem (adjoint I \<sigma> \<nu>) \<phi> = fml_sem (adjoint I \<sigma> \<omega>) \<phi>"
   sorry
 
-fun NTadjoint::"('sf, 'sc, 'sz) interp \<Rightarrow> ('d::finite \<Rightarrow> ('sf, 'sz) trm) \<Rightarrow> 'sz state \<Rightarrow> ('sf + 'd, 'sc, 'sz) interp" 
+definition NTadjoint::"('sf, 'sc, 'sz) interp \<Rightarrow> ('d::finite \<Rightarrow> ('sf, 'sz) trm) \<Rightarrow> 'sz state \<Rightarrow> ('sf + 'd, 'sc, 'sz) interp" 
 where "NTadjoint I \<sigma> \<nu> =
 \<lparr>Functions =   (\<lambda>f. case f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> (\<lambda>R. dterm_sem I (\<sigma> f') \<nu>)),
  Predicates = Predicates I,
@@ -1607,6 +1609,41 @@ where "NTadjoint I \<sigma> \<nu> =
  Programs = Programs I,
  ODEs = ODEs I\<rparr>"
 
+lemma dsem_to_ssem:"dfree \<theta> \<Longrightarrow> dterm_sem I \<theta> \<nu> = sterm_sem I \<theta> (fst \<nu>)"
+  by (induct rule: dfree.induct) (auto)
+
+(* TODO: simplify*)
+lemma adjoint_free:
+assumes sfree:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
+shows "adjoint I \<sigma> \<nu> =
+\<lparr>Functions =   (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. sterm_sem (extendf I R) f' (fst \<nu>)) | None \<Rightarrow> Functions I f),
+ Predicates = (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda>R. \<nu> \<in>fml_sem (extendf I R) p') | None \<Rightarrow> Predicates I p),
+ Contexts =   (\<lambda>c. case SContexts \<sigma> c of Some c' \<Rightarrow> (\<lambda>R. fml_sem (extendc I R) c') | None \<Rightarrow> Contexts I c),
+ Programs =   (\<lambda>a. case SPrograms \<sigma> a of Some a' \<Rightarrow> prog_sem I a' | None \<Rightarrow> Programs I a),
+ ODEs =     (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_sem I ode' | None \<Rightarrow> ODEs I ode)\<rparr>"
+proof -
+  have  "\<And> R I' i \<theta>. SFunctions \<sigma> i = Some \<theta> \<Longrightarrow> dterm_sem I' \<theta> \<nu> = sterm_sem I' \<theta> (fst \<nu>)"
+    using dsem_to_ssem[OF sfree] by (cases \<nu>) (auto)
+  hence "\<And>R f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dterm_sem (extendf I R) f' \<nu> = sterm_sem (extendf I R) f' (fst \<nu>)"
+    by auto 
+  hence "\<And>f. (case SFunctions \<sigma> f of None \<Rightarrow> Functions I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem (extendf I R) f' \<nu>) =
+          (case SFunctions \<sigma> f of None \<Rightarrow> Functions I f | Some f' \<Rightarrow> \<lambda>R. sterm_sem (extendf I R) f' (fst \<nu>))"
+    proof - fix f show "?thesis f" by (cases "SFunctions \<sigma> f") (auto simp add: dsem_to_ssem[OF sfree]) qed
+  hence "(\<lambda>f. case SFunctions \<sigma> f of None \<Rightarrow> Functions I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem (extendf I R) f' \<nu>) =
+    (\<lambda>f. case SFunctions \<sigma> f of None \<Rightarrow> Functions I f | Some f' \<Rightarrow> \<lambda>R. sterm_sem (extendf I R) f' (fst \<nu>))"
+    by auto
+    thus "?thesis" 
+    by (auto simp add: adjoint_def dsem_to_ssem[OF sfree] extensionalityI)
+qed
+
+
+lemma NTadjoint_free:"(\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (NTadjoint I \<sigma> \<nu> =
+\<lparr>Functions =   (\<lambda>f. case f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> (\<lambda>R. sterm_sem I (\<sigma> f') (fst \<nu>))),
+ Predicates = Predicates I,
+ Contexts = Contexts I,
+ Programs = Programs I,
+ ODEs = ODEs I\<rparr>)" 
+  by (auto simp add: dsem_to_ssem NTadjoint_def)
   
 (*   NTadmit_Diff:"NTadmit \<sigma> \<theta> \<Longrightarrow> NTUadmit \<sigma> \<theta> UNIV \<Longrightarrow> NTadmit \<sigma> (Differential \<theta>)"
 | NTadmit_Func:"(\<And>i. NTadmit \<sigma> (args i)) \<Longrightarrow> NTadmit \<sigma> (Function f args)"
@@ -1616,52 +1653,87 @@ where "NTadjoint I \<sigma> \<nu> =
 | NTadmit_Var:"NTadmit \<sigma> (Var x)"
 | NTadmit_Const:"NTadmit \<sigma> (Const r)"
 *)
+
 lemma nsubst_sterm:
-fixes blah::"('d::finite)"
-fixes \<sigma>::"'d \<Rightarrow> ('sf, 'sz) trm"
-(*fixes \<theta>::"('sf + 'd,'sz) trm" *)
 fixes I::"('sf, 'sc, 'sz) interp"
 fixes \<nu>::"'sz state"
-shows "NTadmit \<sigma> (\<theta>::('sf + 'd, 'sz) trm) \<Longrightarrow> dfree \<theta> \<Longrightarrow> sterm_sem I (NTsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
+shows "NTadmit \<sigma> (\<theta>::('sf + ('d::finite), 'sz) trm) \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> dfree \<theta> \<Longrightarrow> sterm_sem I (NTsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
 proof (induct rule: NTadmit.induct)
   case (NTadmit_Func \<sigma> args f)
-(*    fix args::"'sz \<Rightarrow> ('sf + 'd, 'sz) trm"
-    and f::"'sf + 'd" *)
-    have admits:"(\<And>i. NTadmit \<sigma> (args i))" from hyps(1) by auto
-    assume IH:"(\<And>i. dfree (args i) \<Longrightarrow>
+    hence admits:"(\<And>i. NTadmit \<sigma> (args i))" 
+    and IH:"(\<And>i. dfree (args i) \<Longrightarrow>
           sterm_sem I (NTsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) (args i) (fst \<nu>))"
-    assume free: "dfree ($f f args)"
-   (* TODO really no idea why this is not proved by auto. *)
-    have frees: "(\<And>i. dfree (args i))" using free by auto (*proof (induct rule: dfree.induct) qed auto*)
-    hence IH':"(\<And>i. sterm_sem I (NTsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) (args i) (fst \<nu>))" using IH frees sorry
-
-    thus "sterm_sem I (NTsubst (Function f args) \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) (Function f args) (fst \<nu>)"
+    and free: "dfree ($f f args)"
+    and ssafe:"\<And>i. dfree (\<sigma> i)"
       by auto
-
-    (* inductive dfree :: "('a, 'c) trm \<Rightarrow> bool"
-    where
-  dfree_Var: "dfree (Var i)"
-| dfree_Const: "dfree (Const r)"
-| dfree_Fun: "(\<And>i. dfree (args i)) \<Longrightarrow> dfree (Function i args)"
-| dfree_Plus: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
-| dfree_Times: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
-*)
+    have frees: "(\<And>i. dfree (args i))" using free by (rule dfree.cases) (auto)
+    show "?case" 
+      by(cases "f") (auto simp add: frees IH NTadjoint_free[OF ssafe])
     
 next
-  case NTadmit_Plus  show "?case" done
-    assume admit1:"NTadmit \<sigma> \<theta>1"
-    assume IH1:"dfree \<theta>1 \<Longrightarrow> sterm_sem I (NTsubst \<theta>1 \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta>1 (fst \<nu>)"
-    assume admit2:"NTadmit \<sigma> \<theta>2"
-    assume IH2:"dfree \<theta>2 \<Longrightarrow> sterm_sem I (NTsubst \<theta>2 \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta>2 (fst \<nu>)"
-    assume free:"dfree (Plus \<theta>1 \<theta>2)"
-    have free1:"dfree \<theta>1" sorry
-    have free2:"dfree \<theta>2" sorry
-    show "sterm_sem I (NTsubst (Plus \<theta>1 \<theta>2) \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) (Plus \<theta>1 \<theta>2) (fst \<nu>)" 
-      using admit1 admit2 IH1 IH2 free1 free2 by auto
+  case (NTadmit_Plus \<sigma> \<theta>1 \<theta>2)  
+    hence IH1:"(\<And>i. dfree \<theta>1 \<Longrightarrow>
+          sterm_sem I (NTsubst \<theta>1 \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta>1 (fst \<nu>))"
+    and IH2:"(\<And>i. dfree \<theta>2 \<Longrightarrow>
+          sterm_sem I (NTsubst \<theta>2 \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta>2 (fst \<nu>))"
+    and free: "dfree (Plus \<theta>1 \<theta>2)"
+      by auto
+    have free1:"dfree \<theta>1" using free by (rule dfree.cases) (auto)
+    have free2:"dfree \<theta>2" using free by (rule dfree.cases) (auto)
+    show "?case" by (auto simp add: IH1[OF free1] IH2[OF free2])
 next
-  case NTadmit_Times then show "?case" sorry
-  qed (auto)
+  case (NTadmit_Times \<sigma> \<theta>1 \<theta>2)
+    hence IH1:"(\<And>i. dfree \<theta>1 \<Longrightarrow>
+          sterm_sem I (NTsubst \<theta>1 \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta>1 (fst \<nu>))"
+    and IH2:"(\<And>i. dfree \<theta>2 \<Longrightarrow>
+          sterm_sem I (NTsubst \<theta>2 \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta>2 (fst \<nu>))"
+    and free: "dfree (Times \<theta>1 \<theta>2)"
+      by auto
+    have free1:"dfree \<theta>1" using free by (rule dfree.cases) (auto)
+    have free2:"dfree \<theta>2" using free by (rule dfree.cases) (auto)
+    show "?case" by (auto simp add: IH1[OF free1] IH2[OF free2])
+qed (auto)
 
+lemma subst_sterm:
+fixes I::"('sf, 'sc, 'sz) interp"
+fixes \<nu>::"'sz state"
+shows "Tadmit \<sigma> (\<theta>::('sf, 'sz) trm) \<Longrightarrow> 
+     (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> 
+      dfree \<theta> \<Longrightarrow> 
+     sterm_sem I (Tsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
+proof (induct rule: Tadmit.induct)
+  case (Tadmit_Func \<sigma> args f)
+  (*   (\<And>i. Tadmit \<sigma> (args i)) \<Longrightarrow>
+       (\<And>i. (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow>
+             dfree (args i) \<Longrightarrow>
+             sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (local.adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)) \<Longrightarrow>
+       (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow>
+       dfree ($f f args) \<Longrightarrow>
+       sterm_sem I (Tsubst ($f f args) \<sigma>) (fst \<nu>) = sterm_sem (local.adjoint I \<sigma> \<nu>) ($f f args) (fst \<nu>)*)
+  
+    qed
+    hence admits:"(\<And>i. Tadmit \<sigma> (args i))" 
+    and IH:"(\<And>i. dfree (args i) \<Longrightarrow>
+          sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>))"
+    and free: "dfree ($f f args)"
+    and ssafe:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
+      by auto
+    have frees: "(\<And>i. dfree (args i))" using free by (rule dfree.cases) (auto)
+    have eqs:"\<And>i. sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)"
+      by (auto simp add: IH frees)
+    show "?case" proof
+      (cases "SFunctions \<sigma> f")
+        fix a
+        assume foo:"SFunctions \<sigma> f = Some a" 
+        let ?sub = "(\<lambda> i. Tsubst (args i) \<sigma>)"
+        have fact:"sterm_sem I (NTsubst a ?sub) (fst \<nu>) = sterm_sem (NTadjoint I ?sub \<nu>) a (fst \<nu>)"
+          (*by (auto simp add: nsubst_sterm)*) sorry
+        have fact2:"(\<And>i. dfree (?sub i))" sorry
+        show "?thesis" 
+          using eqs adjoint_free[OF ssafe] fact nsubst_sterm NTadjoint_free[OF fact2] foo sledgehammer
+      qed 
+
+qed auto
 (*
 lemma usubst_sterm:"Tadmit \<sigma> \<theta> \<Longrightarrow> Svalid \<sigma> \<Longrightarrow> dfree \<theta> \<Longrightarrow> sterm_sem I (Tsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
 proof (induct rule: Tadmit.induct)
@@ -1723,6 +1795,32 @@ side conditions everywhere. *)
     
 qed (auto simp add: frechet_correctness rangeI)  
 *) 
-
 end
+
+(*
+code_thms dl.pointed_finite.NTsubst
+print_codesetup
+export_code dl.pointed_finite.NTsubst in Haskell
+module_name Example file "examples/"
+*)
+(*definition x::Enum.finite_5 where "x = finite_5.a\<^sub>1"
+global_interpretation ddl:pointed_finite x x x x x x x x x done
+
+code_thms "ddl.Tsubst"
+export_code "ddl.Tsubst"*)
+(*  fixes foo :: "'sf::finite"
+  fixes bar :: "'sc::finite"
+
+  fixes bat :: "'sz::finite"
+  fixes vid1 :: 'sz
+  fixes vid2 :: 'sz
+  fixes vid3 :: 'sz
+  fixes fid1 :: 'sf
+  fixes fid2 :: 'sf
+  fixes fid3 :: 'sf
+  fixes pid1 :: 'sc
+  fixes pid2 :: 'sc
+  fixes pid3 :: 'sc*)
+
+
 end
