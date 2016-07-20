@@ -1645,15 +1645,6 @@ lemma NTadjoint_free:"(\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (NTadjoint
  ODEs = ODEs I\<rparr>)" 
   by (auto simp add: dsem_to_ssem NTadjoint_def)
   
-(*   NTadmit_Diff:"NTadmit \<sigma> \<theta> \<Longrightarrow> NTUadmit \<sigma> \<theta> UNIV \<Longrightarrow> NTadmit \<sigma> (Differential \<theta>)"
-| NTadmit_Func:"(\<And>i. NTadmit \<sigma> (args i)) \<Longrightarrow> NTadmit \<sigma> (Function f args)"
-| NTadmit_Plus:"NTadmit \<sigma> \<theta>1 \<Longrightarrow> NTadmit \<sigma> \<theta>2 \<Longrightarrow> NTadmit \<sigma> (Plus \<theta>1 \<theta>2)"
-| NTadmit_Times:"NTadmit \<sigma> \<theta>1 \<Longrightarrow> NTadmit \<sigma> \<theta>2 \<Longrightarrow> NTadmit \<sigma> (Times \<theta>1 \<theta>2)"
-| NTadmit_DiffVar:"NTadmit \<sigma> (DiffVar x)"
-| NTadmit_Var:"NTadmit \<sigma> (Var x)"
-| NTadmit_Const:"NTadmit \<sigma> (Const r)"
-*)
-
 lemma nsubst_sterm:
 fixes I::"('sf, 'sc, 'sz) interp"
 fixes \<nu>::"'sz state"
@@ -1670,6 +1661,23 @@ proof (induction rule: dfree.induct)
   case (dfree_Fun args i) then show "?case"
     by (cases "i") (auto intro:dfree.intros)
 qed (auto intro: dfree.intros)
+
+lemma ntsubst_free_to_safe:
+"dfree \<theta> \<Longrightarrow> (\<And>i. dsafe (\<sigma> i)) \<Longrightarrow> dsafe (NTsubst \<theta> \<sigma>)"
+proof (induction rule: dfree.induct) 
+  case (dfree_Fun args i) then show "?case"
+    by (cases "i") (auto intro:dsafe.intros ntsubst_preserves_free)
+qed (auto intro: dsafe.intros)
+
+lemma ntsubst_preserves_safe:
+"dsafe \<theta> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> dsafe (NTsubst \<theta> \<sigma>)"
+proof (induction rule: dsafe.induct) 
+  case (dsafe_Fun args i) then show "?case"
+    by (cases "i") (auto intro:dsafe.intros ntsubst_preserves_free dfree_is_dsafe)
+next
+  case (dsafe_Diff \<theta>) then show "?case"
+    by  (auto intro:dsafe.intros ntsubst_preserves_free)
+qed (auto simp add: ntsubst_preserves_free intro: dsafe.intros)
 
 lemma tsubst_preserves_free:
 "dfree \<theta> \<Longrightarrow>  (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> dfree(Tsubst \<theta> \<sigma>)"
