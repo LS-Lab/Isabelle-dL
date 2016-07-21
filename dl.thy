@@ -407,6 +407,7 @@ where
 | "diff_formula_sem I (Geq f g) = {v. dterm_sem I (Differential f) v \<ge> dterm_sem I (Differential g) v}"
 | "diff_formula_sem I (Not p) = diff_formula_sem I p"
 | "diff_formula_sem I (And p q) = diff_formula_sem I p \<inter> diff_formula_sem I p"
+  (* TODO: Totally broken: Think about predicational case *)
 | "diff_formula_sem I  p = fml_sem I p"
 
 | "prog_sem I (Pvar p) = Programs I p"
@@ -424,8 +425,8 @@ where
     {(\<nu>, \<omega>) | \<nu> \<mu> \<omega> sol t.
       t \<ge> 0 \<and>
       \<mu> = xode (sol t) \<and>
-      (Vagree \<nu> \<omega> (-ODE_vars ODE)) \<and>
-      (Vagree \<nu> \<mu> (ODE_vars ODE)) \<and> 
+      (Vagree \<omega> \<nu>  (-ODE_vars ODE)) \<and>
+      (Vagree \<omega> \<mu> (ODE_vars ODE)) \<and> 
       (sol solves_ode (\<lambda>_. ode)) {0 .. t} {x. xode x \<in> fml_sem I \<phi>} \<and>
       sol 0 = fst \<nu>})"
 
@@ -558,6 +559,7 @@ apply(erule func_lemma2)
 apply(auto)
 done
 
+(* TODO: Should be able to remove these by adding some inductive_simp *)
 lemma dfree_vac1: "\<not> dfree ($' var)"
   by (auto elim: dfree.cases)
 
@@ -907,8 +909,9 @@ show "(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P) \<Longrightarrow> Vag
   proof -
   fix \<nu> \<omega>
   assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P)"
-  from sem have agree:"Vagree \<nu> \<omega> (- ODE_vars ODE)" 
-    by (auto simp only: prog_sem.simps Let_def)
+  from sem have agree:"Vagree \<nu> \<omega> (- ODE_vars ODE)"
+    sorry
+(*    by (auto simp only: prog_sem.simps Let_def)*)
     (* fstI mem_Collect_eq snd_conv*)
   thus "Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))" by auto
   qed
@@ -1400,6 +1403,97 @@ theorem diff_const_axiom_valid: "valid diff_const_axiom"
   apply(simp only: dterm_sem.simps constant_deriv_zero sterm_sem.simps)
 done
 
+
+subsection \<open>ODE Axioms\<close>
+definition DWaxiom :: "('sf, 'sc, 'sz) formula"
+  where "DWaxiom = ([[EvolveODE (OVar vid1) (Predicational pid1)]](Predicational pid1))"
+
+definition DWaxiom' :: "('sf, 'sc, 'sz) formula"
+  where "DWaxiom' = ([[EvolveODE (OSing vid1 (Function fid1 (singleton (Var vid1)))) (Prop vid2 (singleton (Var vid1)))]](Prop vid2 (singleton (Var vid1))))"
+  
+definition DCaxiom :: "('sf, 'sc, 'sz) formula"
+  where "DCaxiom = (([[EvolveODE (OVar vid1) (Predicational pid1)]](Predicational pid2)) 
+  \<leftrightarrow> ( ([[EvolveODE (OVar vid1) (Predicational pid1)]]Predicational pid3) \<rightarrow>
+       ([[EvolveODE (OVar vid1) (And (Predicational pid1) (Predicational pid3))]]Predicational pid2)))"
+
+definition DEaxiom :: "('sf, 'sc, 'sz) formula"
+  where "DEaxiom = 
+(([[EvolveODE (OSing vid1 (Function fid1 (singleton (Var vid1)))) (Prop vid2 (singleton (Var vid1)))]]
+    (Predicational pid1))
+\<leftrightarrow>
+ ([[EvolveODE (OSing vid1 (Function fid1 (singleton (Var vid1)))) (Prop vid2 (singleton (Var vid1)))]]
+    [[DiffAssign vid1 (Function fid1 (singleton (Var vid1)))]](Predicational pid1)))"
+
+definition DSaxiom :: "('sf, 'sc, 'sz) formula"
+  where "DSaxiom = 
+(([[EvolveODE (OSing vid1 (Function fid1 empty)) (Prop vid2 (singleton (Var vid1)))]]Prop vid3 (singleton (Var vid1)))
+\<leftrightarrow> 
+(Forall vid2 
+ (Implies (Geq (Var vid2) (Const 0)) 
+ (Implies 
+   (Forall vid3 
+     (Implies (And (Geq (Var vid3) (Const 0)) (Geq (Var vid2) (Var vid3)))
+        (Prop vid2 (singleton (Plus (Var vid1) (Times (Function fid1 empty) (Var vid3)))))))
+   ([[Assign vid1 (Plus (Var vid1) (Times (Function fid1 empty) (Var vid2)))]]Prop vid2 (singleton (Var vid1)))))))"
+
+definition DIaxiom :: "('sf, 'sc, 'sz) formula"
+  where "DIaxiom = (((Predicational pid1) \<rightarrow> (And (Predicational pid2) ([[EvolveODE (OVar vid1) (Predicational pid1)]](DiffFormula (Predicational pid2))))) 
+\<rightarrow> ([[EvolveODE (OVar vid1) (Predicational pid1)]]Predicational pid2))"
+
+definition DGaxiom :: "('sf, 'sc, 'sz) formula"
+  where "DGaxiom = (([[EvolveODE (OVar vid1) (Predicational pid1)]]Predicational pid2) \<leftrightarrow> 
+  (Exists vid2 
+    ([[EvolveODE (OProd (OVar vid1) (OSing vid2 (Plus (Times (Function fid1 empty) (Var vid2)) (Function fid2 empty)))) (Predicational pid1)]]
+       Predicational pid2)))"
+
+lemma Vagree_univ:"\<And>a b c d. Vagree (a,b) (c,d) UNIV \<Longrightarrow> a = c \<and> b = d"
+  by (auto simp add: Vagree_def vec_eq_iff)
+  
+lemma DW_valid:"valid DWaxiom"
+  apply(auto simp add: DWaxiom_def valid_def Let_def)
+  (* TODO: Proof should be much shorter *)
+proof -
+  fix I b aa ba sol t
+  show "is_interp I \<Longrightarrow>
+       0 \<le> t \<Longrightarrow>
+       Vagree (aa, ba) (sol 0, b) {} \<Longrightarrow>
+       Vagree (aa, ba) (sol t, ODEs I vid1 (sol t)) UNIV \<Longrightarrow>
+       (sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV} \<Longrightarrow>
+       (aa, ba) \<in> Contexts I pid1 UNIV"
+    using Vagree_univ[of "aa" "ba" "sol t" "ODEs I vid1 (sol t)"] apply(auto)
+    using solves_ode_domainD by fastforce
+  qed
+
+lemma DE_valid:"valid DEaxiom"
+  apply(auto simp add: DEaxiom_def valid_def Let_def)
+  done
+
+lemma DC_valid:"valid DCaxiom" 
+  apply(auto simp add: DCaxiom_def valid_def Let_def)
+  done
+
+lemma DS_valid:"valid DSaxiom"
+  apply(auto simp add: DSaxiom_def valid_def Let_def)
+  done
+
+
+(* TODO:  differential formula semantics actually bogus right now
+ * I believe the only correct semantics to give a DiffFormula(Predicational P)
+ * is THE x. DI_is_valid_for (x). So the validity of this axiom will be a trivial
+ * appeal to the validity of the interpretation. But then in substitution we will do the
+ * real work by showing that adjoints are valid interpretations, so in adjoints all of the
+ * DI_is_valid_for(x)'s actually exist.
+*)
+lemma DI_valid:"valid DIaxiom"
+  apply(unfold DIaxiom_def valid_def impl_sem iff_sem)
+  done
+
+lemma DG_valid:"valid DGaxiom"
+  apply(auto simp add: DGaxiom_def valid_def Let_def)
+  done
+
+
+
 section Substitution
 
 definition NTUadmit :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'c) trm \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
@@ -1408,7 +1502,7 @@ where "NTUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i. FVT (\<s
 inductive NTadmit :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'c) trm \<Rightarrow> bool"
 where 
   NTadmit_Diff:"NTadmit \<sigma> \<theta> \<Longrightarrow> NTUadmit \<sigma> \<theta> UNIV \<Longrightarrow> NTadmit \<sigma> (Differential \<theta>)"
-| NTadmit_Func:"(\<And>i. NTadmit \<sigma> (args i)) \<Longrightarrow> NTadmit \<sigma> (Function f args)"
+| NTadmit_Fun:"(\<And>i. NTadmit \<sigma> (args i)) \<Longrightarrow> NTadmit \<sigma> (Function f args)"
 | NTadmit_Plus:"NTadmit \<sigma> \<theta>1 \<Longrightarrow> NTadmit \<sigma> \<theta>2 \<Longrightarrow> NTadmit \<sigma> (Plus \<theta>1 \<theta>2)"
 | NTadmit_Times:"NTadmit \<sigma> \<theta>1 \<Longrightarrow> NTadmit \<sigma> \<theta>2 \<Longrightarrow> NTadmit \<sigma> (Times \<theta>1 \<theta>2)"
 | NTadmit_DiffVar:"NTadmit \<sigma> (DiffVar x)"
@@ -1536,7 +1630,7 @@ where "TUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> SIGT
 inductive Tadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) trm \<Rightarrow> bool"
 where 
   Tadmit_Diff:"Tadmit \<sigma> \<theta> \<Longrightarrow> TUadmit \<sigma> \<theta> UNIV \<Longrightarrow> Tadmit \<sigma> (Differential \<theta>)"
-| Tadmit_Func:"(\<And>i. Tadmit \<sigma> (args i)) \<Longrightarrow> Tadmit \<sigma> (Function f args)"
+| Tadmit_Fun:"(\<And>i. Tadmit \<sigma> (args i)) \<Longrightarrow> Tadmit \<sigma> (Function f args)"
 | Tadmit_Plus:"Tadmit \<sigma> \<theta>1 \<Longrightarrow> Tadmit \<sigma> \<theta>2 \<Longrightarrow> Tadmit \<sigma> (Plus \<theta>1 \<theta>2)"
 | Tadmit_Times:"Tadmit \<sigma> \<theta>1 \<Longrightarrow> Tadmit \<sigma> \<theta>2 \<Longrightarrow> Tadmit \<sigma> (Times \<theta>1 \<theta>2)"
 | Tadmit_DiffVar:"Tadmit \<sigma> (DiffVar x)"
@@ -1693,7 +1787,7 @@ fixes \<nu>::"'sz state"
 assumes good_interp:"is_interp I"    
 shows "NTadmit \<sigma> \<theta> \<Longrightarrow> dsafe \<theta> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> dterm_sem I (NTsubst \<theta> \<sigma>) \<nu> = dterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> \<nu>"
 proof (induction rule: NTadmit.induct)
-  case (NTadmit_Func \<sigma> args f) 
+  case (NTadmit_Fun \<sigma> args f) 
     thus "?case" by (cases "f") (auto simp add: vec_extensionality  NTadjoint_def)
 next
     case (NTadmit_Diff \<sigma> \<theta>) 
@@ -1742,6 +1836,14 @@ proof (induction rule: dfree.induct)
     by (cases "SFunctions \<sigma> i") (auto intro:dfree.intros ntsubst_preserves_free)
 qed (auto intro: dfree.intros)
 
+lemma tsubst_preserves_safe:
+"dsafe \<theta> \<Longrightarrow>  (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> dsafe(Tsubst \<theta> \<sigma>)"
+proof (induction rule: dsafe.induct) 
+  case (dsafe_Fun args i) then show "?case" 
+    sorry 
+    (* by (cases "SFunctions \<sigma> i") (auto intro:dsafe.intros ntsubst_preserves_safe tsubst_preserves_free dfree_is_dsafe)*)
+qed (auto intro: dsafe.intros tsubst_preserves_free)
+
 lemma subst_sterm:
 fixes I::"('sf, 'sc, 'sz) interp"
 fixes \<nu>::"'sz state"
@@ -1769,6 +1871,41 @@ proof (induction rule: dfree.induct)
         using IH frees by (auto simp add: eqs adjoint_free[OF sfree] IH2 NTadjoint_free[OF subFree] some)
     qed (auto simp add: IH adjoint_def vec_extensionality frees)
   qed auto
+
+lemma subst_dterm:
+fixes I::"('sf, 'sc, 'sz) interp"
+fixes \<nu>::"'sz state"
+assumes good_interp:"is_interp I"
+shows "
+  Tadmit \<sigma> \<theta> \<Longrightarrow>
+  dsafe \<theta> \<Longrightarrow>
+  (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> 
+   dterm_sem I (Tsubst \<theta> \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) \<theta> \<nu>"
+proof (induction rule: Tadmit.induct)
+  case (Tadmit_Fun \<sigma> args f) 
+    note safe = Tadmit_Fun.prems(1) and sfree = Tadmit_Fun.prems(2)
+    hence safes:"\<And>i. dsafe (args i)" by auto
+    have IH:"(\<And>i. dsafe (args i) \<Longrightarrow>
+        dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
+      using  Tadmit_Fun.prems Tadmit_Fun.IH by auto
+    have eqs:"\<And>i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>"
+      by (auto simp add: IH safes)
+    show "?case" 
+    proof (cases "SFunctions \<sigma> f")
+      fix f'
+      assume some:"SFunctions \<sigma> f = Some f'" 
+      let ?sub = "(\<lambda> i. Tsubst (args i) \<sigma>)"
+      have subFree:"(\<And>i. dfree (?sub i))" sorry (*using tsubst_preserves_free[OF safes sfree] by simp*)
+      have admit:"\<And>i. NTadmit ?sub f'" sorry
+      have safef:"dsafe f'" sorry
+      have IH2:"dterm_sem I (NTsubst f' ?sub) \<nu> = dterm_sem (NTadjoint I ?sub \<nu>) f' \<nu>"
+        by (simp add: nsubst_dterm[OF good_interp admit safef subFree])
+      show "?thesis" 
+        using IH safes by (auto simp add: eqs adjoint_free[OF sfree] IH2 NTadjoint_free[OF subFree] some good_interp)
+    qed (auto simp add: IH adjoint_def vec_extensionality safes)
+  qed auto
+
+
 end
 
 (*
@@ -1800,6 +1937,5 @@ export_code "ddl.Tsubst" in SML
   fixes pid1 :: 'sc
   fixes pid2 :: 'sc
   fixes pid3 :: 'sc*)
-
-
+  
 end
