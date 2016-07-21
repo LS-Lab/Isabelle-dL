@@ -923,15 +923,22 @@ next
 fix ODE P \<nu> \<omega>
 show "(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))"
   proof -
-  fix \<nu> \<omega>
   assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P)"
+  have agree_comm:"\<And>A B V. Vagree A B V \<Longrightarrow> Vagree B A V" unfolding Vagree_def by auto
   from sem have agree:"Vagree \<nu> \<omega> (- ODE_vars ODE)"
-(*    by (auto simp only: prog_sem.simps Let_def)*)
-    sorry
-(*    by (auto simp only: prog_sem.simps Let_def)*)
-    (* fstI mem_Collect_eq snd_conv*)
+    apply(simp only: prog_sem.simps mem_Collect_eq)
+    apply(erule exE)+
+  proof -
+    fix \<nu>' sol t  
+    assume assm: "(\<nu>, \<omega>) = (\<nu>', mk_v I ODE \<nu>' (sol t)) \<and>
+       0 \<le> t \<and>
+       (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu>' (sol t) \<in> fml_sem I P} \<and> sol 0 = fst \<nu>'"
+    hence "Vagree \<omega> \<nu> (- ODE_vars ODE)" using mk_v_agree[of I ODE \<nu> "(sol t)"] by auto
+    thus  "Vagree \<nu> \<omega> (- ODE_vars ODE)" by (rule agree_comm)
+    qed 
   thus "Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))" by auto
   qed
+
 (* Var Assign DiffAssign Test Evolve Choice Compose Star *)
 next
   case (Star a \<nu> \<omega>) then
