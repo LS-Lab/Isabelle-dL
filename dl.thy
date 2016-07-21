@@ -405,7 +405,8 @@ where "concrete_v I ODE \<nu> sol =
 
 lemma mk_v_exists:"\<exists>\<omega>. Vagree \<omega> \<nu> (- ODE_vars ODE) 
 \<and> Vagree \<omega> (mk_xode I ODE sol) (ODE_vars ODE)"
-  sorry
+  by(rule exI[where x="(concrete_v I ODE \<nu> sol)"])
+    (auto simp add: Vagree_def)
 
 lemma mk_v_agree:"Vagree (mk_v I ODE \<nu> sol) \<nu> (- ODE_vars ODE) 
 \<and> Vagree (mk_v I ODE \<nu> sol) (mk_xode I ODE sol) (ODE_vars ODE)"
