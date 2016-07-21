@@ -1523,17 +1523,9 @@ lemma DE_lemma:
 "repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1 (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))
  = mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)"
 proof
-  have "Vagree (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) (ab, bb)
-      (- ODE_vars (OSing vid1 (f1 fid1 vid1))) \<and>
-      Vagree (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) (mk_xode I (OSing vid1 (f1 fid1 vid1)) (sol t))
-      (ODE_vars (OSing vid1 (f1 fid1 vid1)))" using mk_v_agree[of I "(OSing vid1 (f1 fid1 vid1))" "(ab, bb)" "(sol t)"]
-    by auto
-  hence "Vagree (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) (mk_xode I (OSing vid1 (f1 fid1 vid1)) (sol t))
-      (ODE_vars (OSing vid1 (f1 fid1 vid1)))" 
-    by auto
-  hence agree:"Vagree (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) (mk_xode I (OSing vid1 (f1 fid1 vid1)) (sol t))
+  have agree:"Vagree (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) (mk_xode I (OSing vid1 (f1 fid1 vid1)) (sol t))
       {Inl vid1, Inr vid1}" 
-    by auto
+    using mk_v_agree[of I "(OSing vid1 (f1 fid1 vid1))" "(ab, bb)" "(sol t)"] by auto
   have fact:"dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t))
           = snd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) $ vid1"
     using agree apply(simp only: Vagree_def dterm_sem.simps f1_def mk_xode.simps)
@@ -1544,19 +1536,6 @@ proof
         (\<forall>i. Inr i \<in> {Inl vid1, Inr vid1} \<longrightarrow>
           snd (mk_v I (OSing vid1 ($f fid1 (singleton (trm.Var vid1)))) (ab, bb) (sol t)) $ i =
           snd (sol t, ODE_sem I (OSing vid1 ($f fid1 (singleton (trm.Var vid1)))) (sol t)) $ i)"
-      hence all:"(\<forall>i. Inr i \<in> {Inl vid1, Inr vid1} \<longrightarrow>
-        snd (mk_v I (OSing vid1 ($f fid1 (singleton (trm.Var vid1)))) (ab, bb) (sol t)) $ i =
-        snd (sol t, ODE_sem I (OSing vid1 ($f fid1 (singleton (trm.Var vid1)))) (sol t)) $ i)"
-        by auto
-      have mem:"Inr vid1 \<in> {Inl vid1, Inr vid1}" 
-        by auto
-      hence atVid:"snd (mk_v I (OSing vid1 ($f fid1 (singleton (trm.Var vid1)))) (ab, bb) (sol t)) $ vid1 =
-         snd (sol t, ODE_sem I (OSing vid1 ($f fid1 (singleton (trm.Var vid1)))) (sol t)) $ vid1"
-        using all mem 
-        by auto
-      hence atVid':"snd (mk_v I (OSing vid1 ($f fid1 (singleton (trm.Var vid1)))) (ab, bb) (sol t)) $ vid1 =
-         ODE_sem I (OSing vid1 ($f fid1 (singleton (trm.Var vid1)))) (sol t) $ vid1" 
-        by auto
       hence atVid'':"snd (mk_v I (OSing vid1 ($f fid1 (singleton (trm.Var vid1)))) (ab, bb) (sol t)) $ vid1 = sterm_sem I ($f fid1 (singleton (trm.Var vid1))) (sol t)" 
         by auto
       have argsEq:"(\<chi> i. dterm_sem I (singleton (trm.Var vid1) i)
@@ -1616,13 +1595,7 @@ proof -
     assume rep:"   (ac, bc) =
        repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1
         (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))"
-    have "((ab, bb), (aa, ba)) = ((ab,bb), mk_v I (OSing vid1 (f1 fid1 vid1))(ab,bb) (sol t)) \<and>
-                0 \<le> t \<and>
-                (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f1 fid1 vid1)))) {0..t}
-                 {x. mk_v I (OSing vid1 (f1 fid1 vid1)) (ab,bb) (sol t) \<in> fml_sem I (p1 vid2 vid1)} \<and>
-                sol 0 = fst (ab,bb)"
-      using t aaba solve sol0 rep by auto
-    hence aaba_sem:"(aa,ba) \<in> fml_sem I (P pid1)" using thisW by (auto)
+    have aaba_sem:"(aa,ba) \<in> fml_sem I (P pid1)" using thisW t aaba solve sol0 rep by (auto)
     have truth:"repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1
         (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))
    = mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)"
@@ -1654,15 +1627,8 @@ proof -
        assume sol:"(sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f1 fid1 vid1)))) {0..t}
         {x. mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t) \<in> fml_sem I (p1 vid2 vid1)}"
        assume sol0:" sol 0 = fst (ab, bb)"
-       have "((ab, bb), (aa, ba)) = ((ab,bb), mk_v I (OSing vid1 (f1 fid1 vid1)) (ab,bb) (sol t)) \<and>
-                0 \<le> t \<and>
-                (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f1 fid1 vid1)))) {0..t}
-                 {x. mk_v I (OSing vid1 (f1 fid1 vid1)) (ab,bb) (sol t) \<in> fml_sem I (p1 vid2 vid1)} \<and>
-                sol 0 = fst (ab,bb)" using t aaba sol sol0 by auto
-       hence "\<forall>\<omega>'. \<omega>' = repd (aa, ba) vid1 (dterm_sem I (f1 fid1 vid1) (aa, ba)) \<longrightarrow> \<omega>' \<in> fml_sem I (P pid1)" 
-         using justW by auto
-       hence "repd (aa, ba) vid1 (dterm_sem I (f1 fid1 vid1) (aa, ba)) \<in> fml_sem I (P pid1)"
-         by auto
+       have "repd (aa, ba) vid1 (dterm_sem I (f1 fid1 vid1) (aa, ba)) \<in> fml_sem I (P pid1)"
+         using justW t aaba sol sol0 by auto
        hence foo:"repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1 (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t))) \<in> fml_sem I (P pid1)"
          using aaba by auto
        hence "repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1 (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))
