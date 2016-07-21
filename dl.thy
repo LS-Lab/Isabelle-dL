@@ -1637,112 +1637,11 @@ proof -
   qed
 
 lemma DC_valid:"valid DCaxiom" 
-  apply(unfold DCaxiom_def valid_def Let_def iff_sem impl_sem)
-  apply(auto simp add: Let_def)
-  apply(smt Collect_mono atLeastatMost_subset_iff solves_ode_on_subset)
-  done
-(* 
-  (* let
-      ode = ODE_sem I ODE;
-      xode = \<lambda>x. (x, ode x);
-      \<omega> = (\<lambda>\<nu> sol. (THE \<omega>. Vagree \<omega> \<nu> (- ODE_vars ODE)
-                         \<and> Vagree \<omega> (xode sol) (ODE_vars ODE)))
-    in
-    {(\<nu>, \<omega> \<nu> (sol t)) | \<nu> sol t.
-      t \<ge> 0 \<and>
-      (sol solves_ode (\<lambda>_. ode)) {0 .. t} {x. \<omega> \<nu> x \<in> fml_sem I \<phi>} \<and>
-      sol 0 = fst \<nu>})*)
-
-
-
- (*    \<Longrightarrow>
-       Vagree (aa, ba) (sol 0, b) {} \<Longrightarrow>
-       Vagree (aa, ba) (sol t, ODEs I vid1 (sol t)) UNIV \<Longrightarrow>
-       (sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV} \<Longrightarrow>
-       (aa, ba) \<in> Contexts I pid2 UNIV*)
-proof - 
-  fix I::"('sf, 'sc, 'sz) interp" 
-  and b aa ba::"'sz simple_state" 
-  and sol::"real \<Rightarrow> 'sz simple_state"
-  and t::real
-  assume good_interp:"is_interp I"
-  assume sem1:"\<forall>a ba. (\<exists>sola t.
-                  0 \<le> t \<and>
-                  Vagree (a, ba) (sol 0, b) {} \<and>
-                  Vagree (a, ba) (sola t, ODEs I vid1 (sola t)) UNIV \<and>
-                  (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV} \<and>
-                  sola 0 = sol 0) \<longrightarrow>
-              (a, ba) \<in> Contexts I pid3 UNIV"
-  hence "\<forall>ba. (\<exists>sola t.
-                  0 \<le> t \<and>
-                  Vagree (aa, ba) (sol 0, b) {} \<and>
-                  Vagree (aa, ba) (sola t, ODEs I vid1 (sola t)) UNIV \<and>
-                  (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV} \<and>
-                  sola 0 = sol 0) \<longrightarrow>
-              (aa, ba) \<in> Contexts I pid3 UNIV"
-     by (rule allE[where x=aa])
-   hence sem1':"(\<exists>sola t.
-                  0 \<le> t \<and>
-                  Vagree (aa, ba) (sol 0, b) {} \<and>
-                  Vagree (aa, ba) (sola t, ODEs I vid1 (sola t)) UNIV \<and>
-                  (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV} \<and>
-                  sola 0 = sol 0) \<longrightarrow>
-              (aa, ba) \<in> Contexts I pid3 UNIV"
-     by (rule allE[where x=ba])
-  assume sem2:"\<forall>a ba. (\<exists>sola t.
-                  0 \<le> t \<and>
-                  Vagree (a, ba) (sol 0, b) {} \<and>
-                  Vagree (a, ba) (sola t, ODEs I vid1 (sola t)) UNIV \<and>
-                  (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
-                   {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV \<and>
-                       (x, ODEs I vid1 x) \<in> Contexts I pid3 UNIV} \<and>
-                  sola 0 = sol 0) \<longrightarrow>
-              (a, ba) \<in> Contexts I pid2 UNIV"
-  assume t:"0 \<le> t"
-  
-  assume agree1:"Vagree (aa, ba) (sol 0, b) {}"
-  assume agree2:"Vagree (aa, ba) (sol t, ODEs I vid1 (sol t)) UNIV"
-  assume solves:"(sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV}"
-  have solT:"0 \<le> t \<and>
-                  Vagree (aa, ba) (sol 0, b) {} \<and>
-                  Vagree (aa, ba) (sol t, ODEs I vid1 (sol t)) UNIV \<and>
-                  (sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
-                   {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV } \<and>
-                  sol 0 = sol 0"
-    using t agree1 agree2 solves by auto
-  from sem1' solT have p3:"(aa, ba) \<in> Contexts I pid3 UNIV"
-    by auto
-  from sem2 have "\<forall>ba. (\<exists>sola t.
-                  0 \<le> t \<and>
-                  Vagree (aa, ba) (sol 0, b) {} \<and>
-                  Vagree (aa, ba) (sola t, ODEs I vid1 (sola t)) UNIV \<and>
-                  (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
-                   {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV \<and>
-                       (x, ODEs I vid1 x) \<in> Contexts I pid3 UNIV} \<and>
-                  sola 0 = sol 0) \<longrightarrow>
-              (aa, ba) \<in> Contexts I pid2 UNIV" by (rule allE[where x=aa])
-  hence imp:"(\<exists>sola t.
-                  0 \<le> t \<and>
-                  Vagree (aa, ba) (sol 0, b) {} \<and>
-                  Vagree (aa, ba) (sola t, ODEs I vid1 (sola t)) UNIV \<and>
-                  (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
-                   {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV \<and>
-                       (x, ODEs I vid1 x) \<in> Contexts I pid3 UNIV} \<and>
-                  sola 0 = sol 0) \<longrightarrow>
-              (aa, ba) \<in> Contexts I pid2 UNIV" by (rule allE[where x=ba])
-  have sol13: "0 \<le> t \<and>
-                  Vagree (aa, ba) (sol 0, b) {} \<and>
-                  Vagree (aa, ba) (sol t, ODEs I vid1 (sol t)) UNIV \<and>
-                  (sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
-                   {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV \<and>
-                       (x, ODEs I vid1 x) \<in> Contexts I pid3 UNIV} \<and>
-                  sol 0 = sol 0"
-  by using solT p3 Collect_mono atLeastatMost_subset_iff solves_ode_on_subset by auto
-  
-  show "(aa, ba) \<in> Contexts I pid2 UNIV" using sem2 t agree1 agree2 solves by (auto elim: allE exE)
-  qed*)
-(*  apply (smt )
-  done *)
+  apply(unfold DCaxiom_def valid_def iff_sem impl_sem)
+  apply(auto simp only: fml_sem.simps prog_sem.simps)
+  apply(auto simp del: mk_v.simps)
+  apply (smt intervalE pointed_finite.mem_to_nonempty solves_ode_domainD)
+  by fastforce
 
 lemma DS_valid:"valid DSaxiom"
   apply(auto simp add: DSaxiom_def valid_def Let_def)
