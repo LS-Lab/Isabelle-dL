@@ -390,10 +390,33 @@ where
 | "ODE_vars (OSing x \<theta>) = {Inl x, Inr x}"
 | "ODE_vars (OProd ODE1 ODE2) = ODE_vars ODE1 \<union> ODE_vars ODE2"
 
-  
-fun fml_sem  :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> 'c state set" and
-  diff_formula_sem  :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> 'c state set" and
-  prog_sem :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'b, 'c) hp \<Rightarrow> ('c state * 'c state) set"
+fun mk_xode::"('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'c::finite) ODE \<Rightarrow> 'c::finite simple_state \<Rightarrow> 'c::finite state"
+where "mk_xode I ODE sol = (sol, ODE_sem I ODE sol)"
+
+fun mk_v::"('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'c::finite) ODE \<Rightarrow> 'c::finite state \<Rightarrow> 'c::finite simple_state \<Rightarrow> 'c::finite state"
+where "mk_v I ODE \<nu> sol = (SOME \<omega>. 
+  Vagree \<omega> \<nu> (- ODE_vars ODE) 
+\<and> Vagree \<omega> (mk_xode I ODE sol) (ODE_vars ODE))"
+
+fun concrete_v::"('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'c::finite) ODE \<Rightarrow> 'c::finite state \<Rightarrow> 'c::finite simple_state \<Rightarrow> 'c::finite state"
+where "concrete_v I ODE \<nu> sol =
+((\<chi> i. (if Inl i \<in> ODE_vars ODE then sol else (fst \<nu>)) $ i),
+ (\<chi> i. (if Inr i \<in> ODE_vars ODE then ODE_sem I ODE sol else (snd \<nu>)) $ i))"
+
+lemma mk_v_exists:"\<exists>\<omega>. Vagree \<omega> \<nu> (- ODE_vars ODE) 
+\<and> Vagree \<omega> (mk_xode I ODE sol) (ODE_vars ODE)"
+  sorry
+
+lemma mk_v_agree:"Vagree (mk_v I ODE \<nu> sol) \<nu> (- ODE_vars ODE) 
+\<and> Vagree (mk_v I ODE \<nu> sol) (mk_xode I ODE sol) (ODE_vars ODE)"
+  apply (unfold mk_v.simps)
+  apply (rule someI_ex)
+  apply (rule mk_v_exists)
+  done
+
+fun fml_sem  :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) formula \<Rightarrow> 'c::finite state set" and
+  diff_formula_sem  :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) formula \<Rightarrow> 'c::finite state set" and
+  prog_sem :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) hp \<Rightarrow> ('c::finite state * 'c::finite state) set"
 where
   "fml_sem I (Geq t1 t2) = {v. dterm_sem I t1 v \<ge> dterm_sem I t2 v}"
 | "fml_sem I (Prop P terms) = {\<nu>. Predicates I P (\<chi> i. dterm_sem I (terms i) \<nu>)}"
@@ -418,16 +441,9 @@ where
 | "prog_sem I (Sequence \<alpha> \<beta>) = prog_sem I \<alpha> O prog_sem I \<beta>"
 | "prog_sem I (Loop \<alpha>) = (prog_sem I \<alpha>)\<^sup>*"
 | "prog_sem I (EvolveODE ODE \<phi>) =
-    (let
-      ode = ODE_sem I ODE;
-      xode = \<lambda>x. (x, ode x)
-    in
-    {(\<nu>, \<omega>) | \<nu> \<mu> \<omega> sol t.
+    ({(\<nu>, mk_v I ODE \<nu> (sol t)) | \<nu> sol t.
       t \<ge> 0 \<and>
-      \<mu> = xode (sol t) \<and>
-      (Vagree \<omega> \<nu>  (-ODE_vars ODE)) \<and>
-      (Vagree \<omega> \<mu> (ODE_vars ODE)) \<and> 
-      (sol solves_ode (\<lambda>_. ode)) {0 .. t} {x. xode x \<in> fml_sem I \<phi>} \<and>
+      (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0 .. t} {x. mk_v I ODE \<nu> (sol t) \<in> fml_sem I \<phi>} \<and>
       sol 0 = fst \<nu>})"
 
 subsection \<open>Trivial Simplification Lemmas\<close>
@@ -910,6 +926,7 @@ show "(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P) \<Longrightarrow> Vag
   fix \<nu> \<omega>
   assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P)"
   from sem have agree:"Vagree \<nu> \<omega> (- ODE_vars ODE)"
+(*    by (auto simp only: prog_sem.simps Let_def)*)
     sorry
 (*    by (auto simp only: prog_sem.simps Let_def)*)
     (* fstI mem_Collect_eq snd_conv*)
@@ -1412,8 +1429,10 @@ definition DWaxiom' :: "('sf, 'sc, 'sz) formula"
   where "DWaxiom' = ([[EvolveODE (OSing vid1 (Function fid1 (singleton (Var vid1)))) (Prop vid2 (singleton (Var vid1)))]](Prop vid2 (singleton (Var vid1))))"
   
 definition DCaxiom :: "('sf, 'sc, 'sz) formula"
-  where "DCaxiom = (([[EvolveODE (OVar vid1) (Predicational pid1)]](Predicational pid2)) 
-  \<leftrightarrow> ( ([[EvolveODE (OVar vid1) (Predicational pid1)]]Predicational pid3) \<rightarrow>
+  where "DCaxiom = (
+([[EvolveODE (OVar vid1) (Predicational pid1)]]Predicational pid3) \<rightarrow>
+(([[EvolveODE (OVar vid1) (Predicational pid1)]](Predicational pid2)) 
+  \<leftrightarrow>  
        ([[EvolveODE (OVar vid1) (And (Predicational pid1) (Predicational pid3))]]Predicational pid2)))"
 
 definition DEaxiom :: "('sf, 'sc, 'sz) formula"
@@ -1449,18 +1468,38 @@ definition DGaxiom :: "('sf, 'sc, 'sz) formula"
 lemma Vagree_univ:"\<And>a b c d. Vagree (a,b) (c,d) UNIV \<Longrightarrow> a = c \<and> b = d"
   by (auto simp add: Vagree_def vec_eq_iff)
   
+(* fun mk_xode::"('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sz) ODE \<Rightarrow> 'sz simple_state \<Rightarrow> 'sz state"
+where "mk_xode I ODE sol = (sol, ODE_sem I ODE sol)"
+
+fun mk_v::"('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sz) ODE \<Rightarrow> 'sz state \<Rightarrow> 'sz simple_state \<Rightarrow> 'sz state"
+where "mk_v I ODE (\<nu>, \<nu>') sol = 
+((\<chi> i. (if Inl i \<in> ODE_vars ODE then sol else \<nu>) $ i),
+ (\<chi> i. (if Inr i \<in> ODE_vars ODE then ODE_sem I ODE sol else \<nu>') $ i))"
+
+lemma mk_v_agree:"Vagree (mk_v I ODE \<nu> sol) \<nu> (- ODE_vars ODE) 
+                \<and> Vagree (mk_v I ODE \<nu> sol) (mk_xode I ODE sol) (ODE_vars ODE)"
+  by (cases \<nu>) (auto simp add: Vagree_def)
+*)
 lemma DW_valid:"valid DWaxiom"
-  apply(auto simp add: DWaxiom_def valid_def Let_def)
+  apply(unfold DWaxiom_def valid_def Let_def impl_sem )
+  apply(auto simp only: fml_sem.simps prog_sem.simps)
   (* TODO: Proof should be much shorter *)
 proof -
-  fix I b aa ba sol t
-  show "is_interp I \<Longrightarrow>
+  fix I :: "('sf, 'sc, 'sz) interp" 
+  and aa ba ab bb 
+  and sol::"real \<Rightarrow> 'sz simple_state"
+  and t::real
+  have agree:"Vagree (mk_v I (OVar vid1) (ab, bb) (sol t)) 
+               (sol t, ODE_sem I (OVar vid1) (sol t)) (ODE_vars (OVar vid1))" 
+      using mk_v_agree[of I "(OVar vid1)" "(ab,bb)" "sol t"] by (auto)
+
+show"is_interp I \<Longrightarrow>
        0 \<le> t \<Longrightarrow>
-       Vagree (aa, ba) (sol 0, b) {} \<Longrightarrow>
-       Vagree (aa, ba) (sol t, ODEs I vid1 (sol t)) UNIV \<Longrightarrow>
-       (sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV} \<Longrightarrow>
-       (aa, ba) \<in> Contexts I pid1 UNIV"
-    using Vagree_univ[of "aa" "ba" "sol t" "ODEs I vid1 (sol t)"] apply(auto)
+       (aa, ba) = mk_v I (OVar vid1) (ab, bb) (sol t) \<Longrightarrow>
+       (sol solves_ode (\<lambda>_. ODE_sem I (OVar vid1))) {0..t}
+        {x. mk_v I (OVar vid1) (ab, bb) (sol t) \<in> fml_sem I (Predicational pid1)} \<Longrightarrow>
+       sol 0 = fst (ab, bb) \<Longrightarrow> mk_v I (OVar vid1) (ab, bb) (sol t) \<in> fml_sem I (Predicational pid1)"
+    using agree Vagree_univ[of "aa" "ba" "sol t" "ODEs I vid1 (sol t)"] apply(auto  simp only:)
     using solves_ode_domainD by fastforce
   qed
 
@@ -1469,8 +1508,112 @@ lemma DE_valid:"valid DEaxiom"
   done
 
 lemma DC_valid:"valid DCaxiom" 
-  apply(auto simp add: DCaxiom_def valid_def Let_def)
+  apply(unfold DCaxiom_def valid_def Let_def iff_sem impl_sem)
+  apply(auto simp add: Let_def)
+  apply(smt Collect_mono atLeastatMost_subset_iff solves_ode_on_subset)
   done
+(* 
+  (* let
+      ode = ODE_sem I ODE;
+      xode = \<lambda>x. (x, ode x);
+      \<omega> = (\<lambda>\<nu> sol. (THE \<omega>. Vagree \<omega> \<nu> (- ODE_vars ODE)
+                         \<and> Vagree \<omega> (xode sol) (ODE_vars ODE)))
+    in
+    {(\<nu>, \<omega> \<nu> (sol t)) | \<nu> sol t.
+      t \<ge> 0 \<and>
+      (sol solves_ode (\<lambda>_. ode)) {0 .. t} {x. \<omega> \<nu> x \<in> fml_sem I \<phi>} \<and>
+      sol 0 = fst \<nu>})*)
+
+
+
+ (*    \<Longrightarrow>
+       Vagree (aa, ba) (sol 0, b) {} \<Longrightarrow>
+       Vagree (aa, ba) (sol t, ODEs I vid1 (sol t)) UNIV \<Longrightarrow>
+       (sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV} \<Longrightarrow>
+       (aa, ba) \<in> Contexts I pid2 UNIV*)
+proof - 
+  fix I::"('sf, 'sc, 'sz) interp" 
+  and b aa ba::"'sz simple_state" 
+  and sol::"real \<Rightarrow> 'sz simple_state"
+  and t::real
+  assume good_interp:"is_interp I"
+  assume sem1:"\<forall>a ba. (\<exists>sola t.
+                  0 \<le> t \<and>
+                  Vagree (a, ba) (sol 0, b) {} \<and>
+                  Vagree (a, ba) (sola t, ODEs I vid1 (sola t)) UNIV \<and>
+                  (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV} \<and>
+                  sola 0 = sol 0) \<longrightarrow>
+              (a, ba) \<in> Contexts I pid3 UNIV"
+  hence "\<forall>ba. (\<exists>sola t.
+                  0 \<le> t \<and>
+                  Vagree (aa, ba) (sol 0, b) {} \<and>
+                  Vagree (aa, ba) (sola t, ODEs I vid1 (sola t)) UNIV \<and>
+                  (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV} \<and>
+                  sola 0 = sol 0) \<longrightarrow>
+              (aa, ba) \<in> Contexts I pid3 UNIV"
+     by (rule allE[where x=aa])
+   hence sem1':"(\<exists>sola t.
+                  0 \<le> t \<and>
+                  Vagree (aa, ba) (sol 0, b) {} \<and>
+                  Vagree (aa, ba) (sola t, ODEs I vid1 (sola t)) UNIV \<and>
+                  (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV} \<and>
+                  sola 0 = sol 0) \<longrightarrow>
+              (aa, ba) \<in> Contexts I pid3 UNIV"
+     by (rule allE[where x=ba])
+  assume sem2:"\<forall>a ba. (\<exists>sola t.
+                  0 \<le> t \<and>
+                  Vagree (a, ba) (sol 0, b) {} \<and>
+                  Vagree (a, ba) (sola t, ODEs I vid1 (sola t)) UNIV \<and>
+                  (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
+                   {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV \<and>
+                       (x, ODEs I vid1 x) \<in> Contexts I pid3 UNIV} \<and>
+                  sola 0 = sol 0) \<longrightarrow>
+              (a, ba) \<in> Contexts I pid2 UNIV"
+  assume t:"0 \<le> t"
+  
+  assume agree1:"Vagree (aa, ba) (sol 0, b) {}"
+  assume agree2:"Vagree (aa, ba) (sol t, ODEs I vid1 (sol t)) UNIV"
+  assume solves:"(sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV}"
+  have solT:"0 \<le> t \<and>
+                  Vagree (aa, ba) (sol 0, b) {} \<and>
+                  Vagree (aa, ba) (sol t, ODEs I vid1 (sol t)) UNIV \<and>
+                  (sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
+                   {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV } \<and>
+                  sol 0 = sol 0"
+    using t agree1 agree2 solves by auto
+  from sem1' solT have p3:"(aa, ba) \<in> Contexts I pid3 UNIV"
+    by auto
+  from sem2 have "\<forall>ba. (\<exists>sola t.
+                  0 \<le> t \<and>
+                  Vagree (aa, ba) (sol 0, b) {} \<and>
+                  Vagree (aa, ba) (sola t, ODEs I vid1 (sola t)) UNIV \<and>
+                  (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
+                   {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV \<and>
+                       (x, ODEs I vid1 x) \<in> Contexts I pid3 UNIV} \<and>
+                  sola 0 = sol 0) \<longrightarrow>
+              (aa, ba) \<in> Contexts I pid2 UNIV" by (rule allE[where x=aa])
+  hence imp:"(\<exists>sola t.
+                  0 \<le> t \<and>
+                  Vagree (aa, ba) (sol 0, b) {} \<and>
+                  Vagree (aa, ba) (sola t, ODEs I vid1 (sola t)) UNIV \<and>
+                  (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
+                   {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV \<and>
+                       (x, ODEs I vid1 x) \<in> Contexts I pid3 UNIV} \<and>
+                  sola 0 = sol 0) \<longrightarrow>
+              (aa, ba) \<in> Contexts I pid2 UNIV" by (rule allE[where x=ba])
+  have sol13: "0 \<le> t \<and>
+                  Vagree (aa, ba) (sol 0, b) {} \<and>
+                  Vagree (aa, ba) (sol t, ODEs I vid1 (sol t)) UNIV \<and>
+                  (sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
+                   {x. (x, ODEs I vid1 x) \<in> Contexts I pid1 UNIV \<and>
+                       (x, ODEs I vid1 x) \<in> Contexts I pid3 UNIV} \<and>
+                  sol 0 = sol 0"
+  by using solT p3 Collect_mono atLeastatMost_subset_iff solves_ode_on_subset by auto
+  
+  show "(aa, ba) \<in> Contexts I pid2 UNIV" using sem2 t agree1 agree2 solves by (auto elim: allE exE)
+  qed*)
+(*  apply (smt )
+  done *)
 
 lemma DS_valid:"valid DSaxiom"
   apply(auto simp add: DSaxiom_def valid_def Let_def)
@@ -1493,7 +1636,7 @@ lemma DG_valid:"valid DGaxiom"
   done
 
 
-
+oops
 section Substitution
 
 definition NTUadmit :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'c) trm \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
@@ -1905,7 +2048,7 @@ proof (induction rule: Tadmit.induct)
     qed (auto simp add: IH adjoint_def vec_extensionality safes)
   qed auto
 
-
+oops
 end
 
 (*
@@ -1914,28 +2057,17 @@ print_codesetup
 export_code dl.pointed_finite.NTsubst in Haskell
 module_name Example file "examples/"
 *)
-
+(*
 definition x::Enum.finite_5 where "x = finite_5.a\<^sub>1"
 global_interpretation ddl:pointed_finite x x x x x x x x x
   defines Tsubst = ddl.Tsubst
   done
 
 term ddl.Tsubst
-
-
 export_code "ddl.Tsubst" in SML
-(*  fixes foo :: "'sf::finite"
-  fixes bar :: "'sc::finite"
+*)
 
-  fixes bat :: "'sz::finite"
-  fixes vid1 :: 'sz
-  fixes vid2 :: 'sz
-  fixes vid3 :: 'sz
-  fixes fid1 :: 'sf
-  fixes fid2 :: 'sf
-  fixes fid3 :: 'sf
-  fixes pid1 :: 'sc
-  fixes pid2 :: 'sc
-  fixes pid3 :: 'sc*)
-  
+definition foo::real where "foo = 1.234"
+export_code foo in SML
+
 end
