@@ -1704,8 +1704,41 @@ lemma DS_valid:"valid DSaxiom"
   have "?abba = mk_v I (OSing vid1 (f0 fid1)) (a,b) (?sol r)"
     using prod_eq_iff prereq1a prereq1b by blast
   hence req1:"((a, b), ?abba) = ((a, b), mk_v I (OSing vid1 (f0 fid1)) (a,b) (?sol r))" by auto
-  have req3:"(?sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..r}
-              {x. mk_v I (OSing vid1 (f0 fid1)) (a,b) x \<in> fml_sem I (p1 vid2 vid1)}" sorry
+  have "sterm_sem I ($f fid1 (\<lambda>i. Const 0)) b = Functions I fid1 (\<chi> i. 0)" by auto
+  hence vec_simp:"(\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I ($f fid1 (\<lambda>i. Const 0)) b else 0) 
+      = (\<lambda>a b. \<chi> i. if i = vid1 then Functions I fid1 (\<chi> i. 0) else 0)"
+    by (auto simp add: vec_eq_iff cong: if_cong)
+    have req3:"(?sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..r}
+              {x. mk_v I (OSing vid1 (f0 fid1)) (a,b) x \<in> fml_sem I (p1 vid2 vid1)}" 
+    apply(auto simp add: f0_def empty_def vec_simp) 
+    apply(rule solves_odeI)
+    apply(auto simp only: has_vderiv_on_def has_vector_derivative_def)
+    subgoal for x 
+      apply(auto)
+      proof -
+        have deriv:"((\<lambda>t. \<chi> i. if i = vid1 then a $ i + Functions I fid1 (\<chi> _. 0) * t else a $ i) has_derivative
+     (\<lambda>x. (\<chi> i. x *\<^sub>R (if i = vid1
+                      then sterm_sem I ($f fid1 (\<lambda>i. Const 0))
+                            (\<chi> i. if i = vid1 then a $ i + Functions I fid1 (\<chi> _. 0) * x else a $ i)
+                      else 0))))
+     (at x within {0..r})"
+          apply(rule has_derivative_vec)
+          subgoal for i
+            apply(cases "i = vid1")
+            apply(auto  intro: derivative_eq_intros)
+            proof -
+              have deriv1:"((\<lambda>t. a $ vid1) has_derivative (\<lambda> _. 0)) (at x within {0..r})" by auto
+              have deriv2:"((\<lambda>t. Functions I fid1 (\<chi> _. 0) * t) has_derivative (\<lambda>x. x * Functions I fid1 (\<chi> i. 0))) (at x within {0..r})" 
+                by (simp add: has_derivative_mult_right mult_commute_abs)
+              have deriv3:"((\<lambda>t. a $ vid1 + Functions I fid1 (\<chi> _. 0) * t) has_derivative (\<lambda>x. 0 + x * Functions I fid1 (\<chi> i. 0))) (at x within {0..r})"
+                using deriv1 deriv2 by (auto simp only: has_derivative_add)
+              show "((\<lambda>t. a $ vid1 + Functions I fid1 (\<chi> _. 0) * t) has_derivative (\<lambda>x. x * Functions I fid1 (\<chi> i. 0))) (at x within {0..r})" 
+                using deriv3 by (auto simp add: deriv3)
+            qed 
+            done
+        show "?thesis" using deriv vec_simp sorry
+      qed
+      sorry
   have req4:"?sol 0 = fst (a,b)" by (auto simp: vec_eq_iff)
   have inPred:"?abba \<in> fml_sem I (p1 vid3 vid1)"
     using \<open>(\<exists>\<nu> sol t. ((a, b), ?abba) = (\<nu>, mk_v I (OSing vid1 (f0 fid1)) \<nu> (sol t)) \<and> 0 \<le> t \<and> (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..t} {x. mk_v I (OSing vid1 (f0 fid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and> sol 0 = fst \<nu>) \<longrightarrow> ?abba \<in> fml_sem I (p1 vid3 vid1)\<close>
