@@ -115,9 +115,7 @@ record ('a, 'b, 'c) subst =
   SODEs            :: "'c \<rightharpoonup> ('a, 'c) ODE"
 
 (*Differential dynamic logic can be defined for any finite types, given a 
-  few elements of those types (so that we can generate axioms). Note that
-  the elements need not be unique: If they are not unique, then the axioms
-  simply become less useful, but are still valid. *)
+  few elements of those types (so that we can generate axioms). *)
 locale pointed_finite =
   (* NOTE: 'sf, 'sz don't have to be finite *)
   fixes vid1 :: "('sz::finite)"
@@ -129,6 +127,15 @@ locale pointed_finite =
   fixes pid1 :: "('sc::finite)"
   fixes pid2 :: 'sc
   fixes pid3 :: 'sc
+  assumes vne12:"vid1 \<noteq> vid2"
+  assumes vne23:"vid2 \<noteq> vid3"
+  assumes vne13:"vid1 \<noteq> vid3"
+  assumes fne12:"fid1 \<noteq> fid2"
+  assumes fne23:"fid2 \<noteq> fid3"
+  assumes fne13:"fid1 \<noteq> fid3"
+  assumes pne12:"pid1 \<noteq> pid2"
+  assumes pne23:"pid2 \<noteq> pid3"
+  assumes pne13:"pid1 \<noteq> pid3"
 
 context pointed_finite
 begin
@@ -1608,6 +1615,7 @@ lemma DC_valid:"valid DCaxiom"
   apply(auto)
   apply(smt intervalE pointed_finite.mem_to_nonempty solves_ode_domainD)
   by fastforce
+  
 
 
 (* fun mk_xode::"('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sz) ODE \<Rightarrow> 'sz simple_state \<Rightarrow> 'sz state"
@@ -1633,23 +1641,79 @@ lemma DS_valid:"valid DSaxiom"
               ((a, b), \<omega>) = (\<nu>, mk_v I (OSing vid1 (f0 fid1)) \<nu> (sol t)) \<and>
               0 \<le> t \<and>
               (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..t}
-               {x. mk_v I (OSing vid1 (f0 fid1)) \<nu> (sol t) \<in> fml_sem I (p1 vid2 vid1)} \<and>
+               {x. mk_v I (OSing vid1 (f0 fid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and>
               sol 0 = fst \<nu>) \<longrightarrow>
           \<omega> \<in> fml_sem I (p1 vid3 vid1)"
-   assume leq:"dterm_sem I (Const 0) (repv (a, b) vid2 r) \<le> dterm_sem I (trm.Var vid2) (repv (a, b) vid2 r)"
-   assume pred:"\<forall>ra. repv (repv (a, b) vid2 r) vid3 ra
+   assume "dterm_sem I (Const 0) (repv (a, b) vid2 r) \<le> dterm_sem I (trm.Var vid2) (repv (a, b) vid2 r)"
+     hence leq:"0 \<le> r" by (auto)
+   assume "\<forall>ra. repv (repv (a, b) vid2 r) vid3 ra
           \<in> {v. dterm_sem I (Const 0) v \<le> dterm_sem I (trm.Var vid3) v} \<inter>
              {v. dterm_sem I (trm.Var vid3) v \<le> dterm_sem I (trm.Var vid2) v} \<longrightarrow>
           Predicates I vid2
            (\<chi> i. dterm_sem I (singleton (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid3))) i)
                   (repv (repv (a, b) vid2 r) vid3 ra))"
+   hence constraint:"\<forall>ra. (0 \<le> ra \<and> ra \<le> r) \<longrightarrow> 
+          (repv (repv (a, b) vid2 r) vid3 ra) 
+        \<in> fml_sem I (Prop vid2 (singleton (Plus (Var vid1) (Times (f0 fid1) (Var vid3)))))"
+       using leq by auto
   assume aaba:" (aa, ba) =
      repv (repv (a, b) vid2 r) vid1
       (dterm_sem I (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid2))) (repv (a, b) vid2 r))"
-           
+  let ?abba = "repv (repd (a, b) vid1 (Functions I fid1 (\<chi> i. 0))) vid1
+      (dterm_sem I (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid2))) (repv (a, b) vid2 r))"
+  from allW have thisW:"(\<exists>\<nu> sol t.
+             ((a, b), ?abba) = (\<nu>, mk_v I (OSing vid1 (f0 fid1)) \<nu> (sol t)) \<and>
+             0 \<le> t \<and>
+             (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..t}
+              {x. mk_v I (OSing vid1 (f0 fid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and>
+             sol 0 = fst \<nu>) \<longrightarrow>
+         ?abba \<in> fml_sem I (p1 vid3 vid1)" by blast
+  let ?c = "Functions I fid1 (\<chi> _. 0)"
+  let ?sol = "(\<lambda>t. \<chi> i. if i = vid1 then (a $ i) + ?c * t else (a $ i))"
+  have 
+  agrees:"Vagree (mk_v I (OSing vid1 (f0 fid1)) (a, b) (?sol r)) (a, b) (- ODE_vars (OSing vid1 (f0 fid1))) 
+  \<and> Vagree (mk_v I (OSing vid1 (f0 fid1)) (a, b) (?sol r))
+   (mk_xode I (OSing vid1 (f0 fid1)) (?sol r)) (ODE_vars (OSing vid1 (f0 fid1)))" 
+    using mk_v_agree[of "I" "(OSing vid1 (f0 fid1))" "(a,b)" "(?sol r)"] by auto
+  
+  have prereq1a:"fst ?abba
+  = fst (mk_v I (OSing vid1 (f0 fid1)) (a,b) (?sol r))"
+    using  agrees aaba 
+    apply (auto simp add: aaba Vagree_def)
+    apply (rule vec_extensionality)
+    subgoal for i
+      apply (cases "i = vid1")
+      using vne12 agrees Vagree_def  apply (auto simp add: aaba f0_def empty_def )
+      done
+    apply (rule vec_extensionality)
+      subgoal for i
+        apply (cases "i = vid1")
+        apply(auto  simp add: f0_def empty_def)
+      done
+    done
+  have prereq1b:"snd (?abba) = snd (mk_v I (OSing vid1 (f0 fid1)) (a,b) (?sol r))"
+    using  agrees aaba 
+    apply (auto simp add: aaba Vagree_def)
+    apply (rule vec_extensionality)
+    subgoal for i
+      apply (cases "i = vid1")
+      using vne12 agrees Vagree_def  apply (auto simp add: aaba f0_def empty_def )
+      done
+    done
+  
+  have "?abba = mk_v I (OSing vid1 (f0 fid1)) (a,b) (?sol r)"
+    using prod_eq_iff prereq1a prereq1b by blast
+  hence req1:"((a, b), ?abba) = ((a, b), mk_v I (OSing vid1 (f0 fid1)) (a,b) (?sol r))" by auto
+  have req3:"(?sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..r}
+              {x. mk_v I (OSing vid1 (f0 fid1)) (a,b) x \<in> fml_sem I (p1 vid2 vid1)}" sorry
+  have req4:"?sol 0 = fst (a,b)" by (auto simp: vec_eq_iff)
+  have inPred:"?abba \<in> fml_sem I (p1 vid3 vid1)"
+    using \<open>(\<exists>\<nu> sol t. ((a, b), ?abba) = (\<nu>, mk_v I (OSing vid1 (f0 fid1)) \<nu> (sol t)) \<and> 0 \<le> t \<and> (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..t} {x. mk_v I (OSing vid1 (f0 fid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and> sol 0 = fst \<nu>) \<longrightarrow> ?abba \<in> fml_sem I (p1 vid3 vid1)\<close>
+    using req1 leq req3 req4 thisW by fastforce
+  (* thus by lemma 6 consequence for formulas *)
   show"repv (repv (a, b) vid2 r) vid1
        (dterm_sem I (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid2))) (repv (a, b) vid2 r))
-       \<in> fml_sem I (p1 vid3 vid1)" sorry
+       \<in> fml_sem I (p1 vid3 vid1)" using req1 leq req3 req4 allW aaba
 next
   
 qed 
@@ -1901,7 +1965,7 @@ lemma dsem_to_ssem:"dfree \<theta> \<Longrightarrow> dterm_sem I \<theta> \<nu> 
 lemma adjoint_free:
   assumes sfree:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
   shows "adjoint I \<sigma> \<nu> =
-  \<lparr>Functions =   (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. sterm_sem (extendf I R) f' (fst \<nu>)) | None \<Rightarrow> Functions I f),
+  \<lparr>Functions =  (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. sterm_sem (extendf I R) f' (fst \<nu>)) | None \<Rightarrow> Functions I f),
    Predicates = (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda>R. \<nu> \<in> fml_sem (extendf I R) p') | None \<Rightarrow> Predicates I p),
    Contexts =   (\<lambda>c. case SContexts \<sigma> c of Some c' \<Rightarrow> (\<lambda>R. fml_sem (extendc I R) c') | None \<Rightarrow> Contexts I c),
    Programs =   (\<lambda>a. case SPrograms \<sigma> a of Some a' \<Rightarrow> prog_sem I a' | None \<Rightarrow> Programs I a),
