@@ -438,7 +438,7 @@ where
 | "prog_sem I (EvolveODE ODE \<phi>) =
     ({(\<nu>, mk_v I ODE \<nu> (sol t)) | \<nu> sol t.
       t \<ge> 0 \<and>
-      (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0 .. t} {x. mk_v I ODE \<nu> (sol t) \<in> fml_sem I \<phi>} \<and>
+      (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu> x \<in> fml_sem I \<phi>} \<and>
       sol 0 = fst \<nu>})"
 
 subsection \<open>Trivial Simplification Lemmas\<close>
@@ -926,6 +926,7 @@ next
       apply (erule converse_rtrancl_induct)
       by (auto simp add: Vagree_def)
 qed (auto simp add: Vagree_def)
+oops
 
 lemma coincidence_sterm:"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> sterm_sem I  \<theta> (fst \<nu>) = sterm_sem I \<theta> (fst \<nu>')"
   apply(induct "\<theta>")
@@ -1474,26 +1475,12 @@ lemma Vagree_univ:"\<And>a b c d. Vagree (a,b) (c,d) UNIV \<Longrightarrow> a = 
   
 lemma DW_valid:"valid DWaxiom"
   apply(unfold DWaxiom_def valid_def Let_def impl_sem )
+  apply(safe)
   apply(auto simp only: fml_sem.simps prog_sem.simps)
-  (* TODO: Proof should be much shorter *)
-proof -
-  fix I :: "('sf, 'sc, 'sz) interp" 
-  and aa ba ab bb 
-  and sol::"real \<Rightarrow> 'sz simple_state"
-  and t::real
-  have agree:"Vagree (mk_v I (OVar vid1) (ab, bb) (sol t)) 
-               (sol t, ODE_sem I (OVar vid1) (sol t)) (ODE_vars (OVar vid1))" 
-      using mk_v_agree[of I "(OVar vid1)" "(ab,bb)" "sol t"] by (auto)
-
-show"is_interp I \<Longrightarrow>
-       0 \<le> t \<Longrightarrow>
-       (aa, ba) = mk_v I (OVar vid1) (ab, bb) (sol t) \<Longrightarrow>
-       (sol solves_ode (\<lambda>_. ODE_sem I (OVar vid1))) {0..t}
-        {x. mk_v I (OVar vid1) (ab, bb) (sol t) \<in> fml_sem I (Predicational pid1)} \<Longrightarrow>
-       sol 0 = fst (ab, bb) \<Longrightarrow> mk_v I (OVar vid1) (ab, bb) (sol t) \<in> fml_sem I (Predicational pid1)"
-    using agree Vagree_univ[of "aa" "ba" "sol t" "ODEs I vid1 (sol t)"] apply(auto  simp only:)
-    using solves_ode_domainD by fastforce
-  qed
+  subgoal for I aa ba ab bb sol t using mk_v_agree[of I "(OVar vid1)" "(ab,bb)" "sol t"]
+    Vagree_univ[of "aa" "ba" "sol t" "ODEs I vid1 (sol t)"] solves_ode_domainD
+    by (fastforce)
+  done
 
 lemma DE_lemma:
 "repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1 (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))
@@ -1541,6 +1528,16 @@ proof
 qed
 
 lemma DE_valid:"valid DEaxiom"
+  apply (simp add: DEaxiom_def valid_def Let_def 
+    del: fml_sem.simps prog_sem.simps 
+    add: fml_sem.simps(6) prog_sem.simps(7) )
+  apply (intro allI impI arg_cong[where f=All] ext imp_cong refl)
+  apply (auto simp del: prog_sem.simps)
+
+  using DE_lemma
+  apply (auto simp: DEaxiom_def valid_def Let_def)
+  
+  
   apply(auto simp only: DEaxiom_def valid_def Let_def iff_sem impl_sem)
   apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq)
 proof -
@@ -1556,13 +1553,6 @@ proof -
                  {x. mk_v I (OSing vid1 (f1 fid1 vid1)) \<nu> (sol t) \<in> fml_sem I (p1 vid2 vid1)} \<and>
                 sol 0 = fst \<nu>) \<longrightarrow>
             \<omega> \<in> fml_sem I (P pid1)"
-   hence thisW:"(\<exists>\<nu> sol t.
-                ((ab, bb), (aa, ba)) = (\<nu>, mk_v I (OSing vid1 (f1 fid1 vid1)) \<nu> (sol t)) \<and>
-                0 \<le> t \<and>
-                (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f1 fid1 vid1)))) {0..t}
-                 {x. mk_v I (OSing vid1 (f1 fid1 vid1)) \<nu> (sol t) \<in> fml_sem I (p1 vid2 vid1)} \<and>
-                sol 0 = fst \<nu>) \<longrightarrow>
-            (aa,ba) \<in> fml_sem I (P pid1)" by (rule allE[where x="(aa,ba)"])
     assume t:"0 \<le> t"
     assume aaba:"(aa, ba) = mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)"
     assume solve:" (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f1 fid1 vid1)))) {0..t}
@@ -1571,7 +1561,7 @@ proof -
     assume rep:"   (ac, bc) =
        repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1
         (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))"
-    have aaba_sem:"(aa,ba) \<in> fml_sem I (P pid1)" using thisW t aaba solve sol0 rep by (auto)
+    have aaba_sem:"(aa,ba) \<in> fml_sem I (P pid1)" using allw t aaba solve sol0 rep by blast
     have truth:"repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1
         (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))
    = mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)"
@@ -1611,7 +1601,8 @@ proof -
              = mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)" using DE_lemma by auto
        thus "mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t) \<in> fml_sem I (P pid1)" using foo by auto
   qed
-
+  oops
+  
 lemma DC_valid:"valid DCaxiom" 
   apply(auto simp only: fml_sem.simps prog_sem.simps DCaxiom_def valid_def iff_sem impl_sem)
   apply(auto)
