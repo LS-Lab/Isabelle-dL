@@ -1697,6 +1697,13 @@ lemma DS_valid:"valid DSaxiom"
   hence vec_simp:"(\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I ($f fid1 (\<lambda>i. Const 0)) b else 0) 
       = (\<lambda>a b. \<chi> i. if i = vid1 then Functions I fid1 (\<chi> i. 0) else 0)"
     by (auto simp add: vec_eq_iff cong: if_cong)
+    (* TODO: have a solution that exists everywhere, want to restrict the domain. Fabian says this
+       should be true but has not been formalized just yet. *)
+    interpret ll:ll_on_open_it "{0 .. r}" "(\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))" "{x. mk_v I (OSing vid1 (f0 fid1)) (a,b) x \<in> fml_sem I (p1 vid2 vid1)}"
+    apply(standard)
+    apply(auto)
+    sorry
+    (* Combine with flow_usolves_ode and equals_flowI to get uniqueness of solution *)
     have req3:"(?sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..r}
               {x. mk_v I (OSing vid1 (f0 fid1)) (a,b) x \<in> fml_sem I (p1 vid2 vid1)}" 
     apply(auto simp add: f0_def empty_def vec_simp) 
@@ -1743,11 +1750,65 @@ lemma DS_valid:"valid DSaxiom"
   from inPred sem_eq have  inPred':"(aa,ba) \<in> fml_sem I (p1 vid3 vid1)"
     by auto
   (* thus by lemma 6 consequence for formulas *)
-  show"repv (repv (a, b) vid2 r) vid1
+  show "repv (repv (a, b) vid2 r) vid1
        (dterm_sem I (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid2))) (repv (a, b) vid2 r))
        \<in> fml_sem I (p1 vid3 vid1)" using aaba inPred' by auto
 next
-  
+  fix I::"('sf,'sc,'sz) interp"
+  and aa ba ab bb sol 
+  and t:: real
+  assume good_interp:"is_interp I"
+  assume all:"
+       \<forall>r. dterm_sem I (Const 0) (repv (ab, bb) vid2 r) \<le> dterm_sem I (trm.Var vid2) (repv (ab, bb) vid2 r) \<longrightarrow>
+           (\<forall>ra. repv (repv (ab, bb) vid2 r) vid3 ra
+                 \<in> {v. dterm_sem I (Const 0) v \<le> dterm_sem I (trm.Var vid3) v} \<inter>
+                    {v. dterm_sem I (trm.Var vid3) v \<le> dterm_sem I (trm.Var vid2) v} \<longrightarrow>
+                 Predicates I vid2
+                  (\<chi> i. dterm_sem I (singleton (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid3))) i)
+                         (repv (repv (ab, bb) vid2 r) vid3 ra))) \<longrightarrow>
+           (\<forall>\<omega>. \<omega> = repv (repv (ab, bb) vid2 r) vid1
+                      (dterm_sem I (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid2))) (repv (ab, bb) vid2 r)) \<longrightarrow>
+                 \<omega> \<in> fml_sem I (p1 vid3 vid1))"
+  assume t:"0 \<le> t"
+  assume aaba:"(aa, ba) = mk_v I (OSing vid1 (f0 fid1)) (ab, bb) (sol t)"
+  assume sol:"(sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..t}
+        {x. mk_v I (OSing vid1 (f0 fid1)) (ab, bb) x \<in> fml_sem I (p1 vid2 vid1)}"
+  hence constraint:"\<And>s. s \<in> {0 .. t} \<Longrightarrow> sol t \<in> {x. mk_v I (OSing vid1 (f0 fid1)) (ab, bb) x \<in> fml_sem I (p1 vid2 vid1)}"
+    using solves_ode_domainD by fastforce
+  assume sol0:"sol 0 = fst (ab, bb)"
+  have impl:"dterm_sem I (Const 0) (repv (ab, bb) vid2 t) \<le> dterm_sem I (trm.Var vid2) (repv (ab, bb) vid2 t) \<longrightarrow>
+           (\<forall>ra. repv (repv (ab, bb) vid2 t) vid3 ra
+                 \<in> {v. dterm_sem I (Const 0) v \<le> dterm_sem I (trm.Var vid3) v} \<inter>
+                    {v. dterm_sem I (trm.Var vid3) v \<le> dterm_sem I (trm.Var vid2) v} \<longrightarrow>
+                 Predicates I vid2
+                  (\<chi> i. dterm_sem I (singleton (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid3))) i)
+                         (repv (repv (ab, bb) vid2 t) vid3 ra))) \<longrightarrow>
+           (\<forall>\<omega>. \<omega> = repv (repv (ab, bb) vid2 t) vid1
+                      (dterm_sem I (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid2))) (repv (ab, bb) vid2 t)) \<longrightarrow>
+                 \<omega> \<in> fml_sem I (p1 vid3 vid1))" using all by auto
+    have another_eq:"\<And>i ra. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
+                  (mk_v I (OSing vid1 (f0 fid1)) (ab, bb) (sol t))
+
+          =  dterm_sem I (if i = vid1 then Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid3)) else Const 0)
+                  (\<chi> y. if vid3 = y then ra else fst (\<chi> y. if vid2 = y then t else fst (ab, bb) $ y, bb) $ y, bb)"
+      using mk_v_agree[of "I" "(OSing vid1 (f0 fid1))" "(ab, bb)" "(sol t)"]  vne12 vne23 vne13
+      apply(auto simp add: f0_def p1_def empty_def)
+      apply(unfold Vagree_def)
+      using aaba apply(simp add: f0_def empty_def)
+      (* TODO: Think this needs uniqueness of solutions *)
+      
+    have allRa:"(\<forall>ra. repv (repv (ab, bb) vid2 t) vid3 ra
+                 \<in> {v. dterm_sem I (Const 0) v \<le> dterm_sem I (trm.Var vid3) v} \<inter>
+                    {v. dterm_sem I (trm.Var vid3) v \<le> dterm_sem I (trm.Var vid2) v} \<longrightarrow>
+                 Predicates I vid2
+                  (\<chi> i. dterm_sem I (singleton (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid3))) i)
+                         (repv (repv (ab, bb) vid2 t) vid3 ra)))"
+      using mk_v_agree[of "I" "(OSing vid1 (f0 fid1))" "(ab, bb)" "(sol t)"]
+           vne23 constraint[of t] apply(auto simp add: Vagree_def p1_def)
+      (*
+      *)
+      
+  show "mk_v I (OSing vid1 (f0 fid1)) (ab, bb) (sol t) \<in> fml_sem I (p1 vid3 vid1)" sorry
 qed 
 oops
 
