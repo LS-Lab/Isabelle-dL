@@ -35,7 +35,7 @@ proof
     by (auto simp add: norm_axis intro!: exI[of _ 1])
 qed
 
-lemma has_derivative_vec:
+lemma has_derivative_vec[derivative_intros]:
   assumes "\<And>i. ((\<lambda>x. f i x) has_derivative (\<lambda>h. f' i h)) F"
   shows "((\<lambda>x. \<chi> i. f i x) has_derivative (\<lambda>h. \<chi> i. f' i h)) F"
 proof -
@@ -1713,6 +1713,12 @@ lemma DS_valid:"valid DSaxiom"
     apply(auto simp add: f0_def empty_def vec_simp) 
     apply(rule solves_odeI)
     apply(auto simp only: has_vderiv_on_def has_vector_derivative_def)
+    apply (rule has_derivative_vec[THEN has_derivative_eq_rhs])
+    defer
+    apply (rule ext)
+    apply (subst scaleR_vec_def)
+    apply (rule refl)
+    apply auto[]
     subgoal for x 
       apply(auto)
       proof -
