@@ -114,12 +114,12 @@ record ('a, 'b, 'c) subst =
   SPrograms        :: "'c \<rightharpoonup> ('a, 'b, 'c) hp"
   SODEs            :: "'c \<rightharpoonup> ('a, 'c) ODE"
 
+(*Differential dynamic logic can be defined for any finite types, given a 
+  few elements of those types (so that we can generate axioms). Note that
+  the elements need not be unique: If they are not unique, then the axioms
+  simply become less useful, but are still valid. *)
 locale pointed_finite =
-  (* NOTE: Doesn't have to be finite *)
-(*  fixes foo :: "'sf::finite"
-  fixes bar :: "'sc::finite"
-
-  fixes bat :: "'sz::finite"*)
+  (* NOTE: 'sf, 'sz don't have to be finite *)
   fixes vid1 :: "('sz::finite)"
   fixes vid2 :: 'sz
   fixes vid3 :: 'sz
@@ -140,19 +140,15 @@ text \<open>We formalize a state S as a pair (S_V, S_V') : \<real>^n \<times> \<
   have m arguments, any remaining arguments can be uniformly set to 0
   throughout a proof, which simulates the affect of having functions of less
   arguments.
-
-  Due to limitations in the analysis library, we fix n at the beginning of the
-  theory, where the intention is that n should be increased to allow checking
-  realistic proofs. For this to be a feasible option, the rest of this theory
-  needs to be agnostic to n, which it currently is not.
   \<close>
 
+(* TODO: Out of order *)
 subsection \<open>Syntax\<close>
 text \<open>
-  We define the syntax of dL terms, formulas and hybrid programs. We deviate
-  slightly from the definitions given in CADE'15, which allows arbitrarily
-  nested differentials, but with a surprising sem (e.g. (x')' is zero in
-  every state). 
+  We define the syntax of dL terms, formulas and hybrid programs. As in
+  CADE'15, the syntax allows arbitrarily nested differentials. However, 
+  the semantics of such terms is very surprising (e.g. (x')' is zero in
+  every state), so we define predicates dfree and dsafe to rule out such terms.
 
   In keeping with the CADE'15 presentation we currently make the simplifying
   assumption that all terms are smooth, and thus division and arbitrary
@@ -287,14 +283,10 @@ fun Diamond :: "('a, 'b, 'c) hp \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow>
 subsection \<open>Denotational Semantics\<close>
 
 text \<open>
-  The central definitions for the denotational sem are states \nu,
+  The central definitions for the denotational semantics are states \nu,
   interpretations I and the interpretation functions [[\psi]]I, [[\theta]]I\nu,
   [[\alpha]]I, which are represented by the Isabelle functions fml_sem,
   term_sem and prog_sem, respectively.
-
-  The additional functions term_list_sem and loop_sem are
-  straightforward helper functions for the definitions of term_sem
-  and prog_sem.
 
   To enable reasoning about derivatives of functions, our interpretations
   include a field FunctionFrechet specifying the Frechet derivative
@@ -368,14 +360,10 @@ fun ODE_sem:: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'c
 | "ODE_sem I (OSing x \<theta>) =  (\<lambda>\<nu>. (\<chi> i. if i = x then sterm_sem I \<theta> \<nu> else 0))"
 | "ODE_sem I (OProd ODE1 ODE2) = (\<lambda>\<nu>. ODE_sem I ODE1 \<nu> + ODE_sem I ODE2 \<nu>)"
 
-(* Sem for formulas, differential formulas, programs, initial-value problems and loops.
-   Loops and IVP's do not strictly have to have their own notion of sem, but for loops
-   it was helpful to describe the sem recursively and for IVP's it was convenient to
-   have ivp_sem as a helper function simply because ODE's are a little complicated.
-
-   Differential formulas do actually have to have their own notion of sem, because
+(* Semantics for formulas, differential formulas, programs.
+   Differential formulas do actually have to have their own notion of semantics, because
    the meaning of a differential formula (\<phi>)' depends on the syntax of the formula \<phi>:
-   we can have two formulas \<phi> and \<psi> that have the exact same sem, but where
+   we can have two formulas \<phi> and \<psi> that have the exact same semantics, but where
    (\<phi>)' and (\<psi>)' differ because \<phi> and \<psi> differ syntactically.
 *)
 definition Vagree :: "'c::finite state \<Rightarrow> 'c state \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
@@ -393,11 +381,17 @@ where
 fun mk_xode::"('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'c::finite) ODE \<Rightarrow> 'c::finite simple_state \<Rightarrow> 'c::finite state"
 where "mk_xode I ODE sol = (sol, ODE_sem I ODE sol)"
 
+(* Given an initial state \<nu> and solution to an ODE at some point, construct the resulting state \<omega>.
+ * This is defined using the SOME operator because the concrete definition is unwieldy. *)
 fun mk_v::"('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'c::finite) ODE \<Rightarrow> 'c::finite state \<Rightarrow> 'c::finite simple_state \<Rightarrow> 'c::finite state"
 where "mk_v I ODE \<nu> sol = (SOME \<omega>. 
   Vagree \<omega> \<nu> (- ODE_vars ODE) 
 \<and> Vagree \<omega> (mk_xode I ODE sol) (ODE_vars ODE))"
 
+(* Because mk_v is defined with the SOME operator, need to construct a state that satisfies
+   Vagree \<omega> \<nu> (- ODE_vars ODE) 
+ \<and> Vagree \<omega> (mk_xode I ODE sol) (ODE_vars ODE))"
+ to do anything useful *)
 fun concrete_v::"('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'c::finite) ODE \<Rightarrow> 'c::finite state \<Rightarrow> 'c::finite simple_state \<Rightarrow> 'c::finite state"
 where "concrete_v I ODE \<nu> sol =
 ((\<chi> i. (if Inl i \<in> ODE_vars ODE then sol else (fst \<nu>)) $ i),
@@ -815,16 +809,14 @@ lemma agree_refl:"Vagree \<nu> \<nu> A"
 by (auto simp add: Vagree_def)
 
 
-lemma
-  has_vector_derivative_zero_constant:
+lemma has_vector_derivative_zero_constant:
   assumes "convex s"
   assumes "\<And>x. x \<in> s \<Longrightarrow> (f has_vector_derivative 0) (at x within s)"
   obtains c where "\<And>x. x \<in> s \<Longrightarrow> f x = c"
   using has_derivative_zero_constant[of s f] assms
   by (auto simp: has_vector_derivative_def)
 
-lemma
-  has_vderiv_on_zero_constant:
+lemma has_vderiv_on_zero_constant:
   assumes "convex s"
   assumes "(f has_vderiv_on (\<lambda>h. 0)) s"
   obtains c where "\<And>x. x \<in> s \<Longrightarrow> f x = c"
@@ -885,25 +877,15 @@ proof -
  qed
 
 lemma bound_effect:
-fixes I
-assumes good_interp:"is_interp I"
-shows "\<And>\<nu> :: 'sz state. \<And>\<omega> ::'sz state. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<Longrightarrow> Vagree \<nu> \<omega> (- (BVP \<alpha>))"
+  fixes I
+  assumes good_interp:"is_interp I"
+  shows "\<And>\<nu> :: 'sz state. \<And>\<omega> ::'sz state. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<Longrightarrow> Vagree \<nu> \<omega> (- (BVP \<alpha>))"
 proof (induct rule: hp_induct)
   case Var then show "?case" 
     using agree_nil Compl_UNIV_eq pointed_finite.BVP.simps(1) by fastforce
-
-next
-  case Assign then show "?case"
-    by (simp add: Vagree_def)
-
-next
-  case DiffAssign then show "?case"
-    by (simp add: Vagree_def)
-
 next
   case Test then show "?case"
     by auto(simp add: agree_refl Compl_UNIV_eq Vagree_def)
-
 next
   case (Choice a b \<nu> \<omega>)
     assume IH1:"\<And>\<nu>'. \<And>\<omega>'. ((\<nu>', \<omega>') \<in> prog_sem I a \<Longrightarrow> Vagree \<nu>' \<omega>' (- BVP a))"
@@ -915,40 +897,35 @@ next
     have sub2:"-(BVP a) \<supseteq> (- BVP a \<inter> - BVP b)" by auto
     have res:"Vagree \<nu> \<omega> (- BVP a \<inter> - BVP b)" using agrees sub1 sub2 agree_supset by blast
     then show "?case" by auto
-
 next
   case (Compose a b \<nu> \<omega>) then show "?case" 
     using agree_trans by fastforce
-
 next
-fix ODE P \<nu> \<omega>
-show "(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))"
+  fix ODE P \<nu> \<omega>
+  show "(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))"
   proof -
-  assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P)"
-  have agree_comm:"\<And>A B V. Vagree A B V \<Longrightarrow> Vagree B A V" unfolding Vagree_def by auto
-  from sem have agree:"Vagree \<nu> \<omega> (- ODE_vars ODE)"
-    apply(simp only: prog_sem.simps mem_Collect_eq)
-    apply(erule exE)+
-  proof -
-    fix \<nu>' sol t  
-    assume assm: "(\<nu>, \<omega>) = (\<nu>', mk_v I ODE \<nu>' (sol t)) \<and>
-       0 \<le> t \<and>
-       (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu>' (sol t) \<in> fml_sem I P} \<and> sol 0 = fst \<nu>'"
-    hence "Vagree \<omega> \<nu> (- ODE_vars ODE)" using mk_v_agree[of I ODE \<nu> "(sol t)"] by auto
-    thus  "Vagree \<nu> \<omega> (- ODE_vars ODE)" by (rule agree_comm)
-    qed 
-  thus "Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))" by auto
+    assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P)"
+    have agree_comm:"\<And>A B V. Vagree A B V \<Longrightarrow> Vagree B A V" unfolding Vagree_def by auto
+    from sem have agree:"Vagree \<nu> \<omega> (- ODE_vars ODE)"
+      apply(simp only: prog_sem.simps mem_Collect_eq)
+      apply(erule exE)+
+      proof -
+        fix \<nu>' sol t  
+        assume assm: "(\<nu>, \<omega>) = (\<nu>', mk_v I ODE \<nu>' (sol t)) \<and>
+           0 \<le> t \<and>
+           (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu>' (sol t) \<in> fml_sem I P} \<and> sol 0 = fst \<nu>'"
+        hence "Vagree \<omega> \<nu> (- ODE_vars ODE)" using mk_v_agree[of I ODE \<nu> "(sol t)"] by auto
+        thus  "Vagree \<nu> \<omega> (- ODE_vars ODE)" by (rule agree_comm)
+      qed 
+    thus "Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))" by auto
   qed
-
-(* Var Assign DiffAssign Test Evolve Choice Compose Star *)
 next
   case (Star a \<nu> \<omega>) then
     show "?case" 
       apply (simp only: prog_sem.simps)
       apply (erule converse_rtrancl_induct)
       by (auto simp add: Vagree_def)
-qed
-
+qed (auto simp add: Vagree_def)
 
 lemma coincidence_sterm:"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> sterm_sem I  \<theta> (fst \<nu>) = sterm_sem I \<theta> (fst \<nu>')"
   apply(induct "\<theta>")
@@ -1484,18 +1461,6 @@ definition DGaxiom :: "('sf, 'sc, 'sz) formula"
 lemma Vagree_univ:"\<And>a b c d. Vagree (a,b) (c,d) UNIV \<Longrightarrow> a = c \<and> b = d"
   by (auto simp add: Vagree_def vec_eq_iff)
   
-(* fun mk_xode::"('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sz) ODE \<Rightarrow> 'sz simple_state \<Rightarrow> 'sz state"
-where "mk_xode I ODE sol = (sol, ODE_sem I ODE sol)"
-
-fun mk_v::"('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sz) ODE \<Rightarrow> 'sz state \<Rightarrow> 'sz simple_state \<Rightarrow> 'sz state"
-where "mk_v I ODE (\<nu>, \<nu>') sol = 
-((\<chi> i. (if Inl i \<in> ODE_vars ODE then sol else \<nu>) $ i),
- (\<chi> i. (if Inr i \<in> ODE_vars ODE then ODE_sem I ODE sol else \<nu>') $ i))"
-
-lemma mk_v_agree:"Vagree (mk_v I ODE \<nu> sol) \<nu> (- ODE_vars ODE) 
-                \<and> Vagree (mk_v I ODE \<nu> sol) (mk_xode I ODE sol) (ODE_vars ODE)"
-  by (cases \<nu>) (auto simp add: Vagree_def)
-*)
 lemma DW_valid:"valid DWaxiom"
   apply(unfold DWaxiom_def valid_def Let_def impl_sem )
   apply(auto simp only: fml_sem.simps prog_sem.simps)
@@ -1637,16 +1602,27 @@ proof -
   qed
 
 lemma DC_valid:"valid DCaxiom" 
-  apply(unfold DCaxiom_def valid_def iff_sem impl_sem)
-  apply(auto simp only: fml_sem.simps prog_sem.simps)
+  apply(auto simp only: fml_sem.simps prog_sem.simps DCaxiom_def valid_def iff_sem impl_sem)
   apply(auto simp del: mk_v.simps)
-  apply (smt intervalE pointed_finite.mem_to_nonempty solves_ode_domainD)
+  apply(smt intervalE pointed_finite.mem_to_nonempty solves_ode_domainD)
   by fastforce
 
+
+(* fun mk_xode::"('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sz) ODE \<Rightarrow> 'sz simple_state \<Rightarrow> 'sz state"
+where "mk_xode I ODE sol = (sol, ODE_sem I ODE sol)"
+
+fun mk_v::"('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sz) ODE \<Rightarrow> 'sz state \<Rightarrow> 'sz simple_state \<Rightarrow> 'sz state"
+where "mk_v I ODE (\<nu>, \<nu>') sol = 
+((\<chi> i. (if Inl i \<in> ODE_vars ODE then sol else \<nu>) $ i),
+ (\<chi> i. (if Inr i \<in> ODE_vars ODE then ODE_sem I ODE sol else \<nu>') $ i))"
+
+lemma mk_v_agree:"Vagree (mk_v I ODE \<nu> sol) \<nu> (- ODE_vars ODE) 
+                \<and> Vagree (mk_v I ODE \<nu> sol) (mk_xode I ODE sol) (ODE_vars ODE)"
+  by (cases \<nu>) (auto simp add: Vagree_def)
+*)
 lemma DS_valid:"valid DSaxiom"
   apply(auto simp add: DSaxiom_def valid_def Let_def)
   done
-
 
 (* TODO:  differential formula semantics actually bogus right now
  * I believe the only correct semantics to give a DiffFormula(Predicational P)
@@ -1663,8 +1639,8 @@ lemma DG_valid:"valid DGaxiom"
   apply(auto simp add: DGaxiom_def valid_def Let_def)
   done
 
-
 oops
+
 section Substitution
 
 definition NTUadmit :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'c) trm \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
@@ -1892,13 +1868,13 @@ lemma dsem_to_ssem:"dfree \<theta> \<Longrightarrow> dterm_sem I \<theta> \<nu> 
 
 (* TODO: simplify*)
 lemma adjoint_free:
-assumes sfree:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
-shows "adjoint I \<sigma> \<nu> =
-\<lparr>Functions =   (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. sterm_sem (extendf I R) f' (fst \<nu>)) | None \<Rightarrow> Functions I f),
- Predicates = (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda>R. \<nu> \<in> fml_sem (extendf I R) p') | None \<Rightarrow> Predicates I p),
- Contexts =   (\<lambda>c. case SContexts \<sigma> c of Some c' \<Rightarrow> (\<lambda>R. fml_sem (extendc I R) c') | None \<Rightarrow> Contexts I c),
- Programs =   (\<lambda>a. case SPrograms \<sigma> a of Some a' \<Rightarrow> prog_sem I a' | None \<Rightarrow> Programs I a),
- ODEs =     (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_sem I ode' | None \<Rightarrow> ODEs I ode)\<rparr>"
+  assumes sfree:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
+  shows "adjoint I \<sigma> \<nu> =
+  \<lparr>Functions =   (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. sterm_sem (extendf I R) f' (fst \<nu>)) | None \<Rightarrow> Functions I f),
+   Predicates = (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda>R. \<nu> \<in> fml_sem (extendf I R) p') | None \<Rightarrow> Predicates I p),
+   Contexts =   (\<lambda>c. case SContexts \<sigma> c of Some c' \<Rightarrow> (\<lambda>R. fml_sem (extendc I R) c') | None \<Rightarrow> Contexts I c),
+   Programs =   (\<lambda>a. case SPrograms \<sigma> a of Some a' \<Rightarrow> prog_sem I a' | None \<Rightarrow> Programs I a),
+   ODEs =     (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_sem I ode' | None \<Rightarrow> ODEs I ode)\<rparr>"
   using dsem_to_ssem[OF sfree] 
   by (cases \<nu>) (auto simp add: adjoint_def fun_eq_iff split: option.split)
 
