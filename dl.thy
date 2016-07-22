@@ -1616,20 +1616,6 @@ lemma DC_valid:"valid DCaxiom"
   apply(smt intervalE pointed_finite.mem_to_nonempty solves_ode_domainD)
   by fastforce
   
-
-
-(* fun mk_xode::"('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sz) ODE \<Rightarrow> 'sz simple_state \<Rightarrow> 'sz state"
-where "mk_xode I ODE sol = (sol, ODE_sem I ODE sol)"
-
-fun mk_v::"('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sz) ODE \<Rightarrow> 'sz state \<Rightarrow> 'sz simple_state \<Rightarrow> 'sz state"
-where "mk_v I ODE (\<nu>, \<nu>') sol = 
-((\<chi> i. (if Inl i \<in> ODE_vars ODE then sol else \<nu>) $ i),
- (\<chi> i. (if Inr i \<in> ODE_vars ODE then ODE_sem I ODE sol else \<nu>') $ i))"
-
-lemma mk_v_agree:"Vagree (mk_v I ODE \<nu> sol) \<nu> (- ODE_vars ODE) 
-                \<and> Vagree (mk_v I ODE \<nu> sol) (mk_xode I ODE sol) (ODE_vars ODE)"
-  by (cases \<nu>) (auto simp add: Vagree_def)
-*)
 lemma DS_valid:"valid DSaxiom"
   apply(auto simp only: DSaxiom_def valid_def Let_def iff_sem impl_sem)
   apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq  iff_sem impl_sem)
@@ -1718,33 +1704,32 @@ lemma DS_valid:"valid DSaxiom"
     apply (rule ext)
     apply (subst scaleR_vec_def)
     apply (rule refl)
-    apply auto[]
-    subgoal for x 
-      apply(auto)
-      proof -
-        have deriv:"((\<lambda>t. \<chi> i. if i = vid1 then a $ i + Functions I fid1 (\<chi> _. 0) * t else a $ i) has_derivative
-     (\<lambda>x. (\<chi> i. x *\<^sub>R (if i = vid1
-                      then sterm_sem I ($f fid1 (\<lambda>i. Const 0))
-                            (\<chi> i. if i = vid1 then a $ i + Functions I fid1 (\<chi> _. 0) * x else a $ i)
-                      else 0))))
-     (at x within {0..r})"
-          apply(rule has_derivative_vec)
-          subgoal for i
-            apply(cases "i = vid1")
-            apply(auto  intro: derivative_eq_intros)
-            proof -
-              have deriv1:"((\<lambda>t. a $ vid1) has_derivative (\<lambda> _. 0)) (at x within {0..r})" by auto
-              have deriv2:"((\<lambda>t. Functions I fid1 (\<chi> _. 0) * t) has_derivative (\<lambda>x. x * Functions I fid1 (\<chi> i. 0))) (at x within {0..r})" 
-                by (simp add: has_derivative_mult_right mult_commute_abs)
-              have deriv3:"((\<lambda>t. a $ vid1 + Functions I fid1 (\<chi> _. 0) * t) has_derivative (\<lambda>x. 0 + x * Functions I fid1 (\<chi> i. 0))) (at x within {0..r})"
-                using deriv1 deriv2 by (auto simp only: has_derivative_add)
-              show "((\<lambda>t. a $ vid1 + Functions I fid1 (\<chi> _. 0) * t) has_derivative (\<lambda>x. x * Functions I fid1 (\<chi> i. 0))) (at x within {0..r})" 
-                using deriv3 by (auto simp add: deriv3)
-            qed 
-            done
-        show "?thesis" using deriv vec_simp sorry
-      qed
-      sorry
+    apply (auto intro!: derivative_eq_intros)
+    (* Domain constraint satisfied*)
+    using constraint apply (auto)
+    subgoal for t
+      apply(erule allE[where x="t"])
+      apply(auto simp add: p1_def)
+    proof -
+      have eq:"(\<chi> i. dterm_sem I (if i = vid1 then Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid3)) else Const 0)
+            (\<chi> y. if vid3 = y then t else fst (\<chi> y. if vid2 = y then r else fst (a, b) $ y, b) $ y, b)) =
+            (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
+              (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. Const 0))) (a, b)
+                (\<chi> i. if i = vid1 then a $ i + Functions I fid1 (\<chi> _. 0) * t else a $ i)))"
+        using vne12 vne13 mk_v_agree[of "I" "(OSing vid1 ($f fid1 (\<lambda>i. Const 0)))" "(a, b)" "(\<chi> i. if i = vid1 then a $ i + Functions I fid1 (\<chi> _. 0) * t else a $ i)"]
+        by (auto simp add: vec_eq_iff f0_def empty_def Vagree_def)
+      show "0 \<le> t \<Longrightarrow>
+    t \<le> r \<Longrightarrow>
+    Predicates I vid2
+     (\<chi> i. dterm_sem I (if i = vid1 then Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid3)) else Const 0)
+            (\<chi> y. if vid3 = y then t else fst (\<chi> y. if vid2 = y then r else fst (a, b) $ y, b) $ y, b)) \<Longrightarrow>
+    Predicates I vid2
+     (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
+            (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. Const 0))) (a, b)
+              (\<chi> i. if i = vid1 then a $ i + Functions I fid1 (\<chi> _. 0) * t else a $ i)))" using eq by auto
+    qed
+    done
+      
   have req4:"?sol 0 = fst (a,b)" by (auto simp: vec_eq_iff)
   have inPred:"?abba \<in> fml_sem I (p1 vid3 vid1)"
     using \<open>(\<exists>\<nu> sol t. ((a, b), ?abba) = (\<nu>, mk_v I (OSing vid1 (f0 fid1)) \<nu> (sol t)) \<and> 0 \<le> t \<and> (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..t} {x. mk_v I (OSing vid1 (f0 fid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and> sol 0 = fst \<nu>) \<longrightarrow> ?abba \<in> fml_sem I (p1 vid3 vid1)\<close>
