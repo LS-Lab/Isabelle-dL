@@ -1439,6 +1439,14 @@ definition DEaxiom :: "('sf, 'sc, 'sz) formula"
  ([[EvolveODE (OSing vid1 (f1 fid1 vid1)) (p1 vid2 vid1)]]
     [[DiffAssign vid1 (f1 fid1 vid1)]]P pid1))"
 
+  
+(* 
+Function symbols?
+[x'=c()&Q(1)]3(1)
+<-> A t. (t \<ge> 0) \<rightarrow> (A s. (s\<ge>0 & t\<ge>s) \<rightarrow> Q(x+(c*s))) \<rightarrow> 
+  [x:= x+(c()*t)]Q(x)) 
+q should be x. change it!
+*)
 definition DSaxiom :: "('sf, 'sc, 'sz) formula"
   where "DSaxiom = 
 (([[EvolveODE (OSing vid1 (f0 fid1)) (p1 vid2 vid1)]]p1 vid3 vid1)
@@ -1449,7 +1457,7 @@ definition DSaxiom :: "('sf, 'sc, 'sz) formula"
    (Forall vid3 
      (Implies (And (Geq (Var vid3) (Const 0)) (Geq (Var vid2) (Var vid3)))
         (Prop vid2 (singleton (Plus (Var vid1) (Times (f0 fid1) (Var vid3)))))))
-   ([[Assign vid1 (Plus (Var vid1) (Times (f0 fid1) (Var vid2)))]]p1 vid2 vid1)))))"
+   ([[Assign vid1 (Plus (Var vid1) (Times (f0 fid1) (Var vid2)))]]p1 vid3 vid1)))))"
 
 definition DIaxiom :: "('sf, 'sc, 'sz) formula"
   where "DIaxiom = (((Predicational pid1) \<rightarrow> (And (Predicational pid2) ([[EvolveODE (OVar vid1) (Predicational pid1)]](DiffFormula (Predicational pid2))))) 
@@ -1606,7 +1614,7 @@ proof -
 
 lemma DC_valid:"valid DCaxiom" 
   apply(auto simp only: fml_sem.simps prog_sem.simps DCaxiom_def valid_def iff_sem impl_sem)
-  apply(auto simp del: mk_v.simps)
+  apply(auto)
   apply(smt intervalE pointed_finite.mem_to_nonempty solves_ode_domainD)
   by fastforce
 
@@ -1626,9 +1634,35 @@ lemma mk_v_agree:"Vagree (mk_v I ODE \<nu> sol) \<nu> (- ODE_vars ODE)
 lemma DS_valid:"valid DSaxiom"
   apply(auto simp only: DSaxiom_def valid_def Let_def iff_sem impl_sem)
   apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq  iff_sem impl_sem)
-  apply(auto simp only: f0_def p1_def f1_def)
-  sledgehammer
-  done
+  proof -
+    fix I::"('sf,'sc,'sz) interp" 
+    and a b r aa ba
+   assume good_interp:"is_interp I"
+   assume allW:"\<forall>\<omega>. (\<exists>\<nu> sol t.
+              ((a, b), \<omega>) = (\<nu>, mk_v I (OSing vid1 (f0 fid1)) \<nu> (sol t)) \<and>
+              0 \<le> t \<and>
+              (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..t}
+               {x. mk_v I (OSing vid1 (f0 fid1)) \<nu> (sol t) \<in> fml_sem I (p1 vid2 vid1)} \<and>
+              sol 0 = fst \<nu>) \<longrightarrow>
+          \<omega> \<in> fml_sem I (p1 vid3 vid1)"
+   assume leq:"dterm_sem I (Const 0) (repv (a, b) vid2 r) \<le> dterm_sem I (trm.Var vid2) (repv (a, b) vid2 r)"
+   assume pred:"\<forall>ra. repv (repv (a, b) vid2 r) vid3 ra
+          \<in> {v. dterm_sem I (Const 0) v \<le> dterm_sem I (trm.Var vid3) v} \<inter>
+             {v. dterm_sem I (trm.Var vid3) v \<le> dterm_sem I (trm.Var vid2) v} \<longrightarrow>
+          Predicates I vid2
+           (\<chi> i. dterm_sem I (singleton (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid3))) i)
+                  (repv (repv (a, b) vid2 r) vid3 ra))"
+  assume aaba:" (aa, ba) =
+     repv (repv (a, b) vid2 r) vid1
+      (dterm_sem I (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid2))) (repv (a, b) vid2 r))"
+           
+  show"repv (repv (a, b) vid2 r) vid1
+       (dterm_sem I (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid2))) (repv (a, b) vid2 r))
+       \<in> fml_sem I (p1 vid3 vid1)" sorry
+next
+  
+qed 
+oops
 
 (* TODO:  differential formula semantics actually bogus right now
  * I believe the only correct semantics to give a DiffFormula(Predicational P)
