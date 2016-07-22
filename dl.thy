@@ -262,22 +262,22 @@ type_synonym ('a, 'c) stuple = "('c \<Rightarrow> ('a, 'c) trm)"
 type_synonym ('a, 'c) dtuple = "('c \<Rightarrow> ('a, 'c) trm)"
 
 (* Derived forms *)
-fun Or :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" (infixl "||" 7)
+definition Or :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" (infixl "||" 7)
   where "Or P Q = Not (And (Not P) (Not Q))"
 
-fun Implies :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" (infixr "\<rightarrow>" 10)
+definition Implies :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" (infixr "\<rightarrow>" 10)
   where "Implies P Q = Or Q (Not P)"
 
-fun Equiv :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" (infixl "\<leftrightarrow>" 10)
+definition Equiv :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" (infixl "\<leftrightarrow>" 10)
   where "Equiv P Q = Or (And P Q) (And (Not P) (Not Q))"
 
 fun Exists :: "'c \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula"
   where "Exists x P = Not (Forall x (Not P))"
 
-fun Equals :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) formula"
+definition Equals :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) formula"
   where "Equals \<theta> \<theta>' = ((Geq \<theta> \<theta>') && (Geq \<theta>' \<theta>))"
 
-fun Diamond :: "('a, 'b, 'c) hp \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" ("(\<langle>_\<rangle>_)" 10)
+definition Diamond :: "('a, 'b, 'c) hp \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" ("(\<langle>_\<rangle>_)" 10)
   where "Diamond \<alpha> P = Not(Box \<alpha> (Not P))"
 
 subsection \<open>Denotational Semantics\<close>
@@ -383,7 +383,7 @@ where "mk_xode I ODE sol = (sol, ODE_sem I ODE sol)"
 
 (* Given an initial state \<nu> and solution to an ODE at some point, construct the resulting state \<omega>.
  * This is defined using the SOME operator because the concrete definition is unwieldy. *)
-fun mk_v::"('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'c::finite) ODE \<Rightarrow> 'c::finite state \<Rightarrow> 'c::finite simple_state \<Rightarrow> 'c::finite state"
+definition mk_v::"('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'c::finite) ODE \<Rightarrow> 'c::finite state \<Rightarrow> 'c::finite simple_state \<Rightarrow> 'c::finite state"
 where "mk_v I ODE \<nu> sol = (SOME \<omega>. 
   Vagree \<omega> \<nu> (- ODE_vars ODE) 
 \<and> Vagree \<omega> (mk_xode I ODE sol) (ODE_vars ODE))"
@@ -404,7 +404,7 @@ lemma mk_v_exists:"\<exists>\<omega>. Vagree \<omega> \<nu> (- ODE_vars ODE)
 
 lemma mk_v_agree:"Vagree (mk_v I ODE \<nu> sol) \<nu> (- ODE_vars ODE) 
 \<and> Vagree (mk_v I ODE \<nu> sol) (mk_xode I ODE sol) (ODE_vars ODE)"
-  apply (unfold mk_v.simps)
+  apply (unfold mk_v_def)
   apply (rule someI_ex)
   apply (rule mk_v_exists)
   done
@@ -1134,16 +1134,13 @@ definition CE_holds :: "'sc \<Rightarrow> ('sf, 'sc, 'sz) formula \<Rightarrow> 
 definition diff_const_axiom :: "('sf, 'sc, 'sz) formula"
   where "diff_const_axiom \<equiv> Equals (Differential ($f fid1 sempty)) (Const 0)"
 
-theorem test_valid: "valid test_axiom"
-  by (auto simp add: valid_def test_axiom_def)
-
 lemma or_sem [simp]:
   "fml_sem I (Or \<phi> \<psi>) = fml_sem I \<phi> \<union> fml_sem I \<psi>"
-  by (auto)
+  by (auto simp add: Or_def)
 
 lemma iff_sem [simp]: "(\<nu> \<in> fml_sem I (A \<leftrightarrow> B))
   \<longleftrightarrow> ((\<nu> \<in> fml_sem I A) \<longleftrightarrow> (\<nu> \<in> fml_sem I B))"
-  by (auto)
+  by (auto simp add: Equiv_def)
 
 lemma box_sem:"fml_sem I (Box \<alpha> \<phi>) = {\<nu>. \<forall> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<longrightarrow> \<omega> \<in> fml_sem I \<phi>}"
   by (auto)
@@ -1153,15 +1150,15 @@ lemma loop_sem:"prog_sem I (Loop \<alpha>) = (prog_sem I \<alpha>)\<^sup>*"
 
 lemma impl_sem [simp]: "(\<nu> \<in> fml_sem I (A \<rightarrow> B))
   = ((\<nu> \<in> fml_sem I A) \<longrightarrow> (\<nu> \<in> fml_sem I B))"
-  by (auto)
+  by (auto simp add: Implies_def)
 
 lemma equals_sem [simp]: "(\<nu> \<in> fml_sem I (Equals \<theta> \<theta>'))
   = (dterm_sem I \<theta> \<nu> = dterm_sem I \<theta>' \<nu>)"
-  by (auto)
+  by (auto simp add: Equals_def)
 
 lemma diamond_sem [simp]: "fml_sem I (Diamond \<alpha> \<phi>)
   = {\<nu>. \<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<and> \<omega> \<in> fml_sem I \<phi>}"
-  by (auto)
+  by (auto simp add: Diamond_def)
 
 lemma iff_to_impl: "((\<nu> \<in> fml_sem I A) \<longleftrightarrow> (\<nu> \<in> fml_sem I B))
   \<longleftrightarrow> (((\<nu> \<in> fml_sem I A) \<longrightarrow> (\<nu> \<in> fml_sem I B))
@@ -1176,6 +1173,9 @@ lemma proj_sing1:"(singleton \<theta> vid1) = \<theta>"
 
 lemma proj_sing2:"vid1 \<noteq> y  \<Longrightarrow> (singleton \<theta> y) = (Const 0)"
   by (auto simp add: singleton_def)
+
+theorem test_valid: "valid test_axiom"
+  by (auto simp add: valid_def test_axiom_def)
 
 lemma assign_lem1:
 "dterm_sem I (if i = vid1 then Var vid1 else (Const 0))
@@ -1423,6 +1423,9 @@ definition DCaxiom :: "('sf, 'sc, 'sz) formula"
 definition f1::"'sf \<Rightarrow> 'sz \<Rightarrow> ('sf,'sz) trm"
 where "f1 f x = Function f (singleton (Var x))"
 
+definition f0::"'sf \<Rightarrow> ('sf,'sz) trm"
+where "f0 f = Function f empty"
+
 definition p1::"'sz \<Rightarrow> 'sz \<Rightarrow> ('sf, 'sc, 'sz) formula"
 where "p1 p x = Prop p (singleton (Var x))"
 
@@ -1438,15 +1441,15 @@ definition DEaxiom :: "('sf, 'sc, 'sz) formula"
 
 definition DSaxiom :: "('sf, 'sc, 'sz) formula"
   where "DSaxiom = 
-(([[EvolveODE (OSing vid1 (Function fid1 empty)) (Prop vid2 (singleton (Var vid1)))]]Prop vid3 (singleton (Var vid1)))
+(([[EvolveODE (OSing vid1 (f0 fid1)) (p1 vid2 vid1)]]p1 vid3 vid1)
 \<leftrightarrow> 
 (Forall vid2 
  (Implies (Geq (Var vid2) (Const 0)) 
  (Implies 
    (Forall vid3 
      (Implies (And (Geq (Var vid3) (Const 0)) (Geq (Var vid2) (Var vid3)))
-        (Prop vid2 (singleton (Plus (Var vid1) (Times (Function fid1 empty) (Var vid3)))))))
-   ([[Assign vid1 (Plus (Var vid1) (Times (Function fid1 empty) (Var vid2)))]]Prop vid2 (singleton (Var vid1)))))))"
+        (Prop vid2 (singleton (Plus (Var vid1) (Times (f0 fid1) (Var vid3)))))))
+   ([[Assign vid1 (Plus (Var vid1) (Times (f0 fid1) (Var vid2)))]]p1 vid2 vid1)))))"
 
 definition DIaxiom :: "('sf, 'sc, 'sz) formula"
   where "DIaxiom = (((Predicational pid1) \<rightarrow> (And (Predicational pid2) ([[EvolveODE (OVar vid1) (Predicational pid1)]](DiffFormula (Predicational pid2))))) 
@@ -1506,7 +1509,7 @@ proof
       have argsEq:"(\<chi> i. dterm_sem I (singleton (trm.Var vid1) i)
             (mk_v I (OSing vid1 ($f fid1 (singleton (trm.Var vid1)))) (ab, bb) (sol t)))
             = (\<chi> i.  sterm_sem I (singleton (trm.Var vid1) i) (sol t))"
-        using agree by (simp add: vec_extensionality Vagree_def f1_def del: mk_v.simps)
+        using agree by (simp add: vec_extensionality Vagree_def f1_def)
       thus "Functions I fid1 (\<chi> i. dterm_sem I (singleton (trm.Var vid1) i)
             (mk_v I (OSing vid1 ($f fid1 (singleton (trm.Var vid1)))) (ab, bb) (sol t))) 
           = snd (mk_v I (OSing vid1 ($f fid1 (singleton (trm.Var vid1)))) (ab, bb) (sol t)) $ vid1"
@@ -1514,7 +1517,7 @@ proof
     qed
   have eqSnd:"(\<chi> y. if vid1 = y then snd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) $ vid1
         else snd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) $ y) = snd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t))"
-    by (simp add: vec_extensionality del: mk_v.simps)
+    by (simp add: vec_extensionality)
   have truth:"repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1
         (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))
       = mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)"
@@ -1621,7 +1624,10 @@ lemma mk_v_agree:"Vagree (mk_v I ODE \<nu> sol) \<nu> (- ODE_vars ODE)
   by (cases \<nu>) (auto simp add: Vagree_def)
 *)
 lemma DS_valid:"valid DSaxiom"
-  apply(auto simp add: DSaxiom_def valid_def Let_def)
+  apply(auto simp only: DSaxiom_def valid_def Let_def iff_sem impl_sem)
+  apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq  iff_sem impl_sem)
+  apply(auto simp only: f0_def p1_def f1_def)
+  sledgehammer
   done
 
 (* TODO:  differential formula semantics actually bogus right now
