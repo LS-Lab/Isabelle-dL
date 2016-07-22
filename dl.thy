@@ -939,6 +939,9 @@ lemma coincidence_sterm:"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> st
   apply(auto simp add: Vagree_def)
   by (meson rangeI)
 
+lemma coincidence_formula:"Vagree \<nu> \<nu>' (FVF \<phi>) \<Longrightarrow> ((\<nu> \<in> fml_sem I \<phi>) \<longleftrightarrow> (\<nu>' \<in> fml_sem I \<phi>))"
+  sorry
+
 lemma sum_unique_nonzero:
   fixes i::"'sv::finite" and f::"'sv \<Rightarrow> real"
   assumes restZero:"\<And>j. j\<in>(UNIV::'sv set) \<Longrightarrow> j \<noteq> i \<Longrightarrow> f j = 0"
@@ -1734,10 +1737,15 @@ lemma DS_valid:"valid DSaxiom"
   have inPred:"?abba \<in> fml_sem I (p1 vid3 vid1)"
     using \<open>(\<exists>\<nu> sol t. ((a, b), ?abba) = (\<nu>, mk_v I (OSing vid1 (f0 fid1)) \<nu> (sol t)) \<and> 0 \<le> t \<and> (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..t} {x. mk_v I (OSing vid1 (f0 fid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and> sol 0 = fst \<nu>) \<longrightarrow> ?abba \<in> fml_sem I (p1 vid3 vid1)\<close>
     using req1 leq req3 req4 thisW by fastforce
+  have sem_eq:"?abba \<in> fml_sem I (p1 vid3 vid1) \<longleftrightarrow> (aa,ba) \<in> fml_sem I (p1 vid3 vid1)"
+    apply(rule coincidence_formula)
+    by (auto simp add: aaba Vagree_def p1_def f0_def empty_def)
+  from inPred sem_eq have  inPred':"(aa,ba) \<in> fml_sem I (p1 vid3 vid1)"
+    by auto
   (* thus by lemma 6 consequence for formulas *)
   show"repv (repv (a, b) vid2 r) vid1
        (dterm_sem I (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid2))) (repv (a, b) vid2 r))
-       \<in> fml_sem I (p1 vid3 vid1)" using req1 leq req3 req4 allW aaba
+       \<in> fml_sem I (p1 vid3 vid1)" using aaba inPred' by auto
 next
   
 qed 
