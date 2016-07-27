@@ -1110,7 +1110,25 @@ next
 next
   case hpsafe_Not then show "?case" by auto
 next
-  case hpsafe_And then show "?case" sorry
+  case (hpsafe_And p1 p2)
+  then have safes:"fsafe p1" "fsafe p2" 
+    and IH1:"Iagree I J (SIGF p1) \<longrightarrow> Vagree \<nu> \<nu>' (FVF p1) \<longrightarrow> (\<nu> \<in> fml_sem I p1) = (\<nu>' \<in> fml_sem J p1)"
+    and IH2:"Iagree I J (SIGF p2) \<longrightarrow> Vagree \<nu> \<nu>' (FVF p2) \<longrightarrow> (\<nu> \<in> fml_sem I p2) = (\<nu>' \<in> fml_sem J p2)"
+    by auto
+    have almost:"Iagree I J (SIGF (And p1 p2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (And p1 p2)) \<Longrightarrow> (\<nu> \<in> fml_sem I (And p1 p2)) = (\<nu>' \<in> fml_sem J (And p1 p2))" 
+    proof -
+      assume IA:"Iagree I J (SIGF (And p1 p2))"
+      hence IAs:"Iagree I J (SIGF p1)" "Iagree I J (SIGF p2)"
+        unfolding SIGF.simps Iagree_def by auto
+      assume VA:"Vagree \<nu> \<nu>' (FVF (And p1 p2))"
+      hence VAs:"Vagree \<nu> \<nu>' (FVF p1)" "Vagree \<nu> \<nu>' (FVF p2)"
+        unfolding FVF.simps Vagree_def by auto
+      have eq1:"(\<nu> \<in> fml_sem I p1) = (\<nu>' \<in> fml_sem J p1)" using IH1 IAs VAs by auto
+      have eq2:"(\<nu> \<in> fml_sem I p2) = (\<nu>' \<in> fml_sem J p2)" using IH2 IAs VAs by auto
+      show "(\<nu> \<in> fml_sem I (And p1 p2)) = (\<nu>' \<in> fml_sem J (And p1 p2))"
+        using eq1 eq2 by auto
+    qed
+    then show "?case" by blast
 next
   case hpsafe_Forall then show "?case" sorry
 next
