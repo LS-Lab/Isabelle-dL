@@ -1008,16 +1008,16 @@ next
   have almost:"Vagree \<nu> \<nu>' (FVT (Times t1 t2)) \<Longrightarrow> frechet I (Times t1 t2) (fst \<nu>) (snd \<nu>) = frechet I (Times t1 t2) (fst \<nu>') (snd \<nu>')"
   by (smt FVT.simps(5) IH1' IH2' UnCI Vagree_def coincidence_sterm frechet.simps(4)  mem_Collect_eq agree )
   show "?case"
-  using agree FVDiff_sub almost pointed_finite.agree_supset
-  by (metis)
+    using agree FVDiff_sub almost
+    by (metis agree_supset)
 qed
 
 lemma coincidence_dterm:
   fixes I :: "('sf::finite, 'sc::finite, 'sz::finite) interp" and \<nu> :: "'sz state" and \<nu>'::"'sz state"
   shows "dsafe \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta> \<nu>'"
 proof (induction rule: dsafe.induct)
-  case dsafe_Var then show "?case" using Vagree_def rangeI 
-    by (smt insert_iff mem_Collect_eq pointed_finite.FVT.simps(1) pointed_finite.dterm_sem.simps(1))
+  case dsafe_Var then show "?case"
+    by (auto simp add: Vagree_def)
 
 next
   case dsafe_Const then show "?case"
@@ -1047,8 +1047,7 @@ next
 
 next
   case dsafe_DiffVar then show "?case"
-    by (smt Vagree_def rangeI insert_iff mem_Collect_eq pointed_finite.FVT.simps(7) pointed_finite.dterm_sem.simps(2))
-
+    by (auto simp add: Vagree_def)
 qed
 
 subsection \<open>Axioms\<close>
