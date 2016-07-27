@@ -1040,7 +1040,7 @@ sorry
 
 lemma coincidence_hp_fml:
   fixes I J:: "('sf::finite, 'sc::finite, 'sz::finite) interp" 
-  shows "(hpsafe \<alpha> \<longrightarrow> (\<forall> \<nu> \<nu>' \<mu>. Iagree I J (SIGP \<alpha>) \<longrightarrow> Vagree \<nu> \<nu>' V \<longrightarrow> V \<supseteq> (FVP \<alpha>) \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I \<alpha> \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J \<alpha> \<and> Vagree \<mu> \<mu>' (MBV \<alpha> \<union> V))))
+  shows "(hpsafe \<alpha> \<longrightarrow> (\<forall> \<nu> \<nu>' \<mu> V. Iagree I J (SIGP \<alpha>) \<longrightarrow> Vagree \<nu> \<nu>' V \<longrightarrow> V \<supseteq> (FVP \<alpha>) \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I \<alpha> \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J \<alpha> \<and> Vagree \<mu> \<mu>' (MBV \<alpha> \<union> V))))
    \<and> (fsafe \<phi> \<longrightarrow> (\<forall> \<nu> \<nu>'. Iagree I J (SIGF \<phi>) \<longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<longrightarrow> \<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem J \<phi>))"
 proof (induction rule: hpsafe_fsafe.induct)
   case (hpsafe_Pvar x)
@@ -1171,7 +1171,7 @@ next
   case (hpsafe_Diamond a p) then 
     have hsafe:"hpsafe a"
     and psafe:"fsafe p"
-    and IH1:"\<forall>\<nu> \<nu>' \<mu>. Iagree I J (SIGP a) \<longrightarrow>
+    and IH1:"\<forall>\<nu> \<nu>' \<mu> V. Iagree I J (SIGP a) \<longrightarrow>
              Vagree \<nu> \<nu>' V \<longrightarrow>
              FVP a \<subseteq> V \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I a \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J a \<and> Vagree \<mu> \<mu>' (MBV a \<union> V))"
     and IH2:"\<forall>\<nu> \<nu>'. Iagree I J (SIGF p) \<longrightarrow> Vagree \<nu> \<nu>' (FVF p) \<longrightarrow> (\<nu> \<in> fml_sem I p) = (\<nu>' \<in> fml_sem J p)"
@@ -1180,25 +1180,34 @@ next
     proof -
       fix \<nu> \<nu>'
       assume IA:"Iagree I J (SIGF (Diamond a p))"
+      hence IAP:"Iagree I J (SIGP a)"
+      and IAF:"Iagree I J (SIGF p)" unfolding SIGP.simps Iagree_def by auto
       assume VA:"Vagree \<nu> \<nu>' (FVF (Diamond a p))"
       have dir1:"\<nu> \<in> fml_sem I (Diamond a p) \<Longrightarrow> \<nu>' \<in> fml_sem J (Diamond a p)"
       proof - 
         assume sem:"\<nu> \<in> fml_sem I (Diamond a p)"
         let ?V = "FVF (Diamond a p)"
         have Vsup:"FVP a \<subseteq> ?V" by auto
-        obtain \<mu> where prog:"(\<nu>, \<mu>) \<in> prog_sem I a" and fml:"\<mu> \<in> fml_sem I p" sorry
+        obtain \<mu> where prog:"(\<nu>, \<mu>) \<in> prog_sem I a" and fml:"\<mu> \<in> fml_sem I p" 
+          using sem by auto
+        from IH1 have IH1':
+          "Iagree I J (SIGP a) \<Longrightarrow>
+             Vagree \<nu> \<nu>' ?V \<Longrightarrow>
+             FVP a \<subseteq> ?V \<Longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I a \<Longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J a \<and> Vagree \<mu> \<mu>' (MBV a \<union> ?V))"
+          by blast
         obtain \<mu>' where prog':"(\<nu>', \<mu>') \<in> prog_sem J a" and agree:"Vagree \<mu> \<mu>' (MBV a \<union> ?V)"
-            sorry
-          have fml':"\<mu>' \<in> fml_sem J p" using IH2 IA agree sorry
+          using IH1'[OF IAP VA Vsup prog] by blast
+        from IH2 
+        have IH2':"Iagree I J (SIGF p) \<Longrightarrow> Vagree \<mu> \<mu>' (FVF p) \<Longrightarrow> (\<mu> \<in> fml_sem I p) = (\<mu>' \<in> fml_sem J p)"
+          by blast
+        have  VAF:"Vagree \<mu> \<mu>' (FVF p)"
+          using agree VA by (auto simp only: Vagree_def FVF.simps)
+        hence IH2'':"(\<mu> \<in> fml_sem I p) = (\<mu>' \<in> fml_sem J p)"
+           using IH2'[OF IAF VAF] by auto
+        have fml':"\<mu>' \<in> fml_sem J p" using IH2'' fml by auto
         have "\<exists> \<mu>'. (\<nu>', \<mu>') \<in> prog_sem J a \<and> \<mu>' \<in> fml_sem J p" using fml' prog' by blast
         then show "\<nu>' \<in> fml_sem J (Diamond a p)" 
-          unfolding fml_sem.simps apply (simp only: mem_Collect_eq)
-(*          apply(rule allI)
-          apply(erule exE)
-          subgoal for \<omega> \<mu>'
-            apply(erule conjE)*)
-            sorry
-
+          unfolding fml_sem.simps by (auto simp only: mem_Collect_eq)
       qed
       have dir2:"\<nu>' \<in> fml_sem J (Diamond a p) \<Longrightarrow> \<nu> \<in> fml_sem I (Diamond a p)"
       proof - 
