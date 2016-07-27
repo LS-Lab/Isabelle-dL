@@ -234,24 +234,24 @@ where
 inductive hpsafe:: "('a, 'b, 'c) hp \<Rightarrow> bool"
 and fsafe:: "('a, 'b, 'c) formula \<Rightarrow> bool"
 where
-   "hpsafe (Pvar x)"
- | "dsafe e \<Longrightarrow> hpsafe (Assign x e)"
- | "dsafe e \<Longrightarrow> hpsafe (DiffAssign x e)"
- | "fsafe P \<Longrightarrow> hpsafe (Test P)" 
- | "osafe ODE \<Longrightarrow> fsafe P \<Longrightarrow> hpsafe (EvolveODE ODE P)"
- | "hpsafe a \<Longrightarrow> hpsafe b \<Longrightarrow> hpsafe (Choice a b )"
- | "hpsafe a \<Longrightarrow> hpsafe b \<Longrightarrow> hpsafe (Sequence a b)"
- | "hpsafe a \<Longrightarrow> hpsafe (Loop a)"
+   hpsafe_Pvar:"hpsafe (Pvar x)"
+ | hpsafe_Assign:"dsafe e \<Longrightarrow> hpsafe (Assign x e)"
+ | hpsafe_DiffAssign:"dsafe e \<Longrightarrow> hpsafe (DiffAssign x e)"
+ | hpsafe_Test:"fsafe P \<Longrightarrow> hpsafe (Test P)" 
+ | hpsafe_Evolve:"osafe ODE \<Longrightarrow> fsafe P \<Longrightarrow> hpsafe (EvolveODE ODE P)"
+ | hpsafe_Choice:"hpsafe a \<Longrightarrow> hpsafe b \<Longrightarrow> hpsafe (Choice a b )"
+ | hpsafe_Sequence:"hpsafe a \<Longrightarrow> hpsafe b \<Longrightarrow> hpsafe (Sequence a b)"
+ | hpsafe_Loop:"hpsafe a \<Longrightarrow> hpsafe (Loop a)"
 
- | "dsafe t1 \<Longrightarrow> dsafe t2 \<Longrightarrow> fsafe (Geq t1 t2)"
- | "(\<And>arg. arg \<in> range args \<Longrightarrow> dsafe arg) \<Longrightarrow> fsafe (Prop p args)"
- | "fsafe p \<Longrightarrow> fsafe (Not p)"
- | "fsafe p \<Longrightarrow> fsafe q \<Longrightarrow> fsafe (And p q)"
- | "fsafe p \<Longrightarrow> fsafe (Forall x p)"
- | "hpsafe a \<Longrightarrow> fsafe p \<Longrightarrow> fsafe (Box a p)"
- | "ffree p \<Longrightarrow> fsafe (DiffFormula p)"
- | "fsafe f \<Longrightarrow> fsafe (InContext C f)"
- | "fsafe (Predicational P)"
+ | hpsafe_Geq:"dsafe t1 \<Longrightarrow> dsafe t2 \<Longrightarrow> fsafe (Geq t1 t2)"
+ | hpsafe_Prop:"(\<And>arg. arg \<in> range args \<Longrightarrow> dsafe arg) \<Longrightarrow> fsafe (Prop p args)"
+ | hpsafe_Not:"fsafe p \<Longrightarrow> fsafe (Not p)"
+ | hpsafe_And:"fsafe p \<Longrightarrow> fsafe q \<Longrightarrow> fsafe (And p q)"
+ | hpsafe_Forall:"fsafe p \<Longrightarrow> fsafe (Forall x p)"
+ | hpsafe_Box:"hpsafe a \<Longrightarrow> fsafe p \<Longrightarrow> fsafe (Box a p)"
+ | hpsafe_DiffFormula:"ffree p \<Longrightarrow> fsafe (DiffFormula p)"
+ | hpsafe_InContext:"fsafe f \<Longrightarrow> fsafe (InContext C f)"
+ | hpsafe_Predicational:"fsafe (Predicational P)"
   
 lemma hp_induct [case_names Var Assign DiffAssign Test Evolve Choice Compose Star]:
    "(\<And>x. P ($\<alpha> x)) \<Longrightarrow>
@@ -1026,6 +1026,73 @@ proof (induction rule: dsafe.induct)
       using safe coincidence_sterm IH rangeI by (auto)
 qed (auto simp: Vagree_def directional_derivative_def coincidence_frechet)
 
+lemma coincidence_dterm':
+  fixes I J :: "('sf::finite, 'sc::finite, 'sz::finite) interp" and \<nu> :: "'sz state" and \<nu>'::"'sz state"
+  shows "dsafe \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> Iagree I J {Inl x | x. x \<in> (SIGT \<theta>)} \<Longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem J \<theta> \<nu>'"
+sorry
+
+lemma coincidence_hp_fml:
+  fixes I J:: "('sf::finite, 'sc::finite, 'sz::finite) interp" 
+  and \<nu> :: "'sz state" and \<nu>'::"'sz state"
+  shows "(hpsafe \<alpha> \<longrightarrow> Iagree I J (SIGP \<alpha>) \<longrightarrow> Vagree \<nu> \<nu>' V \<longrightarrow> V \<supseteq> (FVP \<alpha>) \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I \<alpha> \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem I \<alpha> \<and> Vagree \<mu> \<mu>' (MBV \<alpha> \<union> V)))
+   \<and> (fsafe \<phi> \<longrightarrow> Iagree I J (SIGF \<phi>) \<longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<longrightarrow> \<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem I \<phi>)"
+proof (induction rule: hpsafe_fsafe.induct)
+  case (hpsafe_Pvar x)
+(*    hence "Vagree \<nu> \<nu>' (FVP (Pvar x)) \<Longrightarrow> \<nu> = \<nu>'" 
+      by (cases "\<nu>", cases "\<nu>'", auto simp: Vagree_def vec_eq_iff)*)
+  thus "?case" sorry
+next
+  case (hpsafe_Assign e x) then show "?case" sorry
+next
+  case hpsafe_DiffAssign then show "?case" sorry
+next
+  case hpsafe_Test then show "?case" sorry
+next
+  case hpsafe_Evolve then show "?case" sorry
+next
+  case hpsafe_Choice then show "?case" sorry
+next
+  case hpsafe_Sequence then show "?case" sorry
+next
+  case hpsafe_Loop then show "?case" sorry
+next
+  case (hpsafe_Geq t1 t2) 
+  then have safe:"dsafe t1" "dsafe t2" by auto
+  have almost:"Iagree I J (SIGF (Geq t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Geq t1 t2)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Geq t1 t2)) = (\<nu>' \<in> fml_sem I (Geq t1 t2))" 
+  proof -
+    assume  IA:"Iagree I J (SIGF (Geq t1 t2))"
+    hence IAs:"Iagree I J {Inl x | x. x \<in> (SIGT t1)}"
+              "Iagree I J {Inl x | x. x \<in> (SIGT t2)}" 
+      unfolding SIGF.simps Iagree_def by auto
+    assume VA:"Vagree \<nu> \<nu>' (FVF (Geq t1 t2))"
+    hence VAs:"Vagree \<nu> \<nu>' (FVT t1)" "Vagree \<nu> \<nu>' (FVT t2)"
+      unfolding FVF.simps Vagree_def by auto
+    have sem1:"dterm_sem I t1 \<nu> = dterm_sem J t1 \<nu>'"
+      by (auto simp add: coincidence_dterm'[OF safe(1) VAs(1) IAs(1)])
+    have sem2:"dterm_sem I t2 \<nu> = dterm_sem J t2 \<nu>'"
+      by (auto simp add: coincidence_dterm'[OF safe(2) VAs(2) IAs(2)])
+    show "(\<nu> \<in> fml_sem I (Geq t1 t2)) = (\<nu>' \<in> fml_sem I (Geq t1 t2))"
+      using VAs(1) VAs(2) coincidence_dterm safe(1) safe(2) by auto
+  qed
+  show "?case" using almost by blast
+next
+  case hpsafe_Prop then show "?case" sorry
+next
+  case hpsafe_Not then show "?case" by auto
+next
+  case hpsafe_And then show "?case" sorry
+next
+  case hpsafe_Forall then show "?case" sorry
+next
+  case hpsafe_Box then show "?case" sorry
+next
+  case hpsafe_DiffFormula then show "?case" sorry
+next
+  case hpsafe_InContext then show "?case" sorry
+next
+  case hpsafe_Predicational then show "?case" sorry
+  qed 
+  
 subsection \<open>Axioms\<close>
 text \<open>
   The uniform substitution calculus is based on a finite list of concrete
