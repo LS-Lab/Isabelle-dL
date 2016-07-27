@@ -1130,7 +1130,22 @@ next
     qed
     then show "?case" by blast
 next
-  case hpsafe_Forall then show "?case" sorry
+  case (hpsafe_Forall p x)
+  then have safe:"fsafe p"
+    and IH:"Iagree I J (SIGF p) \<longrightarrow> Vagree \<nu> \<nu>' (FVF p) \<longrightarrow> (\<nu> \<in> fml_sem I p) = (\<nu>' \<in> fml_sem J p)"
+    by auto
+    have almost:"Iagree I J (SIGF (Forall x p)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Forall x p)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Forall x p)) = (\<nu>' \<in> fml_sem J (Forall x p))" 
+    proof -
+      assume IA:"Iagree I J (SIGF (Forall x p))"
+      hence IA':"Iagree I J (SIGF p)" 
+        unfolding SIGF.simps Iagree_def by auto
+      assume VA:"Vagree \<nu> \<nu>' (FVF (Forall x p))"
+      hence VA':"Vagree \<nu> \<nu>' (FVF p - {Inl x})" by auto
+      show "(\<nu> \<in> fml_sem I (Forall x p)) = (\<nu>' \<in> fml_sem J (Forall x p))"
+        (* todo: strengthen IH to let state change *)
+        apply(simp only: fml_sem.simps mem_Collect_eq repv.simps )
+        done
+        using IH VA' IA' 
 next
   case hpsafe_Box then show "?case" sorry
 next
