@@ -683,7 +683,7 @@ where
  | "FVF (Not p) = FVF p"
  | "FVF (And p q) = FVF p \<union> FVF q"
  | "FVF (Forall x p) = FVF p - {Inl x}"
- | "FVF (Box \<alpha> p) =   FVF p - MBV \<alpha>"
+ | "FVF (Box \<alpha> p) =   FVP \<alpha> \<union> (FVF p - MBV \<alpha>)"
  | "FVF (DiffFormula p) = FVF p"
  | "FVF (InContext C p) = UNIV"
  | "FVP (Pvar a) = UNIV"
@@ -1041,7 +1041,7 @@ sorry
 
 lemma coincidence_hp_fml:
   fixes I J:: "('sf::finite, 'sc::finite, 'sz::finite) interp" 
-  shows "(hpsafe \<alpha> \<longrightarrow> (\<forall> \<nu> \<nu>' \<mu>. Iagree I J (SIGP \<alpha>) \<longrightarrow> Vagree \<nu> \<nu>' V \<longrightarrow> V \<supseteq> (FVP \<alpha>) \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I \<alpha> \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem I \<alpha> \<and> Vagree \<mu> \<mu>' (MBV \<alpha> \<union> V))))
+  shows "(hpsafe \<alpha> \<longrightarrow> (\<forall> \<nu> \<nu>' \<mu>. Iagree I J (SIGP \<alpha>) \<longrightarrow> Vagree \<nu> \<nu>' V \<longrightarrow> V \<supseteq> (FVP \<alpha>) \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I \<alpha> \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J \<alpha> \<and> Vagree \<mu> \<mu>' (MBV \<alpha> \<union> V))))
    \<and> (fsafe \<phi> \<longrightarrow> (\<forall> \<nu> \<nu>'. Iagree I J (SIGF \<phi>) \<longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<longrightarrow> \<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem J \<phi>))"
 proof (induction rule: hpsafe_fsafe.induct)
   case (hpsafe_Pvar x)
@@ -1164,13 +1164,54 @@ next
           using IH'[OF IA' VA''] by auto
         done
       show "(\<nu> \<in> fml_sem I (Forall x p)) = (\<nu>' \<in> fml_sem J (Forall x p))"
-        (* todo: strengthen IH to let state change *)
         apply(simp only: fml_sem.simps mem_Collect_eq)
         using IH'' by auto
     qed
     then show "?case" by blast
 next
-  case hpsafe_Box then show "?case" sorry
+  case (hpsafe_Box a p) then 
+    have hsafe:"hpsafe a"
+    and psafe:"fsafe p"
+    and IH1:"\<forall>\<nu> \<nu>' \<mu>. Iagree I J (SIGP a) \<longrightarrow>
+             Vagree \<nu> \<nu>' V \<longrightarrow>
+             FVP a \<subseteq> V \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I a \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J a \<and> Vagree \<mu> \<mu>' (MBV a \<union> V))"
+    and IH2:"\<forall>\<nu> \<nu>'. Iagree I J (SIGF p) \<longrightarrow> Vagree \<nu> \<nu>' (FVF p) \<longrightarrow> (\<nu> \<in> fml_sem I p) = (\<nu>' \<in> fml_sem J p)"
+      by auto
+    have almost:"\<And>\<nu> \<nu>'. Iagree I J (SIGF (Box a p)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Box a p)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Box a p)) = (\<nu>' \<in> fml_sem J (Box a p))" 
+    proof -
+      fix \<nu> \<nu>'
+      assume IA:"Iagree I J (SIGF (Box a p))"
+      assume VA:"Vagree \<nu> \<nu>' (FVF (Box a p))"
+      have dir1:"\<nu> \<in> fml_sem I (Box a p) \<Longrightarrow> \<nu>' \<in> fml_sem J (Box a p)"
+      proof - 
+        assume sem:"\<nu> \<in> fml_sem I (Box a p)"
+        let ?V = "FVF (Box a p)"
+        have Vsup:"FVP a \<subseteq> ?V" by auto
+        obtain \<mu> where prog:"(\<nu>, \<mu>) \<in> prog_sem I a" and fml:"\<mu> \<in> fml_sem I p" sorry
+        obtain \<mu>' where prog':"(\<nu>', \<mu>') \<in> prog_sem J a" and agree:"Vagree \<mu> \<mu>' (MBV a \<union> ?V)"
+            sorry
+          have fml':"\<mu>' \<in> fml_sem J p" using IH2 IA agree sorry
+        have "\<exists> \<mu>'. (\<nu>', \<mu>') \<in> prog_sem J a \<and> \<mu>' \<in> fml_sem J p" using fml' prog' by blast
+        then show "\<nu>' \<in> fml_sem J (Box a p)" 
+          unfolding fml_sem.simps apply (simp only: mem_Collect_eq)
+          apply(rule allI)
+          apply(erule exE)
+          subgoal for \<omega> \<mu>'
+            apply(erule conjE)
+            sorry
+          done
+      qed
+      have dir2:"\<nu>' \<in> fml_sem J (Box a p) \<Longrightarrow> \<nu> \<in> fml_sem I (Box a p)"
+      proof - 
+        assume sem:"\<nu>' \<in> fml_sem J (Box a p)"
+        show "\<nu> \<in> fml_sem I (Box a p)"
+          sorry
+      qed
+
+      show "(\<nu> \<in> fml_sem I (Box a p)) = (\<nu>' \<in> fml_sem J (Box a p))"
+        using dir1 dir2 by auto
+     qed
+    then show "?case" by blast
 next
   case hpsafe_DiffFormula then show "?case" sorry
 next
