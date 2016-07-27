@@ -740,6 +740,14 @@ where "Iagree I J V \<equiv>
     (\<exists>x. i = Inr (Inr x) \<longrightarrow> Predicates I x = Predicates J x) \<and>
     (\<exists>x. i = Inr (Inr x) \<longrightarrow> Programs I x = Programs J x))"
 
+lemma Iagree_Func:"Iagree I J V \<Longrightarrow> Inl f \<in> V \<Longrightarrow> Functions I a = Functions J a"
+  sorry
+lemma Iagree_Contexts:"Iagree I J V \<Longrightarrow> Inr (Inl C) \<in> V \<Longrightarrow> Contexts I C = Contexts J C"
+  sorry
+lemma Iagree_Pred:"Iagree I J V \<Longrightarrow> Inr (Inr p) \<in> V \<Longrightarrow> Predicates I p = Predicates J p"
+  sorry
+lemma Iagree_Prog:"Iagree I J V \<Longrightarrow> Inr (Inr a) \<in> V \<Longrightarrow> Programs I a = Programs J a"
+  sorry
 lemma agree_nil:"Vagree \<nu> \<omega> {}"
 by (auto simp add: Vagree_def)
 
@@ -1035,7 +1043,7 @@ lemma coincidence_hp_fml:
   fixes I J:: "('sf::finite, 'sc::finite, 'sz::finite) interp" 
   and \<nu> :: "'sz state" and \<nu>'::"'sz state"
   shows "(hpsafe \<alpha> \<longrightarrow> Iagree I J (SIGP \<alpha>) \<longrightarrow> Vagree \<nu> \<nu>' V \<longrightarrow> V \<supseteq> (FVP \<alpha>) \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I \<alpha> \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem I \<alpha> \<and> Vagree \<mu> \<mu>' (MBV \<alpha> \<union> V)))
-   \<and> (fsafe \<phi> \<longrightarrow> Iagree I J (SIGF \<phi>) \<longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<longrightarrow> \<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem I \<phi>)"
+   \<and> (fsafe \<phi> \<longrightarrow> Iagree I J (SIGF \<phi>) \<longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<longrightarrow> \<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem J \<phi>)"
 proof (induction rule: hpsafe_fsafe.induct)
   case (hpsafe_Pvar x)
 (*    hence "Vagree \<nu> \<nu>' (FVP (Pvar x)) \<Longrightarrow> \<nu> = \<nu>'" 
@@ -1058,7 +1066,7 @@ next
 next
   case (hpsafe_Geq t1 t2) 
   then have safe:"dsafe t1" "dsafe t2" by auto
-  have almost:"Iagree I J (SIGF (Geq t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Geq t1 t2)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Geq t1 t2)) = (\<nu>' \<in> fml_sem I (Geq t1 t2))" 
+  have almost:"Iagree I J (SIGF (Geq t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Geq t1 t2)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Geq t1 t2)) = (\<nu>' \<in> fml_sem J (Geq t1 t2))" 
   proof -
     assume  IA:"Iagree I J (SIGF (Geq t1 t2))"
     hence IAs:"Iagree I J {Inl x | x. x \<in> (SIGT t1)}"
@@ -1071,12 +1079,34 @@ next
       by (auto simp add: coincidence_dterm'[OF safe(1) VAs(1) IAs(1)])
     have sem2:"dterm_sem I t2 \<nu> = dterm_sem J t2 \<nu>'"
       by (auto simp add: coincidence_dterm'[OF safe(2) VAs(2) IAs(2)])
-    show "(\<nu> \<in> fml_sem I (Geq t1 t2)) = (\<nu>' \<in> fml_sem I (Geq t1 t2))"
-      using VAs(1) VAs(2) coincidence_dterm safe(1) safe(2) by auto
+    show "(\<nu> \<in> fml_sem I (Geq t1 t2)) = (\<nu>' \<in> fml_sem J (Geq t1 t2))"
+      by (simp add: sem1 sem2)
   qed
   show "?case" using almost by blast
 next
-  case hpsafe_Prop then show "?case" sorry
+  case (hpsafe_Prop args p)
+    then have safes:"\<And>arg. arg \<in> range args \<Longrightarrow> dsafe arg" by auto
+    have almost:"Iagree I J (SIGF (Prop p args)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Prop p args)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Prop p args)) = (\<nu>' \<in> fml_sem J (Prop p args))" 
+    proof -
+      assume IA:"Iagree I J (SIGF (Prop p args))"
+      hence IAs:"\<And>i. Iagree I J {Inl x | x. x \<in> SIGT (args i)}" 
+        unfolding SIGF.simps Iagree_def by (auto)
+      have mem:"Inr (Inr p) \<in> {Inr (Inr p)} \<union> {Inl x |x. x \<in> (\<Union>i. SIGT (args i))}"
+        by auto
+      from IA have pSame:"Predicates I p = Predicates J p"
+        by (auto simp add: Iagree_Pred IA mem)
+      assume VA:"Vagree \<nu> \<nu>' (FVF (Prop p args))"
+      hence VAs:"\<And>i. Vagree \<nu> \<nu>' (FVT (args i))"
+        unfolding FVF.simps Vagree_def by auto
+      have sems:"\<And>i. dterm_sem I (args i) \<nu> = dterm_sem J (args i) \<nu>'"
+        using IAs VAs coincidence_dterm' rangeI safes by simp
+      hence vecSem:"(\<chi> i. dterm_sem I (args i) \<nu>) = (\<chi> i. dterm_sem J (args i) \<nu>')"
+        by auto
+      show "(\<nu> \<in> fml_sem I (Prop p args)) = (\<nu>' \<in> fml_sem J (Prop p args))"
+        apply(unfold fml_sem.simps mem_Collect_eq)
+        using IA vecSem pSame by (auto)
+    qed
+  then show "?case" by blast
 next
   case hpsafe_Not then show "?case" by auto
 next
