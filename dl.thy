@@ -1041,9 +1041,8 @@ sorry
 
 lemma coincidence_hp_fml:
   fixes I J:: "('sf::finite, 'sc::finite, 'sz::finite) interp" 
-  and \<nu> :: "'sz state" and \<nu>'::"'sz state"
-  shows "(hpsafe \<alpha> \<longrightarrow> Iagree I J (SIGP \<alpha>) \<longrightarrow> Vagree \<nu> \<nu>' V \<longrightarrow> V \<supseteq> (FVP \<alpha>) \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I \<alpha> \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem I \<alpha> \<and> Vagree \<mu> \<mu>' (MBV \<alpha> \<union> V)))
-   \<and> (fsafe \<phi> \<longrightarrow> Iagree I J (SIGF \<phi>) \<longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<longrightarrow> \<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem J \<phi>)"
+  shows "(hpsafe \<alpha> \<longrightarrow> (\<forall> \<nu> \<nu>' \<mu>. Iagree I J (SIGP \<alpha>) \<longrightarrow> Vagree \<nu> \<nu>' V \<longrightarrow> V \<supseteq> (FVP \<alpha>) \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I \<alpha> \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem I \<alpha> \<and> Vagree \<mu> \<mu>' (MBV \<alpha> \<union> V))))
+   \<and> (fsafe \<phi> \<longrightarrow> (\<forall> \<nu> \<nu>'. Iagree I J (SIGF \<phi>) \<longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<longrightarrow> \<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem J \<phi>))"
 proof (induction rule: hpsafe_fsafe.induct)
   case (hpsafe_Pvar x)
 (*    hence "Vagree \<nu> \<nu>' (FVP (Pvar x)) \<Longrightarrow> \<nu> = \<nu>'" 
@@ -1066,9 +1065,10 @@ next
 next
   case (hpsafe_Geq t1 t2) 
   then have safe:"dsafe t1" "dsafe t2" by auto
-  have almost:"Iagree I J (SIGF (Geq t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Geq t1 t2)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Geq t1 t2)) = (\<nu>' \<in> fml_sem J (Geq t1 t2))" 
+  have almost:"\<And>\<nu> \<nu>'. Iagree I J (SIGF (Geq t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Geq t1 t2)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Geq t1 t2)) = (\<nu>' \<in> fml_sem J (Geq t1 t2))" 
   proof -
-    assume  IA:"Iagree I J (SIGF (Geq t1 t2))"
+    fix \<nu> \<nu>'
+    assume IA:"Iagree I J (SIGF (Geq t1 t2))"
     hence IAs:"Iagree I J {Inl x | x. x \<in> (SIGT t1)}"
               "Iagree I J {Inl x | x. x \<in> (SIGT t2)}" 
       unfolding SIGF.simps Iagree_def by auto
@@ -1086,8 +1086,9 @@ next
 next
   case (hpsafe_Prop args p)
     then have safes:"\<And>arg. arg \<in> range args \<Longrightarrow> dsafe arg" by auto
-    have almost:"Iagree I J (SIGF (Prop p args)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Prop p args)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Prop p args)) = (\<nu>' \<in> fml_sem J (Prop p args))" 
+    have almost:"\<And>\<nu> \<nu>'. Iagree I J (SIGF (Prop p args)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Prop p args)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Prop p args)) = (\<nu>' \<in> fml_sem J (Prop p args))" 
     proof -
+      fix \<nu> \<nu>'
       assume IA:"Iagree I J (SIGF (Prop p args))"
       hence IAs:"\<And>i. Iagree I J {Inl x | x. x \<in> SIGT (args i)}" 
         unfolding SIGF.simps Iagree_def by (auto)
@@ -1112,19 +1113,20 @@ next
 next
   case (hpsafe_And p1 p2)
   then have safes:"fsafe p1" "fsafe p2" 
-    and IH1:"Iagree I J (SIGF p1) \<longrightarrow> Vagree \<nu> \<nu>' (FVF p1) \<longrightarrow> (\<nu> \<in> fml_sem I p1) = (\<nu>' \<in> fml_sem J p1)"
-    and IH2:"Iagree I J (SIGF p2) \<longrightarrow> Vagree \<nu> \<nu>' (FVF p2) \<longrightarrow> (\<nu> \<in> fml_sem I p2) = (\<nu>' \<in> fml_sem J p2)"
+    and IH1:"\<forall> \<nu> \<nu>'. Iagree I J (SIGF p1) \<longrightarrow> Vagree \<nu> \<nu>' (FVF p1) \<longrightarrow> (\<nu> \<in> fml_sem I p1) = (\<nu>' \<in> fml_sem J p1)"
+    and IH2:"\<forall> \<nu> \<nu>'. Iagree I J (SIGF p2) \<longrightarrow> Vagree \<nu> \<nu>' (FVF p2) \<longrightarrow> (\<nu> \<in> fml_sem I p2) = (\<nu>' \<in> fml_sem J p2)"
     by auto
-    have almost:"Iagree I J (SIGF (And p1 p2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (And p1 p2)) \<Longrightarrow> (\<nu> \<in> fml_sem I (And p1 p2)) = (\<nu>' \<in> fml_sem J (And p1 p2))" 
+    have almost:"\<And>\<nu> \<nu>'. Iagree I J (SIGF (And p1 p2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (And p1 p2)) \<Longrightarrow> (\<nu> \<in> fml_sem I (And p1 p2)) = (\<nu>' \<in> fml_sem J (And p1 p2))" 
     proof -
+      fix \<nu> \<nu>'
       assume IA:"Iagree I J (SIGF (And p1 p2))"
       hence IAs:"Iagree I J (SIGF p1)" "Iagree I J (SIGF p2)"
         unfolding SIGF.simps Iagree_def by auto
       assume VA:"Vagree \<nu> \<nu>' (FVF (And p1 p2))"
       hence VAs:"Vagree \<nu> \<nu>' (FVF p1)" "Vagree \<nu> \<nu>' (FVF p2)"
         unfolding FVF.simps Vagree_def by auto
-      have eq1:"(\<nu> \<in> fml_sem I p1) = (\<nu>' \<in> fml_sem J p1)" using IH1 IAs VAs by auto
-      have eq2:"(\<nu> \<in> fml_sem I p2) = (\<nu>' \<in> fml_sem J p2)" using IH2 IAs VAs by auto
+      have eq1:"(\<nu> \<in> fml_sem I p1) = (\<nu>' \<in> fml_sem J p1)" using IH1 IAs VAs by blast
+      have eq2:"(\<nu> \<in> fml_sem I p2) = (\<nu>' \<in> fml_sem J p2)" using IH2 IAs VAs by blast
       show "(\<nu> \<in> fml_sem I (And p1 p2)) = (\<nu>' \<in> fml_sem J (And p1 p2))"
         using eq1 eq2 by auto
     qed
@@ -1132,20 +1134,41 @@ next
 next
   case (hpsafe_Forall p x)
   then have safe:"fsafe p"
-    and IH:"Iagree I J (SIGF p) \<longrightarrow> Vagree \<nu> \<nu>' (FVF p) \<longrightarrow> (\<nu> \<in> fml_sem I p) = (\<nu>' \<in> fml_sem J p)"
+    and IH:"\<forall> \<nu> \<nu>'. Iagree I J (SIGF p) \<longrightarrow> Vagree \<nu> \<nu>' (FVF p) \<longrightarrow> (\<nu> \<in> fml_sem I p) = (\<nu>' \<in> fml_sem J p)"
     by auto
-    have almost:"Iagree I J (SIGF (Forall x p)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Forall x p)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Forall x p)) = (\<nu>' \<in> fml_sem J (Forall x p))" 
+    have almost:"\<And>\<nu> \<nu>'. Iagree I J (SIGF (Forall x p)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Forall x p)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Forall x p)) = (\<nu>' \<in> fml_sem J (Forall x p))" 
     proof -
+      fix \<nu> \<nu>'
       assume IA:"Iagree I J (SIGF (Forall x p))"
       hence IA':"Iagree I J (SIGF p)" 
         unfolding SIGF.simps Iagree_def by auto
       assume VA:"Vagree \<nu> \<nu>' (FVF (Forall x p))"
       hence VA':"Vagree \<nu> \<nu>' (FVF p - {Inl x})" by auto
+      hence VA'':"\<And>r. Vagree (repv \<nu> x r) (repv \<nu>' x r) (FVF p)" 
+        subgoal for r 
+          unfolding Vagree_def FVF.simps repv.simps
+          by auto
+        done
+      have IH': "\<And>r. Iagree I J (SIGF p) \<Longrightarrow> Vagree (repv \<nu> x r) (repv \<nu>' x r) (FVF p) \<Longrightarrow> ((repv \<nu> x r) \<in> fml_sem I p) = ((repv \<nu>' x r) \<in> fml_sem J p)"
+        subgoal for r
+          using IH apply(rule allE[where x = "repv \<nu> x r"])
+          apply(erule allE[where x = "repv \<nu>' x r"])
+          by (auto)
+        done
+      hence IH'':"\<And>r. ((repv \<nu> x r) \<in> fml_sem I p) = ((repv \<nu>' x r) \<in> fml_sem J p)"
+        subgoal for r
+          using IA' VA'' by auto
+        done
+      have fact:"\<And>r. (repv \<nu> x r \<in> fml_sem I p) = (repv \<nu>' x r \<in> fml_sem J p)"
+        subgoal for r
+          using IH'[OF IA' VA''] by auto
+        done
       show "(\<nu> \<in> fml_sem I (Forall x p)) = (\<nu>' \<in> fml_sem J (Forall x p))"
         (* todo: strengthen IH to let state change *)
-        apply(simp only: fml_sem.simps mem_Collect_eq repv.simps )
-        done
-        using IH VA' IA' 
+        apply(simp only: fml_sem.simps mem_Collect_eq)
+        using IH'' by auto
+    qed
+    then show "?case" by blast
 next
   case hpsafe_Box then show "?case" sorry
 next
