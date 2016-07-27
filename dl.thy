@@ -1783,11 +1783,10 @@ proof -
 lemma DC_valid:"valid DCaxiom" 
   apply(auto simp only: fml_sem.simps prog_sem.simps DCaxiom_def valid_def iff_sem impl_sem box_sem)
   apply(auto)
-  apply(smt intervalE pointed_finite.mem_to_nonempty solves_ode_domainD)
-  by fastforce
+  sorry
   
 lemma DS_valid:"valid DSaxiom"
-  apply(auto simp only: DSaxiom_def valid_def Let_def iff_sem impl_sem)
+  apply(auto simp only: DSaxiom_def valid_def Let_def iff_sem impl_sem box_sem)
   apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq  iff_sem impl_sem box_sem)
   proof -
     fix I::"('sf,'sc,'sz) interp" 
@@ -1875,7 +1874,7 @@ lemma DS_valid:"valid DSaxiom"
               {x. mk_v I (OSing vid1 (f0 fid1)) (a,b) x \<in> fml_sem I (p1 vid2 vid1)}" 
     apply(auto simp add: f0_def empty_def vec_simp) 
     apply(rule solves_odeI)
-    apply(auto simp only: has_vderiv_on_def has_vector_derivative_def)
+    apply(auto simp only: has_vderiv_on_def has_vector_derivative_def box_sem)
     apply (rule has_derivative_vec[THEN has_derivative_eq_rhs])
     defer
     apply (rule ext)
@@ -1917,10 +1916,10 @@ lemma DS_valid:"valid DSaxiom"
   from inPred sem_eq have  inPred':"(aa,ba) \<in> fml_sem I (p1 vid3 vid1)"
     by auto
   (* thus by lemma 6 consequence for formulas *)
-(*  show "repv (repv (a, b) vid2 r) vid1
+  show "repv (repv (a, b) vid2 r) vid1
        (dterm_sem I (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid2))) (repv (a, b) vid2 r))
-       \<in> fml_sem I (p1 vid3 vid1)" using aaba inPred' sorry*)
-  show "?case" sorry
+       \<in> fml_sem I (p1 vid3 vid1)" using aaba inPred' sorry
+(*  show "?case" sorry*)
 next
   fix I::"('sf,'sc,'sz) interp"
   and aa ba ab bb sol 
@@ -1964,7 +1963,7 @@ next
       apply(unfold Vagree_def)
       using aaba apply(simp add: f0_def empty_def)
       (* TODO: Think this needs uniqueness of solutions *)
-      
+      sorry
     have allRa:"(\<forall>ra. repv (repv (ab, bb) vid2 t) vid3 ra
                  \<in> {v. dterm_sem I (Const 0) v \<le> dterm_sem I (trm.Var vid3) v} \<inter>
                     {v. dterm_sem I (trm.Var vid3) v \<le> dterm_sem I (trm.Var vid2) v} \<longrightarrow>
@@ -1973,12 +1972,13 @@ next
                          (repv (repv (ab, bb) vid2 t) vid3 ra)))"
       using mk_v_agree[of "I" "(OSing vid1 (f0 fid1))" "(ab, bb)" "(sol t)"]
            vne23 constraint[of t] apply(auto simp add: Vagree_def p1_def)
+        sorry
       (*
       *)
-      
-  show "mk_v I (OSing vid1 (f0 fid1)) (ab, bb) (sol t) \<in> fml_sem I (p1 vid3 vid1)" sorry
+oops   
+  (*show "mk_v I (OSing vid1 (f0 fid1)) (ab, bb) (sol t) \<in> fml_sem I (p1 vid3 vid1)" sorry
 qed 
-oops
+oops*)
 
 (* TODO:  differential formula semantics actually bogus right now
  * I believe the only correct semantics to give a DiffFormula(Predicational P)
@@ -1989,13 +1989,11 @@ oops
 *)
 lemma DI_valid:"valid DIaxiom"
   apply(unfold DIaxiom_def valid_def impl_sem iff_sem)
-  done
+  sorry
 
 lemma DG_valid:"valid DGaxiom"
   apply(auto simp add: DGaxiom_def valid_def Let_def)
-  done
-
-oops
+  sorry
 
 section Substitution
 
@@ -2404,11 +2402,13 @@ proof (induction rule: Tadmit.induct)
       have IH2:"dterm_sem I (NTsubst f' ?sub) \<nu> = dterm_sem (NTadjoint I ?sub \<nu>) f' \<nu>"
         by (simp add: nsubst_dterm[OF good_interp admit safef subFree])
       show "?thesis" 
-        using IH safes by (auto simp add: eqs adjoint_free[OF sfree] IH2 NTadjoint_free[OF subFree] some good_interp)
+        using IH safes (*by (auto simp add: eqs adjoint_free[OF sfree] IH2 NTadjoint_free[OF subFree] some good_interp)*)
+        sorry
     qed (auto simp add: IH adjoint_def vec_extensionality safes)
+next
+    case (Tadmit_Diff \<sigma> \<theta>) then show "?case" sorry
   qed auto
 
-oops
 end
 
 (*
