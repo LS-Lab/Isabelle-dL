@@ -94,8 +94,8 @@ and ('a, 'b, 'c) formula =
 | Prop 'c "'c \<Rightarrow> ('a, 'c) trm"      ("$\<phi>")
 | Not "('a, 'b, 'c) formula"            ("!")
 | And "('a, 'b, 'c) formula" "('a, 'b, 'c) formula"    (infixl "&&" 8)
-| Forall 'c "('a, 'b, 'c) formula"
-| Box "('a, 'b, 'c) hp" "('a, 'b, 'c) formula"         ("([[_]]_)" 10)
+| Exists 'c "('a, 'b, 'c) formula"
+| Diamond "('a, 'b, 'c) hp" "('a, 'b, 'c) formula"         ("(\<langle> _ \<rangle> _)" 10)
 (* DiffFormula \<phi> gives us the invariant for proving \<phi> by differential induction. *)
 | DiffFormula "('a, 'b, 'c) formula"
 (* Unary quantifier symbols *)
@@ -226,8 +226,8 @@ where
 | "(\<And>arg. arg \<in> range args \<Longrightarrow> dfree arg) \<Longrightarrow> ffree (Prop p args)"
 | "ffree p \<Longrightarrow> ffree (Not p)"
 | "ffree p \<Longrightarrow> ffree q \<Longrightarrow> ffree (And p q)"
-| "ffree p \<Longrightarrow> ffree (Forall x p)"
-| "hpfree a \<Longrightarrow> ffree p \<Longrightarrow> ffree (Box a p)"
+| "ffree p \<Longrightarrow> ffree (Exists x p)"
+| "hpfree a \<Longrightarrow> ffree p \<Longrightarrow> ffree (Diamond a p)"
 | "ffree (Predicational P)"
 | "dfree t1 \<Longrightarrow> dfree t2 \<Longrightarrow> ffree (Geq t1 t2)"
 
@@ -247,11 +247,10 @@ where
  | hpsafe_Prop:"(\<And>arg. arg \<in> range args \<Longrightarrow> dsafe arg) \<Longrightarrow> fsafe (Prop p args)"
  | hpsafe_Not:"fsafe p \<Longrightarrow> fsafe (Not p)"
  | hpsafe_And:"fsafe p \<Longrightarrow> fsafe q \<Longrightarrow> fsafe (And p q)"
- | hpsafe_Forall:"fsafe p \<Longrightarrow> fsafe (Forall x p)"
- | hpsafe_Box:"hpsafe a \<Longrightarrow> fsafe p \<Longrightarrow> fsafe (Box a p)"
+ | hpsafe_Exists:"fsafe p \<Longrightarrow> fsafe (Exists x p)"
+ | hpsafe_Diamond:"hpsafe a \<Longrightarrow> fsafe p \<Longrightarrow> fsafe (Diamond a p)"
  | hpsafe_DiffFormula:"ffree p \<Longrightarrow> fsafe (DiffFormula p)"
  | hpsafe_InContext:"fsafe f \<Longrightarrow> fsafe (InContext C f)"
- | hpsafe_Predicational:"fsafe (Predicational P)"
   
 lemma hp_induct [case_names Var Assign DiffAssign Test Evolve Choice Compose Star]:
    "(\<And>x. P ($\<alpha> x)) \<Longrightarrow>
@@ -278,14 +277,14 @@ definition Implies :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \
 definition Equiv :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" (infixl "\<leftrightarrow>" 10)
   where "Equiv P Q = Or (And P Q) (And (Not P) (Not Q))"
 
-fun Exists :: "'c \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula"
-  where "Exists x P = Not (Forall x (Not P))"
+fun Forall :: "'c \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula"
+  where "Forall x P = Not (Exists x (Not P))"
 
 definition Equals :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) formula"
   where "Equals \<theta> \<theta>' = ((Geq \<theta> \<theta>') && (Geq \<theta>' \<theta>))"
 
-definition Diamond :: "('a, 'b, 'c) hp \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" ("(\<langle>_\<rangle>_)" 10)
-  where "Diamond \<alpha> P = Not(Box \<alpha> (Not P))"
+definition Box :: "('a, 'b, 'c) hp \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" ("([[_]]_)" 10)
+  where "Box \<alpha> P = Not (Diamond \<alpha> (Not P))"
 
 subsection \<open>Denotational Semantics\<close>
 
@@ -424,8 +423,8 @@ where
 | "fml_sem I (Prop P terms) = {\<nu>. Predicates I P (\<chi> i. dterm_sem I (terms i) \<nu>)}"
 | "fml_sem I (Not \<phi>) = {v. v \<notin> fml_sem I \<phi>}"
 | "fml_sem I (And \<phi> \<psi>) = fml_sem I \<phi> \<inter> fml_sem I \<psi>"
-| "fml_sem I (Forall x \<phi>) = {v. \<forall>r. (repv v x r) \<in> fml_sem I \<phi>}"
-| "fml_sem I (Box \<alpha> \<phi>) = {\<nu>. \<forall> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<longrightarrow> \<omega> \<in> fml_sem I \<phi>}"
+| "fml_sem I (Exists x \<phi>) = {v | v r. (repv v x r) \<in> fml_sem I \<phi>}"
+| "fml_sem I (Diamond \<alpha> \<phi>) = {\<nu> | \<nu> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<and> \<omega> \<in> fml_sem I \<phi>}"
 | "fml_sem I (InContext c \<phi>) = Contexts I c (fml_sem I \<phi>)"
 | "fml_sem I (DiffFormula p) = diff_formula_sem I p"
 
@@ -618,8 +617,8 @@ where
 | "BVF (Prop p dfun_args) = {}"
 | "BVF (Not p) = BVF p"
 | "BVF (And p q) = BVF p \<union> BVF q"
-| "BVF (Forall x p) = {Inl x} \<union> BVF p"
-| "BVF (Box \<alpha> p) = BVP \<alpha> \<union> BVF p"
+| "BVF (Exists x p) = {Inl x} \<union> BVF p"
+| "BVF (Diamond \<alpha> p) = BVP \<alpha> \<union> BVF p"
 | "BVF (DiffFormula p) = BVF p"
 | "BVF (InContext C p) = UNIV"
 
@@ -682,8 +681,8 @@ where
  | "FVF (Prop p args) = (\<Union>i. FVT (args i))"
  | "FVF (Not p) = FVF p"
  | "FVF (And p q) = FVF p \<union> FVF q"
- | "FVF (Forall x p) = FVF p - {Inl x}"
- | "FVF (Box \<alpha> p) =   FVP \<alpha> \<union> (FVF p - MBV \<alpha>)"
+ | "FVF (Exists x p) = FVF p - {Inl x}"
+ | "FVF (Diamond \<alpha> p) =   FVP \<alpha> \<union> (FVF p - MBV \<alpha>)"
  | "FVF (DiffFormula p) = FVF p"
  | "FVF (InContext C p) = UNIV"
  | "FVP (Pvar a) = UNIV"
@@ -726,8 +725,8 @@ where
 | "SIGF (Prop var args) = {Inr (Inr var)} \<union> {Inl x | x. x \<in> (\<Union>i. SIGT (args i))}"
 | "SIGF (Not p) = SIGF p"
 | "SIGF (And p1 p2) = SIGF p1 \<union> SIGF p2"
-| "SIGF (Forall var p) = SIGF p"
-| "SIGF (Box a p) = SIGP a \<union> SIGF p"
+| "SIGF (Exists var p) = SIGF p"
+| "SIGF (Diamond a p) = SIGP a \<union> SIGF p"
 | "SIGF (DiffFormula p) = SIGF p"
 | "SIGF (InContext var p) = {Inr (Inl var)} \<union> SIGF p"
 
@@ -1132,17 +1131,17 @@ next
     qed
     then show "?case" by blast
 next
-  case (hpsafe_Forall p x)
+  case (hpsafe_Exists p x)
   then have safe:"fsafe p"
     and IH:"\<forall> \<nu> \<nu>'. Iagree I J (SIGF p) \<longrightarrow> Vagree \<nu> \<nu>' (FVF p) \<longrightarrow> (\<nu> \<in> fml_sem I p) = (\<nu>' \<in> fml_sem J p)"
     by auto
-    have almost:"\<And>\<nu> \<nu>'. Iagree I J (SIGF (Forall x p)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Forall x p)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Forall x p)) = (\<nu>' \<in> fml_sem J (Forall x p))" 
+    have almost:"\<And>\<nu> \<nu>'. Iagree I J (SIGF (Exists x p)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Exists x p)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Exists x p)) = (\<nu>' \<in> fml_sem J (Exists x p))" 
     proof -
       fix \<nu> \<nu>'
-      assume IA:"Iagree I J (SIGF (Forall x p))"
+      assume IA:"Iagree I J (SIGF (Exists x p))"
       hence IA':"Iagree I J (SIGF p)" 
         unfolding SIGF.simps Iagree_def by auto
-      assume VA:"Vagree \<nu> \<nu>' (FVF (Forall x p))"
+      assume VA:"Vagree \<nu> \<nu>' (FVF (Exists x p))"
       hence VA':"Vagree \<nu> \<nu>' (FVF p - {Inl x})" by auto
       hence VA'':"\<And>r. Vagree (repv \<nu> x r) (repv \<nu>' x r) (FVF p)" 
         subgoal for r 
@@ -1163,13 +1162,13 @@ next
         subgoal for r
           using IH'[OF IA' VA''] by auto
         done
-      show "(\<nu> \<in> fml_sem I (Forall x p)) = (\<nu>' \<in> fml_sem J (Forall x p))"
+      show "(\<nu> \<in> fml_sem I (Exists x p)) = (\<nu>' \<in> fml_sem J (Exists x p))"
         apply(simp only: fml_sem.simps mem_Collect_eq)
         using IH'' by auto
     qed
     then show "?case" by blast
 next
-  case (hpsafe_Box a p) then 
+  case (hpsafe_Diamond a p) then 
     have hsafe:"hpsafe a"
     and psafe:"fsafe p"
     and IH1:"\<forall>\<nu> \<nu>' \<mu>. Iagree I J (SIGP a) \<longrightarrow>
@@ -1177,38 +1176,38 @@ next
              FVP a \<subseteq> V \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I a \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J a \<and> Vagree \<mu> \<mu>' (MBV a \<union> V))"
     and IH2:"\<forall>\<nu> \<nu>'. Iagree I J (SIGF p) \<longrightarrow> Vagree \<nu> \<nu>' (FVF p) \<longrightarrow> (\<nu> \<in> fml_sem I p) = (\<nu>' \<in> fml_sem J p)"
       by auto
-    have almost:"\<And>\<nu> \<nu>'. Iagree I J (SIGF (Box a p)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Box a p)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Box a p)) = (\<nu>' \<in> fml_sem J (Box a p))" 
+    have almost:"\<And>\<nu> \<nu>'. Iagree I J (SIGF (Diamond a p)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Diamond a p)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Diamond a p)) = (\<nu>' \<in> fml_sem J (Diamond a p))" 
     proof -
       fix \<nu> \<nu>'
-      assume IA:"Iagree I J (SIGF (Box a p))"
-      assume VA:"Vagree \<nu> \<nu>' (FVF (Box a p))"
-      have dir1:"\<nu> \<in> fml_sem I (Box a p) \<Longrightarrow> \<nu>' \<in> fml_sem J (Box a p)"
+      assume IA:"Iagree I J (SIGF (Diamond a p))"
+      assume VA:"Vagree \<nu> \<nu>' (FVF (Diamond a p))"
+      have dir1:"\<nu> \<in> fml_sem I (Diamond a p) \<Longrightarrow> \<nu>' \<in> fml_sem J (Diamond a p)"
       proof - 
-        assume sem:"\<nu> \<in> fml_sem I (Box a p)"
-        let ?V = "FVF (Box a p)"
+        assume sem:"\<nu> \<in> fml_sem I (Diamond a p)"
+        let ?V = "FVF (Diamond a p)"
         have Vsup:"FVP a \<subseteq> ?V" by auto
         obtain \<mu> where prog:"(\<nu>, \<mu>) \<in> prog_sem I a" and fml:"\<mu> \<in> fml_sem I p" sorry
         obtain \<mu>' where prog':"(\<nu>', \<mu>') \<in> prog_sem J a" and agree:"Vagree \<mu> \<mu>' (MBV a \<union> ?V)"
             sorry
           have fml':"\<mu>' \<in> fml_sem J p" using IH2 IA agree sorry
         have "\<exists> \<mu>'. (\<nu>', \<mu>') \<in> prog_sem J a \<and> \<mu>' \<in> fml_sem J p" using fml' prog' by blast
-        then show "\<nu>' \<in> fml_sem J (Box a p)" 
+        then show "\<nu>' \<in> fml_sem J (Diamond a p)" 
           unfolding fml_sem.simps apply (simp only: mem_Collect_eq)
-          apply(rule allI)
+(*          apply(rule allI)
           apply(erule exE)
           subgoal for \<omega> \<mu>'
-            apply(erule conjE)
+            apply(erule conjE)*)
             sorry
-          done
+
       qed
-      have dir2:"\<nu>' \<in> fml_sem J (Box a p) \<Longrightarrow> \<nu> \<in> fml_sem I (Box a p)"
+      have dir2:"\<nu>' \<in> fml_sem J (Diamond a p) \<Longrightarrow> \<nu> \<in> fml_sem I (Diamond a p)"
       proof - 
-        assume sem:"\<nu>' \<in> fml_sem J (Box a p)"
-        show "\<nu> \<in> fml_sem I (Box a p)"
+        assume sem:"\<nu>' \<in> fml_sem J (Diamond a p)"
+        show "\<nu> \<in> fml_sem I (Diamond a p)"
           sorry
       qed
 
-      show "(\<nu> \<in> fml_sem I (Box a p)) = (\<nu>' \<in> fml_sem J (Box a p))"
+      show "(\<nu> \<in> fml_sem I (Diamond a p)) = (\<nu>' \<in> fml_sem J (Diamond a p))"
         using dir1 dir2 by auto
      qed
     then show "?case" by blast
@@ -1216,9 +1215,7 @@ next
   case hpsafe_DiffFormula then show "?case" sorry
 next
   case hpsafe_InContext then show "?case" sorry
-next
-  case hpsafe_Predicational then show "?case" sorry
-  qed 
+qed 
   
 subsection \<open>Axioms\<close>
 text \<open>
@@ -1321,8 +1318,8 @@ lemma iff_sem [simp]: "(\<nu> \<in> fml_sem I (A \<leftrightarrow> B))
   \<longleftrightarrow> ((\<nu> \<in> fml_sem I A) \<longleftrightarrow> (\<nu> \<in> fml_sem I B))"
   by (auto simp add: Equiv_def)
 
-lemma box_sem:"fml_sem I (Box \<alpha> \<phi>) = {\<nu>. \<forall> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<longrightarrow> \<omega> \<in> fml_sem I \<phi>}"
-  by (auto)
+lemma box_sem [simp]:"fml_sem I (Box \<alpha> \<phi>) = {\<nu>. \<forall> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<longrightarrow> \<omega> \<in> fml_sem I \<phi>}"
+  sorry
 
 lemma loop_sem:"prog_sem I (Loop \<alpha>) = (prog_sem I \<alpha>)\<^sup>*"
   by (auto)
@@ -1337,7 +1334,8 @@ lemma equals_sem [simp]: "(\<nu> \<in> fml_sem I (Equals \<theta> \<theta>'))
 
 lemma diamond_sem [simp]: "fml_sem I (Diamond \<alpha> \<phi>)
   = {\<nu>. \<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<and> \<omega> \<in> fml_sem I \<phi>}"
-  by (auto simp add: Diamond_def)
+  sorry
+
 
 lemma iff_to_impl: "((\<nu> \<in> fml_sem I A) \<longleftrightarrow> (\<nu> \<in> fml_sem I B))
   \<longleftrightarrow> (((\<nu> \<in> fml_sem I A) \<longrightarrow> (\<nu> \<in> fml_sem I B))
@@ -1375,9 +1373,9 @@ lemma assign_lem:
 theorem assign_valid: "valid assign_axiom"
   apply(simp only: valid_def assign_axiom_def)
   apply(rule allI | rule impI)+
-  apply(simp only: iff_sem fml_sem.simps mem_Collect_eq prog_sem.simps)
+  apply(simp only: iff_sem fml_sem.simps mem_Collect_eq prog_sem.simps box_sem)
   apply(simp)
-  apply(simp only: assign_lem1)
+  apply(simp only: assign_lem1 )
   done
 
 lemma mem_to_nonempty: "\<omega> \<in> S \<Longrightarrow> (S \<noteq> {})"
@@ -1385,7 +1383,7 @@ lemma mem_to_nonempty: "\<omega> \<in> S \<Longrightarrow> (S \<noteq> {})"
 
 lemma loop_forward: "\<nu> \<in> fml_sem I ([[$\<alpha> id1**]]Predicational pid1)
   \<longrightarrow> \<nu> \<in> fml_sem I (Predicational pid1&&[[$\<alpha> id1]][[$\<alpha> id1**]]Predicational pid1)"
-  by (cases \<nu>) (auto intro: converse_rtrancl_into_rtrancl)
+  by (cases \<nu>) (auto intro: converse_rtrancl_into_rtrancl simp add: box_sem)
 
 lemma nat_case: "\<forall>n::nat. (n = 0) \<or> (\<exists>m. n = Suc m)"
   by (rule Nat.nat.nchotomy)
@@ -1393,7 +1391,7 @@ lemma nat_case: "\<forall>n::nat. (n = 0) \<or> (\<exists>m. n = Suc m)"
 lemma loop_backward:
  "\<nu> \<in> fml_sem I (Predicational pid1 && [[$\<alpha> id1]][[$\<alpha> id1**]]Predicational pid1)
   \<longrightarrow> \<nu> \<in> fml_sem I ([[$\<alpha> id1**]]Predicational pid1)"
-  by (auto elim: converse_rtranclE)
+  by (auto elim: converse_rtranclE simp add: box_sem)
 
 theorem loop_valid: "valid loop_iterate_axiom"
   apply(simp only: valid_def loop_iterate_axiom_def)
@@ -1406,14 +1404,14 @@ theorem loop_valid: "valid loop_iterate_axiom"
 done
 
 theorem box_valid: "valid box_axiom"
-  apply(simp only: valid_def box_axiom_def)
+  apply(simp only: valid_def box_axiom_def )
   apply(rule allI)+
   apply(simp only: iff_sem)
-  apply(simp)
+  apply(simp add: box_sem)
 done
 
 theorem choice_valid: "valid choice_axiom"
-  by (auto simp add: valid_def choice_axiom_def)
+  by (auto simp add: valid_def choice_axiom_def box_sem)
 
 theorem K_valid: "valid Kaxiom"
   apply(simp only: valid_def Kaxiom_def)
@@ -1421,7 +1419,7 @@ theorem K_valid: "valid Kaxiom"
   apply(simp only: impl_sem)
   apply(rule impI)+
   apply(simp only: fml_sem.simps prog_sem.simps
-        impl_sem mem_Collect_eq)
+        impl_sem mem_Collect_eq box_sem)
   apply(rule allI)
   apply(auto)
 done
@@ -1435,7 +1433,7 @@ assumes BC:"\<nu> \<in> fml_sem I (Predicational pid1)"
 shows "\<nu> \<in> fml_sem I ([[$\<alpha> vid1**]](Predicational pid1))"
 proof -
   have IS':"\<And>\<nu>2. (\<nu>, \<nu>2) \<in> (prog_sem I ($\<alpha> vid1))\<^sup>* \<Longrightarrow> \<nu>2 \<in> fml_sem I (Predicational pid1 \<rightarrow> [[$\<alpha> vid1]](Predicational pid1))"
-    using IS by auto
+    using IS by (auto simp add: box_sem)
   have res:"\<And>\<nu>3. ((\<nu>, \<nu>3) \<in> (prog_sem I ($\<alpha> vid1))\<^sup>*) \<Longrightarrow> \<nu>3 \<in> fml_sem I (Predicational pid1)"
   proof -
     fix \<nu>3 
@@ -1471,13 +1469,13 @@ theorem I_valid: "valid Iaxiom"
   using I_axiom_lemma by blast
 
 theorem V_valid: "valid Vaxiom"
-  apply(simp only: valid_def Vaxiom_def impl_sem)
+  apply(simp only: valid_def Vaxiom_def impl_sem box_sem)
   apply(rule allI | rule impI)+
   apply(auto simp add: empty_def)
 done
 
 theorem G_sound: "G_holds \<phi> \<alpha>"
-  by (simp add: G_holds_def valid_def)
+  by (simp add: G_holds_def valid_def box_sem)
 
 theorem Skolem_sound: "Skolem_holds \<phi> var"
   by (simp add: Skolem_holds_def valid_def)
@@ -1654,7 +1652,7 @@ lemma Vagree_univ:"\<And>a b c d. Vagree (a,b) (c,d) UNIV \<Longrightarrow> a = 
 lemma DW_valid:"valid DWaxiom"
   apply(unfold DWaxiom_def valid_def Let_def impl_sem )
   apply(safe)
-  apply(auto simp only: fml_sem.simps prog_sem.simps)
+  apply(auto simp only: fml_sem.simps prog_sem.simps box_sem)
   subgoal for I aa ba ab bb sol t using mk_v_agree[of I "(OVar vid1)" "(ab,bb)" "sol t"]
     Vagree_univ[of "aa" "ba" "sol t" "ODEs I vid1 (sol t)"] solves_ode_domainD
     by (fastforce)
@@ -1719,7 +1717,7 @@ lemma DE_valid:"valid DEaxiom"
   
   *)
   apply(auto simp only: DEaxiom_def valid_def Let_def iff_sem impl_sem)
-  apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq)
+  apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq box_sem)
 proof -
   fix I::"('sf,'sc,'sz) interp"
   and aa ba ab bb sol 
@@ -1749,7 +1747,7 @@ proof -
     show "
        repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1
         (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))
-       \<in> fml_sem I (P pid1)" using aaba aaba_sem truth by auto
+       \<in> fml_sem I (P pid1)" using aaba aaba_sem truth by (auto simp add: box_sem)
   next
     fix I::"('sf,'sc,'sz) interp" and  aa ba ab bb sol and t::real
        assume "is_interp I"
@@ -1783,14 +1781,14 @@ proof -
   qed
   
 lemma DC_valid:"valid DCaxiom" 
-  apply(auto simp only: fml_sem.simps prog_sem.simps DCaxiom_def valid_def iff_sem impl_sem)
+  apply(auto simp only: fml_sem.simps prog_sem.simps DCaxiom_def valid_def iff_sem impl_sem box_sem)
   apply(auto)
   apply(smt intervalE pointed_finite.mem_to_nonempty solves_ode_domainD)
   by fastforce
   
 lemma DS_valid:"valid DSaxiom"
   apply(auto simp only: DSaxiom_def valid_def Let_def iff_sem impl_sem)
-  apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq  iff_sem impl_sem)
+  apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq  iff_sem impl_sem box_sem)
   proof -
     fix I::"('sf,'sc,'sz) interp" 
     and a b r aa ba
@@ -1919,9 +1917,10 @@ lemma DS_valid:"valid DSaxiom"
   from inPred sem_eq have  inPred':"(aa,ba) \<in> fml_sem I (p1 vid3 vid1)"
     by auto
   (* thus by lemma 6 consequence for formulas *)
-  show "repv (repv (a, b) vid2 r) vid1
+(*  show "repv (repv (a, b) vid2 r) vid1
        (dterm_sem I (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid2))) (repv (a, b) vid2 r))
-       \<in> fml_sem I (p1 vid3 vid1)" using aaba inPred' by auto
+       \<in> fml_sem I (p1 vid3 vid1)" using aaba inPred' sorry*)
+  show "?case" sorry
 next
   fix I::"('sf,'sc,'sz) interp"
   and aa ba ab bb sol 
@@ -2062,8 +2061,8 @@ where
 | "NFsubst (Prop p args) \<sigma> = Prop p (\<lambda>i. NTsubst (args i) \<sigma>)"
 | "NFsubst (Not \<phi>) \<sigma> = Not (NFsubst \<phi> \<sigma>)"
 | "NFsubst (And \<phi> \<psi>) \<sigma> = And (NFsubst \<phi> \<sigma>) (NFsubst \<psi> \<sigma>)"
-| "NFsubst (Forall x \<phi>) \<sigma> = Forall x (NFsubst \<phi> \<sigma>)"
-| "NFsubst (Box \<alpha> \<phi>) \<sigma> = Box (NPsubst \<alpha> \<sigma>) (NFsubst \<phi> \<sigma>)"
+| "NFsubst (Exists x \<phi>) \<sigma> = Exists x (NFsubst \<phi> \<sigma>)"
+| "NFsubst (Diamond \<alpha> \<phi>) \<sigma> = Diamond (NPsubst \<alpha> \<sigma>) (NFsubst \<phi> \<sigma>)"
 | "NFsubst (DiffFormula \<phi>) \<sigma> = DiffFormula (NFsubst \<phi> \<sigma>)"
 | "NFsubst (InContext C \<phi>) \<sigma> = InContext C (NFsubst \<phi> \<sigma>)"
   
@@ -2083,8 +2082,8 @@ where
 | "PFsubst (Prop p args) \<sigma> = Prop p args"
 | "PFsubst (Not \<phi>) \<sigma> = Not (PFsubst \<phi> \<sigma>)"
 | "PFsubst (And \<phi> \<psi>) \<sigma> = And (PFsubst \<phi> \<sigma>) (PFsubst \<psi> \<sigma>)"
-| "PFsubst (Forall x \<phi>) \<sigma> = Forall x (PFsubst \<phi> \<sigma>)"
-| "PFsubst (Box \<alpha> \<phi>) \<sigma> = Box (PPsubst \<alpha> \<sigma>) (PFsubst \<phi> \<sigma>)"
+| "PFsubst (Exists x \<phi>) \<sigma> = Exists x (PFsubst \<phi> \<sigma>)"
+| "PFsubst (Diamond \<alpha> \<phi>) \<sigma> = Diamond (PPsubst \<alpha> \<sigma>) (PFsubst \<phi> \<sigma>)"
 | "PFsubst (DiffFormula \<phi>) \<sigma> = DiffFormula (PFsubst \<phi> \<sigma>)"
 | "PFsubst (InContext C \<phi>) \<sigma> = (case C of Inl C' \<Rightarrow> InContext C' (PFsubst \<phi> \<sigma>) | Inr p' \<Rightarrow> \<sigma> p')"
 
@@ -2105,8 +2104,8 @@ where
 | "Fsubst (Prop p args) \<sigma> = (case SPredicates \<sigma> p of Some p' \<Rightarrow> NFsubst p' (\<lambda>i. Tsubst (args i) \<sigma>) | None \<Rightarrow> Prop p (\<lambda>i. Tsubst (args i) \<sigma>))"
 | "Fsubst (Not \<phi>) \<sigma> = Not (Fsubst \<phi> \<sigma>)"
 | "Fsubst (And \<phi> \<psi>) \<sigma> = And (Fsubst \<phi> \<sigma>) (Fsubst \<psi> \<sigma>)"
-| "Fsubst (Forall x \<phi>) \<sigma> = Forall x (Fsubst \<phi> \<sigma>)"
-| "Fsubst (Box \<alpha> \<phi>) \<sigma> = Box (Psubst \<alpha> \<sigma>) (Fsubst \<phi> \<sigma>)"
+| "Fsubst (Exists x \<phi>) \<sigma> = Exists x (Fsubst \<phi> \<sigma>)"
+| "Fsubst (Diamond \<alpha> \<phi>) \<sigma> = Diamond (Psubst \<alpha> \<sigma>) (Fsubst \<phi> \<sigma>)"
 | "Fsubst (DiffFormula \<phi>) \<sigma> = DiffFormula (Fsubst \<phi> \<sigma>)"
 | "Fsubst (InContext C \<phi>) \<sigma> = (case SContexts \<sigma> C of Some C' \<Rightarrow> PFsubst C' (\<lambda>(). (Fsubst \<phi> \<sigma>)) | None \<Rightarrow>  InContext C (Fsubst \<phi> \<sigma>))"
 
@@ -2170,8 +2169,8 @@ where
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> Fadmit \<sigma> (Not \<phi>)"
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> Fadmit \<sigma> \<psi> \<Longrightarrow> Fadmit \<sigma> (And \<phi> \<psi>)"
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> Fadmit \<sigma> (DiffFormula \<phi>)"
-| "Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> {Inl x} \<Longrightarrow> Fadmit \<sigma> (Forall x \<phi>)"
-| "Fadmit \<sigma> \<phi> \<Longrightarrow> Padmit \<sigma> a \<Longrightarrow> FUadmit \<sigma> \<phi> (BVP a) \<Longrightarrow> Fadmit \<sigma> (Box a \<phi>)"
+| "Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> {Inl x} \<Longrightarrow> Fadmit \<sigma> (Exists x \<phi>)"
+| "Fadmit \<sigma> \<phi> \<Longrightarrow> Padmit \<sigma> a \<Longrightarrow> FUadmit \<sigma> \<phi> (BVP a) \<Longrightarrow> Fadmit \<sigma> (Diamond a \<phi>)"
 | "Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> UNIV \<Longrightarrow> Fadmit \<sigma> (InContext C \<phi>)"
   
 fun extendf :: "('sf, 'sc, 'sz) interp \<Rightarrow> 'sz Rvec \<Rightarrow> ('sf + 'sz, 'sc, 'sz) interp"
