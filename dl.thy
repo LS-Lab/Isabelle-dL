@@ -1016,14 +1016,6 @@ lemma coincidence_dterm:
   fixes I :: "('sf::finite, 'sc::finite, 'sz::finite) interp" and \<nu> :: "'sz state" and \<nu>'::"'sz state"
   shows "dsafe \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta> \<nu>'"
 proof (induction rule: dsafe.induct)
-  case dsafe_Var then show "?case"
-    by (auto simp add: Vagree_def)
-
-next
-  case dsafe_Const then show "?case"
-    by (auto)
-
-next
   case (dsafe_Fun args f)
     assume safe:"(\<And>i. dsafe (args i))"
     assume IH:"\<And>i. Vagree \<nu> \<nu>' (FVT (args i)) \<Longrightarrow> dterm_sem I (args i) \<nu> = dterm_sem I (args i) \<nu>'"
@@ -1032,23 +1024,7 @@ next
       using agree_func_fvt by (metis)
     then show "?case"
       using safe coincidence_sterm IH rangeI by (auto)
-
-next
-  case dsafe_Plus then show "?case"
-    by (metis FVT.simps(4) UnCI agree_supset dterm_sem.simps(4) subset_eq  union_supset1)
-
-next
-  case dsafe_Times then show "?case"
-    by (metis FVT.simps(5) UnCI agree_supset dterm_sem.simps(5) subset_eq  union_supset1)
-
-next 
-  case dsafe_Diff then show "?case"
-    by (auto simp: directional_derivative_def coincidence_frechet)
-
-next
-  case dsafe_DiffVar then show "?case"
-    by (auto simp add: Vagree_def)
-qed
+qed (auto simp: Vagree_def directional_derivative_def coincidence_frechet)
 
 subsection \<open>Axioms\<close>
 text \<open>
