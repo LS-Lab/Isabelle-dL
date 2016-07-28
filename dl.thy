@@ -262,7 +262,19 @@ lemma hp_induct [case_names Var Assign DiffAssign Test Evolve Choice Compose Sta
     (\<And>x1 x2. P x1 \<Longrightarrow> P x2 \<Longrightarrow> P (x1 ;; x2)) \<Longrightarrow>
     (\<And>x. P x \<Longrightarrow> P x**) \<Longrightarrow>
      P hp"
-by(induction rule: hp.induct) (auto)
+  by(induction rule: hp.induct) (auto)
+
+lemma fml_induct:
+"(\<And>t1 t2. P (Geq t1 t2))
+\<Longrightarrow> (\<And>p args. P (Prop p args))
+\<Longrightarrow> (\<And>p. P p \<Longrightarrow> P (Not p))
+\<Longrightarrow> (\<And>p q. P p \<Longrightarrow> P q \<Longrightarrow> P (And p q))
+\<Longrightarrow> (\<And>x p. P p \<Longrightarrow> P (Exists x p))
+\<Longrightarrow> (\<And>a p. P p \<Longrightarrow> P (Diamond a p))
+\<Longrightarrow> (\<And>p. P p \<Longrightarrow> P (DiffFormula p))
+\<Longrightarrow> (\<And>C p. P p \<Longrightarrow> P (InContext C p))
+\<Longrightarrow> P \<phi>"
+  by (induction rule: formula.induct) (auto)
 
 type_synonym ('a, 'c) stuple = "('c \<Rightarrow> ('a, 'c) trm)"
 type_synonym ('a, 'c) dtuple = "('c \<Rightarrow> ('a, 'c) trm)"
@@ -432,7 +444,7 @@ where
 | "diff_formula_sem I (Not p) = diff_formula_sem I p"
 | "diff_formula_sem I (And p q) = diff_formula_sem I p \<inter> diff_formula_sem I p"
   (* TODO: Totally broken: Think about predicational case *)
-| "diff_formula_sem I  p = fml_sem I p"
+| "diff_formula_sem I  p = (*fml_sem I p*) UNIV"
 
 | "prog_sem I (Pvar p) = Programs I p"
 | "prog_sem I (Assign x t) = {(\<nu>, \<omega>). \<omega> = repv \<nu> x (dterm_sem I t \<nu>)}"
@@ -1260,9 +1272,37 @@ next
      qed
     then show "?case" unfolding coincide_fml_def by blast
 next
-  case hpsafe_DiffFormula then show "?case" sorry
+  case (hpsafe_DiffFormula p) then 
+  have "\<And>\<nu> \<nu>' I J.
+       Iagree I J (SIGF (DiffFormula p)) \<Longrightarrow>
+       Vagree \<nu> \<nu>' (FVF (DiffFormula p)) \<Longrightarrow> (\<nu> \<in> diff_formula_sem I p) = (\<nu>' \<in> diff_formula_sem J p)"
+    apply(auto)
+    sorry
+  then show "?case" unfolding coincide_fml_def by auto
 next
-  case hpsafe_InContext then show "?case" sorry
+  case (hpsafe_InContext \<phi>) then 
+  have safe:"fsafe \<phi>"
+    and IH:"(\<forall> \<nu> \<nu>' I J. Iagree I J (SIGF \<phi>) \<longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<longrightarrow> \<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem J \<phi>)"
+    by (unfold coincide_fml_def)
+  hence IH':"\<And>\<nu> \<nu>' I J. Iagree I J (SIGF \<phi>) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<Longrightarrow> \<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem J \<phi>"
+    by auto
+  hence sem_eq:"\<And>I J. Iagree I J (SIGF \<phi>) \<Longrightarrow> fml_sem I \<phi> = fml_sem J \<phi>" sorry
+  have "(\<And> \<nu> \<nu>' I J C . Iagree I J (SIGF (InContext C \<phi>)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (InContext C \<phi>)) \<Longrightarrow> \<nu> \<in> fml_sem I (InContext C \<phi>)  \<longleftrightarrow> \<nu>' \<in> fml_sem J (InContext C \<phi>))"
+    proof -
+      fix \<nu> \<nu>' I J C
+      assume IA:"Iagree I J (SIGF (InContext C \<phi>))"
+      then have IA':"Iagree I J (SIGF \<phi>)" unfolding SIGF.simps Iagree_def by auto
+      assume VA:"Vagree \<nu> \<nu>' (FVF (InContext C \<phi>))"
+      then have VAU:"Vagree \<nu> \<nu>' UNIV" unfolding FVF.simps Vagree_def by auto
+      then have VA':"Vagree \<nu> \<nu>' (FVF \<phi>)" unfolding FVF.simps Vagree_def by auto
+      from VAU have eq:"\<nu> = \<nu>'" by (cases "\<nu>", cases "\<nu>'", auto simp add: vec_eq_iff Vagree_def)
+      from IA have Cmem:"Inr (Inl C) \<in> SIGF (InContext C \<phi>)"
+        by simp
+      have Cagree:"Contexts I C = Contexts J C" by (rule Iagree_Contexts[OF IA Cmem])
+      show "\<nu> \<in> fml_sem I (InContext C \<phi>)  \<longleftrightarrow> \<nu>' \<in> fml_sem J (InContext C \<phi>)"  
+        using Cagree eq sem_eq IA' by (auto)
+    qed
+  then show "?case" by simp
 qed 
   
 subsection \<open>Axioms\<close>
