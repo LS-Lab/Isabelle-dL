@@ -1027,7 +1027,7 @@ next
   have IH2':"(frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
   using IH2 agree2 by (auto)
   have almost:"Vagree \<nu> \<nu>' (FVT (Times t1 t2)) \<Longrightarrow> frechet I (Times t1 t2) (fst \<nu>) (snd \<nu>) = frechet I (Times t1 t2) (fst \<nu>') (snd \<nu>')"
-  by (smt FVT.simps(5) IH1' IH2' UnCI Vagree_def coincidence_sterm frechet.simps(4)  mem_Collect_eq agree )
+  by (smt FVT.simps(5) IH1' IH2' UnCI Vagree_def coincidence_sterm frechet.simps(4)  mem_Collect_eq agree)
   show "?case"
     using agree FVDiff_sub almost
     by (metis agree_supset)
@@ -1239,9 +1239,6 @@ next
       qed
       have dir2:"\<nu>' \<in> fml_sem J (Diamond a p) \<Longrightarrow> \<nu> \<in> fml_sem I (Diamond a p)"
       proof - 
-      (*  assume sem:"\<nu>' \<in> fml_sem J (Diamond a p)"
-        show "\<nu> \<in> fml_sem I (Diamond a p)"
-*)
         assume sem:"\<nu>' \<in> fml_sem J (Diamond a p)"
         let ?V = "FVF (Diamond a p)"
         have Vsup:"FVP a \<subseteq> ?V" by auto
@@ -1266,7 +1263,6 @@ next
         then show "\<nu> \<in> fml_sem I (Diamond a p)" 
           unfolding fml_sem.simps by (auto simp only: mem_Collect_eq)
       qed
-
       show "(\<nu> \<in> fml_sem I (Diamond a p)) = (\<nu>' \<in> fml_sem J (Diamond a p))"
         using dir1 dir2 by auto
      qed
@@ -1286,7 +1282,8 @@ next
     by (unfold coincide_fml_def)
   hence IH':"\<And>\<nu> \<nu>' I J. Iagree I J (SIGF \<phi>) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<Longrightarrow> \<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem J \<phi>"
     by auto
-  hence sem_eq:"\<And>I J. Iagree I J (SIGF \<phi>) \<Longrightarrow> fml_sem I \<phi> = fml_sem J \<phi>" sorry
+  hence sem_eq:"\<And>I J. Iagree I J (SIGF \<phi>) \<Longrightarrow> fml_sem I \<phi> = fml_sem J \<phi>"
+    by (smt Collect_cong Collect_mem_eq agree_refl) 
   have "(\<And> \<nu> \<nu>' I J C . Iagree I J (SIGF (InContext C \<phi>)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (InContext C \<phi>)) \<Longrightarrow> \<nu> \<in> fml_sem I (InContext C \<phi>)  \<longleftrightarrow> \<nu>' \<in> fml_sem J (InContext C \<phi>))"
     proof -
       fix \<nu> \<nu>' I J C
@@ -1449,14 +1446,14 @@ lemma assign_lem1:
 =
  dterm_sem I (if i = vid1 then $f fid1 empty else (Const 0)) \<nu>
 "
- by (case_tac "i = vid1") (auto simp add: proj_sing1)
+ by (cases "i = vid1") (auto simp add: proj_sing1)
 
 lemma assign_lem:
 "dterm_sem I (singleton (Var vid1) i)
    (vec_lambda (\<lambda>y. if y = vid1  then Functions I fid1 (vec_lambda (\<lambda>i. dterm_sem I (empty i) \<nu>)) else vec_nth (fst \<nu>) y), snd \<nu>)
                    =
  dterm_sem I (singleton ($f fid1 empty) i) \<nu>"
- by (case_tac "i = vid1 ") (auto simp add: proj_sing1)
+ by (cases "i = vid1 ") (auto simp add: proj_sing1)
 
 theorem assign_valid: "valid assign_axiom"
   apply(simp only: valid_def assign_axiom_def)
@@ -1669,7 +1666,6 @@ theorem diff_const_axiom_valid: "valid diff_const_axiom"
   apply(rule allI | rule impI)+
   apply(simp only: dterm_sem.simps constant_deriv_zero sterm_sem.simps)
 done
-
 
 subsection \<open>ODE Axioms\<close>
 definition DWaxiom :: "('sf, 'sc, 'sz) formula"
@@ -1926,7 +1922,7 @@ lemma DS_valid:"valid DSaxiom"
     apply (rule vec_extensionality)
     subgoal for i
       apply (cases "i = vid1")
-      using vne12 agrees Vagree_def  apply (auto simp add: aaba f0_def empty_def )
+      using vne12 agrees Vagree_def  apply (auto simp add: aaba f0_def empty_def)
       done
     apply (rule vec_extensionality)
       subgoal for i
@@ -1993,7 +1989,6 @@ lemma DS_valid:"valid DSaxiom"
               (\<chi> i. if i = vid1 then a $ i + Functions I fid1 (\<chi> _. 0) * t else a $ i)))" using eq by auto
     qed
     done
-      
   have req4:"?sol 0 = fst (a,b)" by (auto simp: vec_eq_iff)
   have inPred:"?abba \<in> fml_sem I (p1 vid3 vid1)"
     using \<open>(\<exists>\<nu> sol t. ((a, b), ?abba) = (\<nu>, mk_v I (OSing vid1 (f0 fid1)) \<nu> (sol t)) \<and> 0 \<le> t \<and> (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..t} {x. mk_v I (OSing vid1 (f0 fid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and> sol 0 = fst \<nu>) \<longrightarrow> ?abba \<in> fml_sem I (p1 vid3 vid1)\<close>
