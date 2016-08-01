@@ -725,7 +725,7 @@ where
 primrec SIGP   :: "('a, 'b, 'c) hp      \<Rightarrow> ('a + 'b + 'c) set"
 and     SIGF   :: "('a, 'b, 'c) formula \<Rightarrow> ('a + 'b + 'c) set"
 where
-  "SIGP (Pvar var) = {}"
+  "SIGP (Pvar var) = {Inr (Inr var)}"
 | "SIGP (Assign var t) = {Inl x | x. x \<in> SIGT t}"
 | "SIGP (DiffAssign var t) = {Inl x | x. x \<in> SIGT t}"
 | "SIGP (Test p) = SIGF p"
@@ -839,8 +839,12 @@ lemma agree_refl:"Vagree \<nu> \<nu> A"
 by (auto simp add: Vagree_def)
 
 lemma agree_comm:"\<And>A B V. Vagree A B V \<Longrightarrow> Vagree B A V" unfolding Vagree_def by auto
-lemma agree_sub:"\<And>I J A B . A \<subseteq> B \<Longrightarrow> Vagree I J B \<Longrightarrow> Vagree I J A"
+
+lemma agree_sub:"\<And>\<nu> \<omega> A B . A \<subseteq> B \<Longrightarrow> Vagree \<nu> \<omega> B \<Longrightarrow> Vagree \<nu> \<omega> A"
   unfolding Vagree_def by auto
+
+lemma agree_UNIV_eq:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> UNIV \<Longrightarrow> \<nu> = \<omega>"
+  unfolding Vagree_def by (auto simp add: vec_eq_iff)
 
 lemma Iagree_comm:"\<And>A B V. Iagree A B V \<Longrightarrow> Iagree B A V" 
   unfolding Iagree_def by metis
@@ -1077,9 +1081,28 @@ lemma coincidence_hp_fml:
  shows "(hpsafe \<alpha> \<longrightarrow> coincide_hp \<alpha>) \<and> (fsafe \<phi> \<longrightarrow> coincide_fml \<phi>)"
 proof (induction rule: hpsafe_fsafe.induct)
   case (hpsafe_Pvar x)
-(*    hence "Vagree \<nu> \<nu>' (FVP (Pvar x)) \<Longrightarrow> \<nu> = \<nu>'" 
-      by (cases "\<nu>", cases "\<nu>'", auto simp: Vagree_def vec_eq_iff)*)
-  thus "?case" sorry
+  thus "?case" 
+    apply(auto)
+    subgoal for a b aa ba ab bb V I J
+      proof -
+        assume IA:"Iagree I J {Inr (Inr x)}"
+          have Peq:"\<And>y. y \<in> Programs I x \<longleftrightarrow> y \<in> Programs J x" using Iagree_Prog[OF IA] by auto
+        assume agree:"Vagree (a, b) (aa, ba) V"
+        and sub:"UNIV \<subseteq> V"
+        and sem:"((a, b), ab, bb) \<in> Programs I x"
+        from agree_UNIV_eq[OF agree_sub [OF sub agree]]
+        have eq:"(a,b) = (aa,ba)" by auto
+        hence sem':"((aa,ba), (ab,bb)) \<in> Programs I x"
+          using sem by auto
+        have triv_sub:"V \<subseteq> UNIV" by auto
+        have VA:"Vagree (ab,bb) (ab,bb) V" using agree_sub[OF triv_sub agree_refl[of "(ab,bb)"]] eq
+          by auto
+        show "\<exists>a b. ((aa, ba), a, b) \<in> Programs J x \<and> Vagree (ab, bb) (a, b) V"
+          apply(rule exI[where x="ab"])
+          apply(rule exI[where x="bb"])
+          using sem eq VA by (auto simp add: Peq)
+        qed
+    done
 next
   case (hpsafe_Assign e x) then 
   show "?case" 
