@@ -1083,7 +1083,25 @@ next
   show "?case" 
     apply(simp only: coincide_hp_def)
     apply(rule allI | rule impI)+
-    sorry
+  proof -
+    fix \<nu> \<nu>' \<mu> V 
+      and I J::"('sf, 'sc, 'sz) interp"
+    assume safe:"dsafe e"
+      and IA:"Iagree I J (SIGP (x := e))"
+      and VA:"Vagree \<nu> \<nu>' V"
+      and sub:"FVP (x := e) \<subseteq> V"
+      and sem:"(\<nu>, \<mu>) \<in> prog_sem I (x := e)"
+    from VA have VA':"Vagree \<nu> \<nu>' (FVT e)" unfolding FVP.simps Vagree_def using sub by auto
+    have Ssub:"{Inl x | x. x \<in> SIGT e} \<subseteq> (SIGP (x := e))" by auto
+    from IA have IA':"Iagree I J {Inl x | x. x \<in> SIGT e}" using Ssub unfolding SIGP.simps by auto
+    have "(\<nu>, repv \<nu> x (dterm_sem I e \<nu>)) \<in> prog_sem I (x := e)" by auto
+    then have sem':"(\<nu>', repv \<nu>' x (dterm_sem J e \<nu>')) \<in> prog_sem J (x := e)" 
+      using coincidence_dterm'[OF safe VA' IA'] by auto
+    from sem have eq:"\<mu> = (repv \<nu> x (dterm_sem I e \<nu>))" by auto
+    have VA':"Vagree \<mu> (repv \<nu>' x (dterm_sem J e \<nu>')) (MBV (x := e) \<union> V)" 
+      using coincidence_dterm'[OF safe VA' IA'] eq agree_refl VA unfolding MBV.simps Vagree_def by auto
+    show "\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J (x := e) \<and> Vagree \<mu> \<mu>' (MBV (x := e) \<union> V)"
+      using VA' sem' by blast
 next
   case hpsafe_DiffAssign then show "?case" sorry
 next
