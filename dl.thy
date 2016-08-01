@@ -839,9 +839,11 @@ lemma agree_refl:"Vagree \<nu> \<nu> A"
 by (auto simp add: Vagree_def)
 
 lemma agree_comm:"\<And>A B V. Vagree A B V \<Longrightarrow> Vagree B A V" unfolding Vagree_def by auto
+lemma agree_sub:"\<And>I J A B . A \<subseteq> B \<Longrightarrow> Vagree I J B \<Longrightarrow> Vagree I J A"
+  unfolding Vagree_def by auto
+
 lemma Iagree_comm:"\<And>A B V. Iagree A B V \<Longrightarrow> Iagree B A V" 
   unfolding Iagree_def by metis
-
 lemma Iagree_sub:"\<And>I J A B . A \<subseteq> B \<Longrightarrow> Iagree I J B \<Longrightarrow> Iagree I J A"
   unfolding Iagree_def by blast
 
@@ -1125,7 +1127,21 @@ next
   qed
 
 next
-  case hpsafe_Test then show "?case" sorry
+  case (hpsafe_Test P)then 
+  show "?case" 
+  proof (auto)
+    fix \<nu> \<nu>' \<omega> \<omega>' ::"'sz simple_state"
+      and V I J
+    assume safe:"fsafe P"
+    assume "\<forall>a b aa ba I J. Iagree I J (SIGF P) \<longrightarrow> Vagree (a, b) (aa, ba) (FVF P) \<longrightarrow> ((a, b) \<in> fml_sem I P) = ((aa, ba) \<in> fml_sem J P)"
+    hence IH:"Iagree I J (SIGF P) \<Longrightarrow> Vagree (\<nu>, \<nu>') (\<omega>, \<omega>') (FVF P) \<Longrightarrow> ((\<nu>, \<nu>') \<in> fml_sem I P) = ((\<omega>, \<omega>') \<in> fml_sem J P)"
+      by auto
+    assume IA:"Iagree I J (SIGF P)"
+    assume VA:"Vagree (\<nu>, \<nu>') (\<omega>, \<omega>') V"
+    assume sub:"FVF P \<subseteq> V"
+      hence VA':"Vagree (\<nu>, \<nu>') (\<omega>, \<omega>') (FVF P)" using agree_supset VA by auto
+    assume sem:"(\<nu>, \<nu>') \<in> fml_sem I P"
+    show "(\<omega>, \<omega>') \<in> fml_sem J P" using IH[OF IA VA'] sem by auto
 next
   case hpsafe_Evolve then show "?case" sorry
 next
