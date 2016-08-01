@@ -703,7 +703,7 @@ where
  | "FVP (Test \<phi>) = FVF \<phi>"
  | "FVP (EvolveODE ODE \<phi>) = ODE_vars ODE \<union> FVO ODE \<union> FVF \<phi>"
  | "FVP (Choice \<alpha> \<beta>) = FVP \<alpha> \<union> FVP \<beta>"
- | "FVP (Sequence \<alpha> \<beta>) = (FVP \<alpha> \<union> FVP \<beta>) - (MBV \<alpha>)"
+ | "FVP (Sequence \<alpha> \<beta>) = FVP \<alpha> \<union> (FVP \<beta> - MBV \<alpha>)"
  | "FVP (Loop \<alpha>) = FVP \<alpha>"
 
 primrec SIGT :: "('a, 'c) trm \<Rightarrow> 'a set"
@@ -1142,6 +1142,7 @@ next
       hence VA':"Vagree (\<nu>, \<nu>') (\<omega>, \<omega>') (FVF P)" using agree_supset VA by auto
     assume sem:"(\<nu>, \<nu>') \<in> fml_sem I P"
     show "(\<omega>, \<omega>') \<in> fml_sem J P" using IH[OF IA VA'] sem by auto
+    qed
 next
   case hpsafe_Evolve then show "?case" sorry
 next
@@ -1194,7 +1195,50 @@ next
   qed 
 
 next
-  case (hpsafe_Sequence a b) then show "?case" sorry
+  case (hpsafe_Sequence a b) then show "?case" 
+    apply(auto )
+    subgoal for \<nu>2 \<nu>2' V I J \<nu>1 \<nu>1' \<mu> \<mu>' \<omega> \<omega>' 
+    proof -
+      assume safe:"hpsafe a" "hpsafe b"
+      assume "\<forall>aa b ab ba ac bb V I J.
+         Iagree I J (SIGP a) \<longrightarrow>
+         Vagree (aa, b) (ab, ba) V \<longrightarrow>
+         FVP a \<subseteq> V \<longrightarrow> ((aa, b), ac, bb) \<in> prog_sem I a \<longrightarrow> (\<exists>aa b. ((ab, ba), aa, b) \<in> prog_sem J a \<and> Vagree (ac, bb) (aa, b) (MBV a \<union> V))"
+      hence IH1':"\<And>aa b ab ba ac bb V I J.
+         Iagree I J (SIGP a) \<Longrightarrow>
+         Vagree (aa, b) (ab, ba) V \<Longrightarrow>
+         FVP a \<subseteq> V \<Longrightarrow> ((aa, b), ac, bb) \<in> prog_sem I a \<Longrightarrow> (\<exists>aa b. ((ab, ba), aa, b) \<in> prog_sem J a \<and> Vagree (ac, bb) (aa, b) (MBV a \<union> V))"
+        by auto
+      note IH1 =  IH1'[of I J  \<nu>1 \<nu>1' \<nu>2 \<nu>2' V \<mu> \<mu>']
+      assume "\<forall>a ba aa bb ab bc V I J.
+         Iagree I J (SIGP b) \<longrightarrow>
+         Vagree (a, ba) (aa, bb) V \<longrightarrow>
+         FVP b \<subseteq> V \<longrightarrow> ((a, ba), ab, bc) \<in> prog_sem I b \<longrightarrow> (\<exists>a ba. ((aa, bb), a, ba) \<in> prog_sem J b \<and> Vagree (ab, bc) (a, ba) (MBV b \<union> V))"
+      hence IH2':"\<And>a ba aa bb ab bc V I J.
+         Iagree I J (SIGP b) \<Longrightarrow>
+         Vagree (a, ba) (aa, bb) V \<Longrightarrow>
+         FVP b \<subseteq> V \<Longrightarrow> ((a, ba), ab, bc) \<in> prog_sem I b \<Longrightarrow> (\<exists>a ba. ((aa, bb), a, ba) \<in> prog_sem J b \<and> Vagree (ab, bc) (a, ba) (MBV b \<union> V))"
+        by auto
+      assume "Iagree I J (SIGP a \<union> SIGP b)"
+      hence IA:"Iagree I J (SIGP a)" "Iagree I J (SIGP b)" unfolding Iagree_def by auto
+      assume VA:"Vagree (\<nu>1, \<nu>1') (\<nu>2, \<nu>2') V"
+      (*assume sub:"FVP a \<union> FVP b - MBV a \<subseteq> V"*)
+      assume sub:"FVP a \<subseteq> V" "FVP b - MBV a \<subseteq> V"
+        hence sub':"FVP a \<subseteq> V" by auto
+      assume sem:"((\<nu>1, \<nu>1'), (\<mu>, \<mu>')) \<in> prog_sem I a"
+        "((\<mu>, \<mu>'), (\<omega>, \<omega>')) \<in> prog_sem I b"
+      obtain \<omega>1 \<omega>1' where sem1:"((\<nu>2, \<nu>2'), (\<omega>1, \<omega>1')) \<in> prog_sem J a" and VA1:"Vagree (\<mu>, \<mu>') (\<omega>1, \<omega>1') (MBV a \<union> V)" 
+        using IH1[OF IA(1) VA  sub' sem(1)] by auto
+      note IH2 =  IH2'[of I J  \<mu> \<mu>' \<omega>1 \<omega>1' " MBV a \<union> V" \<omega> \<omega>']
+      have sub2:"FVP b \<subseteq> MBV a \<union> V" using sub by auto
+      obtain \<omega>2 \<omega>2' where sem2:"((\<omega>1, \<omega>1'), (\<omega>2, \<omega>2')) \<in> prog_sem J b" and VA2:"Vagree (\<omega>, \<omega>') (\<omega>2, \<omega>2') (MBV b \<union> (MBV a \<union> V))"
+        using IH2[OF IA(2) VA1 sub2 sem(2)] by auto
+
+      show "\<exists>ab bb. ((\<nu>2, \<nu>2'), (ab, bb)) \<in> prog_sem J a O prog_sem J b \<and> Vagree (\<omega>, \<omega>') (ab, bb) (MBV a \<union> MBV b \<union> V)"
+        using sem1 sem2 VA1 VA2
+        by (metis (no_types, lifting) Un_assoc Un_left_commute relcomp.relcompI)
+    qed
+    done
 next
   case hpsafe_Loop then show "?case" sorry
 next
