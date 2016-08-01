@@ -753,12 +753,16 @@ where "Iagree I J V \<equiv>
 
 lemma Iagree_Func:"Iagree I J V \<Longrightarrow> Inl f \<in> V \<Longrightarrow> Functions I a = Functions J a"
   sorry
+
 lemma Iagree_Contexts:"Iagree I J V \<Longrightarrow> Inr (Inl C) \<in> V \<Longrightarrow> Contexts I C = Contexts J C"
   sorry
+
 lemma Iagree_Pred:"Iagree I J V \<Longrightarrow> Inr (Inr p) \<in> V \<Longrightarrow> Predicates I p = Predicates J p"
   sorry
+
 lemma Iagree_Prog:"Iagree I J V \<Longrightarrow> Inr (Inr a) \<in> V \<Longrightarrow> Programs I a = Programs J a"
   sorry
+
 lemma agree_nil:"Vagree \<nu> \<omega> {}"
 by (auto simp add: Vagree_def)
 
@@ -837,6 +841,9 @@ by (auto simp add: Vagree_def)
 lemma agree_comm:"\<And>A B V. Vagree A B V \<Longrightarrow> Vagree B A V" unfolding Vagree_def by auto
 lemma Iagree_comm:"\<And>A B V. Iagree A B V \<Longrightarrow> Iagree B A V" 
   unfolding Iagree_def by metis
+
+lemma Iagree_sub:"\<And>I J A B . A \<subseteq> B \<Longrightarrow> Iagree I J B \<Longrightarrow> Iagree I J A"
+  unfolding Iagree_def by blast
 
 lemma has_vector_derivative_zero_constant:
   assumes "convex s"
@@ -1072,7 +1079,11 @@ proof (induction rule: hpsafe_fsafe.induct)
       by (cases "\<nu>", cases "\<nu>'", auto simp: Vagree_def vec_eq_iff)*)
   thus "?case" sorry
 next
-  case (hpsafe_Assign e x) then show "?case" sorry
+  case (hpsafe_Assign e x) then 
+  show "?case" 
+    apply(simp only: coincide_hp_def)
+    apply(rule allI | rule impI)+
+    sorry
 next
   case hpsafe_DiffAssign then show "?case" sorry
 next
@@ -1080,9 +1091,56 @@ next
 next
   case hpsafe_Evolve then show "?case" sorry
 next
-  case hpsafe_Choice then show "?case" sorry
+  case (hpsafe_Choice a b) 
+  then show "?case" 
+  proof (auto simp only: coincide_hp_def)
+    fix \<nu>1 \<nu>1' \<nu>2 \<nu>2' \<mu> \<mu>' V I J
+    assume safe:"hpsafe a"
+       "hpsafe b"
+    and IH1:"
+       \<forall>\<nu> \<nu>' \<mu> V I J.
+          Iagree I J (SIGP a) \<longrightarrow>
+          Vagree \<nu> \<nu>' V \<longrightarrow> FVP a \<subseteq> V \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I a \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J a \<and> Vagree \<mu> \<mu>' (MBV a \<union> V))"
+   and IH2:"\<forall>\<nu> \<nu>' \<mu> V I J.
+          Iagree I J (SIGP b) \<longrightarrow>
+          Vagree \<nu> \<nu>' V \<longrightarrow> FVP b \<subseteq> V \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I b \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J b \<and> Vagree \<mu> \<mu>' (MBV b \<union> V))"
+   and IA:"Iagree I J (SIGP (a \<union>\<union> b))"
+   and VA:"Vagree (\<nu>1, \<nu>1') (\<nu>2, \<nu>2') V"
+   and sub:"FVP (a \<union>\<union> b) \<subseteq> V"
+   and sem:"((\<nu>1, \<nu>1'), (\<mu>, \<mu>')) \<in> prog_sem I (a \<union>\<union> b)"
+   hence eitherSem:"((\<nu>1, \<nu>1'), (\<mu>, \<mu>')) \<in> prog_sem I a \<or> ((\<nu>1, \<nu>1'), (\<mu>, \<mu>')) \<in> prog_sem I b"
+     by auto
+   have Ssub:"(SIGP a) \<subseteq> SIGP (a \<union>\<union> b)" "(SIGP b) \<subseteq> SIGP (a \<union>\<union> b)" 
+     unfolding SIGP.simps by auto
+   have IA1:"Iagree I J (SIGP a)" and IA2:"Iagree I J (SIGP b)" 
+     using IA Iagree_sub[OF Ssub(1)] Iagree_sub[OF Ssub(2)] by auto
+   from sub have sub1:"FVP a \<subseteq> V" and sub2:"FVP b \<subseteq> V" by auto
+   then
+   show "\<exists>\<mu>''. ((\<nu>2, \<nu>2'), \<mu>'') \<in> prog_sem J (a \<union>\<union> b) \<and> Vagree (\<mu>, \<mu>') \<mu>'' (MBV (a \<union>\<union> b) \<union> V)" 
+     proof (cases "((\<nu>1, \<nu>1'), (\<mu>, \<mu>')) \<in> prog_sem I a")
+       case True
+       then obtain \<mu>'' where prog_sem:"((\<nu>2,\<nu>2'), \<mu>'') \<in> prog_sem J a" and agree:"Vagree (\<mu>, \<mu>') \<mu>'' (MBV a \<union> V)" 
+         using IH1 VA sub1 IA1 by blast
+       from agree have agree':"Vagree (\<mu>, \<mu>') \<mu>'' (MBV (a \<union>\<union> b) \<union> V)"
+         unfolding Vagree_def MBV.simps by auto
+       from prog_sem have prog_sem':"((\<nu>2,\<nu>2'), \<mu>'') \<in> prog_sem J (a \<union>\<union> b)"
+         unfolding prog_sem.simps by blast
+       from agree' and prog_sem' show ?thesis by blast
+     next
+       case False
+       then have sem2:"((\<nu>1, \<nu>1'), (\<mu>, \<mu>')) \<in> prog_sem I b" using eitherSem by blast
+       then obtain \<mu>'' where prog_sem:"((\<nu>2,\<nu>2'), \<mu>'') \<in> prog_sem J b" and agree:"Vagree (\<mu>, \<mu>') \<mu>'' (MBV b \<union> V)" 
+         using IH2 VA sub2 IA2 by blast
+       from agree have agree':"Vagree (\<mu>, \<mu>') \<mu>'' (MBV (a \<union>\<union> b) \<union> V)"
+         unfolding Vagree_def MBV.simps by auto
+       from prog_sem have prog_sem':"((\<nu>2,\<nu>2'), \<mu>'') \<in> prog_sem J (a \<union>\<union> b)"
+         unfolding prog_sem.simps by blast
+       from agree' and prog_sem' show ?thesis by blast
+     qed
+  qed 
+
 next
-  case hpsafe_Sequence then show "?case" sorry
+  case (hpsafe_Sequence a b) then show "?case" sorry
 next
   case hpsafe_Loop then show "?case" sorry
 next
@@ -2497,7 +2555,8 @@ end
 (*
 code_thms dl.pointed_finite.NTsubst
 print_codesetup
-export_code dl.pointed_finite.NTsubst in Haskell
+ex
+port_code dl.pointed_finite.NTsubst in Haskell
 module_name Example file "examples/"
 *)
 (*
