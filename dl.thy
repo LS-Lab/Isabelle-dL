@@ -20,7 +20,7 @@ theory "dl" (* Theory names with Capital Letters! *)
 imports
   Complex_Main HOL
   "~~/src/HOL/Multivariate_Analysis/Multivariate_Analysis"
-  "../afp/thys/Ordinary_Differential_Equations/Ordinary_Differential_Equations"
+  "../afp/thys/Ordinary_Differential_Equations/ODE_Analysis"
 begin
 
 lemma norm_axis: "norm (axis i x) = norm x"
@@ -1245,7 +1245,6 @@ next
       assume "Iagree I J (SIGP a \<union> SIGP b)"
       hence IA:"Iagree I J (SIGP a)" "Iagree I J (SIGP b)" unfolding Iagree_def by auto
       assume VA:"Vagree (\<nu>1, \<nu>1') (\<nu>2, \<nu>2') V"
-      (*assume sub:"FVP a \<union> FVP b - MBV a \<subseteq> V"*)
       assume sub:"FVP a \<subseteq> V" "FVP b - MBV a \<subseteq> V"
         hence sub':"FVP a \<subseteq> V" by auto
       assume sem:"((\<nu>1, \<nu>1'), (\<mu>, \<mu>')) \<in> prog_sem I a"
@@ -1263,7 +1262,44 @@ next
     qed
     done
 next
-  case hpsafe_Loop then show "?case" sorry
+  case (hpsafe_Loop a) then show "?case" 
+    apply(unfold coincide_hp_def)
+    apply(rule allI | rule impI)+
+    apply(unfold prog_sem.simps FVP.simps MBV.simps SIGP.simps)
+    subgoal for \<nu> \<nu>' \<mu> V I J
+      proof -
+      assume safe:"hpsafe a"
+      assume IH:"\<forall>\<nu> \<nu>' \<mu> V I J.
+       Iagree I J (SIGP a) \<longrightarrow>
+       Vagree \<nu> \<nu>' V \<longrightarrow> FVP a \<subseteq> V \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I a \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J a \<and> Vagree \<mu> \<mu>' (MBV a \<union> V))"
+      assume agree:"Iagree I J (SIGP a)"
+      assume sub:"FVP a \<subseteq> V"
+      show "(\<nu>, \<mu>) \<in> (prog_sem I a)\<^sup>* \<Longrightarrow> (\<And>\<nu>'. Vagree \<nu> \<nu>' V \<Longrightarrow> \<exists>\<mu>'. (\<nu>', \<mu>') \<in> (prog_sem J a)\<^sup>* \<and> Vagree \<mu> \<mu>' ({} \<union> V))"
+        apply(induction rule: converse_rtrancl_induct)
+        apply(auto)
+        subgoal for \<omega> \<omega>' s s' v v'
+          proof -
+            assume sem1:"((\<omega>, \<omega>'), (s, s')) \<in> prog_sem I a"
+               and sem2:"((s, s'), \<mu>) \<in> (prog_sem I a)\<^sup>*"
+               and IH2:"\<And>v v'. (Vagree (s, s') (v,v') V \<Longrightarrow> \<exists>ab ba. ((v,v'), (ab, ba)) \<in> (prog_sem J a)\<^sup>* \<and> Vagree \<mu> (ab, ba) V)"
+               and VA:"Vagree (\<omega>, \<omega>') (v,v') V"
+            obtain s'' where sem'':"((v, v'), s'') \<in> prog_sem J a" and VA'':"Vagree (s,s') s'' (MBV a \<union> V)"
+              using IH agree VA sub sem1 agree_refl by blast
+            then obtain s'1 and s'2 where sem'':"((v, v'), (s'1, s'2)) \<in> prog_sem J a" and VA'':"Vagree (s,s') (s'1, s'2) (MBV a \<union> V)"
+              using IH agree VA sub sem1 agree_refl by (cases "s''", blast)
+            from VA'' have VA''V:"Vagree (s,s') (s'1, s'2) V" 
+              using agree_sub by blast
+            note IH2' = IH2[of s'1 s'2]
+            note IH2'' = IH2'[OF VA''V]
+            then obtain ab and ba where  sem''':"((s'1, s'2), (ab, ba)) \<in> (prog_sem J a)\<^sup>*" and VA''':"Vagree \<mu> (ab, ba) V"
+                using  IH2'' by auto
+            from sem'' sem''' have sem:"((v, v'), (ab, ba)) \<in> (prog_sem J a)\<^sup>*" by auto
+            show "\<exists>\<mu>'1 \<mu>'2. ((v, v'), (\<mu>'1, \<mu>'2)) \<in> (prog_sem J a)\<^sup>* \<and> Vagree \<mu> (\<mu>'1, \<mu>'2) V"
+              using sem VA''' by blast
+          qed
+        done
+      qed
+    done
 next
   case (hpsafe_Geq t1 t2) 
   then have safe:"dsafe t1" "dsafe t2" by auto
