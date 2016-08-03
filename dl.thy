@@ -1661,23 +1661,12 @@ lemma assign_lem1:
 =
  dterm_sem I (if i = vid1 then $f fid1 empty else (Const 0)) \<nu>
 "
- by (cases "i = vid1") (auto simp add: proj_sing1)
-
-lemma assign_lem:
-"dterm_sem I (singleton (Var vid1) i)
-   (vec_lambda (\<lambda>y. if y = vid1  then Functions I fid1 (vec_lambda (\<lambda>i. dterm_sem I (empty i) \<nu>)) else vec_nth (fst \<nu>) y), snd \<nu>)
-                   =
- dterm_sem I (singleton ($f fid1 empty) i) \<nu>"
- by (cases "i = vid1 ") (auto simp add: proj_sing1)
+ by (cases "i = vid1") (auto simp: proj_sing1)
 
 theorem assign_valid: "valid assign_axiom"
-  apply(simp only: valid_def assign_axiom_def)
-  apply(rule allI | rule impI)+
-  apply(simp only: iff_sem fml_sem.simps mem_Collect_eq prog_sem.simps box_sem)
-  apply(simp)
-  apply(simp only: assign_lem1 )
-  done
-
+  unfolding  valid_def assign_axiom_def
+  by (simp add: assign_lem1) 
+  
 lemma mem_to_nonempty: "\<omega> \<in> S \<Longrightarrow> (S \<noteq> {})"
   by (auto)
 
@@ -1704,25 +1693,13 @@ theorem loop_valid: "valid loop_iterate_axiom"
 done
 
 theorem box_valid: "valid box_axiom"
-  apply(simp only: valid_def box_axiom_def )
-  apply(rule allI)+
-  apply(simp only: iff_sem)
-  apply(simp add: box_sem)
-done
+  unfolding valid_def box_axiom_def by(auto)
 
 theorem choice_valid: "valid choice_axiom"
-  by (auto simp add: valid_def choice_axiom_def box_sem)
+  unfolding valid_def choice_axiom_def by (auto)
 
 theorem K_valid: "valid Kaxiom"
-  apply(simp only: valid_def Kaxiom_def)
-  apply(rule allI)+
-  apply(simp only: impl_sem)
-  apply(rule impI)+
-  apply(simp only: fml_sem.simps prog_sem.simps
-        impl_sem mem_Collect_eq box_sem)
-  apply(rule allI)
-  apply(auto)
-done
+  unfolding valid_def Kaxiom_def by (auto)
 
 lemma I_axiom_lemma:
 fixes I::"('sf,'sc,'sz) interp" and \<nu>
