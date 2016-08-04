@@ -389,6 +389,9 @@ where "Vagree \<nu> \<nu>' V \<equiv>
    (\<forall>i. Inl i \<in> V \<longrightarrow> fst \<nu> $ i = fst \<nu>' $ i)
  \<and> (\<forall>i. Inr i \<in> V \<longrightarrow> snd \<nu> $ i = snd \<nu>' $ i)"
 
+definition VSagree :: "'c::finite simple_state \<Rightarrow> 'c simple_state \<Rightarrow> 'c set \<Rightarrow> bool"
+where "VSagree \<nu> \<nu>' V \<longleftrightarrow> (\<forall>i \<in> V. (\<nu> $ i) = (\<nu>' $ i))"
+  
 (* The bound variables of an ODE (which will also be included as free variables) *)
 fun ODE_vars :: "('a, 'c) ODE \<Rightarrow> ('c + 'c) set"
 where 
@@ -457,7 +460,7 @@ where
     ({(\<nu>, mk_v I ODE \<nu> (sol t)) | \<nu> sol t.
       t \<ge> 0 \<and>
       (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu> x \<in> fml_sem I \<phi>} \<and>
-      sol 0 = fst \<nu>})"
+      VSagree (sol 0) (fst \<nu>) {x | x. Inl x \<in> ODE_vars ODE}})"
 
 subsection \<open>Trivial Simplification Lemmas\<close>
 text \<open>
@@ -772,6 +775,12 @@ by (auto simp add: Vagree_def)
 lemma agree_supset:"A \<supseteq> B \<Longrightarrow> Vagree \<nu> \<nu>' A \<Longrightarrow> Vagree \<nu> \<nu>' B"
 by (auto simp add: Vagree_def)
 
+lemma VSagree_nil:"VSagree \<nu> \<omega> {}"
+by (auto simp add: VSagree_def)
+
+lemma VSagree_supset:"A \<supseteq> B \<Longrightarrow> VSagree \<nu> \<nu>' A \<Longrightarrow> VSagree \<nu> \<nu>' B"
+by (auto simp add: VSagree_def)
+
 lemma union_supset1:"A \<union> B \<supseteq> A"
 by (auto)
 
@@ -963,7 +972,7 @@ next
         fix \<nu>' sol t  
         assume assm: "(\<nu>, \<omega>) = (\<nu>', mk_v I ODE \<nu>' (sol t)) \<and>
            0 \<le> t \<and>
-           (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu>' x \<in> fml_sem I P} \<and> sol 0 = fst \<nu>'"
+           (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu>' x \<in> fml_sem I P} \<and> VSagree (sol 0) (fst \<nu>') {x |x. Inl x \<in> ODE_vars ODE}"
         hence "Vagree \<omega> \<nu> (- ODE_vars ODE)" using mk_v_agree[of I ODE \<nu> "(sol t)"] by auto
         thus  "Vagree \<nu> \<omega> (- ODE_vars ODE)" by (rule agree_comm)
       qed 
@@ -1314,63 +1323,102 @@ next
 next
   case (hpsafe_Evolve ODE P) then show "?case"
     proof (auto)
-      fix b aa ba ab bb V I J sol t
+      fix a b aa ba ab bb V I J sol t
       assume
        osafe:"osafe ODE"
        and "fsafe P"
        and IH:"\<forall>a b aa ba I J. Iagree I J (SIGF P) \<longrightarrow> Vagree (a, b) (aa, ba) (FVF P) \<longrightarrow> ((a, b) \<in> fml_sem I P) = ((aa, ba) \<in> fml_sem J P)"
        and IA:"Iagree I J (SIGF P \<union> {Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
-       and VA:"Vagree (sol 0, b) (aa, ba) V"
-       and "ODE_vars ODE \<subseteq> V"
+       and VA:"Vagree (a, b) (aa, ba) V"
+       and OVsub:"ODE_vars ODE \<subseteq> V"
        and Osub:"FVO ODE \<subseteq> V"
        and Fsub:"FVF P \<subseteq> V"
-       and veq:"(ab, bb) = mk_v I ODE (sol 0, b) (sol t)"
+       and veq:"(ab, bb) = mk_v I ODE (a, b) (sol t)"
        and t:"0 \<le> t"
-       and sol:"(sol solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {x. mk_v I ODE (sol 0, b) x \<in> fml_sem I P}"
+       and sol:"(sol solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {x. mk_v I ODE (a, b) x \<in> fml_sem I P}"
+       and VSA:"VSagree (sol 0) a {x. Inl x \<in> ODE_vars ODE}"
+       
+      from sol 
+      have  solSem:"\<And>x. 0 \<le> x \<Longrightarrow> x \<le> t \<Longrightarrow> mk_v I ODE (a, b) (sol x) \<in> fml_sem I P"
+        and solDeriv:"\<And>x. 0 \<le> x \<Longrightarrow> x \<le> t \<Longrightarrow> (sol has_vector_derivative ODE_sem I ODE (sol x)) (at x within {0..t})"
+        unfolding solves_ode_def has_vderiv_on_def by auto
       have SIGFsub:"(SIGF P) \<subseteq> (SIGF P \<union> {Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})" by auto
       from IA have IAP:"Iagree I J (SIGF P)"
         using Iagree_sub[OF SIGFsub] by auto
       from IH have IH':
         "\<forall>a b aa ba. Vagree (a, b) (aa, ba) (FVF P) \<longrightarrow> ((a, b) \<in> fml_sem I P) = ((aa, ba) \<in> fml_sem J P)"
         using IAP by blast
-      have bar:"\<And>s \<omega>. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> (Vagree \<omega> (sol 0, b) (- ODE_vars ODE) \<and> Vagree \<omega> (mk_xode I ODE (sol s)) (ODE_vars ODE))
-        \<longleftrightarrow>
-        (Vagree \<omega> (aa, ba) (- ODE_vars ODE) \<and> Vagree \<omega> (mk_xode J ODE (sol s)) (ODE_vars ODE))
-        "
+      have bar:"\<And>s \<omega>. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> (Vagree \<omega> (a, b) (- ODE_vars ODE) \<and> Vagree \<omega> (mk_xode I ODE (sol s)) (ODE_vars ODE))
+        \<longleftrightarrow> (Vagree \<omega> (aa, ba) (- ODE_vars ODE) \<and> Vagree \<omega> (mk_xode J ODE (sol s)) (ODE_vars ODE))"
         sorry
-      have foo:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> (mk_v I ODE (sol 0, b) (sol s)) = (mk_v J ODE (aa, ba) (sol s))"
+      have foo:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> (mk_v I ODE (a, b) (sol s)) = (mk_v J ODE (aa, ba) (sol s))"
         subgoal for s
           apply(unfold mk_v_def)
           using bar by simp
         done
-      have VAfoo:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (sol 0, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) UNIV"
+      have VAfoo:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (a, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) UNIV"
         subgoal for s
-          using agree_refl[of "(mk_v I ODE (sol 0, b) (sol s))"] foo[of s] by auto
+          using agree_refl[of "(mk_v I ODE (a, b) (sol s))"] foo[of s] by auto
         done
       have duhSub:"FVF P \<subseteq> UNIV" by auto
       from VAfoo 
-      have VA'foo:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (sol 0, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) (FVF P)"
+      have VA'foo:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (a, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) (FVF P)"
         using agree_sub[OF duhSub] by auto
       from VA'foo IH' 
-      have "\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> (mk_v I ODE (sol 0, b) (sol s)) \<in> fml_sem I P \<longleftrightarrow> (mk_v J ODE (aa, ba) (sol s)) \<in> fml_sem J P"
-        using IAP coincide_fml_def IH by blast
-        
-      from VA have VAO:"Vagree (sol 0, b) (aa, ba) (FVO ODE)" using agree_sub[OF Osub] by auto
+      have fmlSem:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> (mk_v I ODE (a, b) (sol s)) \<in> fml_sem I P \<longleftrightarrow> (mk_v J ODE (aa, ba) (sol s)) \<in> fml_sem J P"
+        using IAP coincide_fml_def hpsafe_Evolve.IH by blast
+      from VA 
+      have VAO:"Vagree (a, b) (aa, ba) (FVO ODE)" 
+        using agree_sub[OF Osub] by auto
       have IOsub:"({Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE}) \<subseteq> (SIGF P \<union> {Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
         by auto
-      from IA have IAO:"Iagree I J ({Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
+      from IA 
+      have IAO:"Iagree I J ({Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
         using Iagree_sub[OF IOsub] by auto
-      have Osem:"ODE_sem I ODE (sol 0) = ODE_sem J ODE aa"
-        using coincidence_ode[OF osafe VAO IAO] by auto
+      have VAsol:"\<And>s \<nu>'. Vagree ((sol s), \<nu>') ((sol s), \<nu>') (FVO ODE)" unfolding Vagree_def by auto
+      have Osem:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> ODE_sem I ODE (sol s) = ODE_sem J ODE (sol s)"
+        subgoal for s
+          using coincidence_ode[OF osafe VAsol[of s] IAO] by auto
+        done
+      have sol':"(sol solves_ode (\<lambda>_. ODE_sem J ODE)) {0..t} {x. mk_v J ODE (aa, ba) x \<in> fml_sem J P}"
+        apply(auto simp add: solves_ode_def has_vderiv_on_def)
+        subgoal for s
+          using solDeriv[of s] Osem[of s] by auto
+        subgoal for s
+          using solSem[of s] fmlSem[of s] by auto
+        done
+      have VSA':"VSagree (sol 0) aa {x. Inl x \<in> ODE_vars ODE}"
+        using VSA VA OVsub unfolding VSagree_def Vagree_def
+        by auto
       show
-       "\<exists>a bb. (\<exists>sol. aa = sol 0 \<and>
-                     (\<exists>t. (a, bb) = mk_v J ODE (sol 0, ba) (sol t) \<and>
-                          0 \<le> t \<and> (sol solves_ode (\<lambda>a. ODE_sem J ODE)) {0..t} {x. mk_v J ODE (sol 0, ba) x \<in> fml_sem J P})) \<and>
-              Vagree (mk_v I ODE (sol 0, b) (sol t)) (a, bb) (ODE_vars ODE \<union> V)"
-        using foo Osem sledgehammer
-    done
-    using coincidence_frechet sledgehammer
-    done
+       "\<exists>ab bb. (\<exists>sol t. (ab, bb) = mk_v J ODE (aa, ba) (sol t) \<and>
+                          0 \<le> t \<and> 
+                         (sol solves_ode (\<lambda>a. ODE_sem J ODE)) {0..t} {x. mk_v J ODE (aa, ba) x \<in> fml_sem J P} \<and>
+                         VSagree (sol 0) aa {x. Inl x \<in> ODE_vars ODE}) \<and>
+              Vagree (mk_v I ODE (a, b) (sol t)) (ab, bb) (ODE_vars ODE \<union> V)"
+        apply(rule exI[where x="fst (mk_v J ODE (aa, ba) (sol t))"])
+        apply(rule exI[where x="snd (mk_v J ODE (aa, ba) (sol t))"])
+        apply(rule conjI)
+        subgoal
+          apply(rule exI[where x=sol])
+          apply(rule exI[where x=t])
+          apply(rule conjI)
+          subgoal by (auto)    
+          subgoal
+            apply(rule conjI)
+            subgoal by (rule t)
+            subgoal
+              apply(rule conjI)
+              subgoal by (rule sol')
+              subgoal by (rule VSA')
+            done
+          done
+        done
+      apply(auto)
+      using mk_v_agree[of I ODE "(a,b)" "(sol t)"]
+            mk_v_agree[of J ODE "(aa,ba)" "(sol t)"]
+      by (simp add: agree_refl foo t)
+    qed
 next
   case (hpsafe_Choice a b) 
   then show "?case" 
