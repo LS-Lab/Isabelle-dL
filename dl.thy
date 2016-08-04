@@ -1316,23 +1316,58 @@ next
     proof (auto)
       fix b aa ba ab bb V I J sol t
       assume
-       "osafe ODE"
-       "fsafe P"
-       "\<forall>a b aa ba I J. Iagree I J (SIGF P) \<longrightarrow> Vagree (a, b) (aa, ba) (FVF P) \<longrightarrow> ((a, b) \<in> fml_sem I P) = ((aa, ba) \<in> fml_sem J P)"
-       "Iagree I J (SIGF P \<union> {Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
-       "Vagree (sol 0, b) (aa, ba) V"
-       "ODE_vars ODE \<subseteq> V"
-       "FVO ODE \<subseteq> V"
-       "FVF P \<subseteq> V"
-       "(ab, bb) = mk_v I ODE (sol 0, b) (sol t)"
-       "0 \<le> t"
-       "(sol solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {x. mk_v I ODE (sol 0, b) x \<in> fml_sem I P}"
+       osafe:"osafe ODE"
+       and "fsafe P"
+       and IH:"\<forall>a b aa ba I J. Iagree I J (SIGF P) \<longrightarrow> Vagree (a, b) (aa, ba) (FVF P) \<longrightarrow> ((a, b) \<in> fml_sem I P) = ((aa, ba) \<in> fml_sem J P)"
+       and IA:"Iagree I J (SIGF P \<union> {Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
+       and VA:"Vagree (sol 0, b) (aa, ba) V"
+       and "ODE_vars ODE \<subseteq> V"
+       and Osub:"FVO ODE \<subseteq> V"
+       and Fsub:"FVF P \<subseteq> V"
+       and veq:"(ab, bb) = mk_v I ODE (sol 0, b) (sol t)"
+       and t:"0 \<le> t"
+       and sol:"(sol solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {x. mk_v I ODE (sol 0, b) x \<in> fml_sem I P}"
+      have SIGFsub:"(SIGF P) \<subseteq> (SIGF P \<union> {Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})" by auto
+      from IA have IAP:"Iagree I J (SIGF P)"
+        using Iagree_sub[OF SIGFsub] by auto
+      from IH have IH':
+        "\<forall>a b aa ba. Vagree (a, b) (aa, ba) (FVF P) \<longrightarrow> ((a, b) \<in> fml_sem I P) = ((aa, ba) \<in> fml_sem J P)"
+        using IAP by blast
+      have bar:"\<And>s \<omega>. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> (Vagree \<omega> (sol 0, b) (- ODE_vars ODE) \<and> Vagree \<omega> (mk_xode I ODE (sol s)) (ODE_vars ODE))
+        \<longleftrightarrow>
+        (Vagree \<omega> (aa, ba) (- ODE_vars ODE) \<and> Vagree \<omega> (mk_xode J ODE (sol s)) (ODE_vars ODE))
+        "
+        sorry
+      have foo:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> (mk_v I ODE (sol 0, b) (sol s)) = (mk_v J ODE (aa, ba) (sol s))"
+        subgoal for s
+          apply(unfold mk_v_def)
+          using bar by simp
+        done
+      have VAfoo:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (sol 0, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) UNIV"
+        subgoal for s
+          using agree_refl[of "(mk_v I ODE (sol 0, b) (sol s))"] foo[of s] by auto
+        done
+      have duhSub:"FVF P \<subseteq> UNIV" by auto
+      from VAfoo 
+      have VA'foo:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (sol 0, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) (FVF P)"
+        using agree_sub[OF duhSub] by auto
+      from VA'foo IH' 
+      have "\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> (mk_v I ODE (sol 0, b) (sol s)) \<in> fml_sem I P \<longleftrightarrow> (mk_v J ODE (aa, ba) (sol s)) \<in> fml_sem J P"
+        using IAP coincide_fml_def IH by blast
+        
+      from VA have VAO:"Vagree (sol 0, b) (aa, ba) (FVO ODE)" using agree_sub[OF Osub] by auto
+      have IOsub:"({Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE}) \<subseteq> (SIGF P \<union> {Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
+        by auto
+      from IA have IAO:"Iagree I J ({Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
+        using Iagree_sub[OF IOsub] by auto
+      have Osem:"ODE_sem I ODE (sol 0) = ODE_sem J ODE aa"
+        using coincidence_ode[OF osafe VAO IAO] by auto
       show
        "\<exists>a bb. (\<exists>sol. aa = sol 0 \<and>
                      (\<exists>t. (a, bb) = mk_v J ODE (sol 0, ba) (sol t) \<and>
                           0 \<le> t \<and> (sol solves_ode (\<lambda>a. ODE_sem J ODE)) {0..t} {x. mk_v J ODE (sol 0, ba) x \<in> fml_sem J P})) \<and>
               Vagree (mk_v I ODE (sol 0, b) (sol t)) (a, bb) (ODE_vars ODE \<union> V)"
-        sorry
+        using foo Osem sledgehammer
     done
     using coincidence_frechet sledgehammer
     done
