@@ -680,7 +680,7 @@ by (auto simp add:  primify_contains)
 (* Free variables of an ODE includes both the bound variables and the terms *)
 fun FVO :: "('a, 'c) ODE \<Rightarrow> ('c + 'c) set"
   where
-  "FVO (OVar c) = {}"
+  "FVO (OVar c) = Inl ` UNIV"
 | "FVO (OSing x \<theta>) = FVT \<theta>"
 | "FVO (OProd ODE1 ODE2) = FVO ODE1 \<union> FVO ODE2"
 
@@ -761,6 +761,9 @@ lemma Iagree_Pred:"Iagree I J V \<Longrightarrow> Inr (Inr p) \<in> V \<Longrigh
   sorry
 
 lemma Iagree_Prog:"Iagree I J V \<Longrightarrow> Inr (Inr a) \<in> V \<Longrightarrow> Programs I a = Programs J a"
+  sorry
+
+lemma Iagree_ODE:"Iagree I J V \<Longrightarrow> Inr (Inr a) \<in> V \<Longrightarrow> ODEs I a = ODEs J a"
   sorry
 
 lemma agree_nil:"Vagree \<nu> \<omega> {}"
@@ -844,6 +847,12 @@ lemma agree_sub:"\<And>\<nu> \<omega> A B . A \<subseteq> B \<Longrightarrow> Va
   unfolding Vagree_def by auto
 
 lemma agree_UNIV_eq:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> UNIV \<Longrightarrow> \<nu> = \<omega>"
+  unfolding Vagree_def by (auto simp add: vec_eq_iff)
+
+lemma agree_UNIV_fst:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (Inl ` UNIV) \<Longrightarrow> (fst \<nu>) = (fst \<omega>)"
+  unfolding Vagree_def by (auto simp add: vec_eq_iff)
+
+lemma agree_UNIV_snd:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (Inr ` UNIV) \<Longrightarrow> (snd \<nu>) = (snd \<omega>)"
   unfolding Vagree_def by (auto simp add: vec_eq_iff)
 
 lemma Iagree_comm:"\<And>A B V. Iagree A B V \<Longrightarrow> Iagree B A V" 
@@ -973,6 +982,78 @@ lemma coincidence_sterm:"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> st
   apply(auto simp add: Vagree_def)
   by (meson rangeI)
 
+lemma coincidence_sterm':"dfree \<theta> \<Longrightarrow>  Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT \<theta>} \<Longrightarrow> sterm_sem I  \<theta> (fst \<nu>) = sterm_sem J \<theta> (fst \<nu>')"
+proof (induction rule: dfree.induct)
+  case (dfree_Fun args i)
+    then show ?case
+      proof (auto)
+        assume free:"(\<And>i. dfree (args i))"
+         and IH:"(\<And>i. Vagree \<nu> \<nu>' (FVT (args i)) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT (args i)} \<Longrightarrow> sterm_sem I (args i) (fst \<nu>) = sterm_sem J (args i) (fst \<nu>'))"
+         and VA:"Vagree \<nu> \<nu>' (\<Union>i. FVT (args i))"
+         and IA:"Iagree I J {Inl x |x. x = i \<or> (\<exists>xa. x \<in> SIGT (args xa))}"
+         from IA have IAorig:"Iagree I J {Inl x |x. x \<in> SIGT (Function i args)}" by auto
+         from Iagree_Func[OF IAorig] have eqF:"Functions I i = Functions J i" by auto
+         have Vsubs:"\<And>i. FVT (args i) \<subseteq> (\<Union>i. FVT (args i))" by auto
+         from VA 
+         have VAs:"\<And>i. Vagree \<nu> \<nu>' (FVT (args i))" 
+           using agree_sub[OF Vsubs] by auto
+         have Isubs:"\<And>j. {Inl x |x. x \<in> SIGT (args j)} \<subseteq> {Inl x |x. x \<in> SIGT (Function i args)}"
+           by auto
+         from IA
+         have IAs:"\<And>i. Iagree I J {Inl x |x. x \<in> SIGT (args i)}"
+           using Iagree_sub[OF Isubs] by auto
+     show "Functions I i (\<chi> i. sterm_sem I (args i) (fst \<nu>)) = Functions J i (\<chi> i. sterm_sem J (args i) (fst \<nu>'))"
+       using IH[OF VAs IAs] eqF by auto
+     qed
+      
+next
+  case (dfree_Plus \<theta>\<^sub>1 \<theta>\<^sub>2)
+    then show ?case 
+      proof (auto)
+        assume "dfree \<theta>\<^sub>1"
+        "dfree \<theta>\<^sub>2"
+        and IH1:"(Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>1) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>1} \<Longrightarrow> sterm_sem I \<theta>\<^sub>1 (fst \<nu>) = sterm_sem J \<theta>\<^sub>1 (fst \<nu>'))"
+        and IH2:"(Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>2) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>2} \<Longrightarrow> sterm_sem I \<theta>\<^sub>2 (fst \<nu>) = sterm_sem J \<theta>\<^sub>2 (fst \<nu>'))"
+        and VA:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>1 \<union> FVT \<theta>\<^sub>2)"
+        and IA:"Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>1 \<or> x \<in> SIGT \<theta>\<^sub>2}"
+        from VA 
+        have VAs:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>1)" "Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>2)"
+          unfolding Vagree_def by auto
+        have Isubs:"{Inl x |x. x \<in> SIGT \<theta>\<^sub>1} \<subseteq> {Inl x |x. x \<in> SIGT (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)}"
+          "{Inl x |x. x \<in> SIGT \<theta>\<^sub>2} \<subseteq> {Inl x |x. x \<in> SIGT (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)}"
+          by auto
+        from IA 
+        have IAs:"Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>1}" 
+          "Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>2}"
+          using Iagree_sub[OF Isubs(1)] Iagree_sub[OF Isubs(2)] by auto         
+       show "sterm_sem I \<theta>\<^sub>1 (fst \<nu>) + sterm_sem I \<theta>\<^sub>2 (fst \<nu>) = sterm_sem J \<theta>\<^sub>1 (fst \<nu>') + sterm_sem J \<theta>\<^sub>2 (fst \<nu>')"
+          using IH1[OF VAs(1) IAs(1)] IH2[OF VAs(2) IAs(2)] by auto
+      qed
+next
+  case (dfree_Times \<theta>\<^sub>1 \<theta>\<^sub>2)
+    then show ?case 
+          proof (auto)
+        assume "dfree \<theta>\<^sub>1"
+        "dfree \<theta>\<^sub>2"
+        and IH1:"(Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>1) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>1} \<Longrightarrow> sterm_sem I \<theta>\<^sub>1 (fst \<nu>) = sterm_sem J \<theta>\<^sub>1 (fst \<nu>'))"
+        and IH2:"(Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>2) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>2} \<Longrightarrow> sterm_sem I \<theta>\<^sub>2 (fst \<nu>) = sterm_sem J \<theta>\<^sub>2 (fst \<nu>'))"
+        and VA:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>1 \<union> FVT \<theta>\<^sub>2)"
+        and IA:"Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>1 \<or> x \<in> SIGT \<theta>\<^sub>2}"
+        from VA 
+        have VAs:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>1)" "Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>2)"
+          unfolding Vagree_def by auto
+        have Isubs:"{Inl x |x. x \<in> SIGT \<theta>\<^sub>1} \<subseteq> {Inl x |x. x \<in> SIGT (Times \<theta>\<^sub>1 \<theta>\<^sub>2)}"
+          "{Inl x |x. x \<in> SIGT \<theta>\<^sub>2} \<subseteq> {Inl x |x. x \<in> SIGT (Times \<theta>\<^sub>1 \<theta>\<^sub>2)}"
+          by auto
+        from IA 
+        have IAs:"Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>1}" 
+          "Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>2}"
+          using Iagree_sub[OF Isubs(1)] Iagree_sub[OF Isubs(2)] by auto         
+       show "sterm_sem I \<theta>\<^sub>1 (fst \<nu>) * sterm_sem I \<theta>\<^sub>2 (fst \<nu>) = sterm_sem J \<theta>\<^sub>1 (fst \<nu>') * sterm_sem J \<theta>\<^sub>2 (fst \<nu>')"
+          using IH1[OF VAs(1) IAs(1)] IH2[OF VAs(2) IAs(2)] by auto
+      qed
+qed (unfold Vagree_def Iagree_def, auto)
+
 lemma coincidence_formula:"Vagree \<nu> \<nu>' (FVF \<phi>) \<Longrightarrow> ((\<nu> \<in> fml_sem I \<phi>) \<longleftrightarrow> (\<nu>' \<in> fml_sem I \<phi>))"
   sorry
 
@@ -1064,6 +1145,70 @@ lemma coincidence_dterm':
   fixes I J :: "('sf::finite, 'sc::finite, 'sz::finite) interp" and \<nu> :: "'sz state" and \<nu>'::"'sz state"
   shows "dsafe \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> Iagree I J {Inl x | x. x \<in> (SIGT \<theta>)} \<Longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem J \<theta> \<nu>'"
 sorry
+
+lemma coincidence_ode:
+  fixes I J :: "('sf::finite, 'sc::finite, 'sz::finite) interp" and \<nu> :: "'sz state" and \<nu>'::"'sz state"
+  shows "osafe ODE \<Longrightarrow> Vagree \<nu> \<nu>' (FVO ODE) \<Longrightarrow> Iagree I J ({Inl x | x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) | x. Inr x \<in> SIGO ODE}) \<Longrightarrow> ODE_sem I ODE (fst \<nu>) = ODE_sem J ODE (fst \<nu>')"
+proof (induction rule: osafe.induct)
+  case (osafe_Var c)
+  then show ?case
+    proof (auto)
+      assume VA:"Vagree \<nu> \<nu>' (range Inl)"
+        have eqV:"(fst \<nu>) = (fst \<nu>')"
+          using agree_UNIV_fst[OF VA] by auto
+      assume IA:"Iagree I J {Inr (Inr c)}"
+        have eqIJ:"ODEs I c = ODEs J c"
+          using Iagree_ODE[OF IA] by auto
+      show "ODEs I c (fst \<nu>) = ODEs J c (fst \<nu>')"
+        by (auto simp add: eqV eqIJ)
+    qed
+next
+  case (osafe_Sing \<theta> x)
+  then show ?case
+    proof (auto)
+    assume free:"dfree \<theta>"
+    and VA:"Vagree \<nu> \<nu>' (FVT \<theta>)"
+    and IA:"Iagree I J {Inl x |x. x \<in> SIGT \<theta>}"
+    have trm:"sterm_sem I  \<theta> (fst \<nu>) = sterm_sem J \<theta> (fst \<nu>')"
+      using coincidence_sterm'[OF free VA IA] by auto
+    show "(\<chi> i. if i = x then sterm_sem I \<theta> (fst \<nu>) else 0) = (\<chi> i. if i = x then sterm_sem J \<theta> (fst \<nu>') else 0)"
+      by (auto simp add: vec_eq_iff trm)
+    qed
+next
+  case (osafe_Prod ODE1 ODE2)
+  then show ?case 
+    proof (auto)
+    assume safe1:"osafe ODE1"
+     and  safe2:"osafe ODE2"
+     and  disjoint:"ODE_dom ODE1 \<inter> ODE_dom ODE2 = {}"
+     and  IH1:"Vagree \<nu> \<nu>' (FVO ODE1) \<Longrightarrow>
+        Iagree I J ({Inl x |x. Inl x \<in> SIGO ODE1} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE1}) \<Longrightarrow> ODE_sem I ODE1 (fst \<nu>) = ODE_sem J ODE1 (fst \<nu>')"
+     and  IH2:"Vagree \<nu> \<nu>' (FVO ODE2) \<Longrightarrow>
+     Iagree I J ({Inl x |x. Inl x \<in> SIGO ODE2} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE2}) \<Longrightarrow> ODE_sem I ODE2 (fst \<nu>) = ODE_sem J ODE2 (fst \<nu>')"
+    and VA:"Vagree \<nu> \<nu>' (FVO ODE1 \<union> FVO ODE2)"
+    and IA:"Iagree I J ({Inl x |x. Inl x \<in> SIGO ODE1 \<or> Inl x \<in> SIGO ODE2} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE1 \<or> Inr x \<in> SIGO ODE2})"
+    let ?IA = "({Inl x |x. Inl x \<in> SIGO ODE1 \<or> Inl x \<in> SIGO ODE2} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE1 \<or> Inr x \<in> SIGO ODE2})"
+    have FVsubs:
+      "FVO ODE2 \<subseteq> (FVO ODE1 \<union> FVO ODE2)"
+      "FVO ODE1 \<subseteq> (FVO ODE1 \<union> FVO ODE2)"
+      by auto
+    from VA 
+    have VA1:"Vagree \<nu> \<nu>' (FVO ODE1)"
+     and VA2:"Vagree \<nu> \<nu>' (FVO ODE2)"
+      using agree_sub[OF FVsubs(1)] agree_sub[OF FVsubs(2)] 
+      by (auto)
+    have SIGsubs:
+      "({Inl x |x. Inl x \<in> SIGO ODE1} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE1}) \<subseteq> ?IA"
+      "({Inl x |x. Inl x \<in> SIGO ODE2} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE2}) \<subseteq> ?IA"
+      by auto
+    from IA
+    have IA1:"Iagree I J ({Inl x |x. Inl x \<in> SIGO ODE1} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE1})"
+      and IA2:"Iagree I J ({Inl x |x. Inl x \<in> SIGO ODE2} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE2})"
+      using Iagree_sub[OF SIGsubs(1)] Iagree_sub[OF SIGsubs(2)] by auto
+    show "ODE_sem I ODE1 (fst \<nu>) + ODE_sem I ODE2 (fst \<nu>) = ODE_sem J ODE1 (fst \<nu>') + ODE_sem J ODE2 (fst \<nu>')"
+      using IH1[OF VA1 IA1] IH2[OF VA2 IA2] by auto
+    qed
+  qed
 
 definition coincide_hp :: "('sf, 'sc, 'sz) hp \<Rightarrow> bool"
 where "coincide_hp \<alpha> \<longleftrightarrow> (\<forall> \<nu> \<nu>' \<mu> V I J. Iagree I J (SIGP \<alpha>) \<longrightarrow> Vagree \<nu> \<nu>' V \<longrightarrow> V \<supseteq> (FVP \<alpha>) \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I \<alpha> \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J \<alpha> \<and> Vagree \<mu> \<mu>' (MBV \<alpha> \<union> V)))"
@@ -1167,7 +1312,30 @@ next
     show "(\<omega>, \<omega>') \<in> fml_sem J P" using IH[OF IA VA'] sem by auto
     qed
 next
-  case hpsafe_Evolve then show "?case" sorry
+  case (hpsafe_Evolve ODE P) then show "?case"
+    proof (auto)
+      fix b aa ba ab bb V I J sol t
+      assume
+       "osafe ODE"
+       "fsafe P"
+       "\<forall>a b aa ba I J. Iagree I J (SIGF P) \<longrightarrow> Vagree (a, b) (aa, ba) (FVF P) \<longrightarrow> ((a, b) \<in> fml_sem I P) = ((aa, ba) \<in> fml_sem J P)"
+       "Iagree I J (SIGF P \<union> {Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
+       "Vagree (sol 0, b) (aa, ba) V"
+       "ODE_vars ODE \<subseteq> V"
+       "FVO ODE \<subseteq> V"
+       "FVF P \<subseteq> V"
+       "(ab, bb) = mk_v I ODE (sol 0, b) (sol t)"
+       "0 \<le> t"
+       "(sol solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {x. mk_v I ODE (sol 0, b) x \<in> fml_sem I P}"
+      show
+       "\<exists>a bb. (\<exists>sol. aa = sol 0 \<and>
+                     (\<exists>t. (a, bb) = mk_v J ODE (sol 0, ba) (sol t) \<and>
+                          0 \<le> t \<and> (sol solves_ode (\<lambda>a. ODE_sem J ODE)) {0..t} {x. mk_v J ODE (sol 0, ba) x \<in> fml_sem J P})) \<and>
+              Vagree (mk_v I ODE (sol 0, b) (sol t)) (a, bb) (ODE_vars ODE \<union> V)"
+        sorry
+    done
+    using coincidence_frechet sledgehammer
+    done
 next
   case (hpsafe_Choice a b) 
   then show "?case" 
