@@ -2657,18 +2657,13 @@ lemma DS_valid:"valid DSaxiom"
   have req4':"?sol 0 = fst (a,b)" by (auto simp: vec_eq_iff)
   then have req4: "VSagree (?sol 0) (fst (a,b)) {x |x. Inl x \<in> ODE_vars (OSing vid1 (f0 fid1))}"
     using VSagree_refl[of a] req4' unfolding VSagree_def by auto
-  (*using \<open>(\<exists>\<nu> sol t. ((a, b), ?abba) = (\<nu>, mk_v I (OSing vid1 (f0 fid1)) \<nu> (sol t)) \<and> 0 \<le> t \<and> (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..t} {x. mk_v I (OSing vid1 (f0 fid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and> sol 0 = fst \<nu>) \<longrightarrow> ?abba \<in> fml_sem I (p1 vid3 vid1)\<close>*)
   have inPred:"?abba \<in> fml_sem I (p1 vid3 vid1)"  
     using req1 leq req3 req4 thisW by fastforce
   have sem_eq:"?abba \<in> fml_sem I (p1 vid3 vid1) \<longleftrightarrow> (aa,ba) \<in> fml_sem I (p1 vid3 vid1)"
     apply(rule coincidence_formula)
     apply (auto simp add: aaba Vagree_def p1_def f0_def empty_def)
-    subgoal
-      apply(standard)
-      apply (auto intro: hpsafe_fsafe.intros dsafe.intros)
-      done
-    subgoal
-      using Iagree_refl by auto
+    subgoal by (standard, auto intro: hpsafe_fsafe.intros dsafe.intros)
+    subgoal using Iagree_refl by auto
     done
   from inPred sem_eq have  inPred':"(aa,ba) \<in> fml_sem I (p1 vid3 vid1)"
     by auto
@@ -2676,7 +2671,6 @@ lemma DS_valid:"valid DSaxiom"
   show "repv (repv (a, b) vid2 r) vid1
        (dterm_sem I (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid2))) (repv (a, b) vid2 r))
        \<in> fml_sem I (p1 vid3 vid1)" using aaba inPred' sorry
-(*  show "?case" sorry*)
 next
   fix I::"('sf,'sc,'sz) interp"
   and aa ba ab bb sol 
