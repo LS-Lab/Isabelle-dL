@@ -749,25 +749,26 @@ where
 definition Iagree :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a + 'b + 'c) set \<Rightarrow> bool"
 where "Iagree I J V \<equiv>
   (\<forall>i\<in>V.
-    (\<exists>x. i = Inl x \<longrightarrow> Functions I x = Functions J x) \<and>
-    (\<exists>x. i = Inr (Inl x) \<longrightarrow> Contexts I x = Contexts J x) \<and>
-    (\<exists>x. i = Inr (Inr x) \<longrightarrow> Predicates I x = Predicates J x) \<and>
-    (\<exists>x. i = Inr (Inr x) \<longrightarrow> Programs I x = Programs J x))"
+    (\<forall>x. i = Inl x \<longrightarrow> Functions I x = Functions J x) \<and>
+    (\<forall>x. i = Inr (Inl x) \<longrightarrow> Contexts I x = Contexts J x) \<and>
+    (\<forall>x. i = Inr (Inr x) \<longrightarrow> Predicates I x = Predicates J x) \<and>
+    (\<forall>x. i = Inr (Inr x) \<longrightarrow> Programs I x = Programs J x) \<and>
+    (\<forall>x. i = Inr (Inr x) \<longrightarrow> ODEs I x = ODEs J x))"
 
-lemma Iagree_Func:"Iagree I J V \<Longrightarrow> Inl f \<in> V \<Longrightarrow> Functions I a = Functions J a"
-  sorry
+lemma Iagree_Func:"Iagree I J V \<Longrightarrow> Inl f \<in> V \<Longrightarrow> Functions I f = Functions J f"
+  unfolding Iagree_def by blast
 
 lemma Iagree_Contexts:"Iagree I J V \<Longrightarrow> Inr (Inl C) \<in> V \<Longrightarrow> Contexts I C = Contexts J C"
-  sorry
+  unfolding Iagree_def by blast
 
 lemma Iagree_Pred:"Iagree I J V \<Longrightarrow> Inr (Inr p) \<in> V \<Longrightarrow> Predicates I p = Predicates J p"
-  sorry
+  unfolding Iagree_def by blast
 
 lemma Iagree_Prog:"Iagree I J V \<Longrightarrow> Inr (Inr a) \<in> V \<Longrightarrow> Programs I a = Programs J a"
-  sorry
+  unfolding Iagree_def by blast
 
 lemma Iagree_ODE:"Iagree I J V \<Longrightarrow> Inr (Inr a) \<in> V \<Longrightarrow> ODEs I a = ODEs J a"
-  sorry
+  unfolding Iagree_def by blast
 
 lemma agree_nil:"Vagree \<nu> \<omega> {}"
 by (auto simp add: Vagree_def)
@@ -874,6 +875,9 @@ lemma Iagree_comm:"\<And>A B V. Iagree A B V \<Longrightarrow> Iagree B A V"
   unfolding Iagree_def by metis
 lemma Iagree_sub:"\<And>I J A B . A \<subseteq> B \<Longrightarrow> Iagree I J B \<Longrightarrow> Iagree I J A"
   unfolding Iagree_def by blast
+
+lemma Iagree_refl:"Iagree I I A"
+  by (auto simp add: Iagree_def)
 
 lemma has_vector_derivative_zero_constant:
   assumes "convex s"
@@ -1069,9 +1073,6 @@ next
       qed
 qed (unfold Vagree_def Iagree_def, auto)
 
-lemma coincidence_formula:"Vagree \<nu> \<nu>' (FVF \<phi>) \<Longrightarrow> ((\<nu> \<in> fml_sem I \<phi>) \<longleftrightarrow> (\<nu>' \<in> fml_sem I \<phi>))"
-  sorry
-
 lemma sum_unique_nonzero:
   fixes i::"'sv::finite" and f::"'sv \<Rightarrow> real"
   assumes restZero:"\<And>j. j\<in>(UNIV::'sv set) \<Longrightarrow> j \<noteq> i \<Longrightarrow> f j = 0"
@@ -1145,8 +1146,90 @@ qed
 lemma  coincidence_frechet' :
   fixes I J :: "('sf, 'sc, 'sz) interp" and \<nu> :: "'sz state" and \<nu>'::"'sz state"
   shows "dfree \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff \<theta>) \<Longrightarrow> Iagree I J {Inl x | x. x \<in> (SIGT \<theta>)} \<Longrightarrow> frechet I  \<theta> (fst \<nu>) (snd \<nu>) = frechet J  \<theta> (fst \<nu>') (snd \<nu>')"
-  sorry
+ proof (induction rule: dfree.induct)
+  case dfree_Var then show ?case
+    by (auto simp: inner_prod_eq Vagree_def simp del: basis_vector.simps)
+next
+  case dfree_Const then show ?case
+    by auto
+next
+  case (dfree_Fun args var)
+  assume free:"(\<And>i. dfree (args i))"
+  assume IH:"(\<And>i. Vagree \<nu> \<nu>' (FVDiff (args i)) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT (args i)} \<Longrightarrow> frechet I (args i) (fst \<nu>) (snd \<nu>) = frechet J (args i) (fst \<nu>') (snd \<nu>'))"
+  have frees:"(\<And>i. dfree (args i))" using free by (auto simp add: rangeI)
+  assume agree:"Vagree \<nu> \<nu>' (FVDiff ($f var args))"
+  assume IA:"Iagree I J {Inl x |x. x \<in> SIGT ($f var args)}"
+  have agrees:"\<And>i. Vagree \<nu> \<nu>' (FVDiff (args i))" using agree agree_func by metis
+  then have agrees':"\<And>i. Vagree \<nu> \<nu>' (FVT (args i))"
+    using FVDiff_sub Vagree_def mem_Collect_eq subset_eq by smt
+  from Iagree_Func [OF IA ]have fEq:"Functions I var = Functions J var" by auto 
+  have subs:"\<And>i.{Inl x |x. x \<in> SIGT (args i)} \<subseteq> {Inl x |x. x \<in> SIGT ($f var args)}"
+    by auto
+  from IA have IAs:"\<And>i. Iagree I J {Inl x |x. x \<in> SIGT (args i)}"
+    using Iagree_sub[OF subs] by auto
+  have sterms:"\<And>i. sterm_sem I (args i) (fst \<nu>) = sterm_sem J (args i) (fst \<nu>')"
+    subgoal for i
+      using frees agrees' coincidence_sterm'[of "args i" \<nu> \<nu>' I J] IAs 
+      by (auto)  
+    done
+  have frechets:"\<And>i. frechet I (args i) (fst \<nu>) (snd \<nu>) = frechet J (args i) (fst \<nu>') (snd \<nu>')"  
+    using IH[OF agrees IAs] agrees frees rangeI by blast
+  show  "?case"
+    using agrees agrees' sterms frechets fEq by auto
 
+(* smt chokes on the full IH, so simplify things a bit first *)
+next
+  case (dfree_Plus t1 t2) 
+  assume dfree1:"dfree t1"
+  assume dfree2:"dfree t2"
+  assume IH1:"(Vagree \<nu> \<nu>' (FVDiff t1) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT t1} \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet J t1 (fst \<nu>') (snd \<nu>'))"
+  assume IH2:"(Vagree \<nu> \<nu>' (FVDiff t2) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT t2} \<Longrightarrow>  frechet I t2 (fst \<nu>) (snd \<nu>) = frechet J t2 (fst \<nu>') (snd \<nu>'))"
+  assume agree:"Vagree \<nu> \<nu>' (FVDiff (Plus t1 t2))"
+  assume IA:"Iagree I J {Inl x |x. x \<in> SIGT (Plus t1 t2)}"
+  have subs:"{Inl x |x. x \<in> SIGT t1} \<subseteq> {Inl x |x. x \<in> SIGT (Plus t1 t2)}" "{Inl x |x. x \<in> SIGT t2} \<subseteq> {Inl x |x. x \<in> SIGT (Plus t1 t2)}"
+    by auto
+  from IA have
+    IA1:"Iagree I J {Inl x |x. x \<in> SIGT t1}"
+    and IA2:"Iagree I J {Inl x |x. x \<in> SIGT t2}"
+    using Iagree_sub[OF subs(1)] Iagree_sub[OF subs(2)] by auto
+  have agree1:"Vagree \<nu> \<nu>' (FVDiff t1)" using agree agree_plus1 by (blast)
+  have agree2:"Vagree \<nu> \<nu>' (FVDiff t2)" using agree agree_plus2 by (blast)
+  have IH1':"(frechet I t1 (fst \<nu>) (snd \<nu>) = frechet J t1 (fst \<nu>') (snd \<nu>'))"
+  using IH1 agree1 IA1 by (auto)
+  have IH2':"(frechet I t2 (fst \<nu>) (snd \<nu>) = frechet J t2 (fst \<nu>') (snd \<nu>'))"
+  using IH2 agree2 IA2 by (auto)
+  show "?case"
+  by (smt FVT.simps(4) IH1' IH2' UnCI Vagree_def coincidence_sterm frechet.simps(3) mem_Collect_eq)
+
+(* smt chokes on the full IH, so simplify things a bit first *)
+next
+  case (dfree_Times t1 t2) 
+  assume dfree1:"dfree t1"
+  assume dfree2:"dfree t2"
+  assume IH1:"(Vagree \<nu> \<nu>' (FVDiff t1) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT t1} \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet J t1 (fst \<nu>') (snd \<nu>'))"
+  assume IH2:"(Vagree \<nu> \<nu>' (FVDiff t2) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT t2} \<Longrightarrow>  frechet I t2 (fst \<nu>) (snd \<nu>) = frechet J t2 (fst \<nu>') (snd \<nu>'))"
+  assume agree:"Vagree \<nu> \<nu>' (FVDiff (Times t1 t2))"
+  assume IA:"Iagree I J {Inl x |x. x \<in> SIGT (Times t1 t2)}"
+  have subs:"{Inl x |x. x \<in> SIGT t1} \<subseteq> {Inl x |x. x \<in> SIGT (Times t1 t2)}" "{Inl x |x. x \<in> SIGT t2} \<subseteq> {Inl x |x. x \<in> SIGT (Times t1 t2)}"
+    by auto
+  from IA have
+    IA1:"Iagree I J {Inl x |x. x \<in> SIGT t1}"
+    and IA2:"Iagree I J {Inl x |x. x \<in> SIGT t2}"
+    using Iagree_sub[OF subs(1)] Iagree_sub[OF subs(2)] by auto
+  have agree1:"Vagree \<nu> \<nu>' (FVDiff t1)" using agree agree_times1 by (blast) 
+  then have agree1':"Vagree \<nu> \<nu>' (FVT t1)"
+    using FVDiff_sub Vagree_def mem_Collect_eq subset_eq by smt
+  have agree2:"Vagree \<nu> \<nu>' (FVDiff t2)" using agree agree_times2 by (blast)
+  then have agree2':"Vagree \<nu> \<nu>' (FVT t2)"
+    using FVDiff_sub Vagree_def mem_Collect_eq subset_eq by smt
+  have IH1':"(frechet I t1 (fst \<nu>) (snd \<nu>) = frechet J t1 (fst \<nu>') (snd \<nu>'))"
+  using IH1 agree1 IA1 by (auto)
+  have IH2':"(frechet I t2 (fst \<nu>) (snd \<nu>) = frechet J t2 (fst \<nu>') (snd \<nu>'))"
+  using IH2 agree2 IA2 by (auto)
+  note co1 = coincidence_sterm'[of "t1" \<nu> \<nu>' I J] and co2 = coincidence_sterm'[of "t2" \<nu> \<nu>' I J]
+  show "?case"
+    using  co1 [OF dfree1 agree1' IA1] co2 [OF dfree2 agree2' IA2] IH1' IH2' by auto
+qed
 
 lemma coincidence_dterm:
   fixes I :: "('sf::finite, 'sc::finite, 'sz::finite) interp" and \<nu> :: "'sz state" and \<nu>'::"'sz state"
@@ -1673,8 +1756,13 @@ next
     proof -
       fix \<nu> \<nu>' and I J :: "('sf, 'sc, 'sz) interp"
       assume IA:"Iagree I J (SIGF (Prop p args))"
-      hence IAs:"\<And>i. Iagree I J {Inl x | x. x \<in> SIGT (args i)}" 
-        unfolding SIGF.simps Iagree_def by (auto)
+      have subs:"\<And>i. {Inl x | x. x \<in> SIGT (args i)} \<subseteq> (SIGF (Prop p args))"
+        by auto
+      have IAs:"\<And>i. Iagree I J {Inl x | x. x \<in> SIGT (args i)}"
+        using IA apply(unfold SIGF.simps)
+        subgoal for i
+          using Iagree_sub[OF subs[of i]] by auto
+        done
       have mem:"Inr (Inr p) \<in> {Inr (Inr p)} \<union> {Inl x |x. x \<in> (\<Union>i. SIGT (args i))}"
         by auto
       from IA have pSame:"Predicates I p = Predicates J p"
@@ -1861,7 +1949,43 @@ next
     qed
   then show "?case" by simp
 qed 
-  
+  (*
+definition coincide_hp :: "('sf, 'sc, 'sz) hp \<Rightarrow> bool"
+where "coincide_hp \<alpha> \<longleftrightarrow> (\<forall> \<nu> \<nu>' \<mu> V I J. Iagree I J (SIGP \<alpha>) \<longrightarrow> Vagree \<nu> \<nu>' V \<longrightarrow> V \<supseteq> (FVP \<alpha>) \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I \<alpha> \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J \<alpha> \<and> Vagree \<mu> \<mu>' (MBV \<alpha> \<union> V)))"
+
+definition coincide_fml  :: "('sf, 'sc, 'sz) formula \<Rightarrow> bool"
+where "coincide_fml \<phi> \<longleftrightarrow> (\<forall> \<nu> \<nu>' I J. Iagree I J (SIGF \<phi>) \<longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<longrightarrow> \<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem J \<phi>)"
+
+lemma coinc_hp [simp]: "coincide_hp \<alpha> = (\<forall> \<nu> \<nu>' \<mu> V I J. Iagree I J (SIGP \<alpha>) \<longrightarrow> Vagree \<nu> \<nu>' V \<longrightarrow> V \<supseteq> (FVP \<alpha>) \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I \<alpha> \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J \<alpha> \<and> Vagree \<mu> \<mu>' (MBV \<alpha> \<union> V)))"
+  unfolding coincide_hp_def by auto
+
+lemma coinc_fml [simp]: "coincide_fml \<phi> = (\<forall> \<nu> \<nu>' I J. Iagree I J (SIGF \<phi>) \<longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<longrightarrow> \<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem J \<phi>)"
+  unfolding coincide_fml_def by auto
+
+lemma coincidence_hp_fml:
+ shows "(hpsafe \<alpha> \<longrightarrow> coincide_hp \<alpha>) \<and> (fsafe \<phi> \<longrightarrow> coincide_fml \<phi>)"
+*)
+lemma coincidence_formula:"\<And>\<nu> \<nu>' I J. fsafe (\<phi>::('sf, 'sc, 'sz) formula) \<Longrightarrow> Iagree I J (SIGF \<phi>) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<Longrightarrow> (\<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem J \<phi>)"
+  using coincidence_hp_fml unfolding coincide_fml_def by blast 
+
+lemma coincidence_hp:"\<And>\<nu> \<nu>' \<mu> V I J. hpsafe (\<alpha>::('sf, 'sc, 'sz) hp) \<Longrightarrow> Iagree I J (SIGP \<alpha>) \<Longrightarrow> Vagree \<nu> \<nu>' V \<Longrightarrow> V \<supseteq> (FVP \<alpha>) \<Longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I \<alpha> \<Longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J \<alpha> \<and> Vagree \<mu> \<mu>' (MBV \<alpha> \<union> V))"
+  using coincidence_hp_fml unfolding coincide_hp_def by blast 
+
+(*proof -
+    fix \<nu> \<nu>' I J
+    assume assms: "fsafe \<phi>" "Iagree I J (SIGF \<phi>)" "Vagree \<nu> \<nu>' (FVF \<phi>)"
+    have imp:"(\<And>\<phi>. fsafe \<phi> \<Longrightarrow> coincide_fml \<phi>)"
+      using coincidence_hp_fml by auto
+    have "(\<And>\<phi>. fsafe \<phi> \<Longrightarrow> Iagree I J (SIGF \<phi>) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<Longrightarrow> (\<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem J \<phi>))"
+      unfolding coincide_fml_def apply(auto)
+      subgoal for \<phi>
+        using imp unfolding coincide_fml_def apply(auto)
+      sledgehammer
+      by blast
+    show "(\<nu> \<in> fml_sem I \<phi>) = (\<nu>' \<in> fml_sem J \<phi>)
+  using coincidence_hp_fml apply(unfold coincide_fml_def)
+  by blast
+*)
 subsection \<open>Axioms\<close>
 text \<open>
   The uniform substitution calculus is based on a finite list of concrete
@@ -1964,12 +2088,13 @@ lemma iff_sem [simp]: "(\<nu> \<in> fml_sem I (A \<leftrightarrow> B))
   by (auto simp add: Equiv_def)
 
 lemma box_sem [simp]:"fml_sem I (Box \<alpha> \<phi>) = {\<nu>. \<forall> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<longrightarrow> \<omega> \<in> fml_sem I \<phi>}"
-  sorry
-
-
+  unfolding Box_def fml_sem.simps
+  using Collect_cong by (auto)
+  
 lemma forall_sem [simp]:"fml_sem I (Forall x \<phi>) = {v. \<forall>r. (repv v x r) \<in> fml_sem I \<phi>}"
-  sorry
-
+  unfolding Forall_def fml_sem.simps
+  using Collect_cong by (auto)
+  
 lemma loop_sem:"prog_sem I (Loop \<alpha>) = (prog_sem I \<alpha>)\<^sup>*"
   by (auto)
 
@@ -1983,8 +2108,7 @@ lemma equals_sem [simp]: "(\<nu> \<in> fml_sem I (Equals \<theta> \<theta>'))
 
 lemma diamond_sem [simp]: "fml_sem I (Diamond \<alpha> \<phi>)
   = {\<nu>. \<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<and> \<omega> \<in> fml_sem I \<phi>}"
-  sorry
-
+  by auto
 
 lemma iff_to_impl: "((\<nu> \<in> fml_sem I A) \<longleftrightarrow> (\<nu> \<in> fml_sem I B))
   \<longleftrightarrow> (((\<nu> \<in> fml_sem I A) \<longrightarrow> (\<nu> \<in> fml_sem I B))
@@ -2538,7 +2662,14 @@ lemma DS_valid:"valid DSaxiom"
     using req1 leq req3 req4 thisW by fastforce
   have sem_eq:"?abba \<in> fml_sem I (p1 vid3 vid1) \<longleftrightarrow> (aa,ba) \<in> fml_sem I (p1 vid3 vid1)"
     apply(rule coincidence_formula)
-    by (auto simp add: aaba Vagree_def p1_def f0_def empty_def)
+    apply (auto simp add: aaba Vagree_def p1_def f0_def empty_def)
+    subgoal
+      apply(standard)
+      apply (auto intro: hpsafe_fsafe.intros dsafe.intros)
+      done
+    subgoal
+      using Iagree_refl by auto
+    done
   from inPred sem_eq have  inPred':"(aa,ba) \<in> fml_sem I (p1 vid3 vid1)"
     by auto
   (* thus by lemma 6 consequence for formulas *)
