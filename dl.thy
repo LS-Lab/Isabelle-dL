@@ -1142,6 +1142,12 @@ next
     by (metis agree_supset)
 qed
 
+lemma  coincidence_frechet' :
+  fixes I J :: "('sf, 'sc, 'sz) interp" and \<nu> :: "'sz state" and \<nu>'::"'sz state"
+  shows "dfree \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff \<theta>) \<Longrightarrow> Iagree I J {Inl x | x. x \<in> (SIGT \<theta>)} \<Longrightarrow> frechet I  \<theta> (fst \<nu>) (snd \<nu>) = frechet J  \<theta> (fst \<nu>') (snd \<nu>')"
+  sorry
+
+
 lemma coincidence_dterm:
   fixes I :: "('sf::finite, 'sc::finite, 'sz::finite) interp" and \<nu> :: "'sz state" and \<nu>'::"'sz state"
   shows "dsafe \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta> \<nu>'"
@@ -1159,7 +1165,56 @@ qed (auto simp: Vagree_def directional_derivative_def coincidence_frechet)
 lemma coincidence_dterm':
   fixes I J :: "('sf::finite, 'sc::finite, 'sz::finite) interp" and \<nu> :: "'sz state" and \<nu>'::"'sz state"
   shows "dsafe \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> Iagree I J {Inl x | x. x \<in> (SIGT \<theta>)} \<Longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem J \<theta> \<nu>'"
-sorry
+proof (induction rule: dsafe.induct)
+  case (dsafe_Fun args f) then 
+    have safe:"(\<And>i. dsafe (args i))"
+    and IH:"\<And>i. Vagree \<nu> \<nu>' (FVT (args i)) \<Longrightarrow> Iagree I J {Inl x | x. x \<in> (SIGT (args i))} \<Longrightarrow>  dterm_sem I (args i) \<nu> = dterm_sem J (args i) \<nu>'"
+    and agree:"Vagree \<nu> \<nu>' (FVT ($f f args))"
+    and IA:"Iagree I J {Inl x |x. x \<in> SIGT ($f f args)}"
+      by auto
+    have subs:"\<And>i. {Inl x |x. x \<in> SIGT (args i)} \<subseteq> {Inl x |x. x \<in> SIGT ($f f args)}" by auto
+    from IA have IAs:
+      "\<And>i. Iagree I J {Inl x |x. x \<in> SIGT (args i)}"
+        using Iagree_sub [OF subs IA] by auto
+    from agree have agrees:"\<And>i. Vagree \<nu> \<nu>' (FVT (args i))"
+      using agree_func_fvt by (metis)
+    from Iagree_Func [OF IA] have fEq:"Functions I f = Functions J f" by auto 
+    then show "?case"
+      using safe coincidence_sterm IH[OF agrees IAs] rangeI agrees fEq
+      by (auto)
+next
+  case (dsafe_Plus \<theta>\<^sub>1 \<theta>\<^sub>2) then
+    have safe:"dsafe \<theta>\<^sub>1" "dsafe \<theta>\<^sub>2"
+    and IH1:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>1) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>1} \<Longrightarrow> dterm_sem I \<theta>\<^sub>1 \<nu> = dterm_sem J \<theta>\<^sub>1 \<nu>'"
+    and IH2:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>2) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>2} \<Longrightarrow> dterm_sem I \<theta>\<^sub>2 \<nu> = dterm_sem J \<theta>\<^sub>2 \<nu>'"
+    and VA:"Vagree \<nu> \<nu>' (FVT (Plus \<theta>\<^sub>1 \<theta>\<^sub>2))"
+    and IA:"Iagree I J {Inl x |x. x \<in> SIGT (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)}"
+      by auto
+    from VA have VA1:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>1)" and VA2:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>2)" 
+      unfolding Vagree_def by auto
+    have subs:"{Inl x |x. x \<in> SIGT \<theta>\<^sub>1} \<subseteq> {Inl x |x. x \<in> SIGT (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)}" 
+      "{Inl x |x. x \<in> SIGT \<theta>\<^sub>2} \<subseteq> {Inl x |x. x \<in> SIGT (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)}"by auto
+    from IA have IA1:"Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>1}" and IA2:"Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>2}"
+      using Iagree_sub subs by auto
+  then show ?case 
+    using IH1[OF VA1 IA1] IH2[OF VA2 IA2] by auto
+next
+  case (dsafe_Times \<theta>\<^sub>1 \<theta>\<^sub>2) then
+    have safe:"dsafe \<theta>\<^sub>1" "dsafe \<theta>\<^sub>2"
+    and IH1:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>1) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>1} \<Longrightarrow> dterm_sem I \<theta>\<^sub>1 \<nu> = dterm_sem J \<theta>\<^sub>1 \<nu>'"
+    and IH2:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>2) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>2} \<Longrightarrow> dterm_sem I \<theta>\<^sub>2 \<nu> = dterm_sem J \<theta>\<^sub>2 \<nu>'"
+    and VA:"Vagree \<nu> \<nu>' (FVT (Times \<theta>\<^sub>1 \<theta>\<^sub>2))"
+    and IA:"Iagree I J {Inl x |x. x \<in> SIGT (Times \<theta>\<^sub>1 \<theta>\<^sub>2)}"
+      by auto
+    from VA have VA1:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>1)" and VA2:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>2)" 
+      unfolding Vagree_def by auto
+    have subs:"{Inl x |x. x \<in> SIGT \<theta>\<^sub>1} \<subseteq> {Inl x |x. x \<in> SIGT (Times \<theta>\<^sub>1 \<theta>\<^sub>2)}" 
+      "{Inl x |x. x \<in> SIGT \<theta>\<^sub>2} \<subseteq> {Inl x |x. x \<in> SIGT (Times \<theta>\<^sub>1 \<theta>\<^sub>2)}"by auto
+    from IA have IA1:"Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>1}" and IA2:"Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>2}"
+      using Iagree_sub subs by auto
+  then show ?case 
+    using IH1[OF VA1 IA1] IH2[OF VA2 IA2] by auto  
+qed (auto simp: Vagree_def directional_derivative_def coincidence_frechet')
 
 lemma coincidence_ode:
   fixes I J :: "('sf::finite, 'sc::finite, 'sz::finite) interp" and \<nu> :: "'sz state" and \<nu>'::"'sz state"
