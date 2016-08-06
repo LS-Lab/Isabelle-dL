@@ -921,7 +921,7 @@ proof -
   let ?T = UNIV
   let ?f = "(\<lambda>t. \<lambda>x. \<chi> i::'sz. 0)"
   let ?X = UNIV
-  let ?t0.0 = 0
+  let .0 = 0
   let ?x0.0 = "\<chi> i::'sz. x"
   interpret ll: ll_on_open "UNIV" "(\<lambda>t x. \<chi> i::'sz. 0)" UNIV
     apply unfold_locales
@@ -2617,20 +2617,18 @@ lemma DS_valid:"valid DSaxiom"
   (*interpret ll:ll_on_open_it "{0 .. r}" "(\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))" "{x. mk_v I (OSing vid1 (f0 fid1)) (a,b) x \<in> fml_sem I (p1 vid2 vid1)}"*)
   have sub: "{0..r} \<subseteq> UNIV" by auto
   have sub2:"{x. mk_v I (OSing vid1 (f0 fid1)) (a,b) x \<in> fml_sem I (p1 vid2 vid1)} \<subseteq> UNIV" by auto
-  interpret ll:ll_on_open_it UNIV "(\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))" "UNIV"
+  interpret ll:ll_on_open_it UNIV "(\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))" "UNIV" 0
     apply(standard)
     apply(auto)
-    apply(unfold local_lipschitz_def)
-    apply(unfold f0_def empty_def sterm_sem.simps)
-      apply(safe)
-    subgoal for x t
-      using gt_ex lipschitz_constI by blast
-    subgoal for x
-      by (simp add: continuous_on_const)
-    done
+    unfolding local_lipschitz_def f0_def empty_def sterm_sem.simps apply(safe)
+    using gt_ex lipschitz_constI apply blast
+    by (simp add: continuous_on_const)
     (* Combine with flow_usolves_ode and equals_flowI to get uniqueness of solution *)
-    have req3:"(?sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..r}
-              {x. mk_v I (OSing vid1 (f0 fid1)) (a,b) x \<in> fml_sem I (p1 vid2 vid1)}" 
+  let ?f = "(\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))"
+  have sol_UNIV: "\<And>t x. (ll.flow 0 x solves_ode ?f) (ll.existence_ivl 0 x) UNIV"
+    using ll.flow_solves_ode by auto    
+  have req3:"(?sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..r}
+            {x. mk_v I (OSing vid1 (f0 fid1)) (a,b) x \<in> fml_sem I (p1 vid2 vid1)}" 
     apply(auto simp add: f0_def empty_def vec_simp) 
     apply(rule solves_odeI)
     apply(auto simp only: has_vderiv_on_def has_vector_derivative_def box_sem)
@@ -2680,7 +2678,8 @@ lemma DS_valid:"valid DSaxiom"
   (* thus by lemma 6 consequence for formulas *)
   show "repv (repv (a, b) vid2 r) vid1
        (dterm_sem I (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid2))) (repv (a, b) vid2 r))
-       \<in> fml_sem I (p1 vid3 vid1)" using aaba inPred' sorry
+       \<in> fml_sem I (p1 vid3 vid1)" 
+    using aaba inPred' by (auto)
 next
   fix I::"('sf,'sc,'sz) interp"
   and aa ba ab bb sol 
