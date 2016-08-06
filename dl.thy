@@ -921,7 +921,7 @@ proof -
   let ?T = UNIV
   let ?f = "(\<lambda>t. \<lambda>x. \<chi> i::'sz. 0)"
   let ?X = UNIV
-  let .0 = 0
+  let ?t0.0 = 0
   let ?x0.0 = "\<chi> i::'sz. x"
   interpret ll: ll_on_open "UNIV" "(\<lambda>t x. \<chi> i::'sz. 0)" UNIV
     apply unfold_locales
@@ -2534,6 +2534,49 @@ lemma DC_valid:"valid DCaxiom"
   apply(auto)
   sorry
   
+lemma
+  solves_ode_subset:
+  assumes x: "(x solves_ode f) T X"
+  assumes s: "S \<subseteq> T"
+  shows "(x solves_ode f) S X"
+  apply(rule solves_odeI)
+  using has_vderiv_on_subset s solves_ode_vderivD x apply force
+  using assms by (auto intro!: solves_odeI dest!: solves_ode_domainD)
+
+lemma
+  solves_ode_supset_range:
+  assumes x: "(x solves_ode f) T X"
+  assumes y: "X \<subseteq> Y"
+  shows "(x solves_ode f) T Y"
+  apply(rule solves_odeI)
+  using has_vderiv_on_subset y solves_ode_vderivD x apply force
+  using assms by (auto intro!: solves_odeI dest!: solves_ode_domainD)
+
+lemma
+  usolves_ode_subset:
+  assumes x: "(x usolves_ode f from t0) T X"
+  assumes s: "S \<subseteq> T"
+  assumes t0: "t0 \<in> S"
+  assumes S: "is_interval S"
+  shows "(x usolves_ode f from t0) S X"
+    proof (rule usolves_odeI)
+  note usolves_odeD[OF x]
+  show "(x solves_ode f) S X" by (rule solves_ode_subset; fact)
+  show "t0 \<in> S" "is_interval S" by(fact+)
+  fix z t
+  assume s: "{t0 -- t} \<subseteq> S" and z: "(z solves_ode f) {t0 -- t} X" and z0: "z t0 = x t0"
+  then have "t0 \<in> {t0 -- t}" "is_interval {t0 -- t}"
+    by auto
+  moreover note s
+  moreover have "(z solves_ode f) {t0--t} X"
+    using solves_odeD[OF z] \<open>S \<subseteq> T\<close>
+    by (intro solves_ode_subset_range[OF z]) force
+  moreover note z0
+  moreover have "t \<in> {t0 -- t}" by simp
+  ultimately show "z t = x t"
+    by (meson \<open>\<And>z ta T'. \<lbrakk>t0 \<in> T'; is_interval T'; T' \<subseteq> T; (z solves_ode f) T' X; z t0 = x t0; ta \<in> T'\<rbrakk> \<Longrightarrow> z ta = x ta\<close> assms(2) dual_order.trans)
+qed
+  
 lemma DS_valid:"valid DSaxiom"
   apply(auto simp only: DSaxiom_def valid_def Let_def iff_sem impl_sem box_sem)
   apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq  iff_sem impl_sem box_sem forall_sem)
@@ -2617,16 +2660,6 @@ lemma DS_valid:"valid DSaxiom"
   (*interpret ll:ll_on_open_it "{0 .. r}" "(\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))" "{x. mk_v I (OSing vid1 (f0 fid1)) (a,b) x \<in> fml_sem I (p1 vid2 vid1)}"*)
   have sub: "{0..r} \<subseteq> UNIV" by auto
   have sub2:"{x. mk_v I (OSing vid1 (f0 fid1)) (a,b) x \<in> fml_sem I (p1 vid2 vid1)} \<subseteq> UNIV" by auto
-  interpret ll:ll_on_open_it UNIV "(\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))" "UNIV" 0
-    apply(standard)
-    apply(auto)
-    unfolding local_lipschitz_def f0_def empty_def sterm_sem.simps apply(safe)
-    using gt_ex lipschitz_constI apply blast
-    by (simp add: continuous_on_const)
-    (* Combine with flow_usolves_ode and equals_flowI to get uniqueness of solution *)
-  let ?f = "(\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))"
-  have sol_UNIV: "\<And>t x. (ll.flow 0 x solves_ode ?f) (ll.existence_ivl 0 x) UNIV"
-    using ll.flow_solves_ode by auto    
   have req3:"(?sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..r}
             {x. mk_v I (OSing vid1 (f0 fid1)) (a,b) x \<in> fml_sem I (p1 vid2 vid1)}" 
     apply(auto simp add: f0_def empty_def vec_simp) 
@@ -2713,28 +2746,86 @@ next
            (\<forall>\<omega>. \<omega> = repv (repv (ab, bb) vid2 t) vid1
                       (dterm_sem I (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid2))) (repv (ab, bb) vid2 t)) \<longrightarrow>
                  \<omega> \<in> fml_sem I (p1 vid3 vid1))" using all by auto
-    have another_eq:"\<And>i ra. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-                  (mk_v I (OSing vid1 (f0 fid1)) (ab, bb) (sol t))
+  interpret ll:ll_on_open_it UNIV "(\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))" "UNIV" 0
+    apply(standard)
+    apply(auto)
+    unfolding local_lipschitz_def f0_def empty_def sterm_sem.simps apply(safe)
+    using gt_ex lipschitz_constI apply blast
+    by (simp add: continuous_on_const)
+  have eq_UNIV:"ll.existence_ivl 0 (sol 0) = UNIV"
+    apply(rule ll.existence_ivl_eq_domain)
+    apply(auto)
+    subgoal for tm tM t
+      apply(unfold f0_def empty_def sterm_sem.simps)
+      by(metis add.right_neutral mult_zero_left order_refl)
+    done
+  (* Combine with flow_usolves_ode and equals_flowI to get uniqueness of solution *)
+  let ?f = "(\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))"
+  have sol_UNIV: "\<And>t x. (ll.flow 0 x usolves_ode ?f from 0) (ll.existence_ivl 0 x) UNIV"
+    using ll.flow_usolves_ode by auto    
+  (*have isFlow:"\<And>xa. sol xa = (ll.flow  0 (sol 0) xa)"
+    sledgehammer
+    sorry*)
+  from sol have sol':
+    "(sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..t} UNIV"
+    apply (rule solves_ode_supset_range)
+    by auto
+  have sol0_eq:"sol 0 = ll.flow  0 (sol 0) 0"
+    using ll.general.flow_initial_time_if by auto
+  have isFlow:"sol t = ll.flow 0 (sol 0) t"
+    apply(rule ll.equals_flowI)
+    apply(auto)
+    subgoal using eq_UNIV by auto
+    defer
+    subgoal using eq_UNIV apply auto
+      subgoal using sol sol0_eq by auto
+    done
+    using sol' closed_segment_eq_real_ivl t apply(auto)
+    done
+    
+  have sol_int:"((ll.flow 0 (sol 0)) usolves_ode ?f from 0) {0..t} {x. mk_v I (OSing vid1 (f0 fid1)) (ab, bb) x \<in> fml_sem I (p1 vid2 vid1)}"
+    (*(\<And>x f t0 T X Y. (x usolves_ode f from t0) T X \<Longrightarrow> x ` T \<subseteq> Y \<Longrightarrow> Y \<subseteq> X \<Longrightarrow> (x usolves_ode f from t0) T Y) \<Longrightarrow>*)
+    apply (rule usolves_ode_subset_range[of "(ll.flow 0 (sol 0))" "?f" "0" "{0..t}" "UNIV" "{x. mk_v I (OSing vid1 (f0 fid1)) (ab, bb) x \<in> fml_sem I (p1 vid2 vid1)}"]) 
+    subgoal using eq_UNIV sol_UNIV[of "(sol 0)"] apply (auto)
+      apply (rule usolves_ode_subset)
+      using t by(auto)
+    apply(auto)
+    using sol apply(auto  dest!: solves_ode_domainD)
+    subgoal for xa
+      using isFlow[of xa] by(auto)
+    done
+  
+  
+    
+  (* usolves_ode_on_superset_domain *) 
+       (*  0 \<in> ?T' \<Longrightarrow>
+  is_interval ?T' \<Longrightarrow>
+  ?T' \<subseteq> ll.existence_ivl 0 ?x0.0 \<Longrightarrow>
+  (?z solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) ?T' UNIV \<Longrightarrow> ?z 0 = ll.flow 0 ?x0.0 0 \<Longrightarrow> ?t \<in> ?T' \<Longrightarrow> 
+  ?z ?t = ll.flow 0 ?x0.0 ?t*)
+  have another_eq:"\<And>i ra. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
+                (mk_v I (OSing vid1 (f0 fid1)) (ab, bb) (sol t))
 
-          =  dterm_sem I (if i = vid1 then Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid3)) else Const 0)
-                  (\<chi> y. if vid3 = y then ra else fst (\<chi> y. if vid2 = y then t else fst (ab, bb) $ y, bb) $ y, bb)"
-      using mk_v_agree[of "I" "(OSing vid1 (f0 fid1))" "(ab, bb)" "(sol t)"]  vne12 vne23 vne13
-      apply(auto simp add: f0_def p1_def empty_def)
-      apply(unfold Vagree_def)
-      using aaba apply(simp add: f0_def empty_def)
-      (* TODO: Think this needs uniqueness of solutions *)
+        =  dterm_sem I (if i = vid1 then Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid3)) else Const 0)
+                (\<chi> y. if vid3 = y then ra else fst (\<chi> y. if vid2 = y then t else fst (ab, bb) $ y, bb) $ y, bb)"
+    using mk_v_agree[of "I" "(OSing vid1 (f0 fid1))" "(ab, bb)" "(sol t)"]  vne12 vne23 vne13
+    apply(auto simp add: f0_def p1_def empty_def)
+    apply(unfold Vagree_def)
+    using aaba apply(simp add: f0_def empty_def)
+    (* TODO: Think this needs uniqueness of solutions *)
+    
+    sorry
+  have allRa:"(\<forall>ra. repv (repv (ab, bb) vid2 t) vid3 ra
+               \<in> {v. dterm_sem I (Const 0) v \<le> dterm_sem I (trm.Var vid3) v} \<inter>
+                  {v. dterm_sem I (trm.Var vid3) v \<le> dterm_sem I (trm.Var vid2) v} \<longrightarrow>
+               Predicates I vid2
+                (\<chi> i. dterm_sem I (singleton (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid3))) i)
+                       (repv (repv (ab, bb) vid2 t) vid3 ra)))"
+    using mk_v_agree[of "I" "(OSing vid1 (f0 fid1))" "(ab, bb)" "(sol t)"]
+         vne23 constraint[of t] apply(auto simp add: Vagree_def p1_def)
       sorry
-    have allRa:"(\<forall>ra. repv (repv (ab, bb) vid2 t) vid3 ra
-                 \<in> {v. dterm_sem I (Const 0) v \<le> dterm_sem I (trm.Var vid3) v} \<inter>
-                    {v. dterm_sem I (trm.Var vid3) v \<le> dterm_sem I (trm.Var vid2) v} \<longrightarrow>
-                 Predicates I vid2
-                  (\<chi> i. dterm_sem I (singleton (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid3))) i)
-                         (repv (repv (ab, bb) vid2 t) vid3 ra)))"
-      using mk_v_agree[of "I" "(OSing vid1 (f0 fid1))" "(ab, bb)" "(sol t)"]
-           vne23 constraint[of t] apply(auto simp add: Vagree_def p1_def)
-        sorry
-      (*
-      *)
+    (*
+    *)
 oops   
   (*show "mk_v I (OSing vid1 (f0 fid1)) (ab, bb) (sol t) \<in> fml_sem I (p1 vid3 vid1)" sorry
 qed 
