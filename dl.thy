@@ -2614,10 +2614,20 @@ lemma DS_valid:"valid DSaxiom"
     by (auto simp add: vec_eq_iff cong: if_cong)
     (* TODO: have a solution that exists everywhere, want to restrict the domain. Fabian says this
        should be true but has not been formalized just yet. *)
-    interpret ll:ll_on_open_it "{0 .. r}" "(\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))" "{x. mk_v I (OSing vid1 (f0 fid1)) (a,b) x \<in> fml_sem I (p1 vid2 vid1)}"
+  (*interpret ll:ll_on_open_it "{0 .. r}" "(\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))" "{x. mk_v I (OSing vid1 (f0 fid1)) (a,b) x \<in> fml_sem I (p1 vid2 vid1)}"*)
+  have sub: "{0..r} \<subseteq> UNIV" by auto
+  have sub2:"{x. mk_v I (OSing vid1 (f0 fid1)) (a,b) x \<in> fml_sem I (p1 vid2 vid1)} \<subseteq> UNIV" by auto
+  interpret ll:ll_on_open_it UNIV "(\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))" "UNIV"
     apply(standard)
     apply(auto)
-    sorry
+    apply(unfold local_lipschitz_def)
+    apply(unfold f0_def empty_def sterm_sem.simps)
+      apply(safe)
+    subgoal for x t
+      using gt_ex lipschitz_constI by blast
+    subgoal for x
+      by (simp add: continuous_on_const)
+    done
     (* Combine with flow_usolves_ode and equals_flowI to get uniqueness of solution *)
     have req3:"(?sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..r}
               {x. mk_v I (OSing vid1 (f0 fid1)) (a,b) x \<in> fml_sem I (p1 vid2 vid1)}" 
