@@ -2905,10 +2905,6 @@ next
                        (repv (repv (ab, bb) vid2 t) vid3 ra)))"
     apply(rule allI)
     subgoal for ra
-      (* dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. Const 0))) (ab, bb) (sol ra))
-      =  dterm_sem I (if i = vid1 then Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid3)) else Const 0)
-            (\<chi>y. if vid3 = y then ra else fst (\<chi>y. if vid2 = y then t else fst (ab, bb) $ y, bb) $ y, bb)
-            *)
       using mk_v_agree[of "I" "(OSing vid1 (f0 fid1))" "(ab, bb)" "(sol ra)"]
          vne23 constraint[of ra] apply(auto simp add: Vagree_def p1_def)
       using sol_eq_exp[of ra] apply auto
@@ -2916,11 +2912,33 @@ next
       using thing' apply auto
       done
     done
-    (*
-    *)
-oops   
-  (*show "mk_v I (OSing vid1 (f0 fid1)) (ab, bb) (sol t) \<in> fml_sem I (p1 vid3 vid1)" sorry
-qed 
+  have fml3:"\<And>ra. 0 \<le> ra \<Longrightarrow> ra \<le> t \<Longrightarrow>
+           (\<forall>\<omega>. \<omega> = repv (repv (ab, bb) vid2 t) vid1
+                      (dterm_sem I (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid2))) (repv (ab, bb) vid2 t)) \<longrightarrow>
+                 \<omega> \<in> fml_sem I (p1 vid3 vid1))"
+    using impl allRa by auto
+       
+  have someEq:"(\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
+            (\<chi> y. if vid1 = y then (if vid2 = vid1 then t else fst (ab, bb) $ vid1) + Functions I fid1 (\<chi> i. 0) * t
+                  else fst (\<chi> y. if vid2 = y then t else fst (ab, bb) $ y, bb) $ y,
+             bb)) 
+             = (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. Const 0))) (ab, bb) (sol t)))"
+    apply(rule vec_extensionality)
+    subgoal for i
+      using vne12 apply(auto)
+      using sol_eq_exp t thing by auto
+    done  
+  have res:"mk_v I (OSing vid1 (f0 fid1)) (ab, bb) (sol t) \<in> fml_sem I (p1 vid3 vid1)"
+    using mk_v_agree[of I "OSing vid1 (f0 fid1)" "(ab, bb)" "sol t"] fml3[of t]
+    unfolding f0_def p1_def empty_def
+    unfolding Vagree_def apply auto
+    apply(auto simp add:  sol_eq_exp_t' t vec_extensionality  vne12)
+    using someEq by auto
+
+    
+    
+  oops
+(*qed 
 oops*)
 
 (* TODO:  differential formula semantics actually bogus right now
