@@ -460,7 +460,7 @@ where
     ({(\<nu>, mk_v I ODE \<nu> (sol t)) | \<nu> sol t.
       t \<ge> 0 \<and>
       (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu> x \<in> fml_sem I \<phi>} \<and>
-      VSagree (sol 0) (fst \<nu>) {x | x. Inl x \<in> ODE_vars ODE}})"
+      VSagree (sol 0) (fst \<nu>) UNIV (*{x | x. Inl x \<in> ODE_vars ODE} *)})"
 
 subsection \<open>Trivial Simplification Lemmas\<close>
 text \<open>
@@ -982,7 +982,7 @@ next
         fix \<nu>' sol t  
         assume assm: "(\<nu>, \<omega>) = (\<nu>', mk_v I ODE \<nu>' (sol t)) \<and>
            0 \<le> t \<and>
-           (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu>' x \<in> fml_sem I P} \<and> VSagree (sol 0) (fst \<nu>') {x |x. Inl x \<in> ODE_vars ODE}"
+           (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu>' x \<in> fml_sem I P} \<and> VSagree (sol 0) (fst \<nu>') UNIV"
         hence "Vagree \<omega> \<nu> (- ODE_vars ODE)" using mk_v_agree[of I ODE \<nu> "(sol t)"] by auto
         thus  "Vagree \<nu> \<omega> (- ODE_vars ODE)" by (rule agree_comm)
       qed 
@@ -1480,7 +1480,7 @@ next
        and veq:"(ab, bb) = mk_v I ODE (a, b) (sol t)"
        and t:"0 \<le> t"
        and sol:"(sol solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {x. mk_v I ODE (a, b) x \<in> fml_sem I P}"
-       and VSA:"VSagree (sol 0) a {x. Inl x \<in> ODE_vars ODE}"
+       and VSA:"VSagree (sol 0) a UNIV"
        
       from sol 
       have  solSem:"\<And>x. 0 \<le> x \<Longrightarrow> x \<le> t \<Longrightarrow> mk_v I ODE (a, b) (sol x) \<in> fml_sem I P"
@@ -1563,14 +1563,14 @@ next
         subgoal for s
           using solSem[of s] fmlSem[of s] by auto
         done
-      have VSA':"VSagree (sol 0) aa {x. Inl x \<in> ODE_vars ODE}"
+      have VSA':"VSagree (sol 0) aa UNIV"
         using VSA VA OVsub unfolding VSagree_def Vagree_def
-        by auto
+        sorry
       show
        "\<exists>ab bb. (\<exists>sol t. (ab, bb) = mk_v J ODE (aa, ba) (sol t) \<and>
                           0 \<le> t \<and> 
                          (sol solves_ode (\<lambda>a. ODE_sem J ODE)) {0..t} {x. mk_v J ODE (aa, ba) x \<in> fml_sem J P} \<and>
-                         VSagree (sol 0) aa {x. Inl x \<in> ODE_vars ODE}) \<and>
+                         VSagree (sol 0) aa UNIV) \<and>
               Vagree (mk_v I ODE (a, b) (sol t)) (ab, bb) (ODE_vars ODE \<union> V)"
         apply(rule exI[where x="fst (mk_v J ODE (aa, ba) (sol t))"])
         apply(rule exI[where x="snd (mk_v J ODE (aa, ba) (sol t))"])
@@ -2478,13 +2478,13 @@ proof -
                 0 \<le> t \<and>
                 (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f1 fid1 vid1)))) {0..t}
                  {x. mk_v I (OSing vid1 (f1 fid1 vid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and>
-                VSagree (sol 0) (fst \<nu>) {x |x. Inl x \<in> ODE_vars (OSing vid1 (f1 fid1 vid1))}) \<longrightarrow>
+                VSagree (sol 0) (fst \<nu>) UNIV) \<longrightarrow>
             \<omega> \<in> fml_sem I (P pid1)"
     assume t:"0 \<le> t"
     assume aaba:"(aa, ba) = mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)"
     assume solve:" (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f1 fid1 vid1)))) {0..t}
         {x. mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) x \<in> fml_sem I (p1 vid2 vid1)}"
-    assume sol0:"VSagree (sol 0) (fst (ab, bb)) {x |x. Inl x \<in> ODE_vars (OSing vid1 (f1 fid1 vid1))}"
+    assume sol0:"VSagree (sol 0) (fst (ab, bb)) UNIV"
     assume rep:"   (ac, bc) =
        repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1
         (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))"
@@ -2496,7 +2496,7 @@ proof -
     show "
        repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1
         (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))
-       \<in> fml_sem I (P pid1)" using aaba aaba_sem truth by (auto simp add: box_sem)
+       \<in> fml_sem I (P pid1)" using aaba aaba_sem truth by (auto)
   next
     fix I::"('sf,'sc,'sz) interp" and  aa ba ab bb sol and t::real
        assume "is_interp I"
@@ -2505,21 +2505,21 @@ proof -
                 0 \<le> t \<and>
                 (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f1 fid1 vid1)))) {0..t}
                  {x. mk_v I (OSing vid1 (f1 fid1 vid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and>
-                VSagree (sol 0) (fst \<nu>) {x |x. Inl x \<in> ODE_vars (OSing vid1 (f1 fid1 vid1))}) \<longrightarrow>
+                VSagree (sol 0) (fst \<nu>) UNIV) \<longrightarrow>
             (\<forall>\<omega>'. \<omega>' = repd \<omega> vid1 (dterm_sem I (f1 fid1 vid1) \<omega>) \<longrightarrow> \<omega>' \<in> fml_sem I (P pid1))"
        hence justW:"(\<exists>\<nu> sol t.
                 ((ab, bb), (aa, ba)) = (\<nu>, mk_v I (OSing vid1 (f1 fid1 vid1)) \<nu> (sol t)) \<and>
                 0 \<le> t \<and>
                 (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f1 fid1 vid1)))) {0..t}
                  {x. mk_v I (OSing vid1 (f1 fid1 vid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and>
-                VSagree (sol 0) (fst \<nu>) {x |x. Inl x \<in> ODE_vars (OSing vid1 (f1 fid1 vid1))}) \<longrightarrow>
+                VSagree (sol 0) (fst \<nu>) UNIV) \<longrightarrow>
             (\<forall>\<omega>'. \<omega>' = repd (aa, ba) vid1 (dterm_sem I (f1 fid1 vid1) (aa, ba)) \<longrightarrow> \<omega>' \<in> fml_sem I (P pid1))"
          by (rule allE)
        assume t:"0 \<le> t"
        assume aaba:"(aa, ba) = mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)"
        assume sol:"(sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f1 fid1 vid1)))) {0..t}
         {x. mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) x \<in> fml_sem I (p1 vid2 vid1)}"
-       assume sol0:"VSagree (sol 0) (fst (ab, bb)) {x |x. Inl x \<in> ODE_vars (OSing vid1 (f1 fid1 vid1))}"
+       assume sol0:"VSagree (sol 0) (fst (ab, bb)) UNIV"
        have "repd (aa, ba) vid1 (dterm_sem I (f1 fid1 vid1) (aa, ba)) \<in> fml_sem I (P pid1)"
          using justW t aaba sol sol0 by auto
        hence foo:"repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1 (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t))) \<in> fml_sem I (P pid1)"
@@ -2589,7 +2589,7 @@ lemma DS_valid:"valid DSaxiom"
               0 \<le> t \<and>
               (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..t}
                {x. mk_v I (OSing vid1 (f0 fid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and>
-              VSagree (sol 0) (fst \<nu>) {x |x. Inl x \<in> ODE_vars (OSing vid1 (f0 fid1))}) \<longrightarrow>
+              VSagree (sol 0) (fst \<nu>) UNIV) \<longrightarrow>
           \<omega> \<in> fml_sem I (p1 vid3 vid1)"
    assume "dterm_sem I (Const 0) (repv (a, b) vid2 r) \<le> dterm_sem I (trm.Var vid2) (repv (a, b) vid2 r)"
      hence leq:"0 \<le> r" by (auto)
@@ -2613,7 +2613,7 @@ lemma DS_valid:"valid DSaxiom"
              0 \<le> t \<and>
              (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..t}
               {x. mk_v I (OSing vid1 (f0 fid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and>
-             VSagree (sol 0) (fst \<nu>) {x |x. Inl x \<in> ODE_vars (OSing vid1 (f0 fid1))}) \<longrightarrow>
+             VSagree (sol 0) (fst \<nu>) UNIV) \<longrightarrow>
          ?abba \<in> fml_sem I (p1 vid3 vid1)" by blast
   let ?c = "Functions I fid1 (\<chi> _. 0)"
   let ?sol = "(\<lambda>t. \<chi> i. if i = vid1 then (a $ i) + ?c * t else (a $ i))"
@@ -2696,7 +2696,7 @@ lemma DS_valid:"valid DSaxiom"
     qed
     done
   have req4':"?sol 0 = fst (a,b)" by (auto simp: vec_eq_iff)
-  then have req4: "VSagree (?sol 0) (fst (a,b)) {x |x. Inl x \<in> ODE_vars (OSing vid1 (f0 fid1))}"
+  then have req4: "VSagree (?sol 0) (fst (a,b)) UNIV"
     using VSagree_refl[of a] req4' unfolding VSagree_def by auto
   have inPred:"?abba \<in> fml_sem I (p1 vid3 vid1)"  
     using req1 leq req3 req4 thisW by fastforce
@@ -2735,7 +2735,8 @@ next
         {x. mk_v I (OSing vid1 (f0 fid1)) (ab, bb) x \<in> fml_sem I (p1 vid2 vid1)}"
   hence constraint:"\<And>s. s \<in> {0 .. t} \<Longrightarrow> sol s \<in> {x. mk_v I (OSing vid1 (f0 fid1)) (ab, bb) x \<in> fml_sem I (p1 vid2 vid1)}"
     using solves_ode_domainD by fastforce
-  assume sol0:"sol 0 = fst (ab, bb)"
+  (* sol 0 = fst (ab, bb)*)
+  assume sol0:" VSagree (sol 0) (fst (ab, bb)) UNIV"
   have impl:"dterm_sem I (Const 0) (repv (ab, bb) vid2 t) \<le> dterm_sem I (trm.Var vid2) (repv (ab, bb) vid2 t) \<longrightarrow>
            (\<forall>ra. repv (repv (ab, bb) vid2 t) vid3 ra
                  \<in> {v. dterm_sem I (Const 0) v \<le> dterm_sem I (trm.Var vid3) v} \<inter>
@@ -2805,8 +2806,9 @@ next
     using ll.general.flow_initial_time_if by auto
   (* TODO: Think this has to change for new semantics *)
   have more_eq:"(\<chi> i. if i = vid1 then ab $ i + Functions I fid1 (\<chi> _. 0) * 0 else ab $ i) = sol 0"
-    (*by (smt fst_eqD sol0 vec_extensionality vec_lambda_beta)*)
-    sorry
+    using sol0 apply (unfold VSagree_def)
+    apply(rule vec_extensionality)
+    by(auto)
     
   have exp_isFlow:"\<And>s. s \<ge> 0 \<Longrightarrow> s \<le> t \<Longrightarrow> ?sol s = ll.flow 0 (sol 0) s"
     apply(rule ll.equals_flowI)
@@ -2928,16 +2930,13 @@ next
       using vne12 apply(auto)
       using sol_eq_exp t thing by auto
     done  
-  have res:"mk_v I (OSing vid1 (f0 fid1)) (ab, bb) (sol t) \<in> fml_sem I (p1 vid3 vid1)"
+  show "mk_v I (OSing vid1 (f0 fid1)) (ab, bb) (sol t) \<in> fml_sem I (p1 vid3 vid1)"
     using mk_v_agree[of I "OSing vid1 (f0 fid1)" "(ab, bb)" "sol t"] fml3[of t]
     unfolding f0_def p1_def empty_def
     unfolding Vagree_def apply auto
     apply(auto simp add:  sol_eq_exp_t' t vec_extensionality  vne12)
     using someEq by auto
-
-  oops
-(*qed 
-oops*)
+qed 
 
 (* TODO:  differential formula semantics actually bogus right now
  * I believe the only correct semantics to give a DiffFormula(Predicational P)
