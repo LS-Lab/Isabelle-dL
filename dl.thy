@@ -2935,8 +2935,6 @@ next
     apply(auto simp add:  sol_eq_exp_t' t vec_extensionality  vne12)
     using someEq by auto
 
-    
-    
   oops
 (*qed 
 oops*)
