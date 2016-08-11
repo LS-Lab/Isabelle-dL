@@ -46,7 +46,7 @@ proof -
     by (intro has_derivative_setsum bounded_linear.has_derivative[OF bounded_linear_axis] assms)
 qed
 
-lemma has_derivative_proj[derivative_intros]:
+lemma has_derivative_proj:
   assumes "((\<lambda>x. \<chi> i. f i x) has_derivative (\<lambda>h. \<chi> i. f' i h)) F"
   shows "\<And>i. ((\<lambda>x. f i x) has_derivative (\<lambda>h. f' i h)) F"  
 proof -
@@ -974,55 +974,7 @@ proof -
   thus ?thesis by auto
  qed
 
-lemma bound_effect:
-  fixes I
-  assumes good_interp:"is_interp I"
-  shows "\<And>\<nu> :: 'sz state. \<And>\<omega> ::'sz state. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<Longrightarrow> Vagree \<nu> \<omega> (- (BVP \<alpha>))"
-proof (induct rule: hp_induct)
-  case Var then show "?case" 
-    using agree_nil Compl_UNIV_eq pointed_finite.BVP.simps(1) by fastforce
-next
-  case Test then show "?case"
-    by auto(simp add: agree_refl Compl_UNIV_eq Vagree_def)
-next
-  case (Choice a b \<nu> \<omega>)
-    assume IH1:"\<And>\<nu>'. \<And>\<omega>'. ((\<nu>', \<omega>') \<in> prog_sem I a \<Longrightarrow> Vagree \<nu>' \<omega>' (- BVP a))"
-    assume IH2:"\<And>\<nu>'. \<And>\<omega>'. ((\<nu>', \<omega>') \<in> prog_sem I b \<Longrightarrow> Vagree \<nu>' \<omega>' (- BVP b))"
-    assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (a \<union>\<union> b)"
-    have sems:"(\<nu>, \<omega>) \<in> prog_sem I (a) \<or> (\<nu>, \<omega>) \<in> prog_sem I (b)" using sem by auto
-    have agrees:"Vagree \<nu> \<omega> (- BVP a) \<or> Vagree \<nu> \<omega> (- BVP b)" using IH1 IH2 sems by blast
-    have sub1:"-(BVP a) \<supseteq> (- BVP a \<inter> - BVP b)" by auto
-    have sub2:"-(BVP a) \<supseteq> (- BVP a \<inter> - BVP b)" by auto
-    have res:"Vagree \<nu> \<omega> (- BVP a \<inter> - BVP b)" using agrees sub1 sub2 agree_supset by blast
-    then show "?case" by auto
-next
-  case (Compose a b \<nu> \<omega>) then show "?case" 
-    using agree_trans by fastforce
-next
-  fix ODE P \<nu> \<omega>
-  show "(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))"
-  proof -
-    assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P)"
-    from sem have agree:"Vagree \<nu> \<omega> (- ODE_vars ODE)"
-      apply(simp only: prog_sem.simps mem_Collect_eq)
-      apply(erule exE)+
-      proof -
-        fix \<nu>' sol t  
-        assume assm: "(\<nu>, \<omega>) = (\<nu>', mk_v I ODE \<nu>' (sol t)) \<and>
-           0 \<le> t \<and>
-           (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu>' x \<in> fml_sem I P} \<and> VSagree (sol 0) (fst \<nu>') UNIV"
-        hence "Vagree \<omega> \<nu> (- ODE_vars ODE)" using mk_v_agree[of I ODE \<nu> "(sol t)"] by auto
-        thus  "Vagree \<nu> \<omega> (- ODE_vars ODE)" by (rule agree_comm)
-      qed 
-    thus "Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))" by auto
-  qed
-next
-  case (Star a \<nu> \<omega>) then
-    show "?case" 
-      apply (simp only: prog_sem.simps)
-      apply (erule converse_rtrancl_induct)
-      by (auto simp add: Vagree_def)
-qed (auto simp add: Vagree_def)
+
 
 lemma coincidence_sterm:"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> sterm_sem I  \<theta> (fst \<nu>) = sterm_sem I \<theta> (fst \<nu>')"
   apply(induct "\<theta>")
@@ -2216,6 +2168,65 @@ subgoal for I ODE \<phi>
            unfolding VSagree_def by auto
        qed
      done
+
+ lemma bound_effect:
+  fixes I
+  assumes good_interp:"is_interp I"
+  shows "\<And>\<nu> :: 'sz state. \<And>\<omega> ::'sz state. hpsafe \<alpha> \<Longrightarrow> (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<Longrightarrow> Vagree \<nu> \<omega> (- (BVP \<alpha>))"
+proof (induct rule: hp_induct)
+  case Var then show "?case" 
+    using agree_nil Compl_UNIV_eq pointed_finite.BVP.simps(1) by fastforce
+next
+  case Test then show "?case"
+    by auto(simp add: agree_refl Compl_UNIV_eq Vagree_def)
+next
+  case (Choice a b \<nu> \<omega>)
+    assume IH1:"\<And>\<nu>'. \<And>\<omega>'. hpsafe a \<Longrightarrow>((\<nu>', \<omega>') \<in> prog_sem I a \<Longrightarrow> Vagree \<nu>' \<omega>' (- BVP a))"
+    assume IH2:"\<And>\<nu>'. \<And>\<omega>'. hpsafe b \<Longrightarrow>((\<nu>', \<omega>') \<in> prog_sem I b \<Longrightarrow> Vagree \<nu>' \<omega>' (- BVP b))"
+    assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (a \<union>\<union> b)"
+    assume safe:"hpsafe (Choice a b)"
+    from safe have safes:"hpsafe a" "hpsafe b" by (auto dest: hpsafe.cases)
+    have sems:"(\<nu>, \<omega>) \<in> prog_sem I (a) \<or> (\<nu>, \<omega>) \<in> prog_sem I (b)" using sem by auto
+    have agrees:"Vagree \<nu> \<omega> (- BVP a) \<or> Vagree \<nu> \<omega> (- BVP b)" using IH1 IH2 sems safes by blast
+    have sub1:"-(BVP a) \<supseteq> (- BVP a \<inter> - BVP b)" by auto
+    have sub2:"-(BVP a) \<supseteq> (- BVP a \<inter> - BVP b)" by auto
+    have res:"Vagree \<nu> \<omega> (- BVP a \<inter> - BVP b)" using agrees sub1 sub2 agree_supset by blast
+    then show "?case" by auto
+next
+  case (Compose a b \<nu> \<omega>) 
+    assume IH1:"\<And>\<nu>'. \<And>\<omega>'. hpsafe a \<Longrightarrow> (\<nu>', \<omega>') \<in> prog_sem I a \<Longrightarrow> Vagree \<nu>' \<omega>' (- BVP a)"
+    assume IH2:"\<And>\<nu>'. \<And>\<omega>'. hpsafe b \<Longrightarrow> (\<nu>', \<omega>') \<in> prog_sem I b \<Longrightarrow> Vagree \<nu>' \<omega>' (- BVP b)"
+    assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (a ;; b)"
+    assume safe:"hpsafe (a ;; b)"
+    from safe have safes:"hpsafe a" "hpsafe b" by (auto dest: hpsafe.cases)
+    
+  then show "?case" 
+    using agree_trans IH1 IH2 sem safes by fastforce
+next
+  fix ODE P \<nu> \<omega>
+  show "(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))"
+  proof -
+    assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P)"
+    from sem have agree:"Vagree \<nu> \<omega> (- ODE_vars ODE)"
+      using ode_alt_sem apply(simp only: ode_alt_sem mem_Collect_eq)
+      apply(erule exE)+
+      proof -
+        fix \<nu>' sol t  
+        assume assm: "(\<nu>, \<omega>) = (\<nu>', mk_v I ODE \<nu>' (sol t)) \<and>
+           0 \<le> t \<and>
+           (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu>' x \<in> fml_sem I P} \<and> VSagree (sol 0) (fst \<nu>') UNIV"
+        hence "Vagree \<omega> \<nu> (- ODE_vars ODE)" using mk_v_agree[of I ODE \<nu> "(sol t)"] by auto
+        thus  "Vagree \<nu> \<omega> (- ODE_vars ODE)" by (rule agree_comm)
+      qed 
+    thus "Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))" by auto
+  qed
+next
+  case (Star a \<nu> \<omega>) then
+    show "?case" 
+      apply (simp only: prog_sem.simps)
+      apply (erule converse_rtrancl_induct)
+      by (auto simp add: Vagree_def)
+qed (auto simp add: Vagree_def)
 
 subsection \<open>Axioms\<close>
 text \<open>
