@@ -47,13 +47,24 @@ proof -
 qed
 
 lemma has_derivative_proj:
-  assumes "((\<lambda>x. \<chi> i. f i x) has_derivative (\<lambda>h. \<chi> i. f' i h)) F"
-  shows "\<And>i. ((\<lambda>x. f i x) has_derivative (\<lambda>h. f' i h)) F"  
-proof -
+  fixes j::"('a::finite)" 
+  fixes f::"'a \<Rightarrow> real \<Rightarrow> real"
+  assumes assm:"((\<lambda>x. \<chi> i. f i x) has_derivative (\<lambda>h. \<chi> i. f' i h)) F"
+  shows "((\<lambda>x. f j x) has_derivative (\<lambda>h. f' j h)) F"
+  proof -
+    have bounded_proj:"bounded_linear (\<lambda> x::(real^'a). x $ j)"
+      by (simp add: bounded_linear_component_cart)
+    show "?thesis"
+      using bounded_linear.has_derivative[OF bounded_proj, of "(\<lambda>x. \<chi> i. f i x)" "(\<lambda>h. \<chi> i. f' i h)", OF assm]
+      by auto
+  qed
+      
+(*proof -
   fix i
   show "?thesis i"
+    using assm apply auto
     sorry
-qed
+qed*)
 
 
   type_synonym 'a Rvec = "real^('a::finite)"
@@ -253,14 +264,14 @@ where
  | hpsafe_Sequence:"hpsafe a \<Longrightarrow> hpsafe b \<Longrightarrow> hpsafe (Sequence a b)"
  | hpsafe_Loop:"hpsafe a \<Longrightarrow> hpsafe (Loop a)"
 
- | hpsafe_Geq:"dsafe t1 \<Longrightarrow> dsafe t2 \<Longrightarrow> fsafe (Geq t1 t2)"
- | hpsafe_Prop:"(\<And>arg. arg \<in> range args \<Longrightarrow> dsafe arg) \<Longrightarrow> fsafe (Prop p args)"
- | hpsafe_Not:"fsafe p \<Longrightarrow> fsafe (Not p)"
- | hpsafe_And:"fsafe p \<Longrightarrow> fsafe q \<Longrightarrow> fsafe (And p q)"
- | hpsafe_Exists:"fsafe p \<Longrightarrow> fsafe (Exists x p)"
- | hpsafe_Diamond:"hpsafe a \<Longrightarrow> fsafe p \<Longrightarrow> fsafe (Diamond a p)"
- | hpsafe_DiffFormula:"ffree p \<Longrightarrow> fsafe (DiffFormula p)"
- | hpsafe_InContext:"fsafe f \<Longrightarrow> fsafe (InContext C f)"
+ | fsafe_Geq:"dsafe t1 \<Longrightarrow> dsafe t2 \<Longrightarrow> fsafe (Geq t1 t2)"
+ | fsafe_Prop:"(\<And>i. dsafe (args i)) \<Longrightarrow> fsafe (Prop p args)"
+ | fsafe_Not:"fsafe p \<Longrightarrow> fsafe (Not p)"
+ | fsafe_And:"fsafe p \<Longrightarrow> fsafe q \<Longrightarrow> fsafe (And p q)"
+ | fsafe_Exists:"fsafe p \<Longrightarrow> fsafe (Exists x p)"
+ | fsafe_Diamond:"hpsafe a \<Longrightarrow> fsafe p \<Longrightarrow> fsafe (Diamond a p)"
+ | fsafe_DiffFormula:"ffree p \<Longrightarrow> fsafe (DiffFormula p)"
+ | fsafe_InContext:"fsafe f \<Longrightarrow> fsafe (InContext C f)"
   
 lemma hp_induct [case_names Var Assign DiffAssign Test Evolve Choice Compose Star]:
    "(\<And>x. P ($\<alpha> x)) \<Longrightarrow>
@@ -1748,7 +1759,7 @@ next
       qed
     done
 next
-  case (hpsafe_Geq t1 t2) 
+  case (fsafe_Geq t1 t2) 
   then have safe:"dsafe t1" "dsafe t2" by auto
   have almost:"\<And>\<nu> \<nu>'. \<And> I J :: ('sf, 'sc, 'sz) interp. Iagree I J (SIGF (Geq t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Geq t1 t2)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Geq t1 t2)) = (\<nu>' \<in> fml_sem J (Geq t1 t2))" 
   proof -
@@ -1769,7 +1780,7 @@ next
   qed
   show "?case" using almost unfolding coincide_fml_def by blast
 next
-  case (hpsafe_Prop args p)
+  case (fsafe_Prop args p)
     then have safes:"\<And>arg. arg \<in> range args \<Longrightarrow> dsafe arg" by auto
     have almost:"\<And>\<nu> \<nu>'. \<And> I J::('sf, 'sc, 'sz) interp. Iagree I J (SIGF (Prop p args)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Prop p args)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Prop p args)) = (\<nu>' \<in> fml_sem J (Prop p args))" 
     proof -
@@ -1799,9 +1810,9 @@ next
     qed
   then show "?case" unfolding coincide_fml_def by blast
 next
-  case hpsafe_Not then show "?case" by auto
+  case fsafe_Not then show "?case" by auto
 next
-  case (hpsafe_And p1 p2)
+  case (fsafe_And p1 p2)
   then have safes:"fsafe p1" "fsafe p2" 
     and IH1:"\<forall> \<nu> \<nu>' I J. Iagree I J (SIGF p1) \<longrightarrow> Vagree \<nu> \<nu>' (FVF p1) \<longrightarrow> (\<nu> \<in> fml_sem I p1) = (\<nu>' \<in> fml_sem J p1)"
     and IH2:"\<forall> \<nu> \<nu>' I J. Iagree I J (SIGF p2) \<longrightarrow> Vagree \<nu> \<nu>' (FVF p2) \<longrightarrow> (\<nu> \<in> fml_sem I p2) = (\<nu>' \<in> fml_sem J p2)"
@@ -1822,7 +1833,7 @@ next
     qed
     then show "?case" unfolding coincide_fml_def by blast
 next
-  case (hpsafe_Exists p x)
+  case (fsafe_Exists p x)
   then have safe:"fsafe p"
     and IH:"\<forall> \<nu> \<nu>' I J. Iagree I J (SIGF p) \<longrightarrow> Vagree \<nu> \<nu>' (FVF p) \<longrightarrow> (\<nu> \<in> fml_sem I p) = (\<nu>' \<in> fml_sem J p)"
     by auto
@@ -1859,7 +1870,7 @@ next
     qed
     then show "?case" unfolding coincide_fml_def by blast
 next
-  case (hpsafe_Diamond a p) then 
+  case (fsafe_Diamond a p) then 
     have hsafe:"hpsafe a"
     and psafe:"fsafe p"
     and IH1:"\<forall>\<nu> \<nu>' \<mu> V I J. Iagree I J (SIGP a) \<longrightarrow>
@@ -1935,7 +1946,7 @@ next
      qed
     then show "?case" unfolding coincide_fml_def by blast
 next
-  case (hpsafe_DiffFormula p) then 
+  case (fsafe_DiffFormula p) then 
   have "\<And>\<nu> \<nu>' I J.
        Iagree I J (SIGF (DiffFormula p)) \<Longrightarrow>
        Vagree \<nu> \<nu>' (FVF (DiffFormula p)) \<Longrightarrow> (\<nu> \<in> diff_formula_sem I p) = (\<nu>' \<in> diff_formula_sem J p)"
@@ -1943,7 +1954,7 @@ next
     sorry
   then show "?case" unfolding coincide_fml_def by auto
 next
-  case (hpsafe_InContext \<phi>) then 
+  case (fsafe_InContext \<phi>) then 
   have safe:"fsafe \<phi>"
     and IH:"(\<forall> \<nu> \<nu>' I J. Iagree I J (SIGF \<phi>) \<longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<longrightarrow> \<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem J \<phi>)"
     by (unfold coincide_fml_def)
@@ -2170,7 +2181,7 @@ subgoal for I ODE \<phi>
      done
 
  lemma bound_effect:
-  fixes I
+  fixes I::"('sf,'sc,'sz) interp"
   assumes good_interp:"is_interp I"
   shows "\<And>\<nu> :: 'sz state. \<And>\<omega> ::'sz state. hpsafe \<alpha> \<Longrightarrow> (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<Longrightarrow> Vagree \<nu> \<omega> (- (BVP \<alpha>))"
 proof (induct rule: hp_induct)
@@ -2203,16 +2214,19 @@ next
   then show "?case" 
     using agree_trans IH1 IH2 sem safes by fastforce
 next
-  fix ODE P \<nu> \<omega>
+  fix ODE::"('sf,'sz) ODE" and P::"('sf,'sc,'sz) formula" and \<nu> \<omega>
+  assume safe:"hpsafe (EvolveODE ODE P)"
+  from safe have osafe:"osafe ODE" and fsafe:"fsafe P" by (auto dest: hpsafe.cases)
   show "(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))"
   proof -
     assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P)"
     from sem have agree:"Vagree \<nu> \<omega> (- ODE_vars ODE)"
-      using ode_alt_sem apply(simp only: ode_alt_sem mem_Collect_eq)
+      apply(simp only: ode_alt_sem[of ODE P I] mem_Collect_eq osafe fsafe)
       apply(erule exE)+
       proof -
         fix \<nu>' sol t  
-        assume assm: "(\<nu>, \<omega>) = (\<nu>', mk_v I ODE \<nu>' (sol t)) \<and>
+        assume assm:
+          "(\<nu>, \<omega>) = (\<nu>', mk_v I ODE \<nu>' (sol t)) \<and>
            0 \<le> t \<and>
            (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu>' x \<in> fml_sem I P} \<and> VSagree (sol 0) (fst \<nu>') UNIV"
         hence "Vagree \<omega> \<nu> (- ODE_vars ODE)" using mk_v_agree[of I ODE \<nu> "(sol t)"] by auto
@@ -2222,10 +2236,17 @@ next
   qed
 next
   case (Star a \<nu> \<omega>) then
-    show "?case" 
-      apply (simp only: prog_sem.simps)
-      apply (erule converse_rtrancl_induct)
-      by (auto simp add: Vagree_def)
+  have IH:"(\<And>\<nu> \<omega>. hpsafe a \<Longrightarrow> (\<nu>, \<omega>) \<in> prog_sem I a \<Longrightarrow> Vagree \<nu> \<omega> (- BVP a))"
+  and safe:"hpsafe a**"
+  and sem:"(\<nu>, \<omega>) \<in> prog_sem I a**"
+    by auto
+  from safe have asafe:"hpsafe a" by (auto dest: hpsafe.cases)
+  show "Vagree \<nu> \<omega> (- BVP a**)" 
+    using sem apply (simp only: prog_sem.simps)
+    apply (erule converse_rtrancl_induct)
+    subgoal by(rule agree_refl)
+    subgoal for y z using IH[of y z, OF asafe] sem by (auto simp add: Vagree_def)
+    done
 qed (auto simp add: Vagree_def)
 
 subsection \<open>Axioms\<close>
@@ -2695,6 +2716,13 @@ proof
 qed
 
 lemma DE_valid:"valid DEaxiom"
+  proof -
+    have dsafe:"dsafe ($f fid1 (singleton (trm.Var vid1)))" unfolding singleton_def by(auto intro: dsafe.intros)
+    have osafe:"osafe(OSing vid1 (f1 fid1 vid1))" unfolding f1_def empty_def singleton_def using dsafe osafe.intros dsafe.intros
+      by (simp add: osafe_Sing dfree_Const) 
+    have fsafe:"fsafe (p1 vid2 vid1)" unfolding p1_def singleton_def using hpsafe_fsafe.intros(10)
+      by (metis (no_types, lifting) dsafe dsafe_Fun_simps image_iff)
+    show "valid DEaxiom"
 (*  apply (simp add: DEaxiom_def valid_def Let_def 
     del: fml_sem.simps prog_sem.simps 
     add: fml_sem.simps(6) prog_sem.simps(7) )
@@ -2707,38 +2735,38 @@ lemma DE_valid:"valid DEaxiom"
   apply (auto simp: DEaxiom_def valid_def Let_def)
   
   *)
-  apply(auto simp only: DEaxiom_def valid_def Let_def iff_sem impl_sem)
-  apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq box_sem)
-proof -
-  fix I::"('sf,'sc,'sz) interp"
-  and aa ba ab bb sol 
-  and t::real
-  and ac bc
-   assume "is_interp I"
-   assume allw:"\<forall>\<omega>. (\<exists>\<nu> sol t.
-                ((ab, bb), \<omega>) = (\<nu>, mk_v I (OSing vid1 (f1 fid1 vid1)) \<nu> (sol t)) \<and>
-                0 \<le> t \<and>
-                (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f1 fid1 vid1)))) {0..t}
-                 {x. mk_v I (OSing vid1 (f1 fid1 vid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and>
-                VSagree (sol 0) (fst \<nu>) UNIV) \<longrightarrow>
-            \<omega> \<in> fml_sem I (P pid1)"
-    assume t:"0 \<le> t"
-    assume aaba:"(aa, ba) = mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)"
-    assume solve:" (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f1 fid1 vid1)))) {0..t}
-        {x. mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) x \<in> fml_sem I (p1 vid2 vid1)}"
-    assume sol0:"VSagree (sol 0) (fst (ab, bb)) UNIV"
-    assume rep:"   (ac, bc) =
-       repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1
-        (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))"
-    have aaba_sem:"(aa,ba) \<in> fml_sem I (P pid1)" using allw t aaba solve sol0 rep by blast
-    have truth:"repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1
-        (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))
-   = mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)"
-      using DE_lemma by auto
-    show "
-       repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1
-        (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))
-       \<in> fml_sem I (P pid1)" using aaba aaba_sem truth by (auto)
+    apply(auto simp only: DEaxiom_def valid_def Let_def iff_sem impl_sem)
+    apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq box_sem simp del: prog_sem.simps(8) simp add: ode_alt_sem[OF osafe fsafe])
+  proof -
+    fix I::"('sf,'sc,'sz) interp"
+    and aa ba ab bb sol 
+    and t::real
+    and ac bc
+     assume "is_interp I"
+     assume allw:"\<forall>\<omega>. (\<exists>\<nu> sol t.
+                  ((ab, bb), \<omega>) = (\<nu>, mk_v I (OSing vid1 (f1 fid1 vid1)) \<nu> (sol t)) \<and>
+                  0 \<le> t \<and>
+                  (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f1 fid1 vid1)))) {0..t}
+                   {x. mk_v I (OSing vid1 (f1 fid1 vid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and>
+                  VSagree (sol 0) (fst \<nu>) UNIV) \<longrightarrow>
+              \<omega> \<in> fml_sem I (P pid1)"
+      assume t:"0 \<le> t"
+      assume aaba:"(aa, ba) = mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)"
+      assume solve:" (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f1 fid1 vid1)))) {0..t}
+          {x. mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) x \<in> fml_sem I (p1 vid2 vid1)}"
+      assume sol0:"VSagree (sol 0) (fst (ab, bb)) UNIV"
+      assume rep:"   (ac, bc) =
+         repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1
+          (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))"
+      have aaba_sem:"(aa,ba) \<in> fml_sem I (P pid1)" using allw t aaba solve sol0 rep by blast
+      have truth:"repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1
+          (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))
+     = mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)"
+        using DE_lemma by auto
+      show "
+         repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1
+          (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))
+         \<in> fml_sem I (P pid1)" using aaba aaba_sem truth by (auto)
   next
     fix I::"('sf,'sc,'sz) interp" and  aa ba ab bb sol and t::real
        assume "is_interp I"
@@ -2770,6 +2798,7 @@ proof -
              = mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)" using DE_lemma by auto
        thus "mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t) \<in> fml_sem I (P pid1)" using foo by auto
   qed
+qed
   
 lemma DC_valid:"valid DCaxiom" 
   apply(auto simp only: fml_sem.simps prog_sem.simps DCaxiom_def valid_def iff_sem impl_sem box_sem)
@@ -2820,8 +2849,21 @@ lemma
 qed
   
 lemma DS_valid:"valid DSaxiom"
+  proof -
+    have dsafe:"dsafe($f fid1 (\<lambda>i. Const 0))"
+      using dsafe_Const by auto
+    have osafe:"osafe(OSing vid1 (f0 fid1))"
+      unfolding f0_def empty_def
+      using dsafe osafe.intros
+      by (simp add: osafe_Sing dfree_Const)
+    have fsafe:"fsafe(p1 vid2 vid1)"
+      unfolding p1_def
+      apply(rule fsafe_Prop)
+      using singleton.simps dsafe_Const by auto
+    show "valid DSaxiom"
   apply(auto simp only: DSaxiom_def valid_def Let_def iff_sem impl_sem box_sem)
-  apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq  iff_sem impl_sem box_sem forall_sem)
+  apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq  iff_sem impl_sem box_sem forall_sem
+       simp del: prog_sem.simps(8) simp add: ode_alt_sem[OF osafe fsafe])
   proof -
     fix I::"('sf,'sc,'sz) interp" 
     and a b r aa ba
@@ -3178,7 +3220,7 @@ next
     unfolding Vagree_def apply auto
     apply(auto simp add:  sol_eq_exp_t' t vec_extensionality  vne12)
     using someEq by auto
-qed 
+qed qed
 
 (* TODO:  differential formula semantics actually bogus right now
  * I believe the only correct semantics to give a DiffFormula(Predicational P)
