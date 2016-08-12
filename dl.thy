@@ -1954,32 +1954,32 @@ next
     prefer 2 subgoal unfolding ode_sem_equiv_def  by auto
     apply(unfold prog_sem.simps SIGP.simps FVP.simps )
     apply(rule allI)+
-    subgoal for I J \<nu> \<nu>' \<mu> V
-    apply (cases "\<nu>", cases \<nu>', cases \<mu>)
-    (*subgoal for \<nu>2 \<nu>2' V \<nu>1 \<nu>1' \<mu> \<mu>' \<omega> \<omega>' 
+    apply(auto)
+    subgoal for I J  \<nu>2 \<nu>2' V \<nu>1 \<nu>1' \<mu> \<mu>' \<omega> \<omega>' 
     proof -
       assume safe:"hpsafe a" "hpsafe b"
-      assume "\<forall>aa b ab ba ac bb V.
-         Iagree I J (SIGP a) \<longrightarrow>
+      assume "(\<forall>I. ((\<forall>J. Iagree I J (SIGP a) \<rightarrow> (\<forall>aa b ab ba ac bb V.
          Vagree (aa, b) (ab, ba) V \<longrightarrow>
-         FVP a \<subseteq> V \<longrightarrow> ((aa, b), ac, bb) \<in> prog_sem I a \<longrightarrow> (\<exists>aa b. ((ab, ba), aa, b) \<in> prog_sem J a \<and> Vagree (ac, bb) (aa, b) (MBV a \<union> V))"
+         FVP a \<subseteq> V \<longrightarrow> ((aa, b), ac, bb) \<in> prog_sem I a \<longrightarrow> (\<exists>aa b. ((ab, ba), aa, b) \<in> prog_sem J a \<and> Vagree (ac, bb) (aa, b) (MBV a \<union> V))))
+          \<and> ode_sem_equiv a I))"
       hence IH1':"\<And>aa b ab ba ac bb V.
          Iagree I J (SIGP a) \<Longrightarrow>
          Vagree (aa, b) (ab, ba) V \<Longrightarrow>
          FVP a \<subseteq> V \<Longrightarrow> ((aa, b), ac, bb) \<in> prog_sem I a \<Longrightarrow> (\<exists>aa b. ((ab, ba), aa, b) \<in> prog_sem J a \<and> Vagree (ac, bb) (aa, b) (MBV a \<union> V))"
         by auto
       note IH1 =  IH1'[of \<nu>1 \<nu>1' \<nu>2 \<nu>2' V \<mu> \<mu>']
-      assume "\<forall>a ba aa bb ab bc V.
-         Iagree I J (SIGP b) \<longrightarrow>
+      assume IH2'':"
+        \<forall>I. (\<forall>J. Iagree I J (SIGP b) \<longrightarrow> (\<forall>a ba aa bb ab bc V.
          Vagree (a, ba) (aa, bb) V \<longrightarrow>
-         FVP b \<subseteq> V \<longrightarrow> ((a, ba), ab, bc) \<in> prog_sem I b \<longrightarrow> (\<exists>a ba. ((aa, bb), a, ba) \<in> prog_sem J b \<and> Vagree (ab, bc) (a, ba) (MBV b \<union> V))"
-      hence IH2':"\<And>a ba aa bb ab bc V .
+         FVP b \<subseteq> V \<longrightarrow> ((a, ba), ab, bc) \<in> prog_sem I b \<longrightarrow> (\<exists>a ba. ((aa, bb), a, ba) \<in> prog_sem J b \<and> Vagree (ab, bc) (a, ba) (MBV b \<union> V))))
+         \<and> ode_sem_equiv b I"
+      assume "Iagree I J (SIGP a \<union> SIGP b)"
+      hence IA:"Iagree I J (SIGP a)" "Iagree I J (SIGP b)" unfolding Iagree_def by auto
+      from IH2'' have IH2':"\<And>a ba aa bb ab bc V .
          Iagree I J (SIGP b) \<Longrightarrow>
          Vagree (a, ba) (aa, bb) V \<Longrightarrow>
          FVP b \<subseteq> V \<Longrightarrow> ((a, ba), ab, bc) \<in> prog_sem I b \<Longrightarrow> (\<exists>a ba. ((aa, bb), a, ba) \<in> prog_sem J b \<and> Vagree (ab, bc) (a, ba) (MBV b \<union> V))"
-        by auto
-      assume "Iagree I J (SIGP a \<union> SIGP b)"
-      hence IA:"Iagree I J (SIGP a)" "Iagree I J (SIGP b)" unfolding Iagree_def by auto
+        using IA by auto
       assume VA:"Vagree (\<nu>1, \<nu>1') (\<nu>2, \<nu>2') V"
       assume sub:"FVP a \<subseteq> V" "FVP b - MBV a \<subseteq> V"
         hence sub':"FVP a \<subseteq> V" by auto
@@ -1995,8 +1995,7 @@ next
       show "\<exists>ab bb. ((\<nu>2, \<nu>2'), (ab, bb)) \<in> prog_sem J a O prog_sem J b \<and> Vagree (\<omega>, \<omega>') (ab, bb) (MBV a \<union> MBV b \<union> V)"
         using sem1 sem2 VA1 VA2
         by (metis (no_types, lifting) Un_assoc Un_left_commute relcomp.relcompI)
-    qed*)
-      sorry
+    qed
     done
 next
   case (hpsafe_Loop a) then show "?case" 
@@ -2160,9 +2159,9 @@ next
   case (fsafe_Diamond a p) then 
     have hsafe:"hpsafe a"
     and psafe:"fsafe p"
-    and IH1:"\<forall>\<nu> \<nu>' \<mu> V. Iagree I J (SIGP a) \<longrightarrow>
+    and IH1:"\<forall> I J. (\<forall>\<nu> \<nu>' \<mu> V. Iagree I J (SIGP a) \<longrightarrow>
              Vagree \<nu> \<nu>' V \<longrightarrow>
-             FVP a \<subseteq> V \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I a \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J a \<and> Vagree \<mu> \<mu>' (MBV a \<union> V))"
+             FVP a \<subseteq> V \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I a \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J a \<and> Vagree \<mu> \<mu>' (MBV a \<union> V)))"
     and IH2:"\<forall>\<nu> \<nu>' I J. Iagree I J (SIGF p) \<longrightarrow> Vagree \<nu> \<nu>' (FVF p) \<longrightarrow> (\<nu> \<in> fml_sem I p) = (\<nu>' \<in> fml_sem J p)"
       unfolding coincide_hp'_def coincide_hp_def coincide_fml_def apply auto done
     have almost:"\<And>\<nu> \<nu>' I J. Iagree I J (SIGF (Diamond a p)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Diamond a p)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Diamond a p)) = (\<nu>' \<in> fml_sem J (Diamond a p))" 
@@ -2271,15 +2270,39 @@ qed
 lemma coincidence_formula:"\<And>\<nu> \<nu>' I J. fsafe (\<phi>::('sf, 'sc, 'sz) formula) \<Longrightarrow> Iagree I J (SIGF \<phi>) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<Longrightarrow> (\<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem J \<phi>)"
   using coincidence_hp_fml unfolding coincide_fml_def by blast 
 
-lemma coincidence_hp:"\<And>\<nu> \<nu>' \<mu> V I J. hpsafe (\<alpha>::('sf, 'sc, 'sz) hp) \<Longrightarrow> Iagree I J (SIGP \<alpha>) \<Longrightarrow> Vagree \<nu> \<nu>' V \<Longrightarrow> V \<supseteq> (FVP \<alpha>) \<Longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I \<alpha> \<Longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J \<alpha> \<and> Vagree \<mu> \<mu>' (MBV \<alpha> \<union> V))"
-  using coincidence_hp_fml unfolding coincide_hp_def by blast 
-
+lemma coincidence_hp:
+  fixes \<nu> \<nu>' \<mu> V I J
+  assumes safe:"hpsafe (\<alpha>::('sf, 'sc, 'sz) hp)"
+  assumes IA:"Iagree I J (SIGP \<alpha>)"
+  assumes VA:"Vagree \<nu> \<nu>' V"
+  assumes sub:"V \<supseteq> (FVP \<alpha>)"
+  assumes sem:"(\<nu>, \<mu>) \<in> prog_sem I \<alpha>"
+    
+  shows "(\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J \<alpha> \<and> Vagree \<mu> \<mu>' (MBV \<alpha> \<union> V))"
+  proof -
+    have thing:"(\<forall>I J. (\<forall>\<nu> \<nu>' \<mu> V.
+              Iagree I J (SIGP \<alpha>) \<longrightarrow>
+              Vagree \<nu> \<nu>' V \<longrightarrow> FVP \<alpha> \<subseteq> V \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I \<alpha> \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J \<alpha> \<and> Vagree \<mu> \<mu>' (MBV \<alpha> \<union> V))) \<and>
+          ode_sem_equiv \<alpha> I)" 
+      using coincidence_hp_fml unfolding coincide_hp_def coincide_hp'_def
+      using safe by auto
+    then have "(Iagree I J (SIGP \<alpha>) \<Longrightarrow>
+              Vagree \<nu> \<nu>' V \<Longrightarrow> FVP \<alpha> \<subseteq> V \<Longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I \<alpha> \<Longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J \<alpha> \<and> Vagree \<mu> \<mu>' (MBV \<alpha> \<union> V)))"
+      using IA VA sub sem thing by blast
+    then show "(\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J \<alpha> \<and> Vagree \<mu> \<mu>' (MBV \<alpha> \<union> V))"
+      using IA VA sub sem by auto
+  qed
+      
 (* ({(\<nu>, mk_v I ODE \<nu> (sol t)) | \<nu> sol t.
       t \<ge> 0 \<and>
       (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu> x \<in> fml_sem I \<phi>} \<and>
       VSagree (sol 0) (fst \<nu>) {x | x. Inl x \<in> FVP (EvolveODE ODE \<phi>)}})*)
-lemma ode_sem_eq:"
-  \<And>I::('sf,'sc,'sz) interp. \<And>ODE::('sf,'sz) ODE. \<And>\<phi>::('sf,'sc,'sz)formula. osafe ODE \<Longrightarrow> fsafe \<phi>  \<Longrightarrow> 
+lemma ode_sem_eq:
+  fixes I::"('sf,'sc,'sz) interp" and ODE::"('sf,'sz) ODE" and \<phi>::"('sf,'sc,'sz) formula"
+  assumes osafe:"osafe ODE"
+  assumes fsafe:"fsafe \<phi>"
+  shows
+  " 
   ({(\<nu>, mk_v I ODE \<nu> (sol t)) | \<nu> sol t.
       t \<ge> 0 \<and>
       (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu> x \<in> fml_sem I \<phi>} \<and>
@@ -2288,172 +2311,14 @@ lemma ode_sem_eq:"
       t \<ge> 0 \<and>
       (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu> x \<in> fml_sem I \<phi>} \<and>
       VSagree (sol 0) (fst \<nu>) UNIV})"
-subgoal for I ODE \<phi>
-  apply(auto)
-  subgoal for aa ba ab bb sol t
-    apply(rule exI[where x="(\<lambda>t. \<chi> i. if Inl i \<in> FVO ODE then sol t $ i else ab $ i)"])
-    apply(rule exI[where x=t])
-    apply(rule conjI)
-    subgoal
-      apply(rule agree_UNIV_eq)
-      using mk_v_agree[of I ODE "(ab,bb)" "sol t"] mk_v_agree[of I ODE "(ab,bb)" "(\<chi> i. if Inl i \<in> FVO ODE then sol t $ i else ab $ i)"]
-      unfolding Vagree_def VSagree_def
-      apply(auto)
-      subgoal for i
-        apply(cases "Inl i \<in> ODE_vars ODE")
-        using fv_to_ode apply auto
-        by (simp add: fv_to_ode)
-        proof -
-          fix i :: 'sz
-          assume a1: "osafe ODE"
-          assume a2: "(aa, ba) = mk_v I ODE (ab, bb) (sol t)"
-          assume a3: "\<forall>i. Inr i \<notin> ODE_vars ODE \<longrightarrow> snd (mk_v I ODE (ab, bb) (\<chi> i. if Inl i \<in> FVO ODE then sol t $ i else ab $ i)) $ i = bb $ i"
-          assume a4: "\<forall>i. Inr i \<notin> ODE_vars ODE \<longrightarrow> snd (mk_v I ODE (ab, bb) (sol t)) $ i = bb $ i"
-          assume a5: "\<forall>i. Inr i \<in> ODE_vars ODE \<longrightarrow> snd (mk_v I ODE (ab, bb) (\<chi> i. if Inl i \<in> FVO ODE then sol t $ i else ab $ i)) $ i = ODE_sem I ODE (\<chi> i. if Inl i \<in> FVO ODE then sol t $ i else ab $ i) $ i"
-          assume "\<forall>i. Inr i \<in> ODE_vars ODE \<longrightarrow> snd (mk_v I ODE (ab, bb) (sol t)) $ i = ODE_sem I ODE (sol t) $ i"
-          then have "Inr i \<in> ODE_vars ODE \<longrightarrow> snd (mk_v I ODE (ab, bb) (\<chi> s. if Inl s \<in> FVO ODE then sol t $ s else ab $ s)) $ i = snd (aa, ba) $ i"
-            using a5 a2 a1 alt_sem_lemma by presburger
-          then show "snd (mk_v I ODE (ab, bb) (sol t)) $ i = snd (mk_v I ODE (ab, bb) (\<chi> s. if Inl s \<in> FVO ODE then sol t $ s else ab $ s)) $ i"
-            using a4 a3 a2 by fastforce
-        qed
-        apply(auto)
-        apply(auto simp only: solves_ode_def has_vderiv_on_def has_vector_derivative_def)
-        apply (rule has_derivative_vec[THEN has_derivative_eq_rhs])
-        defer
-        apply (rule ext)
-        apply (subst scaleR_vec_def)
-        apply (rule refl)
-        subgoal for x unfolding VSagree_def apply auto
-          proof - 
-            assume osafe:"osafe ODE"
-            and fsafe:"fsafe \<phi>"
-            and aaba: "(aa, ba) = mk_v I ODE (ab, bb) (sol t)"
-            and all:"\<forall>i. (Inl i \<in> ODE_vars ODE \<longrightarrow> sol 0 $ i = ab $ i) \<and> (Inl i \<in> FVO ODE \<longrightarrow> sol 0 $ i = ab $ i) \<and> (Inl i \<in> FVF \<phi> \<longrightarrow> sol 0 $ i = ab $ i)"
-            and allSol:"\<forall>x\<in>{0..t}. (sol has_derivative (\<lambda>xa. xa *\<^sub>R ODE_sem I ODE (sol x))) (at x within {0..t})"
-            and mkV:"sol \<in> {0..t} \<rightarrow> {x. mk_v I ODE (ab, bb) x \<in> fml_sem I \<phi>}"
-            and x:"0 \<le> x" 
-            and t:"x \<le> t"
-            from all have allT:"\<And>s. s \<ge> 0 \<Longrightarrow> s \<le> t \<Longrightarrow> mk_v I ODE (ab,bb) (sol s) \<in> fml_sem I \<phi>"
-              using mkV by auto
-             have VA:"\<And>x. Vagree (mk_v I ODE (ab, bb) (sol x)) (mk_v I ODE (ab, bb) (\<chi> i. if Inl i \<in> FVO ODE then sol x $ i else ab $ i))
-               (FVF \<phi>)"
-               unfolding Vagree_def
-               apply(auto)
-               subgoal for xa i
-                 using mk_v_agree[of I ODE "(ab,bb)" "sol xa"] 
-                     mk_v_agree[of I ODE "(ab,bb)" "(\<chi> i. if Inl i \<in> FVO ODE then sol xa $ i else ab $ i)"]
-                 apply(cases "Inl i \<in> ODE_vars ODE")
-                 using fv_to_ode[of i ODE] unfolding Vagree_def by (auto)
-               subgoal for xa i
-                 using mk_v_agree[of I ODE "(ab,bb)" "sol xa"] 
-                     mk_v_agree[of I ODE "(ab,bb)" "(\<chi> i. if Inl i \<in> FVO ODE then sol xa $ i else ab $ i)"]
-                     ODE_vars_lr
-                 apply(cases "Inl i \<in> ODE_vars ODE")
-                 using fv_to_ode[of i ODE] unfolding Vagree_def apply auto
-                 using alt_sem_lemma osafe by auto
-               done
-             note sem = coincidence_formula[OF fsafe Iagree_refl[of I]]       
-             have VA1:"(\<forall>i. Inl i \<in> FVF \<phi> \<longrightarrow> fst (mk_v I ODE (ab, bb) (\<chi> i. if Inl i \<in> FVO ODE then sol x $ i else ab $ i)) $ i = fst (mk_v I ODE (ab, bb) (sol x)) $ i)"
-             and VA2: "(\<forall>i. Inr i \<in> FVF \<phi> \<longrightarrow> snd (mk_v I ODE (ab, bb) (\<chi> i. if Inl i \<in> FVO ODE then sol x $ i else ab $ i)) $ i = snd (mk_v I ODE (ab, bb) (sol x)) $ i)"
-               apply(auto)
-               subgoal for i
-                 using mk_v_agree[of I ODE "(ab,bb)" "(\<chi> i. if Inl i \<in> FVO ODE then sol x $ i else ab $ i)"]
-                 using mk_v_agree[of I ODE "(ab,bb)" "(sol x)"] ODE_vars_lr[of i ODE]
-                 unfolding Vagree_def apply (auto)
-                 apply(erule allE[where x=i])+
-                 apply(cases "Inl i \<in> FVO ODE")
-                 apply(auto)
-                 apply(cases "Inl i \<in> FVO ODE")
-                 apply(auto)
-                 using ODE_vars_lr[of i ODE] fv_to_ode[of i ODE]
-                 apply(auto)
-                 done
-               subgoal for i
-                 using mk_v_agree[of I ODE "(ab,bb)" "(\<chi> i. if Inl i \<in> FVO ODE then sol x $ i else ab $ i)"]
-                 using mk_v_agree[of I ODE "(ab,bb)" "(sol x)"] ODE_vars_lr[of i ODE]
-                 unfolding Vagree_def apply (auto)
-                 apply(erule allE[where x=i])+
-                 apply(cases "Inl i \<in> FVO ODE")
-                 apply(auto)
-                 apply(cases "Inl i \<in> FVO ODE")
-                 apply(auto)
-                 using ODE_vars_lr[of i ODE] fv_to_ode[of i ODE]
-                 apply(auto)
-                 using alt_sem_lemma osafe by auto
-               done               
-             show "mk_v I ODE (ab, bb) (\<chi> i. if Inl i \<in> FVO ODE then sol x $ i else ab $ i) \<in> fml_sem I \<phi>"
-               using mk_v_agree[of I ODE "(ab, bb)" "(\<chi> i. if Inl i \<in> FVO ODE then sol x $ i else ab $ i)"]
-               using sem[of "mk_v I ODE (ab, bb) (\<chi> i. if Inl i \<in> FVO ODE then sol x $ i else ab $ i)" "mk_v I ODE (ab, bb) (sol t)"]
-               VA1 VA2
-               allT[of x]
-               unfolding Vagree_def
-               apply auto
-               using atLeastAtMost_iff mem_Collect_eq mkV t x
-               apply(auto)
-               using VA sem by blast
-           qed
-           subgoal unfolding VSagree_def apply auto done
-           proof -
-             fix x i 
-             assume 
-               assms:"osafe ODE"
-             "fsafe \<phi>"
-             "0 \<le> t"
-             "(aa, ba) = mk_v I ODE (ab, bb) (sol t)"
-             "VSagree (sol 0) ab {x. Inl x \<in> ODE_vars ODE \<or> Inl x \<in> FVO ODE \<or> Inl x \<in> FVF \<phi>}"
-             and deriv:"\<forall>x\<in>{0..t}. (sol has_derivative (\<lambda>xa. xa *\<^sub>R ODE_sem I ODE (sol x))) (at x within {0..t})"
-             and sol:"sol \<in> {0..t} \<rightarrow> {x. mk_v I ODE (ab, bb) x \<in> fml_sem I \<phi>}"
-             and mem:"x \<in> {0..t}"
-             from deriv 
-             have xDeriv:"(sol has_derivative (\<lambda>xa. xa *\<^sub>R ODE_sem I ODE (sol x))) (at x within {0..t})"
-               using mem by blast
-             have silly1:"(\<lambda>x. \<chi> i. sol x $ i) = sol"
-               by (auto simp add: vec_eq_iff)
-             have silly2:"(\<lambda>h. \<chi> i. h * ODE_sem I ODE (sol x) $ i) = (\<lambda>xa. xa *\<^sub>R ODE_sem I ODE (sol x))"
-               by (auto simp add: vec_eq_iff)
-             from xDeriv have 
-               xDeriv':"((\<lambda>x. \<chi> i. sol x $ i) has_derivative (\<lambda>h. \<chi> i. h * ODE_sem I ODE (sol x) $ i)) (at x within {0..t})"
-               using silly1 silly2 apply auto done
-             from xDeriv have xDerivs:"\<And>j. ((\<lambda>t. sol t $ j) has_derivative (\<lambda>xa. (xa *\<^sub>R ODE_sem I ODE (sol x)) $ j)) (at x within {0..t})"
-               subgoal for j
-                 using silly1 silly2 has_derivative_proj[of "(\<lambda>i. \<lambda>t. sol t $ i)" "(\<lambda> i. \<lambda>xa. (xa *\<^sub>R ODE_sem I ODE (sol x)) $ i)" "(at x within {0..t})" j]
-                 apply auto
-                 done
-               done
-             have neato:"\<And>\<nu>. Inl i \<notin> FVO ODE \<Longrightarrow> ODE_sem I ODE \<nu> $ i = 0"
-             proof (induction "ODE")
-             qed auto
-             show "((\<lambda>t. if Inl i \<in> FVO ODE then sol t $ i else ab $ i) has_derivative
-            (\<lambda>h. h *\<^sub>R ODE_sem I ODE (\<chi> i. if Inl i \<in> FVO ODE then sol x $ i else ab $ i) $ i))
-            (at x within {0..t})"
-               using assms sol mem
-               apply auto
-               apply (rule has_derivative_eq_rhs)
-               unfolding VSagree_def apply auto
-               apply(cases "Inl i \<in> FVO ODE")
-               using xDerivs[of i] apply auto (*(auto intro!: derivative_eq_intros dest:has_derivative_vec)*)
-               using alt_sem_lemma apply auto[1]
-               using neato[of "(\<chi> i. if Inl i \<in> FVO ODE then sol x $ i else ab $ i)"] apply auto
-               done
-         qed
-   proof -
-     fix aa ba ab bb sol t
-       assume osafe:"osafe ODE"
-       and fsafe:"fsafe \<phi>"
-       and t:"0 \<le> t"
-       and aaba:"(aa, ba) = mk_v I ODE (ab, bb) (sol t)"
-       and sol:"(sol solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {x. mk_v I ODE (ab, bb) x \<in> fml_sem I \<phi>}"
-       and VSA:"VSagree (sol 0) ab UNIV"
-       show"\<exists>sola ta. mk_v I ODE (ab, bb) (sol t) = mk_v I ODE (ab, bb) (sola ta) \<and>
-                 0 \<le> ta \<and>
-                 (sola solves_ode (\<lambda>a. ODE_sem I ODE)) {0..ta} {x. mk_v I ODE (ab, bb) x \<in> fml_sem I \<phi>} \<and>
-                 VSagree (sola 0) ab {x. Inl x \<in> ODE_vars ODE \<or> Inl x \<in> FVO ODE \<or> Inl x \<in> FVF \<phi>}"   
-          apply(rule exI[where x=sol])
-          apply(rule exI[where x=t])
-           using fsafe t aaba sol VSA apply auto
-           unfolding VSagree_def by auto
-       qed
-     done
+  proof - 
+    have hpsafe:"hpsafe (EvolveODE ODE \<phi>)" using osafe fsafe by (auto intro: hpsafe_fsafe.intros)
+    have "coincide_hp'(EvolveODE ODE \<phi>)" using coincidence_hp_fml hpsafe by auto
+    hence "ode_sem_equiv (EvolveODE ODE \<phi>) I" unfolding coincide_hp'_def by auto
+    then show "?thesis" 
+      unfolding ode_sem_equiv_def using osafe fsafe by auto
+  qed
+
 
 lemma ode_alt_sem:"\<And>I::('sf,'sc,'sz) interp. \<And>ODE::('sf,'sz) ODE. \<And>\<phi>::('sf,'sc,'sz)formula. osafe ODE \<Longrightarrow> fsafe \<phi>  \<Longrightarrow> prog_sem I (EvolveODE ODE \<phi>)
 = 
