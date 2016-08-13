@@ -273,7 +273,7 @@ where
   ({(\<nu>, mk_v I ODE \<nu> (sol t)) | \<nu> sol t.
       t \<ge> 0 \<and>
       (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu> x \<in> fml_sem I \<phi>} \<and>
-      VSagree (sol 0) (fst \<nu>) UNIV})"
+      sol 0 = fst \<nu>})"
 
 context ids begin
 definition valid :: "('sf, 'sc, 'sz) formula \<Rightarrow> bool"

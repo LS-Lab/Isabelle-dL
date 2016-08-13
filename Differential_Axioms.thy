@@ -167,13 +167,13 @@ lemma DE_valid:"valid DEaxiom"
                   0 \<le> t \<and>
                   (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f1 fid1 vid1)))) {0..t}
                    {x. mk_v I (OSing vid1 (f1 fid1 vid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and>
-                  VSagree (sol 0) (fst \<nu>) UNIV) \<longrightarrow>
+                  (sol 0) = (fst \<nu>) ) \<longrightarrow>
               \<omega> \<in> fml_sem I (P pid1)"
       assume t:"0 \<le> t"
       assume aaba:"(aa, ba) = mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)"
       assume solve:" (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f1 fid1 vid1)))) {0..t}
           {x. mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) x \<in> fml_sem I (p1 vid2 vid1)}"
-      assume sol0:"VSagree (sol 0) (fst (ab, bb)) UNIV"
+      assume sol0:" (sol 0) = (fst (ab, bb)) "
       assume rep:"   (ac, bc) =
          repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1
           (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))"
@@ -194,21 +194,21 @@ lemma DE_valid:"valid DEaxiom"
                 0 \<le> t \<and>
                 (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f1 fid1 vid1)))) {0..t}
                  {x. mk_v I (OSing vid1 (f1 fid1 vid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and>
-                VSagree (sol 0) (fst \<nu>) UNIV) \<longrightarrow>
+                 (sol 0) = (fst \<nu>) ) \<longrightarrow>
             (\<forall>\<omega>'. \<omega>' = repd \<omega> vid1 (dterm_sem I (f1 fid1 vid1) \<omega>) \<longrightarrow> \<omega>' \<in> fml_sem I (P pid1))"
        hence justW:"(\<exists>\<nu> sol t.
                 ((ab, bb), (aa, ba)) = (\<nu>, mk_v I (OSing vid1 (f1 fid1 vid1)) \<nu> (sol t)) \<and>
                 0 \<le> t \<and>
                 (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f1 fid1 vid1)))) {0..t}
                  {x. mk_v I (OSing vid1 (f1 fid1 vid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and>
-                VSagree (sol 0) (fst \<nu>) UNIV) \<longrightarrow>
+                (sol 0) = (fst \<nu>)) \<longrightarrow>
             (\<forall>\<omega>'. \<omega>' = repd (aa, ba) vid1 (dterm_sem I (f1 fid1 vid1) (aa, ba)) \<longrightarrow> \<omega>' \<in> fml_sem I (P pid1))"
          by (rule allE)
        assume t:"0 \<le> t"
        assume aaba:"(aa, ba) = mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)"
        assume sol:"(sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f1 fid1 vid1)))) {0..t}
         {x. mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) x \<in> fml_sem I (p1 vid2 vid1)}"
-       assume sol0:"VSagree (sol 0) (fst (ab, bb)) UNIV"
+       assume sol0:" (sol 0) = (fst (ab, bb))"
        have "repd (aa, ba) vid1 (dterm_sem I (f1 fid1 vid1) (aa, ba)) \<in> fml_sem I (P pid1)"
          using justW t aaba sol sol0 by auto
        hence foo:"repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1 (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t))) \<in> fml_sem I (P pid1)"
@@ -249,7 +249,7 @@ lemma DS_valid:"valid DSaxiom"
               0 \<le> t \<and>
               (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..t}
                {x. mk_v I (OSing vid1 (f0 fid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and>
-              VSagree (sol 0) (fst \<nu>) UNIV) \<longrightarrow>
+               (sol 0) = (fst \<nu>)) \<longrightarrow>
           \<omega> \<in> fml_sem I (p1 vid3 vid1)"
    assume "dterm_sem I (Const 0) (repv (a, b) vid2 r) \<le> dterm_sem I (trm.Var vid2) (repv (a, b) vid2 r)"
      hence leq:"0 \<le> r" by (auto)
@@ -273,7 +273,7 @@ lemma DS_valid:"valid DSaxiom"
              0 \<le> t \<and>
              (sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..t}
               {x. mk_v I (OSing vid1 (f0 fid1)) \<nu> x \<in> fml_sem I (p1 vid2 vid1)} \<and>
-             VSagree (sol 0) (fst \<nu>) UNIV) \<longrightarrow>
+              (sol 0) = (fst \<nu>)) \<longrightarrow>
          ?abba \<in> fml_sem I (p1 vid3 vid1)" by blast
   let ?c = "Functions I fid1 (\<chi> _. 0)"
   let ?sol = "(\<lambda>t. \<chi> i. if i = vid1 then (a $ i) + ?c * t else (a $ i))"
@@ -356,7 +356,7 @@ lemma DS_valid:"valid DSaxiom"
     qed
     done
   have req4':"?sol 0 = fst (a,b)" by (auto simp: vec_eq_iff)
-  then have req4: "VSagree (?sol 0) (fst (a,b)) UNIV"
+  then have req4: " (?sol 0) = (fst (a,b))"
     using VSagree_refl[of a] req4' unfolding VSagree_def by auto
   have inPred:"?abba \<in> fml_sem I (p1 vid3 vid1)"  
     using req1 leq req3 req4 thisW by fastforce
@@ -396,7 +396,7 @@ next
   hence constraint:"\<And>s. s \<in> {0 .. t} \<Longrightarrow> sol s \<in> {x. mk_v I (OSing vid1 (f0 fid1)) (ab, bb) x \<in> fml_sem I (p1 vid2 vid1)}"
     using solves_ode_domainD by fastforce
   (* sol 0 = fst (ab, bb)*)
-  assume sol0:" VSagree (sol 0) (fst (ab, bb)) UNIV"
+  assume sol0:"  (sol 0) = (fst (ab, bb)) "
   have impl:"dterm_sem I (Const 0) (repv (ab, bb) vid2 t) \<le> dterm_sem I (trm.Var vid2) (repv (ab, bb) vid2 t) \<longrightarrow>
            (\<forall>ra. repv (repv (ab, bb) vid2 t) vid3 ra
                  \<in> {v. dterm_sem I (Const 0) v \<le> dterm_sem I (trm.Var vid3) v} \<inter>
@@ -465,7 +465,8 @@ next
   have exp_sol0_eq:"?sol 0 = ll.flow  0 (?sol 0) 0"
     using ll.general.flow_initial_time_if by auto
   have more_eq:"(\<chi> i. if i = vid1 then ab $ i + Functions I fid1 (\<chi> _. 0) * 0 else ab $ i) = sol 0"
-    using sol0 apply (unfold VSagree_def)
+    using sol0 
+    apply auto 
     apply(rule vec_extensionality)
     by(auto)
   have exp_isFlow:"\<And>s. s \<ge> 0 \<Longrightarrow> s \<le> t \<Longrightarrow> ?sol s = ll.flow 0 (sol 0) s"

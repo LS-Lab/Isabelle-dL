@@ -60,7 +60,7 @@ next
         assume assm:
           "(\<nu>, \<omega>) = (\<nu>', mk_v I ODE \<nu>' (sol t)) \<and>
            0 \<le> t \<and>
-           (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu>' x \<in> fml_sem I P} \<and> VSagree (sol 0) (fst \<nu>') UNIV"
+           (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu>' x \<in> fml_sem I P} \<and>  (sol 0) = (fst \<nu>')"
         hence "Vagree \<omega> \<nu> (- ODE_vars ODE)" using mk_v_agree[of I ODE \<nu> "(sol t)"] by auto
         thus  "Vagree \<nu> \<omega> (- ODE_vars ODE)" by (rule agree_comm)
       qed 
