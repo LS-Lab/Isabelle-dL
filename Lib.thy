@@ -3,7 +3,10 @@ imports
   Complex_Main
   "../afp/thys/Ordinary_Differential_Equations/ODE_Analysis"
 begin
-(* Lemmas that could be part of the standard libraries and don't have anything to do with dL specifically. *)
+subsection \<open>Library of assorted things\<close>
+text\<open>General lemmas that don't have anything to do with dL specifically and could be fit for 
+  general-purpose libraries, mostly dealing with derivatives, ODEs and vectors.\<close>
+
 lemma vec_extensionality:"(\<And>i. v$i = w$i) \<Longrightarrow> (v = w)"
   by (simp add: vec_eq_iff)
 
@@ -43,8 +46,6 @@ lemma has_derivative_proj:
       by auto
   qed
   
-
-
 lemma has_vector_derivative_zero_constant:
   assumes "convex s"
   assumes "\<And>x. x \<in> s \<Longrightarrow> (f has_vector_derivative 0) (at x within s)"
@@ -79,7 +80,6 @@ proof -
   then show ?thesis by simp
 qed
 
-  
 lemma
   solves_ode_subset:
   assumes x: "(x solves_ode f) T X"
@@ -123,6 +123,8 @@ lemma
     by (meson \<open>\<And>z ta T'. \<lbrakk>t0 \<in> T'; is_interval T'; T' \<subseteq> T; (z solves_ode f) T' X; z t0 = x t0; ta \<in> T'\<rbrakk> \<Longrightarrow> z ta = x ta\<close> assms(2) dual_order.trans)
 qed
 
+(* Example of using lemmas above to show a lemma that could be useful for dL: The constant ODE
+ * 0 does not change the state.  *)
 lemma example:
   fixes x t::real and i::"('sz::finite)"
   assumes "t > 0"

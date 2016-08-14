@@ -7,7 +7,6 @@ imports
   "./Lib"
   "./Syntax"
   "./Denotational_Semantics"
-  "./Frechet_Correctness"
 begin context ids begin
 
 subsection \<open>Axioms\<close>

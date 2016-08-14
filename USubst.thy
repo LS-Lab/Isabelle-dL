@@ -7,8 +7,7 @@ imports
   "./Lib"
   "./Syntax"
   "./Denotational_Semantics"
-  "./Frechet_Correctness"
-  "./Coincidence"
+  "./Static_Semantics"
 begin 
 record ('a, 'b, 'c) subst =
   (* The RHS of a function or predicate substitution is a term or formula

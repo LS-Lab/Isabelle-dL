@@ -11,8 +11,6 @@ imports
   "./Static_Semantics"
   "./Coincidence"
   "./Bound_Effect"
-  "./Axioms"
-  "./Differential_Axioms"
   "./USubst"
 begin context ids begin
 (* Properties of adjoints *)
