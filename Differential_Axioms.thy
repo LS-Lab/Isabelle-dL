@@ -13,7 +13,7 @@ begin context ids begin
 
 subsection \<open>Differentiation Axioms\<close>
 definition diff_const_axiom :: "('sf, 'sc, 'sz) formula"
-  where "diff_const_axiom \<equiv> Equals (Differential ($f fid1 sempty)) (Const 0)"
+  where "diff_const_axiom \<equiv> Equals (Differential ($f fid1 empty)) (Const 0)"
 
 subsection \<open>ODE Axioms\<close>
 definition DWaxiom :: "('sf, 'sc, 'sz) formula"
@@ -63,12 +63,12 @@ definition DGaxiom :: "('sf, 'sc, 'sz) formula"
 subsection \<open>Proofs for Differentiation Axioms\<close>
 lemma constant_deriv_inner:
  assumes interp:"\<forall>x i. (Functions I i has_derivative FunctionFrechet I i x) (at x)"
- shows "FunctionFrechet I id1 (vec_lambda (\<lambda>i. sterm_sem I (sempty i) (fst \<nu>))) (vec_lambda(\<lambda>i. frechet I (sempty i) (fst \<nu>) (snd \<nu>)))= 0"
+ shows "FunctionFrechet I id1 (vec_lambda (\<lambda>i. sterm_sem I (empty i) (fst \<nu>))) (vec_lambda(\<lambda>i. frechet I (empty i) (fst \<nu>) (snd \<nu>)))= 0"
   proof -
-    have empty_zero:"(vec_lambda(\<lambda>i. frechet I (sempty i) (fst \<nu>) (snd \<nu>))) = 0"
-    using sempty_def Cart_lambda_cong frechet.simps(5) zero_vec_def
-    by fastforce
-    let ?x = "(vec_lambda (\<lambda>i. sterm_sem I (sempty i) (fst \<nu>)))"
+    have empty_zero:"(vec_lambda(\<lambda>i. frechet I (empty i) (fst \<nu>) (snd \<nu>))) = 0"
+    using local.empty_def Cart_lambda_cong frechet.simps(5) zero_vec_def
+      by smt
+    let ?x = "(vec_lambda (\<lambda>i. sterm_sem I (empty i) (fst \<nu>)))"
     from interp
     have has_deriv:"(Functions I id1 has_derivative FunctionFrechet I id1 ?x) (at ?x)"
     by auto
@@ -78,7 +78,7 @@ lemma constant_deriv_inner:
     show ?thesis using empty_zero f_linear Linear_Algebra.linear_0 by (auto)
   qed
 
-lemma constant_deriv_zero:"is_interp I \<Longrightarrow> directional_derivative I ($f id1 sempty) \<nu> = 0"
+lemma constant_deriv_zero:"is_interp I \<Longrightarrow> directional_derivative I ($f id1 empty) \<nu> = 0"
   apply(simp only: is_interp_def directional_derivative_def frechet.simps frechet_correctness)
   apply(rule constant_deriv_inner)
   apply(auto)

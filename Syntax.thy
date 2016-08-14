@@ -126,13 +126,6 @@ definition empty::" 'sz \<Rightarrow> ('sf, 'sz) trm"
 fun singleton :: "('sf, 'sz) trm \<Rightarrow> ('sz \<Rightarrow> ('sf, 'sz) trm)"
   where "singleton t i = (if i = vid1 then t else (Const 0))"
 
-(* Equivalents of the above for functions over simple terms. *)
-definition sempty :: "('sz \<Rightarrow> ('sf, 'sz) trm)"
-  where "sempty _ \<equiv> (Const 0)"
-
-fun ssingleton :: "('sf, 'sz) trm \<Rightarrow> ('sz \<Rightarrow> ('sf, 'sz) trm)"
-  where "ssingleton t var = (if var = vid1 then t else (Const 0))"
-
 (* Function applied to one argument *)
 definition f1::"'sf \<Rightarrow> 'sz \<Rightarrow> ('sf,'sz) trm"
   where "f1 f x = Function f (singleton (Var x))"
