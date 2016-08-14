@@ -17,8 +17,7 @@ text \<open>
 \<close>
 theory "Differential_Dynamic_Logic" 
 imports
-  Complex_Main HOL
-  "~~/src/HOL/Multivariate_Analysis/Multivariate_Analysis"
+  Complex_Main
   "../afp/thys/Ordinary_Differential_Equations/ODE_Analysis"
   "./Ids"
   "./Lib"

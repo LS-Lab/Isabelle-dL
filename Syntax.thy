@@ -1,8 +1,6 @@
 theory Syntax
 imports
-  Complex_Main HOL
-  "~~/src/HOL/Multivariate_Analysis/Multivariate_Analysis"
-  "../afp/thys/Ordinary_Differential_Equations/ODE_Analysis"
+  Complex_Main
   "./Ids"
 begin 
 subsection \<open>Syntax\<close>
@@ -10,51 +8,83 @@ text \<open>
   We define the syntax of dL terms, formulas and hybrid programs. As in
   CADE'15, the syntax allows arbitrarily nested differentials. However, 
   the semantics of such terms is very surprising (e.g. (x')' is zero in
-  every state), so we define predicates dfree and dsafe to rule out such terms.
+  every state), so we define predicates dfree and dsafe to describe terms
+  with no differentials and no nested differentials, respectively.
 
   In keeping with the CADE'15 presentation we currently make the simplifying
   assumption that all terms are smooth, and thus division and arbitrary
   exponentiation are absent from the syntax. Several other standard logical
   constructs are implemented as derived forms to reduce the soundness burden.
+  
+  The types of formulas and programs are parameterized by three finite types 
+  ('a, 'b, 'c) used as identifiers for function constants, context constants, and
+  everything else, respectively. These type variables are distinct because some
+  substitution operations affect one type variable while leaving the others unchanged.
+  Because these types will be finite in practice, it is more useful to think of them
+  as natural numbers that happen to be represented as types (due to HOL's lack of dependent types).
+  The types of terms and ODE systems follow the same approach, but have only two type 
+  variables because they cannot contain contexts.
 \<close>
 datatype ('a, 'c) trm =
- (* Program variable *)
+(* Real-valued variables given meaning by the state and modified by programs. *)
   Var 'c
 (* N.B. This is technically more expressive than true dL since most reals
- can't be written down. *)
+ * can't be written down. *)
 | Const real
+(* A function (applied to its arguments) consists of an identifier for the function
+ * and a function 'c \<Rightarrow> ('a, 'c) trm (where 'c is a finite type) which specifies one
+ * argument of the function for each element of type 'c. To simulate a function with
+ * less than 'c arguments, set the remaining arguments to a constant, such as Const 0*)
 | Function 'a "'c \<Rightarrow> ('a, 'c) trm" ("$f")
 | Plus "('a, 'c) trm" "('a, 'c) trm"
 | Times "('a, 'c) trm" "('a, 'c) trm"
+(* A (real-valued) variable standing for a differential, such as x', given meaning by the state
+ * and modified by programs. *)
 | DiffVar 'c ("$'")
+(* The differential of an arbitrary term (\<theta>)' *)
 | Differential "('a, 'c) trm"
 
 datatype('a, 'c) ODE =
+(* Variable standing for an ODE system, given meaning by the interpretation *)
   OVar 'c
+(* Singleton ODE defining x' = \<theta>, where \<theta> may or may not contain x
+ * (but must not contain differentials) *)
 | OSing 'c "('a, 'c) trm"
+(* The product OProd ODE1 ODE2 composes two ODE systems in parallel, e.g. 
+ * OProd (x' = y) (y' = -x) is the system {x' = y, y' = -x} *)
 | OProd "('a, 'c) ODE" "('a, 'c) ODE"
 
 datatype ('a, 'b, 'c) hp =
- Pvar 'c                           ("$\<alpha>")
+(* Variables standing for programs, given meaning by the interpretation. *)
+  Pvar 'c                           ("$\<alpha>")
+(* Assignment to a real-valued variable x := \<theta> *)
 | Assign 'c "('a, 'c) trm"                (infixr ":=" 10)
+(* Assignment to a differential variable*)
 | DiffAssign 'c "('a, 'c) trm"
+(* Program ?\<phi> succeeds iff \<phi> holds in current state. *)
 | Test "('a, 'b, 'c) formula"                 ("?")
 (* An ODE program is an ODE system with some evolution domain. *)
 | EvolveODE "('a, 'c) ODE" "('a, 'b, 'c) formula"
+(* Non-deterministic choice between two programs a and b *)
 | Choice "('a, 'b, 'c) hp" "('a, 'b, 'c) hp"            (infixl "\<union>\<union>" 10)
+(* Sequential composition of two programs a and b *)
 | Sequence "('a, 'b, 'c) hp"  "('a, 'b, 'c) hp"         (infixr ";;" 8)
+(* Nondeterministic repetition of a program "a", zero or more times. *)
 | Loop "('a, 'b, 'c) hp"                      ("_**")
 
 and ('a, 'b, 'c) formula =
- Geq "('a, 'c) trm" "('a, 'c) trm"
+  Geq "('a, 'c) trm" "('a, 'c) trm"
 | Prop 'c "'c \<Rightarrow> ('a, 'c) trm"      ("$\<phi>")
 | Not "('a, 'b, 'c) formula"            ("!")
 | And "('a, 'b, 'c) formula" "('a, 'b, 'c) formula"    (infixl "&&" 8)
 | Exists 'c "('a, 'b, 'c) formula"
+(* \<langle>\<alpha>\<rangle>\<phi> iff exists run of \<alpha> where \<phi> is true in end state *)
 | Diamond "('a, 'b, 'c) hp" "('a, 'b, 'c) formula"         ("(\<langle> _ \<rangle> _)" 10)
 (* DiffFormula \<phi> gives us the invariant for proving \<phi> by differential induction. *)
 | DiffFormula "('a, 'b, 'c) formula"
-(* Unary quantifier symbols *)
+(* Contexts C are symbols standing for functions from (the semantics of) formulas to 
+ * (the semantics of) formulas, thus C(\<phi>) is another formula. While not necessary
+ * in terms of expressiveness, contexts allow for more efficient reasoning principles. *)
 | InContext 'b "('a, 'b, 'c) formula"
   
   
@@ -77,22 +107,22 @@ definition Equals :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a,
 definition Box :: "('a, 'b, 'c) hp \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" ("([[_]]_)" 10)
   where "Box \<alpha> P = Not (Diamond \<alpha> (Not P))"
   
-(* Definite predicational as a context with a constant argument (e.g. constant true *)
+(* A predicational is like a context with no argument, i.e. a variable standing for a 
+ * state-dependent formula, given meaning by the interpretation. This differs from a predicate
+ * because predicates depend only on their arguments (which might then indirectly depend on the state).
+ * We encode a predicational as a context applied to a formula whose truth value is constant with
+ * respect to the state (specifically, always true)*)
 fun Predicational :: "'b \<Rightarrow> ('a, 'b, 'c) formula"
   where "Predicational P = InContext P (Geq (Const 0) (Const 0))"
 
-(* Arguments for a "nullary" function - a tuple of all-zeros. When we encode
-  a function that has less than the maximum allowed number of arguments, we
-  do so by making the remaining arguments 0 at every use site. We can't actually
-  enforce that the interpretation of the function "doesnt care" about an argument,
-  but if we never use that argument at more than one value there's no way to "notice"
-  that the extra arguments exist *)
+(* Abbreviations for common syntactic constructs in order to make axiom definitions, etc. more
+ * readable. *)
 context ids begin
-
+(* "Empty" function argument tuple, encoded as tuple where all arguments assume a constant value. *)
 definition empty::" 'sz \<Rightarrow> ('sf, 'sz) trm"
   where "empty \<equiv> \<lambda>i.(Const 0)"
 
-(* Function argument tuple where the first argument is arbitrary and the rest are zero.*)
+(* Function argument tuple with (effectively) one argument, where all others have a constant value. *)
 fun singleton :: "('sf, 'sz) trm \<Rightarrow> ('sz \<Rightarrow> ('sf, 'sz) trm)"
   where "singleton t i = (if i = vid1 then t else (Const 0))"
 
@@ -103,20 +133,24 @@ definition sempty :: "('sz \<Rightarrow> ('sf, 'sz) trm)"
 fun ssingleton :: "('sf, 'sz) trm \<Rightarrow> ('sz \<Rightarrow> ('sf, 'sz) trm)"
   where "ssingleton t var = (if var = vid1 then t else (Const 0))"
 
+(* Function applied to one argument *)
 definition f1::"'sf \<Rightarrow> 'sz \<Rightarrow> ('sf,'sz) trm"
   where "f1 f x = Function f (singleton (Var x))"
 
+(* Function applied to zero arguments (simulates a constant symbol given meaning by the interpretation) *)
 definition f0::"'sf \<Rightarrow> ('sf,'sz) trm"
   where "f0 f = Function f empty"
 
+(* Predicate applied to one argument *)
 definition p1::"'sz \<Rightarrow> 'sz \<Rightarrow> ('sf, 'sc, 'sz) formula"
   where "p1 p x = Prop p (singleton (Var x))"
 
+(* Predicational *)
 definition P::"'sc \<Rightarrow> ('sf, 'sc, 'sz) formula"
   where "P p = Predicational p"
 end
 
-(* Well-formedness predicates *)
+subsection \<open>Well-Formedness predicates\<close>
 inductive dfree :: "('a, 'c) trm \<Rightarrow> bool"
 where
   dfree_Var: "dfree (Var i)"
@@ -236,10 +270,10 @@ lemma fml_induct:
 
 context ids begin
 lemma proj_sing1:"(singleton \<theta> vid1) = \<theta>"
-  by (auto simp add: singleton.simps)
+  by (auto)
 
 lemma proj_sing2:"vid1 \<noteq> y  \<Longrightarrow> (singleton \<theta> y) = (Const 0)"
-  by (auto simp add: singleton_def)
+  by (auto)
 end
 
 end

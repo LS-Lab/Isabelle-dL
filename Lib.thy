@@ -1,7 +1,6 @@
 theory Lib
 imports
-  Complex_Main HOL
-  "~~/src/HOL/Multivariate_Analysis/Multivariate_Analysis"
+  Complex_Main
   "../afp/thys/Ordinary_Differential_Equations/ODE_Analysis"
 begin
 (* Lemmas that could be part of the standard libraries and don't have anything to do with dL specifically. *)
