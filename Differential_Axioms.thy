@@ -525,12 +525,9 @@ next
     apply(rule ll.equals_flowI)
     apply(auto)
     subgoal using eq_UNIV by auto
-    defer
-    subgoal using eq_UNIV apply auto
-      subgoal using sol sol0_eq by auto
+    subgoal using sol'' closed_segment_eq_real_ivl t by (auto simp add: solves_ode_singleton)
+    subgoal using eq_UNIV sol sol0_eq by auto
     done
-    using sol'' closed_segment_eq_real_ivl t apply(auto)
-    by (simp add: solves_ode_singleton)
   let ?c = "Functions I fid1 (\<chi> _. 0)"
   let ?sol = "(\<lambda>t. \<chi> i. if i = vid1 then (ab $ i) + ?c * t else (ab $ i))"
   have vec_simp:"(\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I ($f fid1 (\<lambda>i. Const 0)) b else 0) 
@@ -538,7 +535,6 @@ next
     by (auto simp add: vec_eq_iff cong: if_cong)
   have exp_sol:"(?sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..t}
     UNIV"
-            (*{x. mk_v I (OSing vid1 (f0 fid1)) (ab,bb) x \<in> fml_sem I (p1 vid2 vid1)}*) 
     apply(auto simp add: f0_def empty_def vec_simp) 
     apply(rule solves_odeI)
     apply(auto simp only: has_vderiv_on_def has_vector_derivative_def box_sem)
@@ -572,9 +568,7 @@ next
     using exp_sol' closed_segment_eq_real_ivl t apply(auto)
     by (simp add: solves_ode_singleton)
   have sol_eq_exp:"\<And>s. s \<ge> 0 \<Longrightarrow> s \<le> t \<Longrightarrow> ?sol s = sol s"
-    apply(unfold exp_isFlow)
-    apply(unfold isFlow)
-    by (auto)
+    unfolding exp_isFlow isFlow by auto
   then have sol_eq_exp_t:"?sol t = sol t"
     using t by auto
   then have sol_eq_exp_t':"sol t $ vid1 = ?sol t $ vid1" by auto
@@ -583,7 +577,6 @@ next
   from sol_eq_exp_t' useful have useful':"sol t $ vid1 = ab $ vid1 + Functions I fid1 (\<chi> i. 0) * t"
     by auto
   have sol_int:"((ll.flow 0 (sol 0)) usolves_ode ?f from 0) {0..t} {x. mk_v I (OSing vid1 (f0 fid1)) (ab, bb) x \<in> fml_sem I (p1 vid2 vid1)}"
-    (*(\<And>x f t0 T X Y. (x usolves_ode f from t0) T X \<Longrightarrow> x ` T \<subseteq> Y \<Longrightarrow> Y \<subseteq> X \<Longrightarrow> (x usolves_ode f from t0) T Y) \<Longrightarrow>*)
     apply (rule usolves_ode_subset_range[of "(ll.flow 0 (sol 0))" "?f" "0" "{0..t}" "UNIV" "{x. mk_v I (OSing vid1 (f0 fid1)) (ab, bb) x \<in> fml_sem I (p1 vid2 vid1)}"]) 
     subgoal using eq_UNIV sol_UNIV[of "(sol 0)"] apply (auto)
       apply (rule usolves_ode_subset)
@@ -595,8 +588,7 @@ next
   have thing:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> fst (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. Const 0))) (ab, bb) (?sol s)) $ vid1 = ab $ vid1 + Functions I fid1 (\<chi> i. 0) * s"
     subgoal for s
       using mk_v_agree[of I "(OSing vid1 ($f fid1 (\<lambda>i. Const 0)))" "(ab, bb)" "(?sol s)"] apply auto
-      unfolding Vagree_def apply auto
-      done
+      unfolding Vagree_def by auto
     done
   have thing':"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow>  fst (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. Const 0))) (ab, bb) (sol s)) $ vid1 = ab $ vid1 + Functions I fid1 (\<chi> i. 0) * s"
     subgoal for s using thing[of s] sol_eq_exp[of s] by auto done
@@ -607,9 +599,7 @@ next
                 (\<chi> y. if vid3 = y then s else fst (\<chi> y. if vid2 = y then s else fst (ab, bb) $ y, bb) $ y, bb)"
     using mk_v_agree[of "I" "(OSing vid1 (f0 fid1))" "(ab, bb)" "(sol s)"]  vne12 vne23 vne13
     apply(auto simp add: f0_def p1_def empty_def)
-    apply(unfold Vagree_def)
-    apply(simp add: f0_def empty_def)
-    (*using aaba apply(simp add: f0_def empty_def)*)
+    unfolding Vagree_def apply(simp add: f0_def empty_def)
     subgoal for s using thing' by auto
     done
   have allRa':"(\<forall>ra. repv (repv (ab, bb) vid2 t) vid3 ra
@@ -635,17 +625,11 @@ next
       =  dterm_sem I (if i = vid1 then Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid3)) else Const 0)
             (\<chi> y. if vid3 = y then ra else fst (\<chi> y. if vid2 = y then t else fst (ab, bb) $ y, bb) $ y, bb) "
     subgoal for ra i
-      using vne12 vne13 apply(auto)
-      using mk_v_agree[of I "OSing vid1 ($f fid1 (\<lambda>i. Const 0))" "(ab,bb)" "(sol ra)"]
-      apply(auto)
-      apply(unfold Vagree_def)
-      apply(safe)
+      using vne12 vne13 mk_v_agree[of I "OSing vid1 ($f fid1 (\<lambda>i. Const 0))" "(ab,bb)" "(sol ra)"] 
+      apply (auto)
+      unfolding Vagree_def apply(safe)
       apply(erule allE[where x="vid1"])+
-      apply(auto)
-      using sol_eq_exp[of ra]
-      apply(auto)
-      using anotherFact[of ra] apply auto
-      done
+      using sol_eq_exp[of ra] anotherFact[of ra] by auto
     done
   have allRa:"(\<forall>ra. repv (repv (ab, bb) vid2 t) vid3 ra
                \<in> {v. dterm_sem I (Const 0) v \<le> dterm_sem I (trm.Var vid3) v} \<inter>
@@ -657,10 +641,8 @@ next
     subgoal for ra
       using mk_v_agree[of "I" "(OSing vid1 (f0 fid1))" "(ab, bb)" "(sol ra)"]
          vne23 constraint[of ra] apply(auto simp add: Vagree_def p1_def)
-      using sol_eq_exp[of ra] apply auto
-      apply (auto simp add: f0_def empty_def Vagree_def vec_eq_iff)
-      using thing' apply auto
-      done
+      using sol_eq_exp[of ra]  apply (auto simp add: f0_def empty_def Vagree_def vec_eq_iff)
+      using thing' by auto
     done
   have fml3:"\<And>ra. 0 \<le> ra \<Longrightarrow> ra \<le> t \<Longrightarrow>
            (\<forall>\<omega>. \<omega> = repv (repv (ab, bb) vid2 t) vid1
@@ -674,16 +656,12 @@ next
              bb)) 
              = (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. Const 0))) (ab, bb) (sol t)))"
     apply(rule vec_extensionality)
-    subgoal for i
-      using vne12 apply(auto)
-      using sol_eq_exp t thing by auto
-    done  
+    using vne12 sol_eq_exp t thing by auto
+  
   show "mk_v I (OSing vid1 (f0 fid1)) (ab, bb) (sol t) \<in> fml_sem I (p1 vid3 vid1)"
     using mk_v_agree[of I "OSing vid1 (f0 fid1)" "(ab, bb)" "sol t"] fml3[of t]
-    unfolding f0_def p1_def empty_def
-    unfolding Vagree_def apply auto
-    apply(auto simp add:  sol_eq_exp_t' t vec_extensionality  vne12)
-    using someEq by auto
+    unfolding f0_def p1_def empty_def Vagree_def 
+    using someEq by(auto simp add:  sol_eq_exp_t' t vec_extensionality  vne12)
 qed qed
 
 (* TODO:  differential formula semantics actually bogus right now
