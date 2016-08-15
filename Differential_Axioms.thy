@@ -223,9 +223,95 @@ lemma DE_valid:"valid DEaxiom"
 qed
   
 lemma DC_valid:"valid DCaxiom" 
-  apply(auto simp only: fml_sem.simps prog_sem.simps DCaxiom_def valid_def iff_sem impl_sem box_sem)
-  apply(auto)
-  sorry
+  proof (auto simp only: fml_sem.simps prog_sem.simps DCaxiom_def valid_def iff_sem impl_sem box_sem, auto)
+    fix I::"('sf,'sc,'sz) interp" and aa ba bb sol t
+       assume "is_interp I"
+       and all3:"\<forall>a b. (\<exists>sola. sol 0 = sola 0 \<and>
+                     (\<exists>t. (a, b) = mk_v I (OVar vid1) (sola 0, bb) (sola t) \<and>
+                          0 \<le> t \<and> (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. mk_v I (OVar vid1) (sola 0, bb) x \<in> Contexts I pid1 UNIV})) \<longrightarrow>
+             (a, b) \<in> Contexts I pid3 UNIV"
+       and all2:"\<forall>a b. (\<exists>sola. sol 0 = sola 0 \<and>
+                     (\<exists>t. (a, b) = mk_v I (OVar vid1) (sola 0, bb) (sola t) \<and>
+                          0 \<le> t \<and> (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. mk_v I (OVar vid1) (sola 0, bb) x \<in> Contexts I pid1 UNIV})) \<longrightarrow>
+             (a, b) \<in> Contexts I pid2 UNIV"
+       and t:"0 \<le> t"
+       and aaba:"(aa, ba) = mk_v I (OVar vid1) (sol 0, bb) (sol t)"
+       and sol:"(sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
+         {x. mk_v I (OVar vid1) (sol 0, bb) x \<in> Contexts I pid1 UNIV \<and> mk_v I (OVar vid1) (sol 0, bb) x \<in> Contexts I pid3 UNIV}"
+       from sol have
+             sol1:"(sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. mk_v I (OVar vid1) (sol 0, bb) x \<in> Contexts I pid1 UNIV}"
+         by (metis (mono_tags, lifting) Collect_mono solves_ode_supset_range)
+       from all2 have all2':"\<And>v. (\<exists>sola. sol 0 = sola 0 \<and>
+                     (\<exists>t. v = mk_v I (OVar vid1) (sola 0, bb) (sola t) \<and>
+                          0 \<le> t \<and> (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. mk_v I (OVar vid1) (sola 0, bb) x \<in> Contexts I pid1 UNIV})) \<Longrightarrow>
+             v \<in> Contexts I pid2 UNIV" by auto
+       show "mk_v I (OVar vid1) (sol 0, bb) (sol t) \<in> Contexts I pid2 UNIV" 
+         apply(rule all2'[of "mk_v I (OVar vid1) (sol 0, bb) (sol t)"])
+         apply(rule exI[where x=sol])
+         apply(rule conjI)
+         subgoal by (rule refl)
+         subgoal using t sol1 by auto
+       done
+  next
+    fix I::"('sf,'sc,'sz) interp" and  aa ba bb sol t
+       assume "is_interp I"
+       and all3:"\<forall>a b. (\<exists>sola. sol 0 = sola 0 \<and>
+                     (\<exists>t. (a, b) = mk_v I (OVar vid1) (sola 0, bb) (sola t) \<and>
+                          0 \<le> t \<and> (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. mk_v I (OVar vid1) (sola 0, bb) x \<in> Contexts I pid1 UNIV})) \<longrightarrow>
+             (a, b) \<in> Contexts I pid3 UNIV"
+       and all2:"\<forall>a b. (\<exists>sola. sol 0 = sola 0 \<and>
+                     (\<exists>t. (a, b) = mk_v I (OVar vid1) (sola 0, bb) (sola t) \<and>
+                          0 \<le> t \<and>
+                          (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
+                           {x. mk_v I (OVar vid1) (sola 0, bb) x \<in> Contexts I pid1 UNIV \<and>
+                               mk_v I (OVar vid1) (sola 0, bb) x \<in> Contexts I pid3 UNIV})) \<longrightarrow>
+             (a, b) \<in> Contexts I pid2 UNIV"
+       and t:"0 \<le> t"
+       and aaba:"(aa, ba) = mk_v I (OVar vid1) (sol 0, bb) (sol t)"
+       and sol:"(sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. mk_v I (OVar vid1) (sol 0, bb) x \<in> Contexts I pid1 UNIV}"
+       from all2 
+       have all2':"\<And>v. (\<exists>sola. sol 0 = sola 0 \<and>
+                     (\<exists>t. v = mk_v I (OVar vid1) (sola 0, bb) (sola t) \<and>
+                          0 \<le> t \<and>
+                          (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
+                           {x. mk_v I (OVar vid1) (sola 0, bb) x \<in> Contexts I pid1 UNIV \<and>
+                               mk_v I (OVar vid1) (sola 0, bb) x \<in> Contexts I pid3 UNIV})) \<Longrightarrow>
+             v \<in> Contexts I pid2 UNIV"
+         by auto
+       from all3
+       have all3':"\<And>v. (\<exists>sola. sol 0 = sola 0 \<and>
+                     (\<exists>t. v = mk_v I (OVar vid1) (sola 0, bb) (sola t) \<and>
+                          0 \<le> t \<and> (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. mk_v I (OVar vid1) (sola 0, bb) x \<in> Contexts I pid1 UNIV})) \<Longrightarrow>
+             v \<in> Contexts I pid3 UNIV"
+         by auto
+       have inp1:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> mk_v I (OVar vid1) (sol 0, bb) (sol s) \<in> Contexts I pid1 UNIV"
+         using sol solves_odeD atLeastAtMost_iff by blast
+       have inp3:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> mk_v I (OVar vid1) (sol 0, bb) (sol s) \<in> Contexts I pid3 UNIV"
+         apply(rule all3')
+         subgoal for s 
+           apply(rule exI [where x=sol])
+           apply(rule conjI)
+           subgoal by (rule refl)
+           apply(rule exI [where x=s])
+           apply(rule conjI)
+           subgoal by (rule refl)
+           apply(rule conjI)
+           subgoal by assumption
+           subgoal using sol by (meson atLeastatMost_subset_iff order_refl solves_ode_subset)
+           done
+         done
+       have inp13:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> mk_v I (OVar vid1) (sol 0, bb) (sol s) \<in> Contexts I pid1 UNIV \<and> mk_v I (OVar vid1) (sol 0, bb) (sol s) \<in> Contexts I pid3 UNIV"
+         using inp1 inp3 by auto
+       have sol13:"(sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
+         {x. mk_v I (OVar vid1) (sol 0, bb) x \<in> Contexts I pid1 UNIV \<and> mk_v I (OVar vid1) (sol 0, bb) x \<in> Contexts I pid3 UNIV}"
+         apply(rule solves_odeI)
+         subgoal using sol by (rule solves_odeD)
+         subgoal for s using inp13[of s] by auto
+         done
+       show "mk_v I (OVar vid1) (sol 0, bb) (sol t) \<in> Contexts I pid2 UNIV"
+         using t sol13 all2'[of "mk_v I (OVar vid1) (sol 0, bb) (sol t)"] by auto
+         
+  qed
 
 lemma DS_valid:"valid DSaxiom"
   proof -
