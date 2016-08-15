@@ -9,6 +9,18 @@ imports
   "./Denotational_Semantics"
   "./Frechet_Correctness"
 begin
+section \<open>Static Semantics\<close>
+text \<open>This section introduces functions for computing properties of the static semantics, specifically
+ the following dependencies:
+  Signatures: Symbols (from the interpretation) which influence the result of a term, ode, formula, program
+  Free variables: Variables (from the state) which influence the result of a term, ode, formula, program
+  Bound variables: Variables (from the state) that *might* be influenced by a program
+  Must-bound variables: Variables (from the state) that are *always* influenced by a program (i.e.
+  will never depend on anything other than the free variables of that program)
+   
+  We also prove basic lemmas about these definitions, but their overall correctness is proved elsewhere
+  in the Bound_Effect and Coincidence theorems.
+  \<close>
 
 primrec SIGT :: "('a, 'c) trm \<Rightarrow> 'a set"
 where

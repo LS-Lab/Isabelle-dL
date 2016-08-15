@@ -11,6 +11,9 @@ imports
   "./Static_Semantics"
   "./Coincidence"
 begin
+section \<open>The bound effect lemma says that a program can only modify its bound variables and nothing else.
+  This is one of the major lemmas for showing correctness of uniform substitution. \<close>
+
 context ids begin
 lemma bound_effect:
   fixes I::"('sf,'sc,'sz) interp"

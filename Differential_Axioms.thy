@@ -10,6 +10,11 @@ imports
   "./Frechet_Correctness"
   "./Coincidence"
 begin context ids begin
+section \<open>Differential Axioms\<close>
+text \<open>Differential axioms fall into two categories:
+Axioms for computing the derivatives of terms and axioms for proving properties of ODEs.
+The derivative axioms are all corollaries of the frechet correctness theorem. The ODE
+axioms are more involved, often requiring extensive use of the ODE libraries.\<close> 
 
 subsection \<open>Differentiation Axioms\<close>
 definition diff_const_axiom :: "('sf, 'sc, 'sz) formula"
@@ -29,14 +34,12 @@ definition DCaxiom :: "('sf, 'sc, 'sz) formula"
   \<leftrightarrow>  
        ([[EvolveODE (OVar vid1) (And (Predicational pid1) (Predicational pid3))]]Predicational pid2)))"
 
-
 definition DEaxiom :: "('sf, 'sc, 'sz) formula"
   where "DEaxiom = 
 (([[EvolveODE (OSing vid1 (f1 fid1 vid1)) (p1 vid2 vid1)]] (P pid1))
 \<leftrightarrow>
  ([[EvolveODE (OSing vid1 (f1 fid1 vid1)) (p1 vid2 vid1)]]
     [[DiffAssign vid1 (f1 fid1 vid1)]]P pid1))"
-
   
 definition DSaxiom :: "('sf, 'sc, 'sz) formula"
   where "DSaxiom = 

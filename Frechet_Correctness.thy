@@ -14,7 +14,7 @@ text \<open>
  This section builds up to a proof that in well-formed interpretations, all
  terms have derivatives, and those derivatives agree with the expected rules
  of derivatives. In particular, we show the [frechet] function given in the
- denotational sem is the true Frechet derivative of a term. From this
+ denotational semantics is the true Frechet derivative of a term. From this
  theorem we can recover all the standard derivative rules as corollaries.
 \<close>
 
@@ -110,7 +110,7 @@ apply(erule func_lemma2)
 apply(auto)
 done
 
-(* TODO: Should be able to remove these by adding some inductive_simp *)
+(* TODO: Should be able to remove these lemmas by adding some inductive_simp rules *)
 lemma dfree_vac1: "\<not> dfree ($' var)"
   by (auto elim: dfree.cases)
 

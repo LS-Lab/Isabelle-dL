@@ -15,11 +15,15 @@ text \<open>We formalize a state S as a pair (S_V, S_V') : \<real>^n \<times> \<
   
   Most semantic proofs need to reason about states agreeing on variables.
   We say Vagree A B V if states A and B have the same values on all variables in V,
-  similarly with VSagree A B V for simple_states A and B.
+  similarly with VSagree A B V for simple_states A and B and Iagree I J V for interpretations
+  I and J.
   \<close>
 
+(* Vector of reals of length 'a *)
 type_synonym 'a Rvec = "real^('a::finite)"
+(* A state specifies one vector of values for unprimed variables x and a second vector for x'*)
 type_synonym 'a state = "'a Rvec \<times> 'a Rvec"
+(* 'a simple_state is half a state - either the xs or the x's *)
 type_synonym 'a simple_state = "'a Rvec"
 
 definition Vagree :: "'c::finite state \<Rightarrow> 'c state \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
@@ -79,13 +83,13 @@ subsection \<open>Denotational Semantics\<close>
 
 text \<open>
   The central definitions for the denotational semantics are states \nu,
-  interpretations I and the interpretation functions [[\psi]]I, [[\theta]]I\nu,
+  interpretations I and the semantic functions [[\psi]]I, [[\theta]]I\nu,
   [[\alpha]]I, which are represented by the Isabelle functions fml_sem,
   dterm_sem and prog_sem, respectively.
 
   For convenience we pretend interpretations contain an extra field called
   FunctionFrechet specifying the Frechet derivative (FunctionFrechet f \<nu>) : \<real>^m -> \<real> 
-  for every function in every state. The proposition (is_interp I) that such a
+  for every function in every state. The proposition (is_interp I) says that such a
   derivative actually exists (i.e. all functions are differentiable everywhere)
   without saying what the exact derivative is.
   
@@ -214,7 +218,6 @@ lemma ODE_vars_lr:
   fixes x::"'sz" and ODE::"('sf,'sz) ODE"
   shows "Inl x \<in> ODE_vars ODE \<longleftrightarrow> Inr x \<in> ODE_vars ODE"
     by (induction "ODE", auto)
-
   
 fun mk_xode::"('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'c::finite) ODE \<Rightarrow> 'c::finite simple_state \<Rightarrow> 'c::finite state"
   where "mk_xode I ODE sol = (sol, ODE_sem I ODE sol)"
@@ -238,7 +241,7 @@ where "repd v x r = (fst v, (\<chi> y. if x = y then r else vec_nth (snd v) y))"
    Differential formulas do actually have to have their own notion of semantics, because
    the meaning of a differential formula (\<phi>)' depends on the syntax of the formula \<phi>:
    we can have two formulas \<phi> and \<psi> that have the exact same semantics, but where
-   (\<phi>)' and (\<psi>)' differ because \<phi> and \<psi> differ syntactically.
+   the semantics of (\<phi>)' and (\<psi>)' differ because \<phi> and \<psi> differ syntactically.
 *)
 fun fml_sem  :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) formula \<Rightarrow> 'c::finite state set" and
   diff_formula_sem  :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) formula \<Rightarrow> 'c::finite state set" and
@@ -266,8 +269,6 @@ where
 | "prog_sem I (Choice \<alpha> \<beta>) = prog_sem I \<alpha> \<union> prog_sem I \<beta>"
 | "prog_sem I (Sequence \<alpha> \<beta>) = prog_sem I \<alpha> O prog_sem I \<beta>"
 | "prog_sem I (Loop \<alpha>) = (prog_sem I \<alpha>)\<^sup>*"
-  (* TODO: simplify VSagree to =
-     *)
 | "prog_sem I (EvolveODE ODE \<phi>) =
   ({(\<nu>, mk_v I ODE \<nu> (sol t)) | \<nu> sol t.
       t \<ge> 0 \<and>

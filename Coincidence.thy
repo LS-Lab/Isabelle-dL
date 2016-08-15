@@ -10,6 +10,24 @@ imports
   "./Frechet_Correctness"
   "./Static_Semantics"
 begin
+section \<open>Coincidence and ODE semantics\<close>
+text \<open>This section proves coincidence: semantics of terms, odes, formulas and programs depend only
+  on the free variables. This is one of the major lemmas for the correctness of uniform substitutions.
+  Along the way, we also prove the equivalence between two similar, but different semantics for ODE programs:
+  It does not matter whether the semantics of ODE's insist on the existence of a solution that agrees
+  with the start state on all variables vs. one that agrees only on the variables that are actually
+  relevant to the ODE. This is proven here by simultaneous induction with the coincidence theorem
+  for the following reason:
+  
+  The reason for having two different semantics is that some proofs are easier with one semantics
+  and other proofs are easier with the other definition. The coincidence proof is either with the
+  more complicated definition, which should not be used as the main definition because it would make
+  the specification for the dL semantics significantly larger, effectively increasing the size of
+  the trusted core. However, that the proof of equivalence between the semantics using the coincidence
+  lemma for formulas. In order to use the coincidence proof in the equivalence proof and the equivalence
+  proof in the coincidence proof, they are proved by simultaneous induction.
+  \<close>
+
 context ids begin
 lemma coincidence_sterm:"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> sterm_sem I  \<theta> (fst \<nu>) = sterm_sem I \<theta> (fst \<nu>')"
   apply(induct "\<theta>")
@@ -434,13 +452,6 @@ where "coincide_hp' \<alpha> \<longleftrightarrow> (\<forall> I J. coincide_hp \
 
 definition coincide_fml  :: "('sf, 'sc, 'sz) formula \<Rightarrow> bool"
 where "coincide_fml \<phi> \<longleftrightarrow> (\<forall> \<nu> \<nu>' I J . Iagree I J (SIGF \<phi>) \<longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<longrightarrow> \<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem J \<phi>)"
-
-  
-  
-(*lemma coinc_hp' [simp]:
-  fixes I J ::"('sf, 'sc, 'sz) interp" and \<alpha>::"('sf, 'sc, 'sz) hp"
-  shows "coincide_hp' \<alpha> I J = (\<forall> \<nu> \<nu>' \<mu> V. Iagree I J (SIGP \<alpha>) \<longrightarrow> Vagree \<nu> \<nu>' V \<longrightarrow> V \<supseteq> (FVP \<alpha>) \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I \<alpha> \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J \<alpha> \<and> Vagree \<mu> \<mu>' (MBV \<alpha> \<union> V)))"
-  unfolding coincide_hp'_def by auto*)
 
 lemma coinc_fml [simp]: "coincide_fml \<phi>  = (\<forall> \<nu> \<nu>' I J. Iagree I J (SIGF \<phi>) \<longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<longrightarrow> \<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem J \<phi>)"
   unfolding coincide_fml_def by auto

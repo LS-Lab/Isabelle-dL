@@ -16,6 +16,9 @@ text \<open>
   to arbitrary programs or formulas, they mention concrete program or formula
   variables, which are then instantiated by uniform substitution, as opposed
   metavariables.
+  
+  This section cointains axioms and rules for propositional connectives and programs other than
+  ODE's. Differential axioms are handled separately because the proofs are significantly more involved.
   \<close>
 
 definition assign_axiom :: "('sf, 'sc, 'sz) formula"
@@ -42,7 +45,10 @@ definition Kaxiom :: "('sf, 'sc, 'sz) formula"
   where "Kaxiom \<equiv> ([[$\<alpha> vid1]]((Predicational pid1) \<rightarrow> (Predicational pid2)))
     \<rightarrow> ([[$\<alpha> vid1]]Predicational pid1) \<rightarrow> ([[$\<alpha> vid1]]Predicational pid2)"
 
-(*
+(* Here is an example of an old version of the induction axiom that was too weak
+ * and thus very easy to prove: it used predicates when it should have used predicationals.
+ * This serves as a reminder to be careful whether other axioms are also too weak. *)
+(* 
 definition Ibroken :: "('sf, 'sc, 'sz) formula"
   where "Ibroken \<equiv> ([[$$a]]($P [] \<rightarrow> ([[$$a]]$P []))
     \<rightarrow> ($P [] \<rightarrow> ([[($$a)**]]$P [])))"*)
@@ -55,9 +61,9 @@ definition Iaxiom :: "('sf, 'sc, 'sz) formula"
 definition Vaxiom :: "('sf, 'sc, 'sz) formula"
   where "Vaxiom \<equiv> ($\<phi> vid1 empty) \<rightarrow> ([[$\<alpha> vid1]]($\<phi> vid1 empty))"
 
+subsection \<open>Validity/Soundness proofs for axioms and rules\<close>
 theorem test_valid: "valid test_axiom"
   by (auto simp add: valid_def test_axiom_def)  
-
 
 lemma assign_lem1:
 "dterm_sem I (if i = vid1 then Var vid1 else (Const 0))

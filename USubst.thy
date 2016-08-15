@@ -9,6 +9,19 @@ imports
   "./Denotational_Semantics"
   "./Static_Semantics"
 begin 
+section \<open>Uniform Substitution Definitions\<close>
+text\<open>This section defines substitutions and implements the substitution operation.
+  Every part of substitution comes in two flavors. The "Nsubst" variant of each function
+  returns a term/formula/ode/program which (as encoded in the type system) has less symbols
+  that the input. We use this operation when substitution into functions and function-like
+  constructs to make it easy to distinguish identifiers that stand for arguments to functions
+  from other identifiers. In order to expose a simpler interface, we also have a "subst" variant
+  which does not delete variables.
+  
+  Substitution is not always sound. The various admissibility predicates *admit describe conditions
+  under which the various substitution operations are sound.
+  \<close>
+
 record ('a, 'b, 'c) subst =
   (* The RHS of a function or predicate substitution is a term or formula
    * with extra variables, which are used to refer to arguments. *)
