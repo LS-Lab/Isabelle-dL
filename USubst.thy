@@ -50,8 +50,10 @@ where
   "NTsubst (Var v) \<sigma> = Var v"
 | "NTsubst (DiffVar v) \<sigma> = DiffVar v"
 | "NTsubst (Const r) \<sigma> = Const r"  
-| "NTsubst (Function f args) \<sigma> = 
-    (case f of Inl f' \<Rightarrow> Function f' (\<lambda>i. NTsubst (args i) \<sigma>) | Inr f' \<Rightarrow> \<sigma> f')"  
+| "NTsubst (Function f args) \<sigma> =
+    (case f of 
+      Inl f' \<Rightarrow> Function f' (\<lambda> i. NTsubst (args i) \<sigma>) 
+    | Inr f' \<Rightarrow> \<sigma> f')"  
 | "NTsubst (Plus \<theta>1 \<theta>2) \<sigma> = Plus (NTsubst \<theta>1 \<sigma>) (NTsubst \<theta>2 \<sigma>)"  
 | "NTsubst (Times \<theta>1 \<theta>2) \<sigma> = Times (NTsubst \<theta>1 \<sigma>) (NTsubst \<theta>2 \<sigma>)"  
 | "NTsubst (Differential \<theta>) \<sigma> = Differential (NTsubst \<theta> \<sigma>)"
@@ -230,12 +232,12 @@ where "adjoint I \<sigma> \<nu> =
  Programs =   (\<lambda>a. case SPrograms \<sigma> a of Some a' \<Rightarrow> prog_sem I a' | None \<Rightarrow> Programs I a),
  ODEs =     (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_sem I ode' | None \<Rightarrow> ODEs I ode)\<rparr>"
 
-  lemma dsem_to_ssem:"dfree \<theta> \<Longrightarrow> dterm_sem I \<theta> \<nu> = sterm_sem I \<theta> (fst \<nu>)"
+lemma dsem_to_ssem:"dfree \<theta> \<Longrightarrow> dterm_sem I \<theta> \<nu> = sterm_sem I \<theta> (fst \<nu>)"
   by (induct rule: dfree.induct) (auto)
 
 definition NTadjoint::"('sf, 'sc, 'sz) interp \<Rightarrow> ('d::finite \<Rightarrow> ('sf, 'sz) trm) \<Rightarrow> 'sz state \<Rightarrow> ('sf + 'd, 'sc, 'sz) interp" 
 where "NTadjoint I \<sigma> \<nu> =
-\<lparr>Functions =   (\<lambda>f. case f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> (\<lambda>R. dterm_sem I (\<sigma> f') \<nu>)),
+\<lparr>Functions =   (\<lambda>f. case f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> (\<lambda>_. dterm_sem I (\<sigma> f') \<nu>)),
  Predicates = Predicates I,
  Contexts = Contexts I,
  Programs = Programs I,
@@ -253,9 +255,8 @@ lemma adjoint_free:
   using dsem_to_ssem[OF sfree] 
   by (cases \<nu>) (auto simp add: adjoint_def fun_eq_iff split: option.split)
 
-
 lemma NTadjoint_free:"(\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (NTadjoint I \<sigma> \<nu> =
-\<lparr>Functions =   (\<lambda>f. case f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> (\<lambda>R. sterm_sem I (\<sigma> f') (fst \<nu>))),
+\<lparr>Functions =   (\<lambda>f. case f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> (\<lambda>_. sterm_sem I (\<sigma> f') (fst \<nu>))),
  Predicates = Predicates I,
  Contexts = Contexts I,
  Programs = Programs I,
