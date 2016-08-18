@@ -100,6 +100,15 @@ fixes \<nu>'::"'sz state"
 assumes good_interp:"is_interp I"    
 shows "NTadmit \<sigma> \<theta> \<Longrightarrow> dsafe \<theta> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> dterm_sem I (NTsubst \<theta> \<sigma>) \<nu>' = dterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> \<nu>'"
   sorry
+
+lemma nsubst_dterm':
+fixes I::"('sf, 'sc, 'sz) interp"
+fixes \<nu>::"'sz state"
+fixes \<nu>'::"'sz state"
+assumes good_interp:"is_interp I"    
+shows "NTadmit \<sigma> \<theta> \<Longrightarrow> dfree \<theta> \<Longrightarrow> (\<And>i. dsafe (\<sigma> i)) \<Longrightarrow> dterm_sem I (NTsubst \<theta> \<sigma>) \<nu>' = dterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> \<nu>'"
+  sorry
+
 (*proof (induction rule: NTadmit.induct)
   case (NTadmit_Fun \<sigma> args f) 
     thus "?case" (*by (cases "f") (auto simp add: vec_extensionality  NTadjoint_def)*)
@@ -217,44 +226,45 @@ shows "
   (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> 
   (\<And>\<nu>. dterm_sem I (Tsubst \<theta> \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) \<theta> \<nu>)"
 proof (induction rule: Tadmit.induct)
-  case (Tadmit_Fun \<sigma> args f) 
-    note safe = Tadmit_Fun.prems(1) and sfree = Tadmit_Fun.prems(2)
+  case (Tadmit_Fun1 \<sigma> args f f' \<nu>) 
+    note safe = Tadmit_Fun1.prems(1) and sfree = Tadmit_Fun1.prems(2) and TA = Tadmit_Fun1.hyps(1)
+    and some = Tadmit_Fun1.hyps(2) and NTA = Tadmit_Fun1.hyps(3)
     hence safes:"\<And>i. dsafe (args i)" by auto
     have IH:"(\<And>\<nu>'. \<And>i. dsafe (args i) \<Longrightarrow>
         dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
-      using  Tadmit_Fun.prems Tadmit_Fun.IH by auto
+      using  Tadmit_Fun1.prems Tadmit_Fun1.IH by auto
     have eqs:"\<And>i \<nu>'. dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>"
       by (auto simp add: IH safes)
+    let ?sub = "(\<lambda> i. Tsubst (args i) \<sigma>)"
+    have subSafe:"(\<And>i. dsafe (?sub i))"
+      using tsubst_preserves_safe[OF safes sfree] by simp
+    have freef:"dfree f'" using sfree some by auto 
+    have IH2:"dterm_sem I (NTsubst f' ?sub) \<nu> = dterm_sem (NTadjoint I ?sub \<nu>) f' \<nu>"
+      by (simp add: nsubst_dterm'[OF good_interp NTA freef subSafe])
+    have vec:"(\<chi> i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) = (\<chi> i. dterm_sem (local.adjoint I \<sigma> \<nu>) (args i) \<nu>)"
+      apply(auto simp add: vec_eq_iff)
+      subgoal for i
+        using IH[of i, OF safes[of i]] 
+        by auto
+      done
     show "?case" 
-    proof (cases "SFunctions \<sigma> f")
-      fix f'
-      assume some:"SFunctions \<sigma> f = Some f'" 
-      let ?sub = "(\<lambda> i. Tsubst (args i) \<sigma>)"
-      have subFree:"(\<And>i. dfree (?sub i))" sorry (*using tsubst_preserves_free[OF safes sfree] by simp*)
-      have admit:"\<And>i. NTadmit ?sub f'" sorry
-      have safef:"dsafe f'" sorry
-      have IH2:"dterm_sem I (NTsubst f' ?sub) \<nu> = dterm_sem (NTadjoint I ?sub \<nu>) f' \<nu>"
-        by (simp add: nsubst_dterm[OF good_interp admit safef subFree])
-      have vec:"(\<chi> i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) = (\<chi> i. dterm_sem (local.adjoint I \<sigma> \<nu>) (args i) \<nu>)"
-        apply(auto simp add: vec_eq_iff)
-        subgoal for i
-          using IH[of i, OF safes[of i]] 
-          by auto
-        done
-      show "?thesis" 
-        using IH safes eqs apply (auto simp add:  IH2  some good_interp)
-        using some unfolding adjoint_def NTadjoint_def by auto
-    next
-      assume none:"SFunctions \<sigma> f = None"
+      using IH safes eqs apply (auto simp add:  IH2  some good_interp)
+      using some unfolding adjoint_def NTadjoint_def by auto
+next
+   case (Tadmit_Fun2 \<sigma> args f \<nu>) 
+    note safe = Tadmit_Fun2.prems(1) and sfree = Tadmit_Fun2.prems(2) and TA = Tadmit_Fun2.hyps(1)
+    and none = Tadmit_Fun2.hyps(2) 
+    hence safes:"\<And>i. dsafe (args i)" by auto
+    have IH:"(\<And>\<nu>'. \<And>i. dsafe (args i) \<Longrightarrow>
+        dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
+      using  Tadmit_Fun2.prems Tadmit_Fun2.IH by auto
       have Ieq:"Functions I f = Functions (adjoint I \<sigma> \<nu>) f"
         using none unfolding adjoint_def by auto
       have vec:"(\<chi> i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) = (\<chi> i. dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)"
         apply(auto simp add: vec_eq_iff)
         subgoal for i using IH[of i, OF safes[of i]] by auto
         done
-      show "?thesis"
-        using none IH Ieq vec by auto
-    qed
+      show "?case" using none IH Ieq vec by auto
 next
     case (Tadmit_Diff \<sigma> \<theta>)  then
       have TA:"Tadmit \<sigma> \<theta>"

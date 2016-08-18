@@ -475,6 +475,7 @@ next
                  Predicates I vid2
                   (\<chi> i. dterm_sem I (singleton (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid3))) i)
                          (repv (repv (ab, bb) vid2 r) vid3 ra))) \<longrightarrow>
+                         
            (\<forall>\<omega>. \<omega> = repv (repv (ab, bb) vid2 r) vid1
                       (dterm_sem I (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid2))) (repv (ab, bb) vid2 r)) \<longrightarrow>
                  \<omega> \<in> fml_sem I (p1 vid3 vid1))"

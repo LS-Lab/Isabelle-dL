@@ -68,6 +68,8 @@ where
 | "Tsubst (Times \<theta>1 \<theta>2) \<sigma> = Times (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"  
 | "Tsubst (Differential \<theta>) \<sigma> = Differential (Tsubst \<theta> \<sigma>)"
 
+
+  
 primrec NOsubst::"('a + 'b, 'c) ODE \<Rightarrow> ('b \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'c) ODE"
 where
   "NOsubst (OVar c) \<sigma> = OVar c"
@@ -165,15 +167,22 @@ where "SDom \<sigma> =
 definition TUadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
 where "TUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> SIGT \<theta>. (case SFunctions \<sigma> i of Some f' \<Rightarrow> FVT f')) \<inter> U) = {}"
 
-inductive Tadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) trm \<Rightarrow> bool"
+inductive Tadmit :: "('sf, 'sc, 'sz) subst \<Rightarrow> ('sf, 'sz) trm \<Rightarrow> bool"
 where 
   Tadmit_Diff:"Tadmit \<sigma> \<theta> \<Longrightarrow> TUadmit \<sigma> \<theta> UNIV \<Longrightarrow> Tadmit \<sigma> (Differential \<theta>)"
-| Tadmit_Fun:"(\<And>i. Tadmit \<sigma> (args i)) \<Longrightarrow> Tadmit \<sigma> (Function f args)"
+| Tadmit_Fun1:"(\<And>i. Tadmit \<sigma> (args i)) \<Longrightarrow> SFunctions \<sigma> f = Some f' \<Longrightarrow> NTadmit (\<lambda> i. Tsubst (args i) \<sigma>) f' \<Longrightarrow> Tadmit \<sigma> (Function f args)"
+| Tadmit_Fun2:"(\<And>i. Tadmit \<sigma> (args i)) \<Longrightarrow> SFunctions \<sigma> f = None \<Longrightarrow> Tadmit \<sigma> (Function f args)"
 | Tadmit_Plus:"Tadmit \<sigma> \<theta>1 \<Longrightarrow> Tadmit \<sigma> \<theta>2 \<Longrightarrow> Tadmit \<sigma> (Plus \<theta>1 \<theta>2)"
 | Tadmit_Times:"Tadmit \<sigma> \<theta>1 \<Longrightarrow> Tadmit \<sigma> \<theta>2 \<Longrightarrow> Tadmit \<sigma> (Times \<theta>1 \<theta>2)"
 | Tadmit_DiffVar:"Tadmit \<sigma> (DiffVar x)"
 | Tadmit_Var:"Tadmit \<sigma> (Var x)"
 | Tadmit_Const:"Tadmit \<sigma> (Const r)"
+
+inductive_simps
+      Tadmit_Plus_simps[simp]: "Tadmit \<sigma> (Plus a b)"
+  and Tadmit_Times_simps[simp]: "Tadmit \<sigma> (Times a b)"
+  and Tadmit_Var_simps[simp]: "Tadmit \<sigma> (Var x)"
+  and Tadmit_Fun_simps[simp]: "Tadmit \<sigma> (Function i args)"
 
 inductive OUadmit:: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) ODE \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
 where 
