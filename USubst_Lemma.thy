@@ -215,7 +215,7 @@ shows "
   Tadmit \<sigma> \<theta> \<Longrightarrow>
   dsafe \<theta> \<Longrightarrow>
   (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> 
-  dterm_sem I (Tsubst \<theta> \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) \<theta> \<nu>"
+  (\<And>\<nu>. dterm_sem I (Tsubst \<theta> \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) \<theta> \<nu>)"
 proof (induction rule: Tadmit.induct)
   case (Tadmit_Fun \<sigma> args f) 
     note safe = Tadmit_Fun.prems(1) and sfree = Tadmit_Fun.prems(2)
@@ -259,7 +259,7 @@ next
     case (Tadmit_Diff \<sigma> \<theta>)  then
       have TA:"Tadmit \<sigma> \<theta>"
       and TUA:"TUadmit \<sigma> \<theta> UNIV"
-      and IH:"dsafe \<theta> \<Longrightarrow> (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> (\<And> \<nu>. dterm_sem I (Tsubst \<theta> \<sigma>) = dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>)"
+      and IH:"dsafe \<theta> \<Longrightarrow> (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> (\<And>\<nu>. dterm_sem I (Tsubst \<theta> \<sigma>) \<nu> = dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta> \<nu>)"
       and safe:"dsafe (Differential \<theta>)"
       and sfree:"\<And>i f'1. SFunctions \<sigma> i = Some f'1 \<Longrightarrow> dfree f'1"
         by auto
@@ -273,26 +273,30 @@ next
       have freeSubst:"dfree (Tsubst \<theta> \<sigma>)" 
         using tsubst_preserves_free[OF free sfree]
         by auto 
-      have IH':"\<And>\<nu>'. dterm_sem I (Tsubst \<theta> \<sigma>) \<nu>' = dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta> \<nu>'"
+      have IH':"\<And>\<nu>. dterm_sem I (Tsubst \<theta> \<sigma>) \<nu> = dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta> \<nu>"
         using IH[OF tsafe sfree] by auto
-       have IH'':"\<And>\<nu>'. sterm_sem I (Tsubst \<theta> \<sigma>) \<nu>' = sterm_sem (local.adjoint I \<sigma> \<nu>) \<theta> \<nu>'"
-        subgoal for \<nu>' using dsem_to_ssem[OF free, of "(local.adjoint I \<sigma> \<nu>)" "(\<nu>', \<nu>')"] dsem_to_ssem[OF freeSubst, of I "(\<nu>', \<nu>')"] IH'[of "(\<nu>',\<nu>')"] by auto
-        done
+      have IH'':"\<And>\<nu>'. dterm_sem I (Tsubst \<theta> \<sigma>) \<nu>' = dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta> \<nu>'"
+        subgoal for \<nu>'
+        using uadmit_dterm_adjoint[OF TUA VA, of I \<nu> \<nu>'] IH'[of \<nu>'] by auto
+      done
       have sem_eq:"sterm_sem I (Tsubst \<theta> \<sigma>) = sterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>" 
         apply (auto simp add: fun_eq_iff)
-        subgoal for x
-          apply (cases "x")
-          using IH''[of "(x)"] by auto
+        subgoal for \<nu>'
+          apply (cases "\<nu>'")
+          subgoal for \<nu>''
+            apply auto
+            using dsem_to_ssem[OF free, of "(local.adjoint I \<sigma> \<nu>)" "(\<nu>',\<nu>')"] dsem_to_ssem[OF freeSubst, of I "(\<nu>',\<nu>')"] IH'[of "(\<nu>)"]
+            apply auto
+          using IH'' by auto
+          done
         done
       have frech:"frechet I (Tsubst \<theta> \<sigma>) (fst \<nu>) = frechet (adjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
         using subst_frechet[OF good_interp free sfree] by auto
     show "?case"
       apply (auto simp add: directional_derivative_def fun_eq_iff)
-      subgoal for a b
-        using sterm_determines_frechet[of I "(adjoint I \<sigma> \<nu>)" "(Tsubst \<theta> \<sigma>)" \<theta> "(a,b)", 
+        using sterm_determines_frechet[of I "(adjoint I \<sigma> \<nu>)" "(Tsubst \<theta> \<sigma>)" \<theta> "\<nu>", 
             OF good_interp adjoint_safe[OF good_interp sfree] tsubst_preserves_free[OF free sfree] 
             free sem_eq]
         by auto
-      done
   qed auto
 end end
