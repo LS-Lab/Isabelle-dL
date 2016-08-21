@@ -101,8 +101,39 @@ lemma adjoint_consequence:"(\<And>f f'. SFunctions \<sigma> f = Some f' \<Longri
     done
 
 lemma uadmit_sterm_adjoint:"TUadmit \<sigma> \<theta> U \<Longrightarrow> Vagree \<nu> \<omega> (-U) \<Longrightarrow> sterm_sem (adjoint I \<sigma> \<nu>) \<theta> = sterm_sem (adjoint I \<sigma> \<omega>) \<theta>"
-  sorry
-
+  proof -
+    assume TUA:"TUadmit \<sigma> \<theta> U"
+    assume VA:"Vagree \<nu> \<omega> (- U)"
+    have sub:"(\<Union>x. SFV \<sigma> x) \<subseteq> (-U)"
+      sorry
+      (*apply (auto)
+      subgoal for x xa
+        apply(cases "xa")
+        apply(auto)
+        subgoal for a
+          apply(cases "SFunctions \<sigma> a")
+          apply(auto)
+          using TUA unfolding TUadmit_def using VA unfolding Vagree_def apply auto
+      using TUA unfolding TUadmit_def unfolding SFV.simps 
+      apply auto
+      subgoal for x xa
+        apply (cases "xa")
+        apply auto
+        subgoal for a
+          apply(cases "SFunctions \<sigma> a")
+          apply auto
+          sledgehammer*)
+    (*have VA':"Vagree \<nu> \<omega> (FVS \<sigma>)"
+      using TUA VA unfolding TUadmit_def FVS_def
+      apply auto
+      sledgehammer*)
+    have eq:"(adjoint I \<sigma> \<nu>) = (adjoint I \<sigma> \<omega>)"
+      apply(rule adjoint_consequence)
+      sorry
+    show "?thesis"
+      sorry
+  qed
+  
 lemma uadmit_dterm_adjoint:"TUadmit \<sigma> \<theta> U \<Longrightarrow> Vagree \<nu> \<omega> (-U) \<Longrightarrow> dterm_sem (adjoint I \<sigma> \<nu>) \<theta> = dterm_sem (adjoint I \<sigma> \<omega>) \<theta>"
   sorry
 
