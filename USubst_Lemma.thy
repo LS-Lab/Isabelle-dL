@@ -323,15 +323,146 @@ assumes good_interp:"is_interp I"
 shows "is_interp (extendc I R)"
   sorry
 
+(* 
+dfree_Var: "dfree (Var i)"
+| dfree_Const: "dfree (Const r)"
+| dfree_Fun: "(\<And>i. dfree (args i)) \<Longrightarrow> dfree (Function i args)"
+| dfree_Plus: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
+| dfree_Times: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
+  
+*)
+primrec extendf_deriv :: "('sf,'sc,'sz) interp \<Rightarrow> 'sf \<Rightarrow> (*('sz, real) vec \<Rightarrow>*) ('sf + 'sz,'sz) trm \<Rightarrow> 'sz state \<Rightarrow> 'sz Rvec \<Rightarrow> ('sz Rvec \<Rightarrow> real)"
+where
+  "extendf_deriv I _ (Var i) \<nu> x = (\<lambda>_. 0)"
+| "extendf_deriv I _ (Const r) \<nu> x = (\<lambda>_. 0)"
+| "extendf_deriv I g (Function f args) \<nu> x = undefined
+  (*(\<lambda> \<nu>'.
+    ((case f of 
+       Inl ff \<Rightarrow> FunctionFrechet I ff \<nu>'
+     | Inr ff \<Rightarrow> dterm_sem (extendf I \<nu>') f' \<nu>)
+      \<circ> (extendf_deriv I )))*)"
+| "extendf_deriv I g (Plus t1 t2) \<nu> x = (\<lambda>\<nu>'. (extendf_deriv I g t1 \<nu> x \<nu>') + (extendf_deriv I g t2 \<nu> x \<nu>'))"
+| "extendf_deriv I g (Times t1 t2) \<nu> x = 
+   (\<lambda>\<nu>'. ((dterm_sem (extendf I x) t1 \<nu> * (extendf_deriv I g t2 \<nu> x \<nu>'))) 
+       + (extendf_deriv I g t1 \<nu> x \<nu>') * (dterm_sem (extendf I x) t2 \<nu>))"
+| "extendf_deriv I g ($' _) \<nu> = undefined"
+| "extendf_deriv I g (Differential _) \<nu> = undefined"
+
 lemma extendf_deriv:
   fixes f'::"('sf + 'sz,'sz) trm" and I::"('sf,'sc,'sz) interp"
   assumes free:"dfree f'"
   assumes good_interp:"is_interp I"
   assumes some:"SFunctions \<sigma> i = Some f'"
-  shows "\<exists>f''. \<forall>x. ((\<lambda>R. dterm_sem (extendf I R) f' \<nu>) has_derivative f'' x) (at x)"
+  shows "\<exists>f''. \<forall>x. ((\<lambda>R. dterm_sem (extendf I R) f' \<nu>) has_derivative (extendf_deriv I i f' \<nu>)) (at x)"
   using free apply (induction rule: dfree.induct)
   apply(auto)+
-  subgoal for i 
+  defer
+  subgoal for \<theta>\<^sub>1 \<theta>\<^sub>2 x
+  proof -
+    (*fix \<theta>\<^sub>1 \<theta>\<^sub>2::"('sf + 'sz, 'sz) trm" and a b*)
+    assume free1:"dfree \<theta>\<^sub>1"
+    assume "\<forall>x. ((\<lambda>R. dterm_sem
+                    \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                       ODEs = ODEs I\<rparr>
+                    \<theta>\<^sub>1 \<nu>) has_derivative
+              extendf_deriv I i \<theta>\<^sub>1 \<nu>)
+              (at x)"
+    then have 
+      IH1:"\<forall>x. ((\<lambda>R. dterm_sem (extendf I R) \<theta>\<^sub>1 \<nu>) has_derivative extendf_deriv I i \<theta>\<^sub>1 \<nu>) (at x)"
+      by auto
+    then have IH1':"((\<lambda>R. dterm_sem (extendf I R) \<theta>\<^sub>1 \<nu>) has_derivative extendf_deriv I i \<theta>\<^sub>1 \<nu>) (at x)"
+      by auto
+    assume free2:"dfree \<theta>\<^sub>2"
+    assume "\<forall>x. ((\<lambda>R. dterm_sem
+                    \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                       ODEs = ODEs I\<rparr>
+                    \<theta>\<^sub>2 \<nu>) has_derivative
+              extendf_deriv I i \<theta>\<^sub>2 \<nu>)
+              (at x)"
+    then have 
+      IH2:"\<forall>x. ((\<lambda>R. dterm_sem (extendf I R) \<theta>\<^sub>2 \<nu>) has_derivative extendf_deriv I i \<theta>\<^sub>2 \<nu>) (at x)"
+      by auto
+    then have IH2':"((\<lambda>R. dterm_sem (extendf I R) \<theta>\<^sub>2 \<nu>) has_derivative extendf_deriv I i \<theta>\<^sub>2 \<nu>) (at x)" by auto
+ (* then have IH1':"((\<lambda>R. dterm_sem (extendf I R) \<theta>\<^sub>1 \<nu>) has_derivative extendf_deriv I i \<theta>\<^sub>1 \<nu>) (at x)"
+     *)
+    (* (?f has_derivative ?f') (at ?x within ?s) \<Longrightarrow>
+    (?g has_derivative ?g') (at ?x within ?s) \<Longrightarrow> 
+    ((\<lambda>x. ?f x * ?g x) has_derivative (\<lambda>h. ?f ?x * ?g' h + ?f' h * ?g ?x)) (at ?x within ?s)*)
+    (* ((\<lambda>R. dterm_sem
+           \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+              ODEs = ODEs I\<rparr>
+           \<theta>\<^sub>1 \<nu>) has_derivative
+     extendf_deriv I i \<theta>\<^sub>1 \<nu>)
+     (at x) \<Longrightarrow>
+    ((\<lambda>R. dterm_sem
+           \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+              ODEs = ODEs I\<rparr>
+           \<theta>\<^sub>2 \<nu>) has_derivative
+     extendf_deriv I i \<theta>\<^sub>2 \<nu>)
+     (at x) \<Longrightarrow>
+     
+     OPEN SUBGOAL:
+    (\<lambda>h. dterm_sem (extendf I x) \<theta>\<^sub>1 \<nu> * extendf_deriv I i \<theta>\<^sub>2 \<nu> h + 
+          extendf_deriv I i \<theta>\<^sub>1 \<nu> h * dterm_sem (extendf I x) \<theta>\<^sub>2 \<nu>) =
+    (\<lambda>R. dterm_sem (extendf I R) \<theta>\<^sub>1 \<nu> * extendf_deriv I i \<theta>\<^sub>2 \<nu> R +
+         dterm_sem (extendf I R) \<theta>\<^sub>2 \<nu> * extendf_deriv I i \<theta>\<^sub>1 \<nu> R)
+         
+    OR:
+((\<lambda>R. dterm_sem (extendf I R) \<theta>\<^sub>1 \<nu>) has_derivative extendf_deriv I i \<theta>\<^sub>1 \<nu>) (at x) \<Longrightarrow>
+((\<lambda>R. dterm_sem (extendf I R) \<theta>\<^sub>2 \<nu>) has_derivative extendf_deriv I i \<theta>\<^sub>2 \<nu>) (at x) \<Longrightarrow>
+    
+(\<lambda>h. dterm_sem (extendf I h) \<theta>\<^sub>1 \<nu> * extendf_deriv I i \<theta>\<^sub>2 \<nu> h +
+     extendf_deriv I i \<theta>\<^sub>1 \<nu> h * dterm_sem (extendf I h) \<theta>\<^sub>2 \<nu>) =
+(\<lambda>R. dterm_sem (extendf I R) \<theta>\<^sub>1 \<nu> * extendf_deriv I i \<theta>\<^sub>2 \<nu> R +
+     extendf_deriv I i \<theta>\<^sub>1 \<nu> R * dterm_sem (extendf I R) \<theta>\<^sub>2 \<nu>)
+         *)
+    
+    have duh:"(\<lambda>R. dterm_sem (extendf I R) \<theta>\<^sub>1 \<nu> * extendf_deriv I i \<theta>\<^sub>2 \<nu> R +
+     extendf_deriv I i \<theta>\<^sub>1 \<nu> R * dterm_sem (extendf I R) \<theta>\<^sub>2 \<nu>) =
+(\<lambda>R. dterm_sem (extendf I R) \<theta>\<^sub>1 \<nu> * extendf_deriv I i \<theta>\<^sub>2 \<nu> R +
+     extendf_deriv I i \<theta>\<^sub>1 \<nu> R * dterm_sem (extendf I R) \<theta>\<^sub>2 \<nu>)"
+      by auto
+    (* problem: x != h, x is fixed, h is argument *)
+    have res:"((\<lambda>R. dterm_sem (extendf I R) \<theta>\<^sub>1 \<nu> * dterm_sem (extendf I R) \<theta>\<^sub>2 \<nu>) has_derivative
+               (\<lambda>R. dterm_sem (extendf I x) \<theta>\<^sub>1 \<nu> * extendf_deriv I i \<theta>\<^sub>2 \<nu> R +
+                    extendf_deriv I i \<theta>\<^sub>1 \<nu> R * dterm_sem (extendf I x) \<theta>\<^sub>2 \<nu>)) (at x)"
+      (*apply(rule has_derivative_mult)*)
+      (*     (?f1 has_derivative ?f'1) (at ?x1 within ?s1) \<Longrightarrow>
+    (?g1 has_derivative ?g'1) (at ?x1 within ?s1) \<Longrightarrow>
+    (\<lambda>h. ?f1 ?x1 * ?g'1 h + ?f'1 h * ?g1 ?x1) = ?g' \<Longrightarrow> ((\<lambda>x. ?f1 x * ?g1 x) has_derivative ?g') (at ?x1 within ?s1)
+*)(* derivative_eq_intros(12)*)
+      (*  Deriv.has_derivative_mult:
+    (?f has_derivative ?f') (at ?x within ?s) \<Longrightarrow>
+    (?g has_derivative ?g') (at ?x within ?s) \<Longrightarrow> ((\<lambda>x. ?f x * ?g x) has_derivative (\<lambda>h. ?f ?x * ?g' h + ?f' h * ?g ?x)) (at ?x within ?s)
+    *)
+      apply(rule has_derivative_mult)
+      using IH1' apply auto
+      using IH2' by auto
+      
+    then show "((\<lambda>R. dterm_sem
+              \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                 ODEs = ODEs I\<rparr>
+              \<theta>\<^sub>1 \<nu> *
+             dterm_sem
+              \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                 ODEs = ODEs I\<rparr>
+              \<theta>\<^sub>2 \<nu>) has_derivative
+        (\<lambda>c. dterm_sem
+              \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. c $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                 ODEs = ODEs I\<rparr>
+              \<theta>\<^sub>1 \<nu> *  extendf_deriv I i \<theta>\<^sub>2 \<nu> c +
+             
+              extendf_deriv I i \<theta>\<^sub>1 \<nu> c *
+             dterm_sem
+              \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. c $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                 ODEs = ODEs I\<rparr>
+              \<theta>\<^sub>2 \<nu>
+              ))
+        (at x)"
+      apply auto
+  qed
+  subgoal for i
+    apply(auto)
     apply(rule exI)
     apply(rule allI)
     apply(subst has_derivative_const)
