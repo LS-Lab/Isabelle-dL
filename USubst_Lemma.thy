@@ -323,24 +323,14 @@ assumes good_interp:"is_interp I"
 shows "is_interp (extendc I R)"
   sorry
 
-(* 
-dfree_Var: "dfree (Var i)"
-| dfree_Const: "dfree (Const r)"
-| dfree_Fun: "(\<And>i. dfree (args i)) \<Longrightarrow> dfree (Function i args)"
-| dfree_Plus: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
-| dfree_Times: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
-  
-*)
-primrec extendf_deriv :: "('sf,'sc,'sz) interp \<Rightarrow> 'sf \<Rightarrow> (*('sz, real) vec \<Rightarrow>*) ('sf + 'sz,'sz) trm \<Rightarrow> 'sz state \<Rightarrow> 'sz Rvec \<Rightarrow> ('sz Rvec \<Rightarrow> real)"
+primrec extendf_deriv :: "('sf,'sc,'sz) interp \<Rightarrow> 'sf \<Rightarrow> ('sf + 'sz,'sz) trm \<Rightarrow> 'sz state \<Rightarrow> 'sz Rvec \<Rightarrow> ('sz Rvec \<Rightarrow> real)"
 where
   "extendf_deriv I _ (Var i) \<nu> x = (\<lambda>_. 0)"
 | "extendf_deriv I _ (Const r) \<nu> x = (\<lambda>_. 0)"
-| "extendf_deriv I g (Function f args) \<nu> x = undefined
-  (*(\<lambda> \<nu>'.
-    ((case f of 
-       Inl ff \<Rightarrow> FunctionFrechet I ff \<nu>'
-     | Inr ff \<Rightarrow> dterm_sem (extendf I \<nu>') f' \<nu>)
-      \<circ> (extendf_deriv I )))*)"
+| "extendf_deriv I g (Function f args) \<nu> x =
+  (case f of 
+    Inl ff \<Rightarrow> (\<lambda> \<nu>'. FunctionFrechet I ff x \<nu>') \<circ> (\<lambda>\<nu>'. \<chi> i. extendf_deriv I g (args i) \<nu> x \<nu>')
+  | Inr ff \<Rightarrow> (\<lambda> \<nu>'. \<nu>' $ ff))"
 | "extendf_deriv I g (Plus t1 t2) \<nu> x = (\<lambda>\<nu>'. (extendf_deriv I g t1 \<nu> x \<nu>') + (extendf_deriv I g t2 \<nu> x \<nu>'))"
 | "extendf_deriv I g (Times t1 t2) \<nu> x = 
    (\<lambda>\<nu>'. ((dterm_sem (extendf I x) t1 \<nu> * (extendf_deriv I g t2 \<nu> x \<nu>'))) 
