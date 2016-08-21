@@ -58,7 +58,7 @@ where
 | "NTsubst (Times \<theta>1 \<theta>2) \<sigma> = Times (NTsubst \<theta>1 \<sigma>) (NTsubst \<theta>2 \<sigma>)"  
 | "NTsubst (Differential \<theta>) \<sigma> = Differential (NTsubst \<theta> \<sigma>)"
 
-primrec Tsubst::"('sf, 'sz) trm \<Rightarrow> ('sf, 'sc, 'sz) subst \<Rightarrow> ('sf, 'sz) trm"
+primrec Tsubst::"('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) trm"
 where
   "Tsubst (Var x) \<sigma> = Var x"
 | "Tsubst (DiffVar x) \<sigma> = DiffVar x"  
@@ -76,7 +76,7 @@ where
 | "NOsubst (OSing x \<theta>) \<sigma> = OSing x (NTsubst \<theta> \<sigma>)"
 | "NOsubst (OProd ODE1 ODE2) \<sigma> = OProd (NOsubst ODE1 \<sigma>) (NOsubst ODE2 \<sigma>)"
 
-primrec Osubst::"('sf, 'sz) ODE \<Rightarrow> ('sf, 'sc, 'sz) subst \<Rightarrow> ('sf, 'sz) ODE"
+primrec Osubst::"('a, 'c) ODE \<Rightarrow> ('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) ODE"
 where
   "Osubst (OVar c) \<sigma> = (case SODEs \<sigma> c of Some c' \<Rightarrow> c' | None \<Rightarrow> OVar c)"
 | "Osubst (OSing x \<theta>) \<sigma> = OSing x (Tsubst \<theta> \<sigma>)"
@@ -125,8 +125,8 @@ where
 | "PFsubst (InContext C \<phi>) \<sigma> = (case C of Inl C' \<Rightarrow> InContext C' (PFsubst \<phi> \<sigma>) | Inr p' \<Rightarrow> \<sigma> p')"
 
   
-fun Psubst::"('sf, 'sc, 'sz) hp \<Rightarrow> ('sf, 'sc, 'sz) subst \<Rightarrow> ('sf, 'sc, 'sz) hp"
-and Fsubst::"('sf, 'sc, 'sz) formula \<Rightarrow> ('sf, 'sc, 'sz) subst \<Rightarrow> ('sf, 'sc, 'sz) formula"
+fun Psubst::"('a, 'b, 'c) hp \<Rightarrow> ('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) hp"
+and Fsubst::"('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) formula"
 where
   "Psubst (Pvar a) \<sigma> = (case SPrograms \<sigma> a of Some a' \<Rightarrow> a' | None \<Rightarrow> Pvar a)"
 | "Psubst (Assign x \<theta>) \<sigma> = Assign x (Tsubst \<theta> \<sigma>)"
@@ -167,7 +167,7 @@ where "SDom \<sigma> =
 definition TUadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
 where "TUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> SIGT \<theta>. (case SFunctions \<sigma> i of Some f' \<Rightarrow> FVT f')) \<inter> U) = {}"
 
-inductive Tadmit :: "('sf, 'sc, 'sz) subst \<Rightarrow> ('sf, 'sz) trm \<Rightarrow> bool"
+inductive Tadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) trm \<Rightarrow> bool"
 where 
   Tadmit_Diff:"Tadmit \<sigma> \<theta> \<Longrightarrow> TUadmit \<sigma> \<theta> UNIV \<Longrightarrow> Tadmit \<sigma> (Differential \<theta>)"
 | Tadmit_Fun1:"(\<And>i. Tadmit \<sigma> (args i)) \<Longrightarrow> SFunctions \<sigma> f = Some f' \<Longrightarrow> NTadmit (\<lambda> i. Tsubst (args i) \<sigma>) f' \<Longrightarrow> Tadmit \<sigma> (Function f args)"
@@ -236,7 +236,7 @@ where "extendc I R =
 definition adjoint :: "('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sc, 'sz) subst \<Rightarrow> 'sz state \<Rightarrow> ('sf, 'sc, 'sz) interp" 
 where "adjoint I \<sigma> \<nu> =
 \<lparr>Functions =   (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. dterm_sem (extendf I R) f' \<nu>) | None \<Rightarrow> Functions I f),
- Predicates = (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda>R. \<nu> \<in>fml_sem (extendf I R) p') | None \<Rightarrow> Predicates I p),
+ Predicates = (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda>R. \<nu> \<in> fml_sem (extendf I R) p') | None \<Rightarrow> Predicates I p),
  Contexts =   (\<lambda>c. case SContexts \<sigma> c of Some c' \<Rightarrow> (\<lambda>R. fml_sem (extendc I R) c') | None \<Rightarrow> Contexts I c),
  Programs =   (\<lambda>a. case SPrograms \<sigma> a of Some a' \<Rightarrow> prog_sem I a' | None \<Rightarrow> Programs I a),
  ODEs =     (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_sem I ode' | None \<Rightarrow> ODEs I ode)\<rparr>"

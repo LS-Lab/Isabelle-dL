@@ -123,7 +123,7 @@ lemma dfree_vac2: "\<not> dfree (Differential d)"
  us the axioms we want for differential terms essentially for free.
  *)
 lemma frechet_correctness:
-  fixes I :: "('sf, 'sc, 'sz) interp" and \<nu>
+  fixes I :: "('a::finite, 'b::finite, 'c::finite) interp" and \<nu>
   assumes good_interp: "is_interp I"
   shows "dfree \<theta> \<Longrightarrow> FDERIV (sterm_sem I \<theta>) \<nu> :> (frechet I \<theta> \<nu>)"
 proof (induct rule: dfree.induct)

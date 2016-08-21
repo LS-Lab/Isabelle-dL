@@ -45,6 +45,11 @@ lemma has_derivative_proj:
       using bounded_linear.has_derivative[OF bounded_proj, of "(\<lambda>x. \<chi> i. f i x)" "(\<lambda>h. \<chi> i. f' i h)", OF assm]
       by auto
   qed
+
+lemma has_derivative_proj':
+  fixes i::"'a::finite"
+  shows "\<exists>D. \<forall>x. ((\<lambda> x. x $ i) has_derivative (D x)) (at x)"
+  sorry    
   
 lemma has_vector_derivative_zero_constant:
   assumes "convex s"
