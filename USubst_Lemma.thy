@@ -313,11 +313,13 @@ proof (induction rule: dfree.induct)
     qed (auto simp add: IH adjoint_def vec_extensionality frees)
   qed auto
 
+(* TODO: In principle useful, not used yet *)
 lemma extendf_safe:
 assumes good_interp:"is_interp I"
 shows "is_interp (extendf I R)"
   sorry
 
+(* TODO: In principle useful, not used yet *)
 lemma extendc_safe:
 assumes good_interp:"is_interp I"
 shows "is_interp (extendc I R)"
@@ -495,7 +497,8 @@ proof (induction rule: Tadmit.induct)
       by (auto simp add: IH safes)
     let ?sub = "(\<lambda> i. Tsubst (args i) \<sigma>)"
     have subSafe:"(\<And>i. dsafe (?sub i))"
-      using tsubst_preserves_safe[OF safes sfree] by simp
+      using tsubst_preserves_safe[OF safes sfree]
+      by (simp add: safes sfree tsubst_preserves_safe)
     have freef:"dfree f'" using sfree some by auto 
     have IH2:"dterm_sem I (NTsubst f' ?sub) \<nu> = dterm_sem (NTadjoint I ?sub \<nu>) f' \<nu>"
       by (simp add: nsubst_dterm'[OF good_interp NTA freef subSafe])
@@ -540,7 +543,7 @@ next
       from free have tsafe:"dsafe \<theta>" using dfree_is_dsafe by auto
       have freeSubst:"dfree (Tsubst \<theta> \<sigma>)" 
         using tsubst_preserves_free[OF free sfree]
-        by auto 
+        using Tadmit_Diff.prems(2) free tsubst_preserves_free by blast 
       have IH':"\<And>\<nu>. dterm_sem I (Tsubst \<theta> \<sigma>) \<nu> = dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta> \<nu>"
         using IH[OF tsafe sfree] by auto
       have IH'':"\<And>\<nu>'. dterm_sem I (Tsubst \<theta> \<sigma>) \<nu>' = dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta> \<nu>'"
