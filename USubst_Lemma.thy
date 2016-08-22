@@ -218,32 +218,43 @@ shows "NTadmit \<sigma> \<theta> \<Longrightarrow> dsafe \<theta> \<Longrightarr
 lemma nsubst_dterm':
 fixes I::"('sf, 'sc, 'sz) interp"
 fixes \<nu>::"'sz state"
-fixes \<nu>'::"'sz state"
 assumes good_interp:"is_interp I"    
-shows "NTadmit \<sigma> \<theta> \<Longrightarrow> dfree \<theta> \<Longrightarrow> (\<And>i. dsafe (\<sigma> i)) \<Longrightarrow> dterm_sem I (NTsubst \<theta> \<sigma>) \<nu>' = dterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> \<nu>'"
-  sorry
-
-(*proof (induction rule: NTadmit.induct)
-  case (NTadmit_Fun \<sigma> args f) 
-    thus "?case" (*by (cases "f") (auto simp add: vec_extensionality  NTadjoint_def)*)
-      sorry
+shows "NTadmit \<sigma> \<theta> \<Longrightarrow> dfree \<theta> \<Longrightarrow> (\<And>i. dsafe (\<sigma> i)) \<Longrightarrow> dterm_sem I (NTsubst \<theta> \<sigma>) \<nu> = dterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> \<nu>"
+proof (induction rule: NTadmit.induct)
+  case (NTadmit_Fun \<sigma> args f)
+    assume admit:"\<And>i. NTadmit \<sigma> (args i)"
+    assume IH:"\<And>i. dfree (args i) \<Longrightarrow> (\<And>i. dsafe (\<sigma> i)) \<Longrightarrow> dterm_sem I (NTsubst (args i) \<sigma>) \<nu> = dterm_sem (NTadjoint I \<sigma> \<nu>) (args i) \<nu>"
+    assume free:"dfree ($f f args)"
+    assume safe:"\<And>i. dsafe (\<sigma> i)"
+    from free have frees: "\<And>i. dfree (args i)" by (auto dest: dfree.cases)
+    have sem:"\<And>i. dterm_sem I (NTsubst (args i) \<sigma>) \<nu> = dterm_sem (NTadjoint I \<sigma> \<nu>) (args i) \<nu>"
+      using IH[OF frees safe] by auto
+    have vecEq:" (\<chi> i. dterm_sem (NTadjoint I \<sigma> \<nu>) (args i) \<nu>) =
+     (\<chi> i. dterm_sem
+            \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. dterm_sem I (\<sigma> f') \<nu>), Predicates = Predicates I, Contexts = Contexts I,
+               Programs = Programs I, ODEs = ODEs I\<rparr>
+            (args i) \<nu>) "
+      apply(rule vec_extensionality)
+      by (auto simp add: NTadjoint_def)
+    show " dterm_sem I (NTsubst ($f f args) \<sigma>) \<nu> = dterm_sem (NTadjoint I \<sigma> \<nu>) ($f f args) \<nu>"
+      apply (cases "f") 
+      apply (auto simp add: vec_extensionality  NTadjoint_def)
+      using sem apply auto
+      subgoal for a using vecEq by auto
+      done
 next
     case (NTadmit_Diff \<sigma> \<theta>) 
     hence admit:"NTadmit \<sigma> \<theta>"
       and admitU:"NTUadmit \<sigma> \<theta> UNIV"
-      and IH : "dsafe \<theta> \<Longrightarrow>
+      and IH : "dfree \<theta> \<Longrightarrow>
             (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> dterm_sem I (NTsubst \<theta> \<sigma>) \<nu> = dterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> \<nu>"
-      and safe: "dsafe (Differential \<theta>)" 
-      and freeSub:"\<And>i. dfree (\<sigma> i)"
-      (*by auto*) sorry
-    have free:"dfree \<theta>" using safe by auto
-    have sem:"sterm_sem I (NTsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
-      using nsubst_sterm[OF free freeSub] by auto
+      and safe: "dfree (Differential \<theta>)" 
+      and freeSub:"\<And>i. dsafe (\<sigma> i)"
+      by auto
+    from safe have "False" by (auto dest: dfree.cases)
     then show "dterm_sem I (NTsubst (Differential \<theta>) \<sigma>) \<nu> = dterm_sem (NTadjoint I \<sigma> \<nu>) (Differential \<theta>) \<nu>"
-      (*by (auto simp add: directional_derivative_def frechet_correctness nsubst_frechet[OF good_interp free freeSub])*)
-      sorry
+      by auto
 qed (auto simp add: NTadmit.cases)
-*)
 
 lemma ntsubst_preserves_free:
 "dfree \<theta> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> dfree(NTsubst \<theta> \<sigma>)"
