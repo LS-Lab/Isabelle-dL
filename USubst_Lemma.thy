@@ -329,8 +329,13 @@ where
 | "extendf_deriv I _ (Const r) \<nu> x = (\<lambda>_. 0)"
 | "extendf_deriv I g (Function f args) \<nu> x =
   (case f of 
-    Inl ff \<Rightarrow> (\<lambda> \<nu>'. FunctionFrechet I ff x \<nu>') \<circ> (\<lambda>\<nu>'. \<chi> i. extendf_deriv I g (args i) \<nu> x \<nu>')
-  | Inr ff \<Rightarrow> (\<lambda> \<nu>'. \<nu>' $ ff))"
+    Inl ff \<Rightarrow> (THE f'. \<forall>y. (Functions I ff has_derivative f' y) (at y))
+              (\<chi> i. dterm_sem
+                     \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. x $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                        ODEs = ODEs I\<rparr>
+                     (args i) \<nu>) \<circ>
+             (\<lambda>\<nu>'. \<chi> ia. extendf_deriv I g (args ia) \<nu> x \<nu>')
+  | Inr ff \<Rightarrow> (\<lambda> \<nu>'. 1))"
 | "extendf_deriv I g (Plus t1 t2) \<nu> x = (\<lambda>\<nu>'. (extendf_deriv I g t1 \<nu> x \<nu>') + (extendf_deriv I g t2 \<nu> x \<nu>'))"
 | "extendf_deriv I g (Times t1 t2) \<nu> x = 
    (\<lambda>\<nu>'. ((dterm_sem (extendf I x) t1 \<nu> * (extendf_deriv I g t2 \<nu> x \<nu>'))) 
@@ -342,142 +347,78 @@ lemma extendf_deriv:
   fixes f'::"('sf + 'sz,'sz) trm" and I::"('sf,'sc,'sz) interp"
   assumes free:"dfree f'"
   assumes good_interp:"is_interp I"
-  assumes some:"SFunctions \<sigma> i = Some f'"
-  shows "\<exists>f''. \<forall>x. ((\<lambda>R. dterm_sem (extendf I R) f' \<nu>) has_derivative (extendf_deriv I i f' \<nu> x)) (at x)"
+  (*assumes some:"SFunctions \<sigma> i = Some f'"*)
+  shows "\<exists>f''. \<forall>x. ((\<lambda>R. dterm_sem (extendf I R) f' \<nu>) has_derivative (extendf_deriv I i_f f' \<nu> x)) (at x)"
   using free apply (induction rule: dfree.induct)
   apply(auto)+
   defer
   subgoal for \<theta>\<^sub>1 \<theta>\<^sub>2 x
     apply(rule has_derivative_mult)
     by auto
-  subgoal for args i 
+  subgoal for args i x
     apply(cases "i")
+    defer
+    apply auto
+    subgoal for b using has_derivative_proj' by blast
+    subgoal for a
     proof -
-    fix a::"'sf"
-    (*fix args::"'sz \<Rightarrow> ('sf + 'sz,'sz) trm" and i::"'sf + 'sz"*)
     assume dfrees:"(\<And>i. dfree (args i))"
-    assume IH:"(\<And>i. \<exists>f''. \<forall>x. ((\<lambda>R. dterm_sem
-                                     \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I,
-                                        Programs = Programs I, ODEs = ODEs I\<rparr>
-                                     (args i) \<nu>) has_derivative
-                               f'' x)
-                               (at x))"
-    from IH have IH':"(\<And>i x. \<exists>f''.((\<lambda>R. dterm_sem
-                                     \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I,
-                                        Programs = Programs I, ODEs = ODEs I\<rparr>
-                                     (args i) \<nu>) has_derivative
-                               f'' i x)
-                               (at x))"
-      sorry
-      (*sledgehammer*)
-    then have IHvec:"\<exists> f. (\<forall> x. ((\<lambda> R. \<chi> i. dterm_sem (extendf I R) (args i) \<nu>) has_derivative f x) (at x))"
-      sorry
+    assume IH1:"(\<And>ia. \<forall>x. ((\<lambda>R. dterm_sem
+                      \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                         ODEs = ODEs I\<rparr>
+                      (args ia) \<nu>) has_derivative
+                extendf_deriv I i_f (args ia) \<nu> x)
+                (at x))"
+    then have IH1':"(\<And>ia. \<And>x. ((\<lambda>R. dterm_sem
+                      \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                         ODEs = ODEs I\<rparr>
+                      (args ia) \<nu>) has_derivative
+                extendf_deriv I i_f (args ia) \<nu> x)
+                (at x))"
+      by auto
     assume a:"i = Inl a"
-    (*obtain f''' where allX:"\<forall>x. ((\<lambda>R. dterm_sem
-                                     \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I,
-                                        Programs = Programs I, ODEs = ODEs I\<rparr>
-                                     (args a) \<nu>) has_derivative
-                               f''' x)
-                               (at x)"
-        using IH by auto*)
     note chain = Deriv.derivative_intros(105)
     let ?f = "(\<lambda>x. Functions I a x)"
     let ?g = "(\<lambda> R. (\<chi> i. dterm_sem
                        \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I,
                           Programs = Programs I, ODEs = ODEs I\<rparr>
                        (args i) \<nu>))"
+    let ?myf' = "(\<lambda>x. (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y)) (?g x))"
+    let ?myg' = "(\<lambda>x. (\<lambda>\<nu>'. \<chi> ia. extendf_deriv I i_f (args ia) \<nu> x \<nu>'))"
     have fg_eq:"(\<lambda>R. Functions I a
-                (\<chi> i. dterm_sem
-                       \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I,
-                          Programs = Programs I, ODEs = ODEs I\<rparr>
-                       (args i) \<nu>)) = (?f \<circ> ?g)"
+           (\<chi> i. dterm_sem
+                  \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                     ODEs = ODEs I\<rparr>
+                  (args i) \<nu>)) = (?f \<circ> ?g)"
       by auto
-    (*((\<lambda>x. \<chi> i. f i x) has_derivative (\<lambda>h. \<chi> i. f' i h)) F*)
-    let ?ff = "(\<lambda>x. \<chi> i. (\<lambda>R. \<chi> i. dterm_sem
-                    \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
-                       ODEs = ODEs I\<rparr>
-                    (args i) \<nu>) x $ i)"
-    have f4:"\<exists> f4. \<forall>x. (?ff has_derivative (f4 x)) (at x)"
-      using IHvec by auto
-    have "\<exists>f''. \<forall>x. ((?f o ?g) has_derivative f'' x) (at x)"
-      apply (rule exI)
+    have "\<forall>x. ((?f o ?g) has_derivative (?myf' x \<circ> ?myg' x)) (at x)"
       apply (rule allI)
       apply (rule chain)
-      using f4 apply (auto)
-      apply(auto)
-      subgoal for x
-        
-      apply (rule f4)
-        sorry
-        (*apply (auto intro: derivative_eq_intros)*)
-        (*using IH has_derivative_vec sledgehammer*)
-      using good_interp unfolding is_interp_def by auto
-    show "\<exists>f''. \<forall>x. ((\<lambda>R. (case i of Inl x \<Rightarrow> Functions I x | Inr f' \<Rightarrow> \<lambda>_. R $ f')
-                               (\<chi> i. dterm_sem
-                                      \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I,
-                                         Programs = Programs I, ODEs = ODEs I\<rparr>
-                                      (args i) \<nu>)) has_derivative
-                         f'' x)
-                         (at x)"
-      using a apply auto
-        apply(rule exI)
-        apply(rule allI)
-        using chain apply(auto)
-        sorry
-      apply(rule exI[where x= f'''])
-      using a allX apply (auto)
-      subgoal for x
-        apply (erule allE[where x=x])
-        apply auto
-  qed
-  subgoal for args i
-    subgoal for a
-      apply(auto)
-      sorry
-    apply(auto)
-    subgoal for b
-      apply(rule allI)
-      using has_derivative_proj'[of i] apply auto
-      sledgehammer
-        apply(rule allI)
-        apply auto
-      apply(rule has_derivative_proj')
-      using  apply auto
-      apply(rule exI[where x= "undefined"])
-    sorry
-  done
-    (*proof -
-      fix a
-      assume frees:"(\<And>i. dfree (args i))"
-      assume existss:"(\<And>i. \<exists>f''. \<forall>x. ((\<lambda>R. dterm_sem
-                           \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I,
-                              Programs = Programs I, ODEs = ODEs I\<rparr>
-                           (args i) \<nu>) has_derivative
-                     f'' x)
-                     (at x))"
-      assume inr:"i = Inr a"
-      from frees have free:"dfree (args a)" by auto
-      from existss have exists:"\<exists>f''. \<forall>x. ((\<lambda>R. dterm_sem
-                         \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I,
-                            Programs = Programs I, ODEs = ODEs I\<rparr>
-                         (args a) \<nu>) has_derivative
-                   f'' x)
-                   (at x)"
-        by auto
-      then obtain f'' where f''d:"\<And>x. ((\<lambda>R. dterm_sem
-                         \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I,
-                            Programs = Programs I, ODEs = ODEs I\<rparr>
-                         (args a) \<nu>) has_derivative
-                   f'' x)
-                   (at x)"
-          by auto
-      have blah:"\<And>x. ((\<lambda>R. R $ a) has_derivative (\<lambda>x. axis a 1)) (at x)"
-        sorry
-      show "\<exists>f'''. \<forall>x. ((\<lambda>R. R $ a) has_derivative f''' x) (at x)"
-        sorry 
+      subgoal for xa
+        apply (rule has_derivative_vec)
+        subgoal for i using IH1'[of i xa] by auto
+      done
+      subgoal for xa 
+        using good_interp unfolding is_interp_def by auto
+      done
+    then have "((?f o ?g) has_derivative (?myf' x \<circ> ?myg' x)) (at x)" by auto
+    then show "((\<lambda>R. Functions I a
+           (\<chi> i. dterm_sem
+                  \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                     ODEs = ODEs I\<rparr>
+                  (args i) \<nu>)) has_derivative
+              (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
+      (\<chi> i. dterm_sem
+             \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. x $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                ODEs = ODEs I\<rparr>
+             (args i) \<nu>) \<circ>
+     (\<lambda>\<nu>'. \<chi> ia. extendf_deriv I i_f (args ia) \<nu> x \<nu>'))
+     (at x) "
+      using fg_eq by auto
       qed
-    apply(rule allI)*)
-  oops
+    done
+  done
+
 lemma the_deriv:
   assumes deriv:"(f has_derivative F) (at x)"
   shows "(THE G. (f has_derivative G) (at x)) = F"
