@@ -100,13 +100,16 @@ lemma adjoint_consequence:"(\<And>f f'. SFunctions \<sigma> f = Some f' \<Longri
       done    
     done
 
-lemma uadmit_sterm_adjoint:"TUadmit \<sigma> \<theta> U \<Longrightarrow> Vagree \<nu> \<omega> (-U) \<Longrightarrow> sterm_sem (adjoint I \<sigma> \<nu>) \<theta> = sterm_sem (adjoint I \<sigma> \<omega>) \<theta>"
+(* Not used, but good practice for dterm adjoint *)
+lemma uadmit_sterm_adjoint:
+  assumes TUA:"TUadmit \<sigma> \<theta> U"
+  assumes VA:"Vagree \<nu> \<omega> (-U)"
+  assumes dsafe:"\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> Vagree \<nu> \<omega> (FVS \<sigma>) \<Longrightarrow> dsafe f'"
+  assumes fsafe:"\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> Vagree \<nu> \<omega> (FVS \<sigma>) \<Longrightarrow> fsafe f'"
+  shows  "sterm_sem (adjoint I \<sigma> \<nu>) \<theta> = sterm_sem (adjoint I \<sigma> \<omega>) \<theta>"
   proof -
-    assume TUA:"TUadmit \<sigma> \<theta> U"
-    assume VA:"Vagree \<nu> \<omega> (- U)"
     have sub:"(\<Union>x. SFV \<sigma> x) \<subseteq> (-U)"
-      sorry
-      (*apply (auto)
+      apply (auto)
       subgoal for x xa
         apply(cases "xa")
         apply(auto)
@@ -116,26 +119,34 @@ lemma uadmit_sterm_adjoint:"TUadmit \<sigma> \<theta> U \<Longrightarrow> Vagree
           using TUA unfolding TUadmit_def using VA unfolding Vagree_def apply auto
       using TUA unfolding TUadmit_def unfolding SFV.simps 
       apply auto
-      subgoal for x xa
+      subgoal for aa
         apply (cases "xa")
         apply auto
-        subgoal for a
-          apply(cases "SFunctions \<sigma> a")
-          apply auto
-          sledgehammer*)
-    (*have VA':"Vagree \<nu> \<omega> (FVS \<sigma>)"
-      using TUA VA unfolding TUadmit_def FVS_def
-      apply auto
-      sledgehammer*)
+        apply(cases "SFunctions \<sigma> a")
+        apply auto
+        sorry
+        done
+      subgoal for b sorry
+      done
+    done
+    have VAF:"Vagree \<nu> \<omega> (FVS \<sigma>)" 
+      using agree_sub[OF sub VA] 
+      by (auto simp add: FVS_def)
     have eq:"(adjoint I \<sigma> \<nu>) = (adjoint I \<sigma> \<omega>)"
       apply(rule adjoint_consequence)
-      sorry
-    show "?thesis"
-      sorry
+      using VAF
+      using fsafe dsafe by auto
+    then show "?thesis"
+      by auto
   qed
   
 (* TODO: Actually used, so prove it *)
-lemma uadmit_dterm_adjoint:"TUadmit \<sigma> \<theta> U \<Longrightarrow> Vagree \<nu> \<omega> (-U) \<Longrightarrow> dterm_sem (adjoint I \<sigma> \<nu>) \<theta> = dterm_sem (adjoint I \<sigma> \<omega>) \<theta>"
+lemma uadmit_dterm_adjoint:
+  assumes TUA:"TUadmit \<sigma> \<theta> U"
+  assumes VA:"Vagree \<nu> \<omega> (-U)"
+  assumes dsafe:"\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> Vagree \<nu> \<omega> (FVS \<sigma>) \<Longrightarrow> dsafe f'"
+  assumes fsafe:"\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> Vagree \<nu> \<omega> (FVS \<sigma>) \<Longrightarrow> fsafe f'"
+  shows  "dterm_sem (adjoint I \<sigma> \<nu>) \<theta> = dterm_sem (adjoint I \<sigma> \<omega>) \<theta>"
   sorry
 
 lemma uadmit_prog_adjoint:"PUadmit \<sigma> a U \<Longrightarrow> Vagree \<nu> \<omega> (-U) \<Longrightarrow> prog_sem (adjoint I \<sigma> \<nu>) a = prog_sem (adjoint I \<sigma> \<omega>) a"
@@ -550,6 +561,7 @@ shows "
   Tadmit \<sigma> \<theta> \<Longrightarrow>
   dsafe \<theta> \<Longrightarrow>
   (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> 
+  (\<And>f f'. SPredicates \<sigma> f = Some f'  \<Longrightarrow> fsafe f') \<Longrightarrow>
   (\<And>\<nu>. dterm_sem I (Tsubst \<theta> \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) \<theta> \<nu>)"
 proof (induction rule: Tadmit.induct)
   case (Tadmit_Fun1 \<sigma> args f f' \<nu>) 
@@ -599,7 +611,11 @@ next
       and IH:"dsafe \<theta> \<Longrightarrow> (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> (\<And>\<nu>. dterm_sem I (Tsubst \<theta> \<sigma>) \<nu> = dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta> \<nu>)"
       and safe:"dsafe (Differential \<theta>)"
       and sfree:"\<And>i f'1. SFunctions \<sigma> i = Some f'1 \<Longrightarrow> dfree f'1"
+      and spsafe:"\<And>f f'. SPredicates \<sigma> f = Some f'  \<Longrightarrow> fsafe f'"
         by auto
+      from sfree have sdsafe:"\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dsafe f'"
+        using dfree_is_dsafe by auto  
+      
       have VA:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (-UNIV)" unfolding Vagree_def by auto
       from safe have free:"dfree \<theta>" by (auto dest: dsafe.cases intro: dfree.intros)
       from free have tsafe:"dsafe \<theta>" using dfree_is_dsafe by auto
@@ -610,7 +626,7 @@ next
         using IH[OF tsafe sfree] by auto
       have IH'':"\<And>\<nu>'. dterm_sem I (Tsubst \<theta> \<sigma>) \<nu>' = dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta> \<nu>'"
         subgoal for \<nu>'
-        using uadmit_dterm_adjoint[OF TUA VA, of I \<nu> \<nu>'] IH'[of \<nu>'] by auto
+        using uadmit_dterm_adjoint[OF TUA VA sdsafe spsafe, of \<nu> \<nu>'] IH'[of \<nu>'] by auto
       done
       have sem_eq:"sterm_sem I (Tsubst \<theta> \<sigma>) = sterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>" 
         apply (auto simp add: fun_eq_iff)
