@@ -460,16 +460,17 @@ shows "is_interp (adjoint I \<sigma> \<nu>)"
         assume free:"dfree f'"
         let ?f = "(\<lambda>R. dterm_sem (extendf I R) f' \<nu>)"
         let ?Poo = "(\<lambda>fd. (\<forall>x. (?f has_derivative (fd x)) (at x)))"
-        obtain f'' where Pf:"?Poo f''"
-            using extendf_deriv[OF good_subst[of i f'] good_interp, of \<sigma> i "\<nu>", OF some some]
+        let ?f''="extendf_deriv I i f' \<nu>"
+        have Pf:"?Poo ?f''"
+            using extendf_deriv[OF good_subst[of i f'] good_interp, of \<nu> i, OF some]
             by auto
-        have "(THE G. (?f has_derivative G) (at x)) = f'' x"
+        have "(THE G. (?f has_derivative G) (at x)) = ?f'' x"
           apply(rule the_deriv)
           using Pf by auto
-        then have the_eq:"(THE G. \<forall> x. (?f has_derivative G x) (at x)) = f''"
+        then have the_eq:"(THE G. \<forall> x. (?f has_derivative G x) (at x)) = ?f''"
           using Pf the_all_deriv by auto
         show "((\<lambda>R. dterm_sem (extendf I R) f' \<nu>) has_derivative (THE f'a. \<forall>x. ((\<lambda>R. dterm_sem (extendf I R) f' \<nu>) has_derivative f'a x) (at x)) x) (at x)"
-          using the_eq Pf by blast
+          using the_eq Pf by simp
         qed
     done
   done
