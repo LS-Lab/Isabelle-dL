@@ -692,15 +692,22 @@ next
     by  (auto intro:dsafe.intros ntsubst_preserves_free)
 qed (auto simp add: ntsubst_preserves_free intro: dsafe.intros)
 
-(* TODO: Actually used, so prove it *)
 lemma tsubst_preserves_safe:
 "dsafe \<theta> \<Longrightarrow>  (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> dsafe(Tsubst \<theta> \<sigma>)"
 proof (induction rule: dsafe.induct) 
-  case (dsafe_Fun args i) then show "?case" 
-    sorry 
-    (* by (cases "SFunctions \<sigma> i") (auto intro:dsafe.intros ntsubst_preserves_safe tsubst_preserves_free dfree_is_dsafe)*)
+  case (dsafe_Fun args i) 
+    assume dsafes:"\<And>i. dsafe (args i)"
+    assume IH:"\<And>j. (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> dsafe (Tsubst (args j) \<sigma>)"
+    assume frees:"\<And>i f. SFunctions \<sigma> i = Some f \<Longrightarrow> dfree f"
+    have IH':"\<And>i. dsafe (Tsubst (args i) \<sigma>)"
+      using frees IH by auto
+  then show "?case" 
+    apply auto
+    apply(cases "SFunctions \<sigma> i")
+    subgoal using IH frees by auto
+    subgoal for a using frees[of i a] ntsubst_free_to_safe[of a] IH' by auto
+    done 
 qed (auto intro: dsafe.intros tsubst_preserves_free)
-
 
 lemma subst_dterm:
 fixes I::"('sf, 'sc, 'sz) interp"
