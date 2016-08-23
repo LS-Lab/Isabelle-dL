@@ -100,15 +100,122 @@ lemma adjoint_consequence:"(\<And>f f'. SFunctions \<sigma> f = Some f' \<Longri
       done    
     done
 
+lemma SIGT_plus1:"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT (Plus t1 t2). case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x) 
+  \<Longrightarrow> Vagree \<nu> \<omega> (\<Union>i\<in>SIGT t1. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x)"
+  unfolding Vagree_def by auto
+
+lemma SIGT_plus2:"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT (Plus t1 t2). case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x) 
+  \<Longrightarrow> Vagree \<nu> \<omega> (\<Union>i\<in>SIGT t2. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x)"
+  unfolding Vagree_def by auto
+
+lemma SIGT_times1:"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT (Times t1 t2). case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x) 
+  \<Longrightarrow> Vagree \<nu> \<omega> (\<Union>i\<in>SIGT t1. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x)"
+  unfolding Vagree_def by auto
+
+lemma SIGT_times2:"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT (Times t1 t2). case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x) 
+  \<Longrightarrow> Vagree \<nu> \<omega> (\<Union>i\<in>SIGT t2. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x)"
+  unfolding Vagree_def by auto
+
+lemma uadmit_sterm_adjoint':
+  assumes dsafe:"\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dsafe f'"
+  assumes fsafe:"\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f'"
+  shows  "Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x) \<Longrightarrow> sterm_sem (adjoint I \<sigma> \<nu>) \<theta> = sterm_sem (adjoint I \<sigma> \<omega>) \<theta>"
+proof (induct "\<theta>")
+  case (Plus \<theta>1 \<theta>2)
+    assume IH1:"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>1. case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a) \<Longrightarrow> sterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>1 = sterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>1"
+    assume IH2:"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>2. case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a) \<Longrightarrow> sterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>2 = sterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>2"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT (Plus \<theta>1 \<theta>2). case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a)"
+  then show ?case
+    using IH1[OF SIGT_plus1[OF VA]] IH2[OF SIGT_plus2[OF VA]] by auto
+next
+  case (Times \<theta>1 \<theta>2)
+    assume IH1:"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>1. case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a) \<Longrightarrow> sterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>1 = sterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>1"
+    assume IH2:"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>2. case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a) \<Longrightarrow> sterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>2 = sterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>2"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT (Times \<theta>1 \<theta>2). case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a)"    
+  then show ?case
+    using IH1[OF SIGT_times1[OF VA]] IH2[OF SIGT_times2[OF VA]] by auto
+next
+  case (Function x1a x2a)
+    assume IH:"\<And>x. x \<in> range x2a \<Longrightarrow> Vagree \<nu> \<omega> (\<Union>i\<in>SIGT x. case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a) \<Longrightarrow>
+      sterm_sem (local.adjoint I \<sigma> \<nu>) x = sterm_sem (local.adjoint I \<sigma> \<omega>) x"
+    from IH have IH':"\<And>j. Vagree \<nu> \<omega> (\<Union>i\<in>SIGT (x2a j). case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a) \<Longrightarrow>
+      sterm_sem (local.adjoint I \<sigma> \<nu>) (x2a j) = sterm_sem (local.adjoint I \<sigma> \<omega>) (x2a j)"
+      using rangeI by auto
+    assume VA:"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT ($f x1a x2a). case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a)"
+    from VA have VAs:"\<And>j. Vagree \<nu> \<omega> (\<Union>i\<in>SIGT (x2a j). case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a)"
+      unfolding Vagree_def SIGT.simps using rangeI by blast
+    have SIGT:"x1a \<in> SIGT ($f x1a x2a)" by auto
+    have VAsub:"\<And>a. SFunctions \<sigma> x1a = Some a \<Longrightarrow> (FVT a) \<subseteq> (\<Union>i\<in>SIGT ($f x1a x2a). case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a)"
+      using SIGT by auto
+    have VAf:"\<And>a. SFunctions \<sigma> x1a = Some a \<Longrightarrow> Vagree \<nu> \<omega> (FVT a)"
+      using agree_sub[OF VAsub VA] by auto
+  then show ?case 
+    using IH'[OF VAs] apply (auto simp add: fun_eq_iff)
+    apply(cases "SFunctions \<sigma> x1a")
+    defer
+    subgoal for x a
+      proof -
+        assume VA:"(\<And>a. SFunctions \<sigma> x1a = Some a \<Longrightarrow> Vagree \<nu> \<omega> (FVT a))"
+        assume sems:"(\<And>j. \<forall>x. sterm_sem (local.adjoint I \<sigma> \<nu>) (x2a j) x = sterm_sem (local.adjoint I \<sigma> \<omega>) (x2a j) x)"
+        assume some:"SFunctions \<sigma> x1a = Some a"
+        note FVT = VAf[OF some]
+        have dsem:"\<And>R . dterm_sem (extendf I R) a \<nu> = dterm_sem (extendf I R) a \<omega>"
+          using coincidence_dterm[OF dsafe[OF some] FVT] by auto
+        have "\<And>R. Functions (local.adjoint I \<sigma> \<nu>) x1a R = Functions (local.adjoint I \<sigma> \<omega>) x1a R"
+          using dsem some unfolding adjoint_def by auto
+        then show "Functions (local.adjoint I \<sigma> \<nu>) x1a (\<chi> i. sterm_sem (local.adjoint I \<sigma> \<omega>) (x2a i) x) =
+                   Functions (local.adjoint I \<sigma> \<omega>) x1a (\<chi> i. sterm_sem (local.adjoint I \<sigma> \<omega>) (x2a i) x)"
+          by auto
+      qed
+    unfolding adjoint_def apply auto    
+    done
+qed (auto)  
+  
 (* Not used, but good practice for dterm adjoint *)
 lemma uadmit_sterm_adjoint:
   assumes TUA:"TUadmit \<sigma> \<theta> U"
   assumes VA:"Vagree \<nu> \<omega> (-U)"
-  assumes dsafe:"\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> Vagree \<nu> \<omega> (FVS \<sigma>) \<Longrightarrow> dsafe f'"
-  assumes fsafe:"\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> Vagree \<nu> \<omega> (FVS \<sigma>) \<Longrightarrow> fsafe f'"
+  assumes dsafe:"\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dsafe f'"
+  assumes fsafe:"\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f'"
   shows  "sterm_sem (adjoint I \<sigma> \<nu>) \<theta> = sterm_sem (adjoint I \<sigma> \<omega>) \<theta>"
   proof -
+    have duh:"\<And>A B. A \<inter> B = {} \<Longrightarrow> A \<subseteq> -B"
+      by auto
+    have "\<And>x. x \<in> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x) \<Longrightarrow> x \<in> (-U)"
+      using TUA unfolding TUadmit_def by auto
+    then have sub1:"(\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x) \<subseteq> -U"
+      by auto
+    then have VA':"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x)"
+      using agree_sub[OF sub1 VA] by auto
+    (*have "\<And>x. x \<in> (\<Union>x. SFV \<sigma> x) \<Longrightarrow> x \<in> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x)"*)
+    have "\<And>x y . x \<in> (SFV \<sigma> y) \<Longrightarrow> (\<exists>i. i \<in> SIGT \<theta> \<and> (x \<in> (case SFunctions \<sigma> i of Some z \<Rightarrow> FVT z)))"
+      subgoal for x y
+        apply(cases "y")
+        subgoal for a 
+          apply(cases "SFunctions \<sigma> a")
+          subgoal using VA unfolding Vagree_def by auto
+          subgoal for aa
+            apply(rule exI[where x="a"])
+            apply auto
+            using TUA VA unfolding Vagree_def TUadmit_def apply auto
+            sorry
+          done
+          (*subgoal for aa using VA unfolding Vagree_def apply auto sledgehammer*)
+        subgoal for b
+          using TUA VA unfolding Vagree_def TUadmit_def apply auto
+            
+          using TUA VA unfolding Vagree_def TUadmit_def apply auto
+          
+          using VA unfolding Vagree_def apply auto
+          
+      using TUA VA unfolding Vagree_def TUadmit_def apply auto
+      sorry
+    (* have "\<And>x. x \<in> (\<Union>x. SFV \<sigma> x) \<Longrightarrow> x \<in> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x)"
+    *)
+    then have sub2:"(\<Union>x. SFV \<sigma> x) \<subseteq> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x)"
+      by auto
     have sub:"(\<Union>x. SFV \<sigma> x) \<subseteq> (-U)"
+      using sub1 sub2 by auto
       apply (auto)
       subgoal for x xa
         apply(cases "xa")
@@ -116,19 +223,20 @@ lemma uadmit_sterm_adjoint:
         subgoal for a
           apply(cases "SFunctions \<sigma> a")
           apply(auto)
+          using TUA unfolding TUadmit_def
           using TUA unfolding TUadmit_def using VA unfolding Vagree_def apply auto
-      using TUA unfolding TUadmit_def unfolding SFV.simps 
-      apply auto
-      subgoal for aa
-        apply (cases "xa")
-        apply auto
-        apply(cases "SFunctions \<sigma> a")
-        apply auto
-        sorry
+          using TUA unfolding TUadmit_def unfolding SFV.simps 
+          apply auto
+          subgoal for aa
+            apply (cases "xa")
+            apply auto
+            apply(cases "SFunctions \<sigma> a")
+            apply auto
+            sorry
+            done
+          subgoal for b sorry
         done
-      subgoal for b sorry
       done
-    done
     have VAF:"Vagree \<nu> \<omega> (FVS \<sigma>)" 
       using agree_sub[OF sub VA] 
       by (auto simp add: FVS_def)
@@ -403,6 +511,7 @@ next
     by  (auto intro:dsafe.intros ntsubst_preserves_free)
 qed (auto simp add: ntsubst_preserves_free intro: dsafe.intros)
 
+(* TODO: Actually used, so prove it *)
 lemma tsubst_preserves_safe:
 "dsafe \<theta> \<Longrightarrow>  (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> dsafe(Tsubst \<theta> \<sigma>)"
 proof (induction rule: dsafe.induct) 
@@ -615,7 +724,6 @@ next
         by auto
       from sfree have sdsafe:"\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dsafe f'"
         using dfree_is_dsafe by auto  
-      
       have VA:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (-UNIV)" unfolding Vagree_def by auto
       from safe have free:"dfree \<theta>" by (auto dest: dsafe.cases intro: dfree.intros)
       from free have tsafe:"dsafe \<theta>" using dfree_is_dsafe by auto
