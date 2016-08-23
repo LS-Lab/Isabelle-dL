@@ -19,6 +19,191 @@ lemma interp_eq:
    \<lparr>Functions = f', Predicates = p', Contexts = c', Programs = PP', ODEs = ode'\<rparr>"
   by auto
 
+lemma sterm_determines_frechet:
+fixes I J::"('sf, 'sc, 'sz) interp" 
+  and \<theta>1 \<theta>2 :: "('sf, 'sz) trm"
+  and \<nu> 
+assumes good_interp1:"is_interp I"
+assumes good_interp2:"is_interp J"
+assumes free1:"dfree \<theta>1"
+assumes free2:"dfree \<theta>2"
+assumes sem:"sterm_sem I \<theta>1 = sterm_sem J \<theta>2"
+shows "frechet I \<theta>1 (fst \<nu>) (snd \<nu>) = frechet J \<theta>2 (fst \<nu>) (snd \<nu>)"
+proof -
+  have d1:"(sterm_sem I \<theta>1 has_derivative (frechet I \<theta>1 (fst \<nu>))) (at (fst \<nu>))"
+    using frechet_correctness[OF good_interp1 free1] by auto
+  have d2:"(sterm_sem J \<theta>2 has_derivative (frechet J \<theta>2 (fst \<nu>))) (at (fst \<nu>))"
+    using frechet_correctness[OF good_interp2 free2] by auto
+  then have d1':"(sterm_sem I \<theta>1 has_derivative (frechet J \<theta>2 (fst \<nu>))) (at (fst \<nu>))"
+    using sem by auto
+  thus "?thesis" using has_derivative_unique d1 d1' by metis 
+qed
+
+
+(* TODO: In principle useful, not used yet *)
+lemma extendf_safe:
+assumes good_interp:"is_interp I"
+shows "is_interp (extendf I R)"
+  sorry
+
+(* TODO: In principle useful, not used yet *)
+lemma extendc_safe:
+assumes good_interp:"is_interp I"
+shows "is_interp (extendc I R)"
+  sorry
+
+primrec extendf_deriv :: "('sf,'sc,'sz) interp \<Rightarrow> 'sf \<Rightarrow> ('sf + 'sz,'sz) trm \<Rightarrow> 'sz state \<Rightarrow> 'sz Rvec \<Rightarrow> ('sz Rvec \<Rightarrow> real)"
+where
+  "extendf_deriv I _ (Var i) \<nu> x = (\<lambda>_. 0)"
+| "extendf_deriv I _ (Const r) \<nu> x = (\<lambda>_. 0)"
+| "extendf_deriv I g (Function f args) \<nu> x =
+  (case f of 
+    Inl ff \<Rightarrow> (THE f'. \<forall>y. (Functions I ff has_derivative f' y) (at y))
+              (\<chi> i. dterm_sem
+                     \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. x $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                        ODEs = ODEs I\<rparr>
+                     (args i) \<nu>) \<circ>
+             (\<lambda>\<nu>'. \<chi> ia. extendf_deriv I g (args ia) \<nu> x \<nu>')
+  | Inr ff \<Rightarrow> (\<lambda> \<nu>'. 1))"
+| "extendf_deriv I g (Plus t1 t2) \<nu> x = (\<lambda>\<nu>'. (extendf_deriv I g t1 \<nu> x \<nu>') + (extendf_deriv I g t2 \<nu> x \<nu>'))"
+| "extendf_deriv I g (Times t1 t2) \<nu> x = 
+   (\<lambda>\<nu>'. ((dterm_sem (extendf I x) t1 \<nu> * (extendf_deriv I g t2 \<nu> x \<nu>'))) 
+       + (extendf_deriv I g t1 \<nu> x \<nu>') * (dterm_sem (extendf I x) t2 \<nu>))"
+| "extendf_deriv I g ($' _) \<nu> = undefined"
+| "extendf_deriv I g (Differential _) \<nu> = undefined"
+
+lemma extendf_deriv:
+  fixes f'::"('sf + 'sz,'sz) trm" and I::"('sf,'sc,'sz) interp"
+  assumes free:"dfree f'"
+  assumes good_interp:"is_interp I"
+  (*assumes some:"SFunctions \<sigma> i = Some f'"*)
+  shows "\<exists>f''. \<forall>x. ((\<lambda>R. dterm_sem (extendf I R) f' \<nu>) has_derivative (extendf_deriv I i_f f' \<nu> x)) (at x)"
+  using free apply (induction rule: dfree.induct)
+  apply(auto)+
+  defer
+  subgoal for \<theta>\<^sub>1 \<theta>\<^sub>2 x
+    apply(rule has_derivative_mult)
+    by auto
+  subgoal for args i x
+    apply(cases "i")
+    defer
+    apply auto
+    subgoal for b using has_derivative_proj' by blast
+    subgoal for a
+    proof -
+    assume dfrees:"(\<And>i. dfree (args i))"
+    assume IH1:"(\<And>ia. \<forall>x. ((\<lambda>R. dterm_sem
+                      \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                         ODEs = ODEs I\<rparr>
+                      (args ia) \<nu>) has_derivative
+                extendf_deriv I i_f (args ia) \<nu> x)
+                (at x))"
+    then have IH1':"(\<And>ia. \<And>x. ((\<lambda>R. dterm_sem
+                      \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                         ODEs = ODEs I\<rparr>
+                      (args ia) \<nu>) has_derivative
+                extendf_deriv I i_f (args ia) \<nu> x)
+                (at x))"
+      by auto
+    assume a:"i = Inl a"
+    note chain = Deriv.derivative_intros(105)
+    let ?f = "(\<lambda>x. Functions I a x)"
+    let ?g = "(\<lambda> R. (\<chi> i. dterm_sem
+                       \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I,
+                          Programs = Programs I, ODEs = ODEs I\<rparr>
+                       (args i) \<nu>))"
+    let ?myf' = "(\<lambda>x. (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y)) (?g x))"
+    let ?myg' = "(\<lambda>x. (\<lambda>\<nu>'. \<chi> ia. extendf_deriv I i_f (args ia) \<nu> x \<nu>'))"
+    have fg_eq:"(\<lambda>R. Functions I a
+           (\<chi> i. dterm_sem
+                  \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                     ODEs = ODEs I\<rparr>
+                  (args i) \<nu>)) = (?f \<circ> ?g)"
+      by auto
+    have "\<forall>x. ((?f o ?g) has_derivative (?myf' x \<circ> ?myg' x)) (at x)"
+      apply (rule allI)
+      apply (rule chain)
+      subgoal for xa
+        apply (rule has_derivative_vec)
+        subgoal for i using IH1'[of i xa] by auto
+      done
+      subgoal for xa 
+        using good_interp unfolding is_interp_def by auto
+      done
+    then have "((?f o ?g) has_derivative (?myf' x \<circ> ?myg' x)) (at x)" by auto
+    then show "((\<lambda>R. Functions I a
+           (\<chi> i. dterm_sem
+                  \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                     ODEs = ODEs I\<rparr>
+                  (args i) \<nu>)) has_derivative
+              (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
+      (\<chi> i. dterm_sem
+             \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. x $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                ODEs = ODEs I\<rparr>
+             (args i) \<nu>) \<circ>
+     (\<lambda>\<nu>'. \<chi> ia. extendf_deriv I i_f (args ia) \<nu> x \<nu>'))
+     (at x) "
+      using fg_eq by auto
+      qed
+    done
+  done
+
+lemma the_deriv:
+  assumes deriv:"(f has_derivative F) (at x)"
+  shows "(THE G. (f has_derivative G) (at x)) = F"
+    apply(rule the_equality)
+    subgoal by (rule deriv)
+    subgoal for G by (auto simp add: deriv has_derivative_unique)
+    done
+   
+lemma the_all_deriv:
+  assumes deriv:"\<forall>x. (f has_derivative F x) (at x)"
+  shows "(THE G. \<forall> x. (f has_derivative G x) (at x)) = F"
+    apply(rule the_equality)
+    subgoal by (rule deriv)
+    subgoal for G 
+      apply(rule ext)
+      subgoal for x
+        apply(erule allE[where x=x])
+        by (auto simp add: deriv has_derivative_unique)
+      done
+    done
+
+lemma adjoint_safe:
+assumes good_interp:"is_interp I"
+assumes good_subst:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') "    
+shows "is_interp (adjoint I \<sigma> \<nu>)"
+  apply(unfold adjoint_def)
+  apply(unfold is_interp_def)
+  apply(auto simp del: extendf.simps extendc.simps FunctionFrechet.simps)
+  subgoal for x i
+    apply(cases "SFunctions \<sigma> i = None")
+    subgoal
+      apply(auto  simp del: extendf.simps extendc.simps)
+      using good_interp unfolding is_interp_def by simp
+    apply(auto  simp del: extendf.simps extendc.simps)
+    subgoal for f'
+      using good_subst[of i f'] apply (auto  simp del: extendf.simps extendc.simps)
+      proof -
+        assume some:"SFunctions \<sigma> i = Some f'"
+        assume free:"dfree f'"
+        let ?f = "(\<lambda>R. dterm_sem (extendf I R) f' \<nu>)"
+        let ?Poo = "(\<lambda>fd. (\<forall>x. (?f has_derivative (fd x)) (at x)))"
+        let ?f''="extendf_deriv I i f' \<nu>"
+        have Pf:"?Poo ?f''"
+            using extendf_deriv[OF good_subst[of i f'] good_interp, of \<nu> i, OF some]
+            by auto
+        have "(THE G. (?f has_derivative G) (at x)) = ?f'' x"
+          apply(rule the_deriv)
+          using Pf by auto
+        then have the_eq:"(THE G. \<forall> x. (?f has_derivative G x) (at x)) = ?f''"
+          using Pf the_all_deriv by auto
+        show "((\<lambda>R. dterm_sem (extendf I R) f' \<nu>) has_derivative (THE f'a. \<forall>x. ((\<lambda>R. dterm_sem (extendf I R) f' \<nu>) has_derivative f'a x) (at x)) x) (at x)"
+          using the_eq Pf by simp
+        qed
+    done
+  done
+
 (* Properties of adjoints *)
 lemma adjoint_consequence:"(\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dsafe f') \<Longrightarrow> (\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f') \<Longrightarrow> Vagree \<nu> \<omega> (FVS \<sigma>) \<Longrightarrow> adjoint I \<sigma> \<nu> = adjoint I \<sigma> \<omega>"
   apply(unfold FVS_def)
@@ -189,7 +374,90 @@ lemma uadmit_sterm_adjoint:
       using agree_sub[OF sub1 VA] by auto
     then show "?thesis" using uadmit_sterm_adjoint'[OF dsafe fsafe VA'] by auto
   qed
-  
+
+lemma uadmit_dterm_adjoint':
+  assumes dfree:"\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dfree f'"
+  assumes fsafe:"\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f'"
+  assumes good_interp:"is_interp I"
+  shows  "\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x) \<Longrightarrow> dsafe \<theta> \<Longrightarrow> dterm_sem (adjoint I \<sigma> \<nu>) \<theta> = dterm_sem (adjoint I \<sigma> \<omega>) \<theta>"
+proof (induct "\<theta>")
+  case (Plus \<theta>1 \<theta>2)
+    assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>1. case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>1 = dterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>1"
+    assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>2. case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>2 = dterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>2"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT (Plus \<theta>1 \<theta>2). case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a)"
+    assume safe:"dsafe (Plus \<theta>1 \<theta>2)"
+  then show ?case
+    using IH1[OF SIGT_plus1[OF VA]] IH2[OF SIGT_plus2[OF VA]] by auto
+next
+  case (Times \<theta>1 \<theta>2)
+    assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>1. case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>1 = dterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>1"
+    assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>2. case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>2 = dterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>2"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT (Times \<theta>1 \<theta>2). case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a)"
+    assume safe:"dsafe (Times \<theta>1 \<theta>2)"
+  then show ?case
+    using IH1[OF SIGT_times1[OF VA]] IH2[OF SIGT_times2[OF VA]] by auto
+next
+  case (Function x1a x2a)
+    assume IH:"\<And>x. \<And>\<nu> \<omega>. x \<in> range x2a \<Longrightarrow> Vagree \<nu> \<omega> (\<Union>i\<in>SIGT x. case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a) \<Longrightarrow>
+      dsafe x \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) x = dterm_sem (local.adjoint I \<sigma> \<omega>) x"
+    assume safe:"dsafe (Function x1a x2a)"
+    from safe have safes:"\<And>j. dsafe (x2a j)" by auto
+    from IH have IH':"\<And>j. Vagree \<nu> \<omega> (\<Union>i\<in>SIGT (x2a j). case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a) \<Longrightarrow>
+      dterm_sem (local.adjoint I \<sigma> \<nu>) (x2a j) = dterm_sem (local.adjoint I \<sigma> \<omega>) (x2a j)"
+      using rangeI safes by auto
+    assume VA:"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT ($f x1a x2a). case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a)"
+    from VA have VAs:"\<And>j. Vagree \<nu> \<omega> (\<Union>i\<in>SIGT (x2a j). case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a)"
+      unfolding Vagree_def SIGT.simps using rangeI by blast
+    have SIGT:"x1a \<in> SIGT ($f x1a x2a)" by auto
+    have VAsub:"\<And>a. SFunctions \<sigma> x1a = Some a \<Longrightarrow> (FVT a) \<subseteq> (\<Union>i\<in>SIGT ($f x1a x2a). case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a)"
+      using SIGT by auto
+    have VAf:"\<And>a. SFunctions \<sigma> x1a = Some a \<Longrightarrow> Vagree \<nu> \<omega> (FVT a)"
+      using agree_sub[OF VAsub VA] by auto
+  then show ?case 
+    using IH'[OF VAs] apply (auto simp add: fun_eq_iff)
+    apply(cases "SFunctions \<sigma> x1a")
+    defer
+    subgoal for x1 x2 a
+      proof -
+        assume VA:"(\<And>a. SFunctions \<sigma> x1a = Some a \<Longrightarrow> Vagree \<nu> \<omega> (FVT a))"
+        assume sems:"(\<And>j. \<forall>x1 x2. dterm_sem (local.adjoint I \<sigma> \<nu>) (x2a j) (x1,x2) = dterm_sem (local.adjoint I \<sigma> \<omega>) (x2a j) (x1,x2))"
+        assume some:"SFunctions \<sigma> x1a = Some a"
+        note FVT = VAf[OF some]
+        have dsafe:"\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dsafe f'"
+          using dfree dfree_is_dsafe by auto
+        have dsem:"\<And>R . dterm_sem (extendf I R) a \<nu> = dterm_sem (extendf I R) a \<omega>"
+          using coincidence_dterm[OF dsafe[OF some] FVT] by auto
+        have "\<And>R. Functions (local.adjoint I \<sigma> \<nu>) x1a R = Functions (local.adjoint I \<sigma> \<omega>) x1a R"
+          using dsem some unfolding adjoint_def by auto
+        then show "Functions (local.adjoint I \<sigma> \<nu>) x1a (\<chi> i. dterm_sem (local.adjoint I \<sigma> \<omega>) (x2a i) (x1,x2)) =
+                   Functions (local.adjoint I \<sigma> \<omega>) x1a (\<chi> i. dterm_sem (local.adjoint I \<sigma> \<omega>) (x2a i) (x1,x2))"
+          by auto
+      qed
+    unfolding adjoint_def apply auto    
+    done
+next
+  case (Differential \<theta>)
+    assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a) \<Longrightarrow> dsafe \<theta> \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta> = dterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT (Differential \<theta>). case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a)"
+    assume safe:"dsafe (Differential \<theta>)"
+    then have free:"dfree \<theta>" by (auto dest: dsafe.cases)
+    from VA have VA':"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a)"
+      by auto
+    have dsafe:"\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dsafe f'"
+          using dfree dfree_is_dsafe by auto
+    have sem:"sterm_sem (local.adjoint I \<sigma> \<nu>) \<theta> = sterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>"
+      using uadmit_sterm_adjoint'[OF dsafe fsafe VA', of "\<lambda> x y. x" "\<lambda> x y. x" I] by auto
+    have good1:"is_interp (adjoint I \<sigma> \<nu>)" using adjoint_safe[OF good_interp dfree] by auto
+    have good2:"is_interp (adjoint I \<sigma> \<omega>)" using adjoint_safe[OF good_interp dfree] by auto
+    have frech:"frechet (local.adjoint I \<sigma> \<nu>) \<theta> = frechet (local.adjoint I \<sigma> \<omega>) \<theta>"
+      apply (auto simp add: fun_eq_iff)
+      subgoal for a b
+        using sterm_determines_frechet [OF good1 good2 free free sem, of "(a,b)"] by auto
+      done
+    then show "dterm_sem (local.adjoint I \<sigma> \<nu>) (Differential \<theta>) = dterm_sem (local.adjoint I \<sigma> \<omega>) (Differential \<theta>)"
+      by (auto simp add: directional_derivative_def)
+qed (auto)  
+
 (* TODO: Actually used, so prove it *)
 lemma uadmit_dterm_adjoint:
   assumes TUA:"TUadmit \<sigma> \<theta> U"
@@ -213,25 +481,6 @@ proof (induction rule: dfree.induct)
       by(cases "f") (auto simp add:  NTadjoint_free)
 qed (auto)
 
-lemma sterm_determines_frechet:
-fixes I J::"('sf, 'sc, 'sz) interp" 
-  and \<theta>1 \<theta>2 :: "('sf, 'sz) trm"
-  and \<nu> 
-assumes good_interp1:"is_interp I"
-assumes good_interp2:"is_interp J"
-assumes free1:"dfree \<theta>1"
-assumes free2:"dfree \<theta>2"
-assumes sem:"sterm_sem I \<theta>1 = sterm_sem J \<theta>2"
-shows "frechet I \<theta>1 (fst \<nu>) (snd \<nu>) = frechet J \<theta>2 (fst \<nu>) (snd \<nu>)"
-proof -
-  have d1:"(sterm_sem I \<theta>1 has_derivative (frechet I \<theta>1 (fst \<nu>))) (at (fst \<nu>))"
-    using frechet_correctness[OF good_interp1 free1] by auto
-  have d2:"(sterm_sem J \<theta>2 has_derivative (frechet J \<theta>2 (fst \<nu>))) (at (fst \<nu>))"
-    using frechet_correctness[OF good_interp2 free2] by auto
-  then have d1':"(sterm_sem I \<theta>1 has_derivative (frechet J \<theta>2 (fst \<nu>))) (at (fst \<nu>))"
-    using sem by auto
-  thus "?thesis" using has_derivative_unique d1 d1' by metis 
-qed
 
 lemma ntsubst_preserves_free:
 "dfree \<theta> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> dfree(NTsubst \<theta> \<sigma>)"
@@ -319,28 +568,6 @@ next
       sorry
     done
 qed (auto) (*(auto  simp add: nsubst_sterm)*)
-
-
-lemma the_deriv:
-  assumes deriv:"(f has_derivative F) (at x)"
-  shows "(THE G. (f has_derivative G) (at x)) = F"
-    apply(rule the_equality)
-    subgoal by (rule deriv)
-    subgoal for G by (auto simp add: deriv has_derivative_unique)
-    done
-   
-lemma the_all_deriv:
-  assumes deriv:"\<forall>x. (f has_derivative F x) (at x)"
-  shows "(THE G. \<forall> x. (f has_derivative G x) (at x)) = F"
-    apply(rule the_equality)
-    subgoal by (rule deriv)
-    subgoal for G 
-      apply(rule ext)
-      subgoal for x
-        apply(erule allE[where x=x])
-        by (auto simp add: deriv has_derivative_unique)
-      done
-    done
 
 (* TODO: Actually also not used so no need to prove it. *)
 lemma subst_frechet:
@@ -462,148 +689,6 @@ proof (induction rule: dsafe.induct)
     (* by (cases "SFunctions \<sigma> i") (auto intro:dsafe.intros ntsubst_preserves_safe tsubst_preserves_free dfree_is_dsafe)*)
 qed (auto intro: dsafe.intros tsubst_preserves_free)
 
-(* TODO: In principle useful, not used yet *)
-lemma extendf_safe:
-assumes good_interp:"is_interp I"
-shows "is_interp (extendf I R)"
-  sorry
-
-(* TODO: In principle useful, not used yet *)
-lemma extendc_safe:
-assumes good_interp:"is_interp I"
-shows "is_interp (extendc I R)"
-  sorry
-
-primrec extendf_deriv :: "('sf,'sc,'sz) interp \<Rightarrow> 'sf \<Rightarrow> ('sf + 'sz,'sz) trm \<Rightarrow> 'sz state \<Rightarrow> 'sz Rvec \<Rightarrow> ('sz Rvec \<Rightarrow> real)"
-where
-  "extendf_deriv I _ (Var i) \<nu> x = (\<lambda>_. 0)"
-| "extendf_deriv I _ (Const r) \<nu> x = (\<lambda>_. 0)"
-| "extendf_deriv I g (Function f args) \<nu> x =
-  (case f of 
-    Inl ff \<Rightarrow> (THE f'. \<forall>y. (Functions I ff has_derivative f' y) (at y))
-              (\<chi> i. dterm_sem
-                     \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. x $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
-                        ODEs = ODEs I\<rparr>
-                     (args i) \<nu>) \<circ>
-             (\<lambda>\<nu>'. \<chi> ia. extendf_deriv I g (args ia) \<nu> x \<nu>')
-  | Inr ff \<Rightarrow> (\<lambda> \<nu>'. 1))"
-| "extendf_deriv I g (Plus t1 t2) \<nu> x = (\<lambda>\<nu>'. (extendf_deriv I g t1 \<nu> x \<nu>') + (extendf_deriv I g t2 \<nu> x \<nu>'))"
-| "extendf_deriv I g (Times t1 t2) \<nu> x = 
-   (\<lambda>\<nu>'. ((dterm_sem (extendf I x) t1 \<nu> * (extendf_deriv I g t2 \<nu> x \<nu>'))) 
-       + (extendf_deriv I g t1 \<nu> x \<nu>') * (dterm_sem (extendf I x) t2 \<nu>))"
-| "extendf_deriv I g ($' _) \<nu> = undefined"
-| "extendf_deriv I g (Differential _) \<nu> = undefined"
-
-lemma extendf_deriv:
-  fixes f'::"('sf + 'sz,'sz) trm" and I::"('sf,'sc,'sz) interp"
-  assumes free:"dfree f'"
-  assumes good_interp:"is_interp I"
-  (*assumes some:"SFunctions \<sigma> i = Some f'"*)
-  shows "\<exists>f''. \<forall>x. ((\<lambda>R. dterm_sem (extendf I R) f' \<nu>) has_derivative (extendf_deriv I i_f f' \<nu> x)) (at x)"
-  using free apply (induction rule: dfree.induct)
-  apply(auto)+
-  defer
-  subgoal for \<theta>\<^sub>1 \<theta>\<^sub>2 x
-    apply(rule has_derivative_mult)
-    by auto
-  subgoal for args i x
-    apply(cases "i")
-    defer
-    apply auto
-    subgoal for b using has_derivative_proj' by blast
-    subgoal for a
-    proof -
-    assume dfrees:"(\<And>i. dfree (args i))"
-    assume IH1:"(\<And>ia. \<forall>x. ((\<lambda>R. dterm_sem
-                      \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
-                         ODEs = ODEs I\<rparr>
-                      (args ia) \<nu>) has_derivative
-                extendf_deriv I i_f (args ia) \<nu> x)
-                (at x))"
-    then have IH1':"(\<And>ia. \<And>x. ((\<lambda>R. dterm_sem
-                      \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
-                         ODEs = ODEs I\<rparr>
-                      (args ia) \<nu>) has_derivative
-                extendf_deriv I i_f (args ia) \<nu> x)
-                (at x))"
-      by auto
-    assume a:"i = Inl a"
-    note chain = Deriv.derivative_intros(105)
-    let ?f = "(\<lambda>x. Functions I a x)"
-    let ?g = "(\<lambda> R. (\<chi> i. dterm_sem
-                       \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I,
-                          Programs = Programs I, ODEs = ODEs I\<rparr>
-                       (args i) \<nu>))"
-    let ?myf' = "(\<lambda>x. (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y)) (?g x))"
-    let ?myg' = "(\<lambda>x. (\<lambda>\<nu>'. \<chi> ia. extendf_deriv I i_f (args ia) \<nu> x \<nu>'))"
-    have fg_eq:"(\<lambda>R. Functions I a
-           (\<chi> i. dterm_sem
-                  \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
-                     ODEs = ODEs I\<rparr>
-                  (args i) \<nu>)) = (?f \<circ> ?g)"
-      by auto
-    have "\<forall>x. ((?f o ?g) has_derivative (?myf' x \<circ> ?myg' x)) (at x)"
-      apply (rule allI)
-      apply (rule chain)
-      subgoal for xa
-        apply (rule has_derivative_vec)
-        subgoal for i using IH1'[of i xa] by auto
-      done
-      subgoal for xa 
-        using good_interp unfolding is_interp_def by auto
-      done
-    then have "((?f o ?g) has_derivative (?myf' x \<circ> ?myg' x)) (at x)" by auto
-    then show "((\<lambda>R. Functions I a
-           (\<chi> i. dterm_sem
-                  \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
-                     ODEs = ODEs I\<rparr>
-                  (args i) \<nu>)) has_derivative
-              (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
-      (\<chi> i. dterm_sem
-             \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. x $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
-                ODEs = ODEs I\<rparr>
-             (args i) \<nu>) \<circ>
-     (\<lambda>\<nu>'. \<chi> ia. extendf_deriv I i_f (args ia) \<nu> x \<nu>'))
-     (at x) "
-      using fg_eq by auto
-      qed
-    done
-  done
-   
-lemma adjoint_safe:
-assumes good_interp:"is_interp I"
-assumes good_subst:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') "    
-shows "is_interp (adjoint I \<sigma> \<nu>)"
-  apply(unfold adjoint_def)
-  apply(unfold is_interp_def)
-  apply(auto simp del: extendf.simps extendc.simps FunctionFrechet.simps)
-  subgoal for x i
-    apply(cases "SFunctions \<sigma> i = None")
-    subgoal
-      apply(auto  simp del: extendf.simps extendc.simps)
-      using good_interp unfolding is_interp_def by simp
-    apply(auto  simp del: extendf.simps extendc.simps)
-    subgoal for f'
-      using good_subst[of i f'] apply (auto  simp del: extendf.simps extendc.simps)
-      proof -
-        assume some:"SFunctions \<sigma> i = Some f'"
-        assume free:"dfree f'"
-        let ?f = "(\<lambda>R. dterm_sem (extendf I R) f' \<nu>)"
-        let ?Poo = "(\<lambda>fd. (\<forall>x. (?f has_derivative (fd x)) (at x)))"
-        let ?f''="extendf_deriv I i f' \<nu>"
-        have Pf:"?Poo ?f''"
-            using extendf_deriv[OF good_subst[of i f'] good_interp, of \<nu> i, OF some]
-            by auto
-        have "(THE G. (?f has_derivative G) (at x)) = ?f'' x"
-          apply(rule the_deriv)
-          using Pf by auto
-        then have the_eq:"(THE G. \<forall> x. (?f has_derivative G x) (at x)) = ?f''"
-          using Pf the_all_deriv by auto
-        show "((\<lambda>R. dterm_sem (extendf I R) f' \<nu>) has_derivative (THE f'a. \<forall>x. ((\<lambda>R. dterm_sem (extendf I R) f' \<nu>) has_derivative f'a x) (at x)) x) (at x)"
-          using the_eq Pf by simp
-        qed
-    done
-  done
 
 lemma subst_dterm:
 fixes I::"('sf, 'sc, 'sz) interp"
