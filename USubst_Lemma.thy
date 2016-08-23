@@ -778,10 +778,15 @@ next
         using Tadmit_Diff.prems(2) free tsubst_preserves_free by blast 
       have IH':"\<And>\<nu>. dterm_sem I (Tsubst \<theta> \<sigma>) \<nu> = dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta> \<nu>"
         using IH[OF tsafe sfree] by auto
+      have sem_eq:"\<And>\<nu>'. dsafe \<theta> \<Longrightarrow> is_interp I \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta> = dterm_sem (local.adjoint I \<sigma> \<nu>') \<theta>"
+        subgoal for \<nu>'
+          using uadmit_dterm_adjoint[OF TUA VA sfree spsafe, of "(\<lambda> x y. x)" "(\<lambda> x y. x)" I \<nu> \<nu>']
+          by auto
+        done
       have IH'':"\<And>\<nu>'. dterm_sem I (Tsubst \<theta> \<sigma>) \<nu>' = dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta> \<nu>'"
         subgoal for \<nu>'
-        using uadmit_dterm_adjoint[OF TUA VA sdsafe spsafe, of \<nu> \<nu>'] IH'[of \<nu>'] by auto
-      done
+          using sem_eq[OF tsafe good_interp, of \<nu>'] IH'[of \<nu>'] by auto
+        done
       have sem_eq:"sterm_sem I (Tsubst \<theta> \<sigma>) = sterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>" 
         apply (auto simp add: fun_eq_iff)
         subgoal for \<nu>'
@@ -795,8 +800,10 @@ next
         done
     show "?case"
       apply (auto simp add: directional_derivative_def fun_eq_iff)
-        using sterm_determines_frechet[of I "(adjoint I \<sigma> \<nu>)" "(Tsubst \<theta> \<sigma>)" \<theta> "\<nu>", 
-            OF good_interp adjoint_safe[OF good_interp sfree] tsubst_preserves_free[OF free sfree] 
+        using sterm_determines_frechet[OF 
+            good_interp 
+            adjoint_safe[OF good_interp sfree] 
+            tsubst_preserves_free[OF free sfree] 
             free sem_eq]
         by auto
   qed auto
