@@ -650,8 +650,8 @@ next
                  assume a3: "\<forall>i. Inr i \<in> ODE_vars ODE \<longrightarrow> snd (mk_v I ODE (ab, bb) (sol xa)) $ i = ODE_sem I ODE (sol xa) $ i"
                  assume "\<forall>i. Inr i \<in> ODE_vars ODE \<longrightarrow> snd (mk_v I ODE (ab, bb) (\<chi> i. if Inl i \<in> FVO ODE then sol xa $ i else ab $ i)) $ i = ODE_sem I ODE (\<chi> i. if Inl i \<in> FVO ODE then sol xa $ i else ab $ i) $ i"
                  then have "Inr i \<in> ODE_vars ODE \<longrightarrow> snd (mk_v I ODE (ab, bb) (sol xa)) $ i = snd (mk_v I ODE (ab, bb) (\<chi> s. if Inl s \<in> FVO ODE then sol xa $ s else ab $ s)) $ i"
-                   using a3 alt_sem_lemma osafe 
-                   sorry
+                   using a3 alt_sem_lemma[OF osafe, of I sol xa]
+                   by auto
                  then show ?thesis
                    using a2 a1 by force
                qed
@@ -750,8 +750,14 @@ next
                unfolding VSagree_def apply auto
                apply(cases "Inl i \<in> FVO ODE")
                using xDerivs[of i] apply auto (*(auto intro!: derivative_eq_intros dest:has_derivative_vec)*)
-               using alt_sem_lemma neato[of "(\<chi> i. if Inl i \<in> FVO ODE then sol x $ i else ab $ i)"] apply auto
-               sorry
+               using alt_sem_lemma neato[of "(\<chi> i. if Inl i \<in> FVO ODE then sol x $ i else ab $ i)"] apply auto 
+             proof -
+               assume a1: "((\<lambda>t. sol t $ i) has_derivative (\<lambda>xa. xa * ODE_sem I ODE (sol x) $ i)) (at x within {0..t})"
+               have "\<And>i r. ODE_sem (i::('a, 'b, 'c) interp) ODE (\<chi> c. if Inl c \<in> FVO ODE then sol r $ c else ab $ c) = ODE_sem i ODE (sol r)"
+                 by (metis (no_types) alt_sem_lemma assms(1))
+               then show "((\<lambda>r. sol r $ i) has_derivative (\<lambda>r. r * ODE_sem I ODE (\<chi> c. if Inl c \<in> FVO ODE then sol x $ c else ab $ c) $ i)) (at x within {0..t})"
+                 using a1 by presburger
+             qed
          qed
    proof -
      fix aa ba bb sol t
