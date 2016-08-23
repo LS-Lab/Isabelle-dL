@@ -48,8 +48,13 @@ lemma has_derivative_proj:
 
 lemma has_derivative_proj':
   fixes i::"'a::finite"
-  shows "\<exists>D. \<forall>x. ((\<lambda> x. x $ i) has_derivative (D x)) (at x)"
-  sorry    
+  shows "\<forall>x. ((\<lambda> x. x $ i) has_derivative (\<lambda>x::(real^'a). x $ i)) (at x)"
+  proof -
+    have bounded_proj:"bounded_linear (\<lambda> x::(real^'a). x $ i)"
+      by (simp add: bounded_linear_component_cart)
+    show "?thesis"
+      using bounded_proj unfolding has_derivative_def by auto
+  qed
   
 lemma has_vector_derivative_zero_constant:
   assumes "convex s"
