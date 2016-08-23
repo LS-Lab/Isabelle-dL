@@ -187,65 +187,7 @@ lemma uadmit_sterm_adjoint:
       by auto
     then have VA':"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x)"
       using agree_sub[OF sub1 VA] by auto
-    (*have "\<And>x. x \<in> (\<Union>x. SFV \<sigma> x) \<Longrightarrow> x \<in> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x)"*)
-    have "\<And>x y . x \<in> (SFV \<sigma> y) \<Longrightarrow> (\<exists>i. i \<in> SIGT \<theta> \<and> (x \<in> (case SFunctions \<sigma> i of Some z \<Rightarrow> FVT z)))"
-      subgoal for x y
-        apply(cases "y")
-        subgoal for a 
-          apply(cases "SFunctions \<sigma> a")
-          subgoal using VA unfolding Vagree_def by auto
-          subgoal for aa
-            apply(rule exI[where x="a"])
-            apply auto
-            using TUA VA unfolding Vagree_def TUadmit_def apply auto
-            sorry
-          done
-          (*subgoal for aa using VA unfolding Vagree_def apply auto sledgehammer*)
-        subgoal for b
-          using TUA VA unfolding Vagree_def TUadmit_def apply auto
-            
-          using TUA VA unfolding Vagree_def TUadmit_def apply auto
-          
-          using VA unfolding Vagree_def apply auto
-          
-      using TUA VA unfolding Vagree_def TUadmit_def apply auto
-      sorry
-    (* have "\<And>x. x \<in> (\<Union>x. SFV \<sigma> x) \<Longrightarrow> x \<in> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x)"
-    *)
-    then have sub2:"(\<Union>x. SFV \<sigma> x) \<subseteq> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x)"
-      by auto
-    have sub:"(\<Union>x. SFV \<sigma> x) \<subseteq> (-U)"
-      using sub1 sub2 by auto
-      apply (auto)
-      subgoal for x xa
-        apply(cases "xa")
-        apply(auto)
-        subgoal for a
-          apply(cases "SFunctions \<sigma> a")
-          apply(auto)
-          using TUA unfolding TUadmit_def
-          using TUA unfolding TUadmit_def using VA unfolding Vagree_def apply auto
-          using TUA unfolding TUadmit_def unfolding SFV.simps 
-          apply auto
-          subgoal for aa
-            apply (cases "xa")
-            apply auto
-            apply(cases "SFunctions \<sigma> a")
-            apply auto
-            sorry
-            done
-          subgoal for b sorry
-        done
-      done
-    have VAF:"Vagree \<nu> \<omega> (FVS \<sigma>)" 
-      using agree_sub[OF sub VA] 
-      by (auto simp add: FVS_def)
-    have eq:"(adjoint I \<sigma> \<nu>) = (adjoint I \<sigma> \<omega>)"
-      apply(rule adjoint_consequence)
-      using VAF
-      using fsafe dsafe by auto
-    then show "?thesis"
-      by auto
+    then show "?thesis" using uadmit_sterm_adjoint'[OF dsafe fsafe VA'] by auto
   qed
   
 (* TODO: Actually used, so prove it *)
