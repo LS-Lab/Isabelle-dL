@@ -716,52 +716,61 @@ shows
   (\<forall> \<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>))))"
 proof (induction rule: Padmit_Fadmit.induct)
   case (Padmit_Pvar \<sigma> a)
-  then show ?case by auto
+  then show ?case sorry
 next
   case (Padmit_Sequence \<sigma> a b)
-  then show ?case by auto
+  then show ?case sorry
 next
   case (Padmit_Loop \<sigma> a)
-  then show ?case by auto
+  then show ?case sorry
 next
   case (Padmit_ODE \<sigma> ODE \<phi>)
-  then show ?case by auto
+  then show ?case sorry
 next
   case (Padmit_Choice \<sigma> a b)
-  then show ?case by auto
+  then show ?case sorry
 next
   case (Padmit_Assign \<sigma> \<theta> x)
-  then show ?case by auto
+  then show ?case sorry
 next
   case (Padmit_DiffAssign \<sigma> \<theta> x)
-  then show ?case by auto
+  then show ?case sorry
 next
   case (Padmit_Test \<sigma> \<phi>)
-  then show ?case by auto
+  then show ?case sorry
 next
   case (Fadmit_Geq \<sigma> \<theta>1 \<theta>2)
-  then show ?case by auto
+  then show ?case sorry
 next
   case (Fadmit_Prop args \<sigma> p)
-  then show ?case by auto
+  then show ?case sorry
 next
-  case (Fadmit_Not \<sigma> \<phi>)
-  then show ?case by auto
+  case (Fadmit_Not \<sigma> \<phi>) then 
+  have IH:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"
+    by blast
+  have fsafe:"fsafe (Not \<phi>) \<Longrightarrow> fsafe \<phi>"
+    by (auto dest: fsafe.cases)
+  show ?case using IH[OF fsafe] by auto
 next
-  case (Fadmit_And \<sigma> \<phi> \<psi>)
-  then show ?case by auto
+  case (Fadmit_And \<sigma> \<phi> \<psi>) then
+    have IH1:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"
+    and IH2:"fsafe \<psi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<psi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<psi>))"
+      by (blast)+
+    have fsafe1:"fsafe (\<phi> && \<psi>) \<Longrightarrow> fsafe \<phi>" and fsafe2:"fsafe (\<phi> && \<psi>) \<Longrightarrow> fsafe \<psi>" 
+      by (auto dest: fsafe.cases)
+    show ?case using IH1[OF fsafe1] IH2[OF fsafe2] by auto
 next
   case (Fadmit_DiffFormula \<sigma> \<phi>)
-  then show ?case by auto
+  then show ?case sorry
 next
   case (Fadmit_Exists \<sigma> \<phi> x)
-  then show ?case by auto
+  then show ?case sorry
 next
   case (Fadmit_Diamond \<sigma> \<phi> a)
-  then show ?case by auto
+  then show ?case sorry
 next
   case (Fadmit_Context \<sigma> \<phi> C)
-  then show ?case by auto
+  then show ?case sorry
 qed
 
   
