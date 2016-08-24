@@ -727,8 +727,14 @@ next
   case (Padmit_ODE \<sigma> ODE \<phi>)
   then show ?case sorry
 next
-  case (Padmit_Choice \<sigma> a b)
-  then show ?case sorry
+  case (Padmit_Choice \<sigma> a b) then 
+  have IH1:"hpsafe a \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) a))"
+  and IH2:"hpsafe b \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst b \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) b))"
+    by blast+
+  have hpsafe1:"hpsafe (a \<union>\<union> b) \<Longrightarrow> hpsafe a" 
+   and hpsafe2:"hpsafe (a \<union>\<union> b) \<Longrightarrow> hpsafe b" 
+      by (auto dest: hpsafe.cases)
+  show ?case using IH1[OF hpsafe1] IH2[OF hpsafe2] by auto
 next
   case (Padmit_Assign \<sigma> \<theta> x)
   then show ?case sorry
