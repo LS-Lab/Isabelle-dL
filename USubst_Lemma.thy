@@ -693,7 +693,78 @@ next
             free sem_eq]
         by auto
   qed auto
+  
+definition ssafe ::"('sf, 'sc, 'sz) subst \<Rightarrow> bool"
+where "ssafe \<sigma> \<equiv>
+  (\<forall> i f'. SFunctions \<sigma> i = Some f' \<longrightarrow> dfree f') \<and> 
+  (\<forall> f f'. SPredicates \<sigma> f = Some f'  \<longrightarrow> fsafe f') \<and>
+  (\<forall> f f'. SPrograms \<sigma> f = Some f'  \<longrightarrow> hpsafe f') \<and>
+  (\<forall> f f'. SODEs \<sigma> f = Some f'  \<longrightarrow> osafe f')"
 
+lemma subst_fml_hp:
+fixes I::"('sf, 'sc, 'sz) interp"
+assumes good_interp:"is_interp I"
+shows 
+"(Padmit \<sigma> \<alpha> \<longrightarrow>
+  (hpsafe \<alpha> \<longrightarrow>
+   ssafe \<sigma> \<longrightarrow>
+  (\<forall> \<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst \<alpha> \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (adjoint I \<sigma> \<nu>) \<alpha>))))
+  \<and>
+  (Fadmit \<sigma> \<phi> \<longrightarrow>
+  (fsafe \<phi> \<longrightarrow>
+  ssafe \<sigma> \<longrightarrow>
+  (\<forall> \<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>))))"
+proof (induction rule: Padmit_Fadmit.induct)
+  case (Padmit_Pvar \<sigma> a)
+  then show ?case by auto
+next
+  case (Padmit_Sequence \<sigma> a b)
+  then show ?case by auto
+next
+  case (Padmit_Loop \<sigma> a)
+  then show ?case by auto
+next
+  case (Padmit_ODE \<sigma> ODE \<phi>)
+  then show ?case by auto
+next
+  case (Padmit_Choice \<sigma> a b)
+  then show ?case by auto
+next
+  case (Padmit_Assign \<sigma> \<theta> x)
+  then show ?case by auto
+next
+  case (Padmit_DiffAssign \<sigma> \<theta> x)
+  then show ?case by auto
+next
+  case (Padmit_Test \<sigma> \<phi>)
+  then show ?case by auto
+next
+  case (Fadmit_Geq \<sigma> \<theta>1 \<theta>2)
+  then show ?case by auto
+next
+  case (Fadmit_Prop args \<sigma> p)
+  then show ?case by auto
+next
+  case (Fadmit_Not \<sigma> \<phi>)
+  then show ?case by auto
+next
+  case (Fadmit_And \<sigma> \<phi> \<psi>)
+  then show ?case by auto
+next
+  case (Fadmit_DiffFormula \<sigma> \<phi>)
+  then show ?case by auto
+next
+  case (Fadmit_Exists \<sigma> \<phi> x)
+  then show ?case by auto
+next
+  case (Fadmit_Diamond \<sigma> \<phi> a)
+  then show ?case by auto
+next
+  case (Fadmit_Context \<sigma> \<phi> C)
+  then show ?case by auto
+qed
+
+  
 subsection \<open>Unused, unproven lemmas\<close>
   (* TODO: In principle useful, not used yet *)
 lemma extendf_safe:
