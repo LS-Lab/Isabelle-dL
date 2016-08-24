@@ -732,8 +732,44 @@ proof (induction rule: Padmit_Fadmit.induct)
     unfolding adjoint_def by auto
   then show ?case by auto
 next
-  case (Padmit_Sequence \<sigma> a b)
-  then show ?case sorry
+  case (Padmit_Sequence \<sigma> a b) then 
+  have PUA:"PUadmit \<sigma> b (BVP (Psubst a \<sigma>))"
+   and IH1:"hpsafe a \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) a))"
+   and IH2:"hpsafe b \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst b \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) b))"
+    by auto
+  have "hpsafe (a ;; b) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst (a ;; b) \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) (a ;; b)))"
+    proof -
+      assume hpsafe:"hpsafe (a ;; b)"
+      assume ssafe:"ssafe \<sigma>"
+      from hpsafe have safe1:"hpsafe a" and safe2:"hpsafe b" by (auto dest: hpsafe.cases)
+      fix \<nu> \<omega>
+      have agree:"\<And>\<mu>. (\<nu>, \<mu>) \<in> prog_sem I (Psubst a \<sigma>) \<Longrightarrow> Vagree \<nu> \<mu> (-BVP(Psubst a \<sigma>))"
+        subgoal for \<mu>
+          using bound_effect[OF good_interp, of "(Psubst a \<sigma>)" \<nu>, OF psubst_preserves_safe[OF safe1 ssafe]] by auto
+        done
+      have sem_eq:"\<And>\<mu>. (\<nu>, \<mu>) \<in> prog_sem I (Psubst a \<sigma>) \<Longrightarrow> 
+          ((\<mu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) b) =
+          ((\<mu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<mu>) b)"
+        subgoal for \<mu>
+          proof -
+            assume assm:"(\<nu>, \<mu>) \<in> prog_sem I (Psubst a \<sigma>)"
+            show "((\<mu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) b) = ((\<mu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<mu>) b)"
+              using uadmit_prog_sem[OF PUA agree[OF assm]] by auto
+          qed
+        done      
+      have "((\<nu>, \<omega>) \<in> prog_sem I (Psubst (a ;; b) \<sigma>)) = (\<exists> \<mu>. (\<nu>, \<mu>) \<in> prog_sem I (Psubst a \<sigma>) \<and> (\<mu>, \<omega>) \<in> prog_sem I (Psubst b \<sigma>))"
+        by auto
+      moreover have "... = (\<exists> \<mu>. (\<nu>, \<mu>) \<in> prog_sem I (Psubst a \<sigma>) \<and> (\<mu>, \<omega>) \<in> prog_sem (adjoint I \<sigma> \<mu>) b)"
+        using IH2[OF safe2 ssafe] by auto
+      moreover have "... = (\<exists> \<mu>. (\<nu>, \<mu>) \<in> prog_sem I (Psubst a \<sigma>) \<and> (\<mu>, \<omega>) \<in> prog_sem (adjoint I \<sigma> \<nu>) b)"
+        using sem_eq by auto
+      moreover have "... = (\<exists> \<mu>. (\<nu>, \<mu>) \<in> prog_sem (adjoint I \<sigma> \<nu>) a \<and> (\<mu>, \<omega>) \<in> prog_sem (adjoint I \<sigma> \<nu>) b)"
+        using IH1[OF safe1 ssafe] by auto
+      ultimately
+      show "((\<nu>, \<omega>) \<in> prog_sem I (Psubst (a ;; b) \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) (a ;; b))"
+        by auto
+    qed
+  then show ?case by auto
 next
   case (Padmit_Loop \<sigma> a)
   then show ?case sorry
