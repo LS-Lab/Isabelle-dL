@@ -701,6 +701,17 @@ where "ssafe \<sigma> \<equiv>
   (\<forall> f f'. SPrograms \<sigma> f = Some f'  \<longrightarrow> hpsafe f') \<and>
   (\<forall> f f'. SODEs \<sigma> f = Some f'  \<longrightarrow> osafe f')"
 
+lemma uadmit_prog_sem:"PUadmit \<sigma> a U \<Longrightarrow> Vagree \<nu> \<omega> (-U) \<Longrightarrow> prog_sem (adjoint I \<sigma> \<nu>) a = prog_sem (adjoint I \<sigma> \<omega>) a"
+and   uadmit_fml_sem:"FUadmit \<sigma> \<phi> U \<Longrightarrow> Vagree \<nu> \<omega> (-U) \<Longrightarrow> fml_sem (adjoint I \<sigma> \<nu>) \<phi> = fml_sem (adjoint I \<sigma> \<omega>) \<phi>"
+  sorry
+
+  
+lemma psubst_preserves_safe:
+  assumes "hpsafe \<alpha>"
+  assumes "ssafe \<sigma>"
+  shows "hpsafe (Psubst \<alpha> \<sigma>)"
+    sorry
+
 lemma subst_fml_hp:
 fixes I::"('sf, 'sc, 'sz) interp"
 assumes good_interp:"is_interp I"
@@ -770,10 +781,63 @@ next
   then show ?case sorry
 next
   case (Fadmit_Exists \<sigma> \<phi> x)
-  then show ?case sorry
+  then have IH:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"
+    and FUA:"FUadmit \<sigma> \<phi> {Inl x}"
+    by blast+
+  have fsafe:"fsafe (Exists x \<phi>) \<Longrightarrow> fsafe \<phi>"
+    by (auto dest: fsafe.cases)
+  have eq:"fsafe (Exists x \<phi>) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst  (Exists x \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>)  (Exists x \<phi>)))"
+    proof -
+      assume fsafe:"fsafe (Exists x \<phi>)"
+      from fsafe have fsafe':"fsafe \<phi>" by (auto dest: fsafe.cases)
+      assume ssafe:"ssafe \<sigma>"
+      fix \<nu>
+      have agree:"\<And>r. Vagree \<nu> (repv \<nu> x r) (- {Inl x})"
+        unfolding Vagree_def by auto
+      have sem_eq:"\<And>r. ((repv \<nu> x r) \<in> fml_sem (local.adjoint I \<sigma> (repv \<nu> x r)) \<phi>) =
+                        ((repv \<nu> x r) \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>)"
+        using uadmit_fml_sem[OF FUA agree] by auto
+      have "(\<nu> \<in> fml_sem I (Fsubst  (Exists x \<phi>) \<sigma>)) = (\<exists>r. (repv \<nu> x r) \<in> fml_sem I (Fsubst \<phi> \<sigma>))"
+        by auto
+      moreover have "... = (\<exists>r. (repv \<nu> x r) \<in> fml_sem (local.adjoint I \<sigma> (repv \<nu> x r)) \<phi>)"
+        using IH[OF fsafe' ssafe] by auto
+      moreover have "... = (\<exists>r. (repv \<nu> x r) \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>)"
+        using sem_eq by auto
+      moreover have "... = (\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) (Exists x \<phi>))"
+        by auto
+      ultimately show "(\<nu> \<in> fml_sem I (Fsubst  (Exists x \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>)  (Exists x \<phi>))"
+        by auto
+      qed
+  then show ?case by auto
 next
-  case (Fadmit_Diamond \<sigma> \<phi> a)
-  then show ?case sorry
+  case (Fadmit_Diamond \<sigma> \<phi> a) then 
+    have FUA:"FUadmit \<sigma> \<phi> (BVP (Psubst a \<sigma>))"
+    and IH1:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>))"
+    and IH2:"hpsafe a \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (adjoint I \<sigma> \<nu>) a))"
+      by auto
+    have "fsafe (\<langle> a \<rangle> \<phi>) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst (\<langle> a \<rangle> \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) (\<langle> a \<rangle> \<phi>)))"
+      proof -
+        assume fsafe:"fsafe (\<langle> a \<rangle> \<phi>)"
+        assume ssafe:"ssafe \<sigma>"
+        from fsafe have fsafe':"fsafe \<phi>" and hpsafe:"hpsafe a" by (auto dest: fsafe.cases)
+        fix \<nu>
+        have agree:"\<And>\<omega>. (\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>) \<Longrightarrow> Vagree \<nu> \<omega> (-BVP(Psubst a \<sigma>))"
+          using bound_effect[OF good_interp, of "(Psubst a \<sigma>)" \<nu>, OF psubst_preserves_safe[OF hpsafe ssafe]] by auto
+        have sem_eq:"\<And>\<omega>. (\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>) \<Longrightarrow> 
+            (\<omega> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>) =
+            (\<omega> \<in> fml_sem (local.adjoint I \<sigma> \<omega>) \<phi>)"
+          using uadmit_fml_sem[OF FUA agree] by auto
+        have "(\<nu> \<in> fml_sem I (Fsubst (\<langle> a \<rangle> \<phi>) \<sigma>)) = (\<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>) \<and> \<omega> \<in> fml_sem I (Fsubst \<phi> \<sigma>))"
+          by auto
+        moreover have "... = (\<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem (adjoint I \<sigma> \<nu>) a \<and> \<omega> \<in> fml_sem (adjoint I \<sigma> \<omega>) \<phi>)"
+          using IH1[OF fsafe' ssafe] IH2[OF hpsafe ssafe, of \<nu>] by auto
+        moreover have "... = (\<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem (adjoint I \<sigma> \<nu>) a \<and> \<omega> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>)"
+          using sem_eq IH2 hpsafe ssafe by blast
+        moreover have "... = (\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) (\<langle> a \<rangle> \<phi>))"
+          by auto
+        ultimately show "?thesis \<nu>" by auto
+        qed
+  then show ?case by auto
 next
   case (Fadmit_Context \<sigma> \<phi> C)
   then show ?case sorry
@@ -791,10 +855,6 @@ shows "is_interp (extendf I R)"
 lemma extendc_safe:
 assumes good_interp:"is_interp I"
 shows "is_interp (extendc I R)"
-  sorry
-
-lemma uadmit_prog_adjoint:"PUadmit \<sigma> a U \<Longrightarrow> Vagree \<nu> \<omega> (-U) \<Longrightarrow> prog_sem (adjoint I \<sigma> \<nu>) a = prog_sem (adjoint I \<sigma> \<omega>) a"
-and   uadmit_fml_sem:"FUadmit \<sigma> \<phi> U \<Longrightarrow> Vagree \<nu> \<omega> (-U) \<Longrightarrow> fml_sem (adjoint I \<sigma> \<nu>) \<phi> = fml_sem (adjoint I \<sigma> \<omega>) \<phi>"
   sorry
 
 
