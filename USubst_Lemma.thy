@@ -771,8 +771,77 @@ next
     qed
   then show ?case by auto
 next
-  case (Padmit_Loop \<sigma> a)
-  then show ?case sorry
+  case (Padmit_Loop \<sigma> a) then 
+    have PUA:"PUadmit \<sigma> a (BVP (Psubst a \<sigma>))"
+    and IH:"hpsafe a \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) a))"
+      by auto
+    have "hpsafe (a**) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst (a**) \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) (a**)))"
+      proof -
+        assume "hpsafe (a**)"
+        then have hpsafe:"hpsafe a" by (auto dest: hpsafe.cases)
+        assume ssafe:"ssafe \<sigma>"
+        have agree:"\<And>\<nu> \<mu>. (\<nu>, \<mu>) \<in> prog_sem I (Psubst a \<sigma>) \<Longrightarrow> Vagree \<nu> \<mu> (-BVP(Psubst a \<sigma>))"
+        subgoal for \<nu> \<mu>
+          using bound_effect[OF good_interp, of "(Psubst a \<sigma>)" \<nu>, OF psubst_preserves_safe[OF hpsafe ssafe]] by auto
+        done
+      have sem_eq:"\<And>\<nu> \<mu> \<omega>. (\<nu>, \<mu>) \<in> prog_sem I (Psubst a \<sigma>) \<Longrightarrow> 
+          ((\<mu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) a) =
+          ((\<mu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<mu>) a)"
+        subgoal for \<nu> \<mu> \<omega> 
+          proof -
+            assume assm:"(\<nu>, \<mu>) \<in> prog_sem I (Psubst a \<sigma>)"
+            show "((\<mu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) a) = ((\<mu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<mu>) a)"
+              using uadmit_prog_sem[OF PUA agree[OF assm]] by auto
+          qed
+        done 
+      fix \<nu> \<omega>
+      have UN_rule:"\<And> a S S'. (\<And>n b. (a,b) \<in> S n \<longleftrightarrow> (a,b) \<in> S' n) \<Longrightarrow> (\<And>b. (a,b) \<in> (\<Union>n. S n) \<longleftrightarrow> (a,b) \<in> (\<Union>n. S' n))"
+        by auto
+      have eqL:"((\<nu>, \<omega>) \<in> prog_sem I (Psubst (a**) \<sigma>)) = ((\<nu>, \<omega>) \<in> (\<Union>n. (prog_sem I (Psubst a \<sigma>)) ^^ n))"
+        using rtrancl_is_UN_relpow by auto
+      moreover have eachEq:"\<And>n. ((\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> (prog_sem I (Psubst a \<sigma>)) ^^ n) = ((\<nu>, \<omega>) \<in> (prog_sem (adjoint I \<sigma> \<nu>) a)^^ n)))"
+        proof -
+          fix n
+          show "((\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> (prog_sem I (Psubst a \<sigma>)) ^^ n) = ((\<nu>, \<omega>) \<in> (prog_sem (adjoint I \<sigma> \<nu>) a)^^ n)))"
+      proof (induct n)
+        case 0
+        then show ?case by auto
+      next
+        case (Suc n) then
+        have IH2:"\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>) ^^ n) = ((\<nu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) a ^^ n)"
+          by auto
+        have relpow:"\<And>R n. R ^^ Suc n = R O R ^^ n"
+          using relpow.simps(2) relpow_commute by metis
+        show ?case 
+          apply (simp only: relpow[of n "prog_sem I (Psubst a \<sigma>)"] relpow[of n "prog_sem (adjoint I \<sigma> \<nu>) a"])
+          apply(unfold relcomp_unfold)
+          apply auto
+          subgoal for ab b
+             apply(rule exI[where x=ab])
+             apply(rule exI[where x=b])
+             using IH2 IH[OF hpsafe ssafe] sem_eq[of \<nu> "(ab,b)" \<omega>] apply auto
+             apply (metis (no_types, lifting) IH PUA agree hpsafe ssafe uadmit_prog_sem)
+             apply (metis (no_types, lifting) IH PUA agree hpsafe ssafe uadmit_prog_sem)
+          done
+          subgoal for ab b
+             apply(rule exI[where x=ab])
+             apply(rule exI[where x=b])
+             using IH2 IH[OF hpsafe ssafe] sem_eq[of \<nu> "(ab,b)" \<omega>] apply auto
+             apply (metis (no_types, lifting) IH PUA agree hpsafe ssafe uadmit_prog_sem)
+             apply (metis (no_types, lifting) IH PUA agree hpsafe ssafe uadmit_prog_sem)
+          done
+        done
+      qed
+      qed
+     moreover have "((\<nu>, \<omega>) \<in> (\<Union>n. (prog_sem I (Psubst a \<sigma>)) ^^ n)) = ((\<nu>, \<omega>) \<in> (\<Union> n.(prog_sem (adjoint I \<sigma> \<nu>) a)^^ n))"
+       apply(rule UN_rule)
+       using eachEq by auto
+     moreover have eqR:"((\<nu>, \<omega>) \<in> prog_sem (adjoint I \<sigma> \<nu>) (a**)) = ((\<nu>, \<omega>) \<in> (\<Union>n. (prog_sem (adjoint I \<sigma> \<nu>) a) ^^ n))"
+        using rtrancl_is_UN_relpow by auto
+     ultimately show "((\<nu>, \<omega>) \<in> prog_sem I (Psubst (a**) \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) (a**))"
+       by auto
+      qed
+  then show ?case by auto
 next
   case (Padmit_ODE \<sigma> ODE \<phi>)
   then show ?case sorry
