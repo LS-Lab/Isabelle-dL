@@ -747,11 +747,39 @@ next
       by (auto dest: hpsafe.cases)
   show ?case using IH1[OF hpsafe1] IH2[OF hpsafe2] by auto
 next
-  case (Padmit_Assign \<sigma> \<theta> x)
-  then show ?case sorry
+  case (Padmit_Assign \<sigma> \<theta> x) then
+  have TA:"Tadmit \<sigma> \<theta>" by auto
+  have "hpsafe (Assign x \<theta>) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow>  (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst (Assign x \<theta>) \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (adjoint I \<sigma> \<nu>) (Assign x \<theta>)))"
+    proof -
+      assume hpsafe:"hpsafe (Assign x \<theta>)"
+      assume ssafe:"ssafe \<sigma>"
+      from ssafe have ssafes:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
+          "(\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f')"
+          unfolding ssafe_def by auto
+      from hpsafe have dsafe:"dsafe \<theta>" by (auto elim: hpsafe.cases)
+      fix \<nu> \<omega>
+      show "?thesis \<nu> \<omega>"
+        using subst_dterm[OF good_interp TA dsafe ssafes]
+        by auto
+    qed
+  then show ?case by auto
 next
-  case (Padmit_DiffAssign \<sigma> \<theta> x)
-  then show ?case sorry
+  case (Padmit_DiffAssign \<sigma> \<theta> x) then
+  have TA:"Tadmit \<sigma> \<theta>" by auto
+  have "hpsafe (DiffAssign x \<theta>) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow>  (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst (DiffAssign x \<theta>) \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (adjoint I \<sigma> \<nu>) (DiffAssign x \<theta>)))"
+    proof -
+      assume hpsafe:"hpsafe (DiffAssign x \<theta>)"
+      assume ssafe:"ssafe \<sigma>"
+      from ssafe have ssafes:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
+          "(\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f')"
+          unfolding ssafe_def by auto
+      from hpsafe have dsafe:"dsafe \<theta>" by (auto elim: hpsafe.cases)
+      fix \<nu> \<omega>
+      show "?thesis \<nu> \<omega>"
+        using subst_dterm[OF good_interp TA dsafe ssafes]
+        by auto
+    qed
+  then show ?case by auto
 next
   case (Padmit_Test \<sigma> \<phi>)
   then show ?case sorry
