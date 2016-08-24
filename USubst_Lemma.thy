@@ -726,8 +726,11 @@ shows
   ssafe \<sigma> \<longrightarrow>
   (\<forall> \<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>))))"
 proof (induction rule: Padmit_Fadmit.induct)
-  case (Padmit_Pvar \<sigma> a)
-  then show ?case sorry
+  case (Padmit_Pvar \<sigma> a) then
+  have "hpsafe ($\<alpha> a) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst ($\<alpha> a) \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) ($\<alpha> a)))"
+    apply (cases "SPrograms \<sigma> a")
+    unfolding adjoint_def by auto
+  then show ?case by auto
 next
   case (Padmit_Sequence \<sigma> a b)
   then show ?case sorry
@@ -781,8 +784,18 @@ next
     qed
   then show ?case by auto
 next
-  case (Padmit_Test \<sigma> \<phi>)
-  then show ?case sorry
+  case (Padmit_Test \<sigma> \<phi>) then
+   have IH:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"
+     by auto
+   have "hpsafe (? \<phi>) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst (? \<phi>) \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) (? \<phi>)))"
+     proof -
+       assume hpsafe:"hpsafe (? \<phi>)"
+       from hpsafe have fsafe:"fsafe \<phi>" by (auto dest: hpsafe.cases)
+       assume ssafe:"ssafe \<sigma>"
+       fix \<nu> \<omega>
+       show "?thesis \<nu> \<omega>" using IH[OF fsafe ssafe] by auto
+     qed
+   then show ?case by auto
 next
   case (Fadmit_Geq \<sigma> \<theta>1 \<theta>2) then 
     have TA1:"Tadmit \<sigma> \<theta>1" and TA2:"Tadmit \<sigma> \<theta>2"
