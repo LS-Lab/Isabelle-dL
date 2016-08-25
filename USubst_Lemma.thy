@@ -953,7 +953,7 @@ next
         fix \<nu>
         note TA = Fadmit_Prop1.hyps(1)
         and some = Fadmit_Prop1.hyps(2) and NFA = Fadmit_Prop1.hyps(3)
-        from fsafe have frees:"\<And>i. dfree (args i)" sorry
+        from fsafe have frees:"\<And>i. dfree (args i)" by auto
         from frees have safes:"\<And>i. dsafe (args i)" using dfree_is_dsafe by auto
         have IH:"(\<And>\<nu>'. \<And>i. dsafe (args i) \<Longrightarrow>
             dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
@@ -989,7 +989,7 @@ next
           "(\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f')"
           unfolding ssafe_def by auto
       fix \<nu>
-      from safe have frees:"\<And>i. dfree (args i)" sorry
+      from safe have frees:"\<And>i. dfree (args i)" by auto
       hence safes:"\<And>i. dsafe (args i)" using dfree_is_dsafe by auto
       have IH:"(\<And>\<nu>'. \<And>i. dsafe (args i) \<Longrightarrow>
           dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 

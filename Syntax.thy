@@ -234,6 +234,10 @@ inductive_simps
   and dsafe_Fun_simps[simp]: "dsafe (Function i args)"
   and dsafe_Diff_simps[simp]: "dsafe (Differential a)"
 
+inductive_simps
+      fsafe_Prop_simps[simp]: "fsafe (Prop p args)"
+  and fsafe_Context_simps[simp]: "fsafe (InContext C \<phi>)"
+
 (* Basic reasoning principles about syntactic constructs, including inductive principles *)
 lemma dfree_is_dsafe: "dfree \<theta> \<Longrightarrow> dsafe \<theta>"
   by (induction rule: dfree.induct) (auto intro: dsafe.intros)
