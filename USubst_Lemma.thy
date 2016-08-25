@@ -1139,8 +1139,31 @@ next
      qed
    then show ?case by auto
 next
-  case (Fadmit_Context2 \<sigma> \<phi> C)
-  then show ?case sorry
+  case (Fadmit_Context2 \<sigma> \<phi> C) then
+    have FA:"Fadmit \<sigma> \<phi>"
+    and FUA:"FUadmit \<sigma> \<phi> UNIV"
+    and none:"SContexts \<sigma> C = None"
+    and IH:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"
+      by auto
+    have "fsafe (InContext C \<phi>) \<Longrightarrow>
+             ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst (InContext C \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) (InContext C \<phi>)))"
+      proof -
+        assume safe:"fsafe (InContext C \<phi>)"
+        then have fsafe:"fsafe \<phi>" by (auto dest: fsafe.cases)
+        assume ssafe:"ssafe \<sigma>"
+        fix \<nu>
+        have Ieq:" Contexts (local.adjoint I \<sigma> \<nu>) C = Contexts I C"
+          using none unfolding adjoint_def by auto
+        have IH':"\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>)"
+          using IH[OF fsafe ssafe] by auto
+        have agree:"\<And>\<omega>. Vagree \<nu> \<omega> (-UNIV)" unfolding Vagree_def by auto
+        have adj_eq:"\<And>\<omega>. fml_sem (adjoint I \<sigma> \<nu>) \<phi> = fml_sem (adjoint I \<sigma> \<omega>) \<phi>"
+          using uadmit_fml_adjoint[OF FUA agree] by auto
+        then have sem:"fml_sem I (Fsubst \<phi> \<sigma>) =  fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>"
+          using IH' agree adj_eq by auto
+        show "?thesis \<nu>"  using none Ieq sem by auto
+      qed
+  then show ?case by auto
 qed
 
   
