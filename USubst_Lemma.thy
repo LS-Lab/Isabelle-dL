@@ -733,6 +733,15 @@ assumes good_interp:"is_interp I"
 shows "PFadmit \<sigma> \<phi> \<Longrightarrow> fsafe \<phi> \<Longrightarrow> (\<And>i. fsafe (\<sigma> i)) \<Longrightarrow> (\<nu> \<in> fml_sem I (PFsubst C' \<sigma>) = (\<nu> \<in> fml_sem (PFadjoint I \<sigma>) C'))"
   sorry
 
+lemma subst_ode:
+fixes I:: "('sf, 'sc, 'sz) interp" and \<nu> :: "'sz state"
+assumes good_interp:"is_interp I"
+shows "osafe ODE \<Longrightarrow> 
+       ssafe \<sigma> \<Longrightarrow> 
+       Oadmit \<sigma> ODE (ODE_vars ODE) \<Longrightarrow>
+       ODE_sem I (Osubst ODE \<sigma>) (fst \<nu>) = ODE_sem (adjoint I \<sigma> \<nu>) ODE (fst \<nu>)"
+sorry
+
 lemma subst_fml_hp:
 fixes I::"('sf, 'sc, 'sz) interp"
 assumes good_interp:"is_interp I"
@@ -864,8 +873,84 @@ next
       qed
   then show ?case by auto
 next
-  case (Padmit_ODE \<sigma> ODE \<phi>)
-  then show ?case sorry
+  case (Padmit_ODE \<sigma> ODE \<phi>) then
+    have OA:"Oadmit \<sigma> ODE (ODE_vars ODE)"
+    and FA:"Fadmit \<sigma> \<phi>"
+    and FUA:"FUadmit \<sigma> \<phi> (ODE_vars ODE)"
+    and IH:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"
+      by auto
+    have "hpsafe (EvolveODE ODE \<phi>) \<Longrightarrow>
+       ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst (EvolveODE ODE \<phi>) \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) (EvolveODE ODE \<phi>)))"
+    proof -
+      assume hpsafe:"hpsafe (EvolveODE ODE \<phi>)"
+      assume ssafe:"ssafe \<sigma>"
+      fix \<nu> \<omega>
+      from hpsafe have osafe:"osafe ODE" and fsafe:"fsafe \<phi>" by (auto dest: hpsafe.cases)
+      have IH':"(\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"
+        using IH[OF fsafe ssafe] by auto
+      have IH2:"\<And>\<nu>. ODE_sem I (Osubst ODE \<sigma>) (fst \<nu>) = ODE_sem (adjoint I \<sigma> \<nu>) ODE (fst \<nu>)"
+        using subst_ode[OF good_interp osafe ssafe OA] by auto
+      have IH2':"\<And>\<nu>1 \<nu>2. ODE_sem I (Osubst ODE \<sigma>) \<nu>1 = ODE_sem (adjoint I \<sigma> (\<nu>1,\<nu>2)) ODE \<nu>1"
+        using subst_ode[OF good_interp osafe ssafe OA] by auto
+      have IH3:"\<And>sol b t. t \<ge> 0 \<Longrightarrow> mk_v I (Osubst ODE \<sigma>) (sol 0, b) (sol t) = mk_v (adjoint I \<sigma> \<nu>) ODE (sol 0, b) (sol t)"
+        sorry
+      have IH3':"\<And>sol b t. t \<ge> 0 \<Longrightarrow> mk_v (local.adjoint I \<sigma> (sol 0, b)) ODE (sol 0, b) (sol t) = mk_v I (Osubst ODE \<sigma>) (sol 0, b) (sol t)"
+        sorry
+      have agree:"\<And>sol t b. Vagree \<nu> (sol t, b) (- ODE_vars ODE)"
+        sorry
+      
+      have eq1:"\<And>sol b t. fml_sem (adjoint I \<sigma> \<nu>) \<phi> = fml_sem (adjoint I \<sigma> (sol t, b)) \<phi>"
+        subgoal for sol b t
+          apply (rule uadmit_fml_adjoint)
+          apply (rule FUA)
+          apply (rule agree)
+        done
+      done
+      have eq2:"\<And> sol b. (\<lambda>a. ODE_sem (local.adjoint I \<sigma> (sol 0, b)) ODE) = (\<lambda>a. ODE_sem I (Osubst ODE \<sigma>))"
+        apply (rule ext)
+        sorry
+      have eq3:"\<And>sol b. mk_v (local.adjoint I \<sigma> (sol 0, b)) ODE  (sol 0, b) =  mk_v I (Osubst ODE \<sigma>) (sol 0, b)"
+        sorry
+      have eq4:"\<And>sol b t x. fml_sem (adjoint I \<sigma> \<nu>) \<phi> = fml_sem (adjoint I \<sigma> (mk_v I (Osubst ODE \<sigma>) (sol 0, b) x)) \<phi> "
+        sorry
+      show "?thesis \<nu> \<omega>" 
+        apply simp
+        apply auto
+        subgoal for  b sol t
+          apply(rule exI[where x="sol"])
+          apply(rule conjI)
+          subgoal by auto
+          subgoal
+            apply(rule exI[where x=t])
+            apply(rule conjI)
+            subgoal using IH3 by auto
+            apply(rule conjI)
+            subgoal by auto
+            subgoal
+              using IH2'[of "sol 0" "b"] eq3[of sol b] eq2[of sol b]  eq1[of sol t b] eq4 IH' IH2' IH3 eq2
+              apply(auto)
+              by (smt Collect_cong eq4 solves_ode_congI)
+            done
+          done
+        subgoal for  b sol t
+          apply(rule exI[where x="sol"])
+          apply(rule conjI)
+          subgoal by auto
+          subgoal
+            apply(rule exI[where x=t])
+            apply(rule conjI)
+            subgoal using IH3' by auto
+            apply(rule conjI)
+            subgoal by auto
+            subgoal
+              using IH2'[of "sol 0" "b"] eq3[of sol b] eq2[of sol b] eq1[of sol t b] eq4 IH' IH2' IH3 eq2
+              apply(auto)
+              by (smt Collect_cong eq4 solves_ode_congI)
+            done
+          done
+        done 
+    qed
+  then show ?case by auto 
 next
   case (Padmit_Choice \<sigma> a b) then 
   have IH1:"hpsafe a \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) a))"

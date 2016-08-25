@@ -184,11 +184,11 @@ inductive_simps
   and Tadmit_Var_simps[simp]: "Tadmit \<sigma> (Var x)"
   and Tadmit_Fun_simps[simp]: "Tadmit \<sigma> (Function i args)"
 
-inductive OUadmit:: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) ODE \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
+inductive Oadmit:: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) ODE \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
 where 
-  "OUadmit \<sigma> (OVar c) U"
-| "TUadmit \<sigma> \<theta> U \<Longrightarrow> OUadmit \<sigma> (OSing x \<theta>) U"
-| "OUadmit \<sigma> ODE1 U \<Longrightarrow> OUadmit \<sigma> ODE2 U \<Longrightarrow> OUadmit \<sigma> (OProd ODE1 ODE2) U"
+  "Oadmit \<sigma> (OVar c) U"
+| "TUadmit \<sigma> \<theta> U \<Longrightarrow> Oadmit \<sigma> (OSing x \<theta>) U"
+| "Oadmit \<sigma> ODE1 U \<Longrightarrow> Oadmit \<sigma> ODE2 U \<Longrightarrow> Oadmit \<sigma> (OProd ODE1 ODE2) U"
 
   
 definition PUadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) hp \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
@@ -261,7 +261,7 @@ where
   Padmit_Pvar:"Padmit \<sigma> (Pvar a)"
 | Padmit_Sequence:"Padmit \<sigma> a \<Longrightarrow> Padmit \<sigma> b \<Longrightarrow> PUadmit \<sigma> b (BVP (Psubst a \<sigma>))\<Longrightarrow> Padmit \<sigma> (Sequence a b)"  
 | Padmit_Loop:"Padmit \<sigma> a \<Longrightarrow> PUadmit \<sigma> a (BVP (Psubst a \<sigma>)) \<Longrightarrow> Padmit \<sigma> (Loop a)"        
-| Padmit_ODE:"OUadmit \<sigma> ODE (ODE_vars ODE) \<Longrightarrow> Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> (ODE_vars ODE) \<Longrightarrow> Padmit \<sigma> (EvolveODE ODE \<phi>)"
+| Padmit_ODE:"Oadmit \<sigma> ODE (ODE_vars ODE) \<Longrightarrow> Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> (ODE_vars ODE) \<Longrightarrow> Padmit \<sigma> (EvolveODE ODE \<phi>)"
 | Padmit_Choice:"Padmit \<sigma> a \<Longrightarrow> Padmit \<sigma> b \<Longrightarrow> Padmit \<sigma> (Choice a b)"            
 | Padmit_Assign:"Tadmit \<sigma> \<theta> \<Longrightarrow> Padmit \<sigma> (Assign x \<theta>)"  
 | Padmit_DiffAssign:"Tadmit \<sigma> \<theta> \<Longrightarrow> Padmit \<sigma> (DiffAssign x \<theta>)"  
