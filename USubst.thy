@@ -227,6 +227,34 @@ where
 | NFadmit_Diamond:"NFadmit \<sigma> \<phi> \<Longrightarrow> NPadmit \<sigma> a \<Longrightarrow> NFUadmit \<sigma> \<phi> (BVP (NPsubst a \<sigma>)) \<Longrightarrow> NFadmit \<sigma> (Diamond a \<phi>)"
 | NFadmit_Context:"NFadmit \<sigma> \<phi> \<Longrightarrow> NFUadmit \<sigma> \<phi> UNIV \<Longrightarrow> NFadmit \<sigma> (InContext C \<phi>)"
 
+definition PFUadmit :: "('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b + 'd, 'c) formula \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
+where "PFUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i. FVF (\<sigma> i)) \<inter> U) = {}"
+
+definition PPUadmit :: "('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b + 'd, 'c) hp \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
+where "PPUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i. FVF (\<sigma> i)) \<inter> U) = {}"
+  
+inductive PPadmit:: "('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b + 'd, 'c) hp \<Rightarrow> bool"
+and PFadmit:: "('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b + 'd, 'c) formula \<Rightarrow> bool"
+where 
+  PPadmit_Pvar:"PPadmit \<sigma> (Pvar a)"
+| PPadmit_Sequence:"PPadmit \<sigma> a \<Longrightarrow> PPadmit \<sigma> b \<Longrightarrow> PPUadmit \<sigma> b (BVP (PPsubst a \<sigma>))\<Longrightarrow> PPadmit \<sigma> (Sequence a b)"  
+| PPadmit_Loop:"PPadmit \<sigma> a \<Longrightarrow> PPUadmit \<sigma> a (BVP (PPsubst a \<sigma>)) \<Longrightarrow> PPadmit \<sigma> (Loop a)"        
+| PPadmit_ODE:"PFadmit \<sigma> \<phi> \<Longrightarrow> PFUadmit \<sigma> \<phi> (ODE_vars ODE) \<Longrightarrow> PPadmit \<sigma> (EvolveODE ODE \<phi>)"
+| PPadmit_Choice:"PPadmit \<sigma> a \<Longrightarrow> PPadmit \<sigma> b \<Longrightarrow> PPadmit \<sigma> (Choice a b)"            
+| PPadmit_Assign:"PPadmit \<sigma> (Assign x \<theta>)"  
+| PPadmit_DiffAssign:"PPadmit \<sigma> (DiffAssign x \<theta>)"  
+| PPadmit_Test:"PFadmit \<sigma> \<phi> \<Longrightarrow> PPadmit \<sigma> (Test \<phi>)"
+
+| PFadmit_Geq:"PFadmit \<sigma> (Geq \<theta>1 \<theta>2)"
+| PFadmit_Prop:"PFadmit \<sigma> (Prop f args)"
+| PFadmit_Not:"PFadmit \<sigma> \<phi> \<Longrightarrow> PFadmit \<sigma> (Not \<phi>)"
+| PFadmit_And:"PFadmit \<sigma> \<phi> \<Longrightarrow> PFadmit \<sigma> \<psi> \<Longrightarrow> PFadmit \<sigma> (And \<phi> \<psi>)"
+| PFadmit_DiffFormula:"PFadmit \<sigma> \<phi> \<Longrightarrow> PFadmit \<sigma> (DiffFormula \<phi>)"
+| PFadmit_Exists:"PFadmit \<sigma> \<phi> \<Longrightarrow> PFUadmit \<sigma> \<phi> {Inl x} \<Longrightarrow> PFadmit \<sigma> (Exists x \<phi>)"
+| PFadmit_Diamond:"PFadmit \<sigma> \<phi> \<Longrightarrow> PPadmit \<sigma> a \<Longrightarrow> PFUadmit \<sigma> \<phi> (BVP (PPsubst a \<sigma>)) \<Longrightarrow> PFadmit \<sigma> (Diamond a \<phi>)"
+| PFadmit_Context:"PFadmit \<sigma> \<phi> \<Longrightarrow> PFUadmit \<sigma> \<phi> UNIV \<Longrightarrow> PFadmit \<sigma> (InContext C \<phi>)"
+
+  
 inductive Padmit:: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) hp \<Rightarrow> bool"
 and Fadmit:: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> bool"
 where
@@ -247,7 +275,8 @@ where
 | Fadmit_DiffFormula:"Fadmit \<sigma> \<phi> \<Longrightarrow> Fadmit \<sigma> (DiffFormula \<phi>)"
 | Fadmit_Exists:"Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> {Inl x} \<Longrightarrow> Fadmit \<sigma> (Exists x \<phi>)"
 | Fadmit_Diamond:"Fadmit \<sigma> \<phi> \<Longrightarrow> Padmit \<sigma> a \<Longrightarrow> FUadmit \<sigma> \<phi> (BVP (Psubst a \<sigma>)) \<Longrightarrow> Fadmit \<sigma> (Diamond a \<phi>)"
-| Fadmit_Context:"Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> UNIV \<Longrightarrow> Fadmit \<sigma> (InContext C \<phi>)"
+| Fadmit_Context1:"Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> UNIV \<Longrightarrow> SContexts \<sigma> C = Some C' \<Longrightarrow> PFadmit (\<lambda> (). Fsubst \<phi> \<sigma>) C' \<Longrightarrow> Fadmit \<sigma> (InContext C \<phi>)"
+| Fadmit_Context2:"Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> UNIV \<Longrightarrow> SContexts \<sigma> C = None \<Longrightarrow> Fadmit \<sigma> (InContext C \<phi>)"
   
 fun extendf :: "('sf, 'sc, 'sz) interp \<Rightarrow> 'sz Rvec \<Rightarrow> ('sf + 'sz, 'sc, 'sz) interp"
 where "extendf I R =

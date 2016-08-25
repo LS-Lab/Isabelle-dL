@@ -1067,7 +1067,24 @@ next
     qed
   then show ?case by auto
 next
-  case (Fadmit_Context \<sigma> \<phi> C)
+  case (Fadmit_Context1 \<sigma> \<phi> C C') then
+   have FA:"Fadmit \<sigma> \<phi>"
+   and FUA:"FUadmit \<sigma> \<phi> UNIV"
+   and some:"SContexts \<sigma> C = Some C'"
+   and PFA:"PFadmit (\<lambda>(). Fsubst \<phi> \<sigma>) C'"
+   and IH:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"
+     by auto
+   have "fsafe (InContext C \<phi>) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst (InContext C \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) (InContext C \<phi>)))"
+     proof -
+       assume safe:"fsafe (InContext C \<phi>)"
+       assume ssafe:"ssafe \<sigma>"
+       fix \<nu>
+       show "(\<nu> \<in> fml_sem I (Fsubst (InContext C \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) (InContext C \<phi>))"
+         sorry
+     qed
+   then show ?case by auto
+next
+  case (Fadmit_Context2 \<sigma> \<phi> C)
   then show ?case sorry
 qed
 
