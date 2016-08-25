@@ -1139,7 +1139,8 @@ next
   show "?case" using almost unfolding coincide_fml_def by blast
 next
   case (fsafe_Prop args p)
-    then have safes:"\<And>arg. arg \<in> range args \<Longrightarrow> dsafe arg" by auto
+    then have frees:"\<And>arg. arg \<in> range args \<Longrightarrow> dfree arg" by auto
+    then have safes:"\<And>arg. arg \<in> range args \<Longrightarrow> dsafe arg" using dfree_is_dsafe by auto
     have almost:"\<And>\<nu> \<nu>'. \<And> I J::('a, 'b, 'c) interp. Iagree I J (SIGF (Prop p args)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Prop p args)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Prop p args)) = (\<nu>' \<in> fml_sem J (Prop p args))" 
     proof -
       fix \<nu> \<nu>' and I J :: "('a, 'b, 'c) interp"

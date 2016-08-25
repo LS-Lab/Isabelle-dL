@@ -333,4 +333,12 @@ lemma NTadjoint_free:"(\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (NTadjoint
  ODEs = ODEs I\<rparr>)" 
   by (auto simp add: dsem_to_ssem NTadjoint_def)
 
+definition PFadjoint::"('sf, 'sc, 'sz) interp \<Rightarrow> ('d::finite \<Rightarrow> ('sf, 'sc, 'sz) formula) \<Rightarrow> ('sf, 'sc  + 'd, 'sz) interp" 
+where "PFadjoint I \<sigma> =
+\<lparr>Functions =  Functions I,
+ Predicates = Predicates I,
+ Contexts = (\<lambda>f. case f of Inl f' \<Rightarrow> Contexts I f' | Inr f' \<Rightarrow> (\<lambda>_. fml_sem I (\<sigma> f'))),
+ Programs = Programs I,
+ ODEs = ODEs I\<rparr>"
+
 end end
