@@ -196,7 +196,37 @@ where "PUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> (SDo
 
 definition FUadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
 where "FUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> (SDom \<sigma> \<inter> SIGF \<theta>).  SFV \<sigma> i) \<inter> U) = {}"
- 
+
+definition NOUadmit :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd,  'c) ODE \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
+where "NOUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i. FVT (\<sigma> i)) \<inter> U) = {}"
+
+definition NFUadmit :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'b, 'c) formula \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
+where "NFUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i. FVT (\<sigma> i)) \<inter> U) = {}"
+
+definition NPUadmit :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'b, 'c) hp \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
+where "NPUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i. FVT (\<sigma> i)) \<inter> U) = {}"
+
+inductive NPadmit :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'b, 'c) hp \<Rightarrow> bool" 
+and NFadmit :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'b, 'c) formula \<Rightarrow> bool"
+where
+  NPadmit_Pvar:"NPadmit \<sigma> (Pvar a)"
+| NPadmit_Sequence:"NPadmit \<sigma> a \<Longrightarrow> NPadmit \<sigma> b \<Longrightarrow> NPUadmit \<sigma> b (BVP (NPsubst a \<sigma>))\<Longrightarrow> NPadmit \<sigma> (Sequence a b)"  
+| NPadmit_Loop:"NPadmit \<sigma> a \<Longrightarrow> NPUadmit \<sigma> a (BVP (NPsubst a \<sigma>)) \<Longrightarrow> NPadmit \<sigma> (Loop a)"        
+| NPadmit_ODE:"NOUadmit \<sigma> ODE (ODE_vars ODE) \<Longrightarrow> NFadmit \<sigma> \<phi> \<Longrightarrow> NFUadmit \<sigma> \<phi> (ODE_vars ODE) \<Longrightarrow> NPadmit \<sigma> (EvolveODE ODE \<phi>)"
+| NPadmit_Choice:"NPadmit \<sigma> a \<Longrightarrow> NPadmit \<sigma> b \<Longrightarrow> NPadmit \<sigma> (Choice a b)"            
+| NPadmit_Assign:"NTadmit \<sigma> \<theta> \<Longrightarrow> NPadmit \<sigma> (Assign x \<theta>)"  
+| NPadmit_DiffAssign:"NTadmit \<sigma> \<theta> \<Longrightarrow> NPadmit \<sigma> (DiffAssign x \<theta>)"  
+| NPadmit_Test:"NFadmit \<sigma> \<phi> \<Longrightarrow> NPadmit \<sigma> (Test \<phi>)"
+
+| NFadmit_Geq:"NTadmit \<sigma> \<theta>1 \<Longrightarrow> NTadmit \<sigma> \<theta>2 \<Longrightarrow> NFadmit \<sigma> (Geq \<theta>1 \<theta>2)"
+| NFadmit_Prop:"(\<And>i. NTadmit \<sigma> (args i)) \<Longrightarrow> NFadmit \<sigma> (Prop f args)"
+| NFadmit_Not:"NFadmit \<sigma> \<phi> \<Longrightarrow> NFadmit \<sigma> (Not \<phi>)"
+| NFadmit_And:"NFadmit \<sigma> \<phi> \<Longrightarrow> NFadmit \<sigma> \<psi> \<Longrightarrow> NFadmit \<sigma> (And \<phi> \<psi>)"
+| NFadmit_DiffFormula:"NFadmit \<sigma> \<phi> \<Longrightarrow> NFadmit \<sigma> (DiffFormula \<phi>)"
+| NFadmit_Exists:"NFadmit \<sigma> \<phi> \<Longrightarrow> NFUadmit \<sigma> \<phi> {Inl x} \<Longrightarrow> NFadmit \<sigma> (Exists x \<phi>)"
+| NFadmit_Diamond:"NFadmit \<sigma> \<phi> \<Longrightarrow> NPadmit \<sigma> a \<Longrightarrow> NFUadmit \<sigma> \<phi> (BVP (NPsubst a \<sigma>)) \<Longrightarrow> NFadmit \<sigma> (Diamond a \<phi>)"
+| NFadmit_Context:"NFadmit \<sigma> \<phi> \<Longrightarrow> NFUadmit \<sigma> \<phi> UNIV \<Longrightarrow> NFadmit \<sigma> (InContext C \<phi>)"
+
 inductive Padmit:: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) hp \<Rightarrow> bool"
 and Fadmit:: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> bool"
 where
@@ -210,7 +240,8 @@ where
 | Padmit_Test:"Fadmit \<sigma> \<phi> \<Longrightarrow> Padmit \<sigma> (Test \<phi>)"
 
 | Fadmit_Geq:"Tadmit \<sigma> \<theta>1 \<Longrightarrow> Tadmit \<sigma> \<theta>2 \<Longrightarrow> Fadmit \<sigma> (Geq \<theta>1 \<theta>2)"
-| Fadmit_Prop:"(\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> Tadmit \<sigma> \<theta>) \<Longrightarrow> Fadmit \<sigma> (Prop p args)" 
+| Fadmit_Prop1:"(\<And>i. Tadmit \<sigma> (args i)) \<Longrightarrow> SPredicates \<sigma> p = Some p' \<Longrightarrow> NFadmit (\<lambda> i. Tsubst (args i) \<sigma>) p' \<Longrightarrow> Fadmit \<sigma> (Prop p args)"
+| Fadmit_Prop2:"(\<And>i. Tadmit \<sigma> (args i)) \<Longrightarrow> SPredicates \<sigma> p = None \<Longrightarrow> Fadmit \<sigma> (Prop p args)"
 | Fadmit_Not:"Fadmit \<sigma> \<phi> \<Longrightarrow> Fadmit \<sigma> (Not \<phi>)"
 | Fadmit_And:"Fadmit \<sigma> \<phi> \<Longrightarrow> Fadmit \<sigma> \<psi> \<Longrightarrow> Fadmit \<sigma> (And \<phi> \<psi>)"
 | Fadmit_DiffFormula:"Fadmit \<sigma> \<phi> \<Longrightarrow> Fadmit \<sigma> (DiffFormula \<phi>)"

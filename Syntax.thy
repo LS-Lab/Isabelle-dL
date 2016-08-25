@@ -211,7 +211,8 @@ where
  | hpsafe_Loop:"hpsafe a \<Longrightarrow> hpsafe (Loop a)"
 
  | fsafe_Geq:"dsafe t1 \<Longrightarrow> dsafe t2 \<Longrightarrow> fsafe (Geq t1 t2)"
- | fsafe_Prop:"(\<And>i. dsafe (args i)) \<Longrightarrow> fsafe (Prop p args)"
+  (* TODO: Can I relax this *)
+ | fsafe_Prop:"(\<And>i. dfree (args i)) \<Longrightarrow> fsafe (Prop p args)"
  | fsafe_Not:"fsafe p \<Longrightarrow> fsafe (Not p)"
  | fsafe_And:"fsafe p \<Longrightarrow> fsafe q \<Longrightarrow> fsafe (And p q)"
  | fsafe_Exists:"fsafe p \<Longrightarrow> fsafe (Exists x p)"

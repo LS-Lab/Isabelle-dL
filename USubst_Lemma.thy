@@ -712,6 +712,13 @@ lemma psubst_preserves_safe:
   shows "hpsafe (Psubst \<alpha> \<sigma>)"
     sorry
 
+lemma nsubst_fml:
+fixes I::"('sf, 'sc, 'sz) interp"
+fixes \<nu>::"'sz state"
+assumes good_interp:"is_interp I"    
+shows "NFadmit \<sigma> \<phi> \<Longrightarrow> fsafe \<phi> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (\<nu> \<in> fml_sem I (NFsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (NTadjoint I \<sigma> \<nu>) \<phi>)"
+  sorry
+  
 lemma subst_fml_hp:
 fixes I::"('sf, 'sc, 'sz) interp"
 assumes good_interp:"is_interp I"
@@ -920,10 +927,68 @@ next
           subst_dterm[OF good_interp TA2 dsafe2 ssafes]
           by auto
       qed
-    then show ?case by auto
+    then show ?case by auto 
+  next case (Fadmit_Prop1 \<sigma> args p p')
+    have "fsafe (Prop p args) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>.(\<nu> \<in> fml_sem I (Fsubst ($\<phi> p args) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) ($\<phi> p args)))"
+      proof -
+        assume fsafe:"fsafe (Prop p args)"
+        and ssafe:"ssafe \<sigma>"
+        from ssafe have ssafes:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
+          "(\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f')"
+          unfolding ssafe_def by auto
+        fix \<nu>
+        note TA = Fadmit_Prop1.hyps(1)
+        and some = Fadmit_Prop1.hyps(2) and NFA = Fadmit_Prop1.hyps(3)
+        from fsafe have frees:"\<And>i. dfree (args i)" sorry
+        from frees have safes:"\<And>i. dsafe (args i)" using dfree_is_dsafe by auto
+        have IH:"(\<And>\<nu>'. \<And>i. dsafe (args i) \<Longrightarrow>
+            dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
+          using  subst_dterm[OF good_interp TA safes ssafes] by auto
+        have eqs:"\<And>i \<nu>'. dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>"
+          by (auto simp add: IH safes)
+        let ?sub = "(\<lambda> i. Tsubst (args i) \<sigma>)"
+        have subFree:"(\<And>i. dfree (?sub i))"
+          using tsubst_preserves_free[OF frees ssafes(1)]
+          by (simp add: frees ssafes tsubst_preserves_free)
+        have freef:"fsafe p'" using ssafe some unfolding ssafe_def by auto 
+        have IH2:"(\<nu> \<in> fml_sem I (NFsubst p' ?sub)) = (\<nu> \<in> fml_sem (NTadjoint I ?sub \<nu>) p')"
+          by (simp add: nsubst_fml [OF good_interp NFA freef subFree])
+        have vec:"(\<chi> i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) = (\<chi> i. dterm_sem (local.adjoint I \<sigma> \<nu>) (args i) \<nu>)"
+          apply(auto simp add: vec_eq_iff)
+          subgoal for i
+            using IH[of i, OF safes[of i]] 
+            by auto
+          done
+        show "?thesis \<nu>" 
+          using IH safes eqs apply (auto simp add:  IH2  some good_interp)
+          using some unfolding adjoint_def NTadjoint_def by auto
+      qed
+    then show "?case" by auto
 next
-  case (Fadmit_Prop args \<sigma> p)
-  then show ?case sorry
+   case (Fadmit_Prop2 \<sigma> args p) 
+    note TA = Fadmit_Prop2.hyps(1)
+    and none = Fadmit_Prop2.hyps(2)
+    have "fsafe (Prop p args) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>.(\<nu> \<in> fml_sem I (Fsubst ($\<phi> p args) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) ($\<phi> p args)))"
+    proof -
+      assume safe:"fsafe (Prop p args)" and ssafe:"ssafe \<sigma>"
+      from ssafe have ssafes:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
+          "(\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f')"
+          unfolding ssafe_def by auto
+      fix \<nu>
+      from safe have frees:"\<And>i. dfree (args i)" sorry
+      hence safes:"\<And>i. dsafe (args i)" using dfree_is_dsafe by auto
+      have IH:"(\<And>\<nu>'. \<And>i. dsafe (args i) \<Longrightarrow>
+          dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
+      using  subst_dterm[OF good_interp TA safes ssafes] by auto
+      have Ieq:"Predicates I p = Predicates (adjoint I \<sigma> \<nu>) p"
+        using none unfolding adjoint_def by auto
+      have vec:"(\<chi> i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) = (\<chi> i. dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)"
+        apply(auto simp add: vec_eq_iff)
+        subgoal for i using IH[of i, OF safes[of i]] by auto
+        done
+      show "?thesis \<nu>" using none IH Ieq vec by auto
+    qed
+    then show "?case" by auto
 next
   case (Fadmit_Not \<sigma> \<phi>) then 
   have IH:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"
