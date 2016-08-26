@@ -1192,12 +1192,54 @@ next
         by auto
   qed auto  
   
-lemma psubst_preserves_safe:
-  assumes "hpsafe \<alpha>"
-  assumes "ssafe \<sigma>"
-  shows "hpsafe (Psubst \<alpha> \<sigma>)"
+lemma psubst_fsubst_preserves_safe:
+assumes ssafe:"ssafe \<sigma>"
+shows "(hpsafe \<alpha> \<longrightarrow> hpsafe (Psubst \<alpha> \<sigma>)) \<and>
+   (fsafe \<phi> \<longrightarrow> fsafe (Fsubst \<phi> \<sigma>))"
+proof (induction rule: hpsafe_fsafe.induct)
+  case (hpsafe_Pvar x)
+  then show ?case 
+    using ssafe unfolding ssafe_def by (cases "SPrograms \<sigma> x", auto intro: hpsafe_fsafe.intros)
+next
+  case (hpsafe_Assign e x) then
+  show ?case
+    using tsubst_preserves_safe ssafe unfolding ssafe_def by (auto intro: hpsafe_fsafe.intros)    
+next
+  case (hpsafe_DiffAssign e x) then 
+  show ?case
+    using tsubst_preserves_safe ssafe unfolding ssafe_def by (auto intro: hpsafe_fsafe.intros)
+next
+  case (hpsafe_Evolve ODE P)
+  then show ?case 
+    apply (auto intro: hpsafe_fsafe.intros)
+    (* TODO: Osubst_preserves_safe *)
     sorry
-
+next
+  case (fsafe_Geq t1 t2) then 
+  show ?case
+    using tsubst_preserves_safe ssafe unfolding ssafe_def by (auto intro: hpsafe_fsafe.intros)  
+next
+  case (fsafe_Prop args p) then
+  show ?case 
+    apply(cases "SPredicates \<sigma> p")
+    using tsubst_preserves_safe tsubst_preserves_free ssafe unfolding ssafe_def 
+    apply (auto intro: hpsafe_fsafe.intros) apply blast
+    using tsubst_preserves_safe tsubst_preserves_free ssafe unfolding ssafe_def 
+    apply (auto intro: hpsafe_fsafe.intros)
+    (* TODO: nsubst_preserves_safe *)
+    sorry
+next
+  case (fsafe_DiffFormula p)
+  then show ?case sorry
+next
+  case (fsafe_InContext f C) then 
+  show ?case
+    apply(cases "SContexts \<sigma> C")
+    apply(auto intro: hpsafe_fsafe.intros)
+    (* TODO: PFsubst_preserves_safe *)
+    sorry
+qed (auto intro: hpsafe_fsafe.intros)
+    
 lemma fsubst_preserves_safe:
   assumes "fsafe \<alpha>"
   assumes "ssafe \<sigma>"
