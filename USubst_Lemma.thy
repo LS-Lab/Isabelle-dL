@@ -715,9 +715,8 @@ next
     from VA have VAs:"\<And>j. Vagree \<nu> \<omega> (\<Union>i\<in>SIGT (x2 j). case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a | None \<Rightarrow> {})"
       unfolding Vagree_def SIGT.simps using rangeI 
       by (metis (no_types, lifting) set_mp subs)
-    have SIGF:"Inr (Inr x1) \<in> SDom \<sigma> \<inter> SIGF ($\<phi> x1 x2)" unfolding SDom_def
-      (* TODO: Might actually be a problem with definition of substitution stuff *)
-      sorry
+    have SIGF:"\<And>a. SPredicates \<sigma> x1 = Some a \<Longrightarrow> Inr (Inr x1) \<in> SDom \<sigma> \<inter> SIGF ($\<phi> x1 x2)" unfolding SDom_def
+      by auto
     have VAsub:"\<And>a. SPredicates \<sigma> x1 = Some a \<Longrightarrow> (FVF a) \<subseteq> (\<Union>i\<in>SDom \<sigma> \<inter> SIGF ($\<phi> x1 x2). SFV \<sigma> i)"
       using SIGF by auto
     have VAf:"\<And>a. SPredicates \<sigma> x1 = Some a \<Longrightarrow> Vagree \<nu> \<omega> (FVF a)"
