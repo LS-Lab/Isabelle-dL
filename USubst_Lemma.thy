@@ -1266,6 +1266,22 @@ next
   then show ?case sorry
 qed (auto intro: hpsafe_fsafe.intros)
 
+lemma npsubst_preserves_safe:
+assumes sfree:"\<And>i. dfree (\<sigma> i)"
+fixes \<alpha> ::"('a + 'd, 'b, 'c) hp"
+assumes safe:"hpsafe \<alpha>"
+assumes admit:"NPadmit \<sigma> \<alpha>"
+shows "hpsafe (NPsubst \<alpha> \<sigma>)"
+using npsubst_nfsubst_preserves_safe sfree safe admit by auto
+
+lemma nfsubst_preserves_safe:
+assumes sfree:"\<And>i. dfree (\<sigma> i)"
+fixes \<phi> ::"('a + 'd, 'b, 'c) formula"
+assumes safe:"fsafe \<phi>"
+assumes admit:"NFadmit \<sigma> \<phi>"
+shows "fsafe (NFsubst \<phi> \<sigma>)"
+using npsubst_nfsubst_preserves_safe sfree safe admit by auto
+
 lemma psubst_fsubst_preserves_safe:
 assumes ssafe:"ssafe \<sigma>"
 shows "(hpsafe \<alpha> \<longrightarrow> Padmit \<sigma> \<alpha> \<longrightarrow> hpsafe (Psubst \<alpha> \<sigma>)) \<and>
@@ -1308,8 +1324,7 @@ next
     apply (auto intro: hpsafe_fsafe.intros) apply blast
     using tsubst_preserves_safe tsubst_preserves_free ssafe unfolding ssafe_def 
     apply (auto intro: hpsafe_fsafe.intros)
-    (* TODO: nfsubst_preserves_safe *)
-    sorry
+    by (simp add: nfsubst_preserves_safe tsubst_preserves_free) 
 next
   case (fsafe_DiffFormula p)
   then show ?case sorry
