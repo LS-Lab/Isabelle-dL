@@ -465,7 +465,202 @@ proof -
     then show "?thesis" using uadmit_dterm_adjoint'[OF dfree fsafe good_interp VA' dsafe] 
       by auto
   qed
-  
+
+definition ssafe ::"('sf, 'sc, 'sz) subst \<Rightarrow> bool"
+where "ssafe \<sigma> \<equiv>
+  (\<forall> i f'. SFunctions \<sigma> i = Some f' \<longrightarrow> dfree f') \<and> 
+  (\<forall> f f'. SPredicates \<sigma> f = Some f'  \<longrightarrow> fsafe f') \<and>
+  (\<forall> f f'. SPrograms \<sigma> f = Some f'  \<longrightarrow> hpsafe f') \<and>
+  (\<forall> f f'. SODEs \<sigma> f = Some f'  \<longrightarrow> osafe f') \<and>
+  (\<forall> C C'. SContexts \<sigma> C = Some C'  \<longrightarrow> fsafe C')"
+
+lemma uadmit_dterm_adjointS:
+  assumes ssafe:"ssafe \<sigma>"
+  assumes good_interp:"is_interp I"
+  fixes \<nu> \<omega>
+  assumes VA:"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x)"
+  assumes dsafe:"dsafe \<theta>"
+  shows  "dterm_sem (adjoint I \<sigma> \<nu>) \<theta> = dterm_sem (adjoint I \<sigma> \<omega>) \<theta>"
+proof -
+  show "?thesis" 
+    apply(rule uadmit_dterm_adjoint')
+    using good_interp ssafe VA dsafe unfolding ssafe_def by auto 
+qed
+
+lemma uadmit_prog_fml_adjoint':
+  assumes ssafe:"ssafe \<sigma>"
+  assumes good_interp:"is_interp I"
+  shows "\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>x\<in>SDom \<sigma> \<inter> SIGP \<alpha>. SFV \<sigma> x) \<Longrightarrow> hpsafe \<alpha> \<Longrightarrow> prog_sem (adjoint I \<sigma> \<nu>) \<alpha> = prog_sem (adjoint I \<sigma> \<omega>) \<alpha>"
+  and "\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>x\<in>SDom \<sigma> \<inter> SIGF \<phi>. SFV \<sigma> x) \<Longrightarrow> fsafe \<phi> \<Longrightarrow> fml_sem (adjoint I \<sigma> \<nu>) \<phi> = fml_sem (adjoint I \<sigma> \<omega>) \<phi>"
+proof (induct "\<alpha>" and "\<phi>")
+  case (Pvar x)
+  then show ?case unfolding adjoint_def by auto
+next
+  case (Assign x e)
+    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (x := e). SFV \<sigma> a)"
+    assume safe:"hpsafe (x := e)"
+    from safe have dsafe:"dsafe e" by (auto dest: hpsafe.cases)
+    have sub:"(\<Union>i\<in>SIGT e. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (x := e). SFV \<sigma> a)"
+      sorry
+    have "dterm_sem (local.adjoint I \<sigma> \<nu>) e = dterm_sem (local.adjoint I \<sigma> \<omega>) e"
+      by (rule uadmit_dterm_adjointS[OF ssafe good_interp agree_sub[OF sub VA] dsafe])
+    then show ?case by (auto simp add: vec_eq_iff)
+next
+  case (DiffAssign x e)
+    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (DiffAssign x e). SFV \<sigma> a)"
+    assume safe:"hpsafe (DiffAssign x e)"
+    from safe have dsafe:"dsafe e" by (auto dest: hpsafe.cases)
+    have sub:"(\<Union>i\<in>SIGT e. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (DiffAssign x e). SFV \<sigma> a)"
+      sorry
+    have "dterm_sem (local.adjoint I \<sigma> \<nu>) e = dterm_sem (local.adjoint I \<sigma> \<omega>) e"
+      by (rule uadmit_dterm_adjointS[OF ssafe good_interp agree_sub[OF sub VA] dsafe])
+    then show ?case by (auto simp add: vec_eq_iff)
+next
+  case (Test x)
+    assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF x. SFV \<sigma> a) \<Longrightarrow> fsafe x \<Longrightarrow> fml_sem (adjoint I \<sigma> \<nu>) x = fml_sem (adjoint I \<sigma> \<omega>) x"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (? x). SFV \<sigma> a)"
+    assume hpsafe:"hpsafe (? x)"
+    then have fsafe:"fsafe x" by (auto dest: hpsafe.cases)
+    have sub:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGF x. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (? x). SFV \<sigma> a)"
+      by auto
+    have "fml_sem (adjoint I \<sigma> \<nu>) x = fml_sem (adjoint I \<sigma> \<omega>) x"
+      using IH[OF agree_sub[OF sub VA] fsafe] by auto
+  then show ?case by auto
+next
+  case (EvolveODE x1 x2)
+  then show ?case sorry
+next
+  case (Choice x1 x2)
+    assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP x1. SFV \<sigma> a) \<Longrightarrow> hpsafe x1 \<Longrightarrow> prog_sem (local.adjoint I \<sigma> \<nu>) x1 = prog_sem (local.adjoint I \<sigma> \<omega>) x1"
+    assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP x2. SFV \<sigma> a) \<Longrightarrow> hpsafe x2 \<Longrightarrow> prog_sem (local.adjoint I \<sigma> \<nu>) x2 = prog_sem (local.adjoint I \<sigma> \<omega>) x2"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (x1 \<union>\<union> x2). SFV \<sigma> a)"
+    assume safe:"hpsafe (x1 \<union>\<union> x2)"
+    from safe have
+      safe1:"hpsafe x1"
+      and safe2:"hpsafe x2"
+      by (auto dest: hpsafe.cases)
+    have sub1:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGP x1. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (x1 \<union>\<union> x2). SFV \<sigma> a)"
+      by auto
+    have sub2:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGP x2. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (x1 \<union>\<union> x2). SFV \<sigma> a)"
+      by auto
+  then show ?case using IH1[OF agree_sub[OF sub1 VA] safe1] IH2[OF agree_sub[OF sub2 VA] safe2] by auto
+next
+  case (Sequence x1 x2)
+    assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP x1. SFV \<sigma> a) \<Longrightarrow> hpsafe x1 \<Longrightarrow> prog_sem (local.adjoint I \<sigma> \<nu>) x1 = prog_sem (local.adjoint I \<sigma> \<omega>) x1"
+    assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP x2. SFV \<sigma> a) \<Longrightarrow> hpsafe x2 \<Longrightarrow> prog_sem (local.adjoint I \<sigma> \<nu>) x2 = prog_sem (local.adjoint I \<sigma> \<omega>) x2"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (x1 ;; x2). SFV \<sigma> a)"
+    assume safe:"hpsafe (x1 ;; x2)"
+    from safe have
+      safe1:"hpsafe x1"
+      and safe2:"hpsafe x2"
+      by (auto dest: hpsafe.cases)
+    have sub1:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGP x1. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (x1 ;; x2). SFV \<sigma> a)"
+      by auto
+    have sub2:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGP x2. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (x1 ;; x2). SFV \<sigma> a)"
+      by auto
+  then show ?case using IH1[OF agree_sub[OF sub1 VA] safe1] IH2[OF agree_sub[OF sub2 VA] safe2] by auto
+next
+  case (Loop x)
+    assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP x. SFV \<sigma> a) \<Longrightarrow> hpsafe x \<Longrightarrow> prog_sem (local.adjoint I \<sigma> \<nu>) x = prog_sem (local.adjoint I \<sigma> \<omega>) x"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (x**). SFV \<sigma> a)"
+    assume safe:"hpsafe (x**)"
+    from safe have
+      safe:"hpsafe x"
+      by (auto dest: hpsafe.cases)
+    have sub:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGP x. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (x**). SFV \<sigma> a)"
+      by auto
+    show ?case using IH[OF agree_sub[OF sub VA] safe] by auto
+next
+  case (Geq x1 x2)
+    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Geq x1 x2). SFV \<sigma> a)"
+    assume safe:"fsafe (Geq x1 x2)"
+    then have dsafe1:"dsafe x1" and dsafe2:"dsafe x2" by (auto dest: fsafe.cases)
+    have sub1:"(\<Union>i\<in>SIGT x1. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Geq x1 x2). SFV \<sigma> a)"
+      sorry
+    have sub2:"(\<Union>i\<in>SIGT x2. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Geq x1 x2). SFV \<sigma> a)"
+      sorry
+    have "dterm_sem (local.adjoint I \<sigma> \<nu>) x1 = dterm_sem (local.adjoint I \<sigma> \<omega>) x1"
+      by (rule uadmit_dterm_adjointS[OF ssafe good_interp agree_sub[OF sub1 VA] dsafe1])
+    moreover have "dterm_sem (local.adjoint I \<sigma> \<nu>) x2 = dterm_sem (local.adjoint I \<sigma> \<omega>) x2"
+      by (rule uadmit_dterm_adjointS[OF ssafe good_interp agree_sub[OF sub2 VA] dsafe2])
+    ultimately show ?case by auto
+next
+  case (Prop x1 x2)
+  then show ?case sorry
+next
+  case (Not x)
+    assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF x. SFV \<sigma> a) \<Longrightarrow> fsafe x \<Longrightarrow> fml_sem (local.adjoint I \<sigma> \<nu>) x = fml_sem (local.adjoint I \<sigma> \<omega>) x"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Not x). SFV \<sigma> a)"
+    assume safe:"fsafe (Not x)"
+    from safe have
+      safe:"fsafe x"
+      by (auto dest: fsafe.cases)
+    have sub:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGF x. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Not x). SFV \<sigma> a)"
+      by auto
+    show ?case using IH[OF agree_sub[OF sub VA] safe] by auto
+next
+  case (And x1 x2)
+    assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF x1. SFV \<sigma> a) \<Longrightarrow> fsafe x1 \<Longrightarrow> fml_sem (local.adjoint I \<sigma> \<nu>) x1 = fml_sem (local.adjoint I \<sigma> \<omega>) x1"
+    assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (local.adjoint I \<sigma> \<nu>) x2 = fml_sem (local.adjoint I \<sigma> \<omega>) x2"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (And x1 x2). SFV \<sigma> a)"
+    assume safe:"fsafe (And x1 x2)"
+    from safe have
+      safe1:"fsafe x1"
+  and safe2:"fsafe x2"
+      by (auto dest: fsafe.cases)
+    have sub1:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGF x1. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (And x1 x2). SFV \<sigma> a)"
+      by auto
+    have sub2:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (And x1 x2). SFV \<sigma> a)"
+      by auto
+    show ?case using IH1[OF agree_sub[OF sub1 VA] safe1] IH2[OF agree_sub[OF sub2 VA] safe2] by auto
+next
+  case (Exists x1 x2)
+    assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (local.adjoint I \<sigma> \<nu>) x2 = fml_sem (local.adjoint I \<sigma> \<omega>) x2"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Exists x1 x2). SFV \<sigma> a)"
+    assume safe:"fsafe (Exists x1 x2)"
+    from safe have safe1:"fsafe x2"
+      by (auto dest: fsafe.cases)
+    have sub1:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Exists x1 x2). SFV \<sigma> a)"
+      by auto
+    show ?case using IH1[OF agree_sub[OF sub1 VA] safe1] by auto
+next
+  case (Diamond x1 x2)
+    assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP x1. SFV \<sigma> a) \<Longrightarrow> hpsafe x1 \<Longrightarrow> prog_sem (local.adjoint I \<sigma> \<nu>) x1 = prog_sem (local.adjoint I \<sigma> \<omega>) x1"
+    assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (local.adjoint I \<sigma> \<nu>) x2 = fml_sem (local.adjoint I \<sigma> \<omega>) x2"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Diamond x1 x2). SFV \<sigma> a)"
+    assume safe:"fsafe (Diamond x1 x2)"
+    from safe have
+      safe1:"hpsafe x1"
+  and safe2:"fsafe x2"
+      by (auto dest: fsafe.cases)
+    have sub1:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGP x1. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Diamond x1 x2). SFV \<sigma> a)"
+      by auto
+    have sub2:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Diamond x1 x2). SFV \<sigma> a)"
+      by auto
+    show ?case using IH1[OF agree_sub[OF sub1 VA] safe1] IH2[OF agree_sub[OF sub2 VA] safe2] by auto
+next
+  case (DiffFormula x)
+  then show ?case sorry
+next
+  case (InContext x1 x2)
+  then show ?case sorry
+qed
+ 
+lemma uadmit_prog_adjoint:
+  assumes PUA:"PUadmit \<sigma> a U"
+  assumes VA:"Vagree \<nu> \<omega> (-U)"
+  assumes hpsafe:"hpsafe a"
+  assumes good_interp:"is_interp I"
+  shows "prog_sem (adjoint I \<sigma> \<nu>) a = prog_sem (adjoint I \<sigma> \<omega>) a"
+  proof -
+    have sub:"(\<Union>x\<in>SDom \<sigma> \<inter> SIGP a. SFV \<sigma> x) \<subseteq> -U" using PUA unfolding PUadmit_def by auto
+    have VA':"Vagree \<nu> \<omega> (\<Union>x\<in>SDom \<sigma> \<inter> SIGP a. SFV \<sigma> x)" using agree_sub[OF sub VA] by auto
+    
+  qed
+
+lemma uadmit_fml_adjoint:"FUadmit \<sigma> \<phi> U \<Longrightarrow> Vagree \<nu> \<omega> (-U) \<Longrightarrow> fml_sem (adjoint I \<sigma> \<nu>) \<phi> = fml_sem (adjoint I \<sigma> \<omega>) \<phi>"
+  sorry
+
 lemma nsubst_sterm:
 fixes I::"('sf, 'sc, 'sz) interp"
 fixes \<nu>::"'sz state"
@@ -692,20 +887,7 @@ next
             tsubst_preserves_free[OF free sfree] 
             free sem_eq]
         by auto
-  qed auto
-  
-definition ssafe ::"('sf, 'sc, 'sz) subst \<Rightarrow> bool"
-where "ssafe \<sigma> \<equiv>
-  (\<forall> i f'. SFunctions \<sigma> i = Some f' \<longrightarrow> dfree f') \<and> 
-  (\<forall> f f'. SPredicates \<sigma> f = Some f'  \<longrightarrow> fsafe f') \<and>
-  (\<forall> f f'. SPrograms \<sigma> f = Some f'  \<longrightarrow> hpsafe f') \<and>
-  (\<forall> f f'. SODEs \<sigma> f = Some f'  \<longrightarrow> osafe f') \<and>
-  (\<forall> C C'. SContexts \<sigma> C = Some C'  \<longrightarrow> fsafe C')"
-
-lemma uadmit_prog_adjoint:"PUadmit \<sigma> a U \<Longrightarrow> Vagree \<nu> \<omega> (-U) \<Longrightarrow> prog_sem (adjoint I \<sigma> \<nu>) a = prog_sem (adjoint I \<sigma> \<omega>) a"
-and   uadmit_fml_adjoint:"FUadmit \<sigma> \<phi> U \<Longrightarrow> Vagree \<nu> \<omega> (-U) \<Longrightarrow> fml_sem (adjoint I \<sigma> \<nu>) \<phi> = fml_sem (adjoint I \<sigma> \<omega>) \<phi>"
-  sorry
-
+  qed auto  
   
 lemma psubst_preserves_safe:
   assumes "hpsafe \<alpha>"
@@ -1024,11 +1206,156 @@ next
         show "?thesis \<nu>" using 
           subst_dterm[OF good_interp TA1 dsafe1 ssafes]
           subst_dterm[OF good_interp TA2 dsafe2 ssafes]
-          by auto
+          by autosorry
       qed
     then show ?case by auto 
   next case (Fadmit_Prop1 \<sigma> args p p')
+    have "fsafe (Prop s:"\<And>i. dfree (args i)" by auto
+        from frees have safes:"\<And>i. dsafe (args i)" using dfree_is_dsafe by auto
+        have IH:"(\<And>\<nu>'. \<And>i. dsafe (args i) \<Longrightarrow>
+            dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
+          using  subst_dterm[OF good_interp TA safes ssafes] by auto
+        have eqs:"\<And>i \<nu>'. dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>"
+          by (auto simp add: IH safes)
+        let ?sub = "(\<lambda> i. Tsubst (args i) \<sigma>)"
+        have subFree:"(\<And>i. dfree (?sub i))"
+          using tsubst_preserves_free[OF frees ssafes(1)]
+          by (simp add: frees ssafes tsubst_preserves_free)
+        have freef:"fsafe p'" using ssafe some unfolding ssafe_def by auto 
+        have IH2:"(\<nu> \<in> fml_sem I (NFsubst p' ?sub)) = (\<nu> \<in> fml_sem (NTadjoint I ?sub \<nu>) p')"
+          by (simp add: nsubst_fml [OF good_interp NFA freef subFree])
+        have vec:"(\<chi> i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) = (\<chi> i. dterm_sem (local.adjoint I \<sigma> \<nu>) (args i) \<nu>)"
+          apply(auto simp add: vec_eq_iff)
+          subgoal for i
+            using IH[of i, OF safes[of i]] 
+            by auto
+          done
+        show "?thesis \<nu>" 
+          using IH safes eqs apply (auto simp add:  IH2  some good_interp)
+          using some unfolding adjoint_def NTadjoint_def by auto
+      qed
+    then show "?case" by auto
+next
+   case (Fadmit_Prop2 \<sigma> args p) 
+    note TA = Fadmit_Prop2.hyps(1)
+    and none = Fadmit_Prop2.hyps(2)
     have "fsafe (Prop p args) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>.(\<nu> \<in> fml_sem I (Fsubst ($\<phi> p args) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) ($\<phi> p args)))"
+    proof -
+      assume safe:"fsafe (Prop p args)" and ssafe:"ssafe \<sigma>"
+      from ssafe have ssafes:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
+          "(\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f')"
+          unfolding ssafe_def by auto
+      fix \<nu>
+      from safe have frees:"\<And>i. dfree (args i)" by auto
+      hence safes:"\<And>i. dsafe (args i)" using dfree_is_dsafe by auto
+      have IH:"(\<And>\<nu>'. \<And>i. dsafe (args i) \<Longrightarrow>
+          dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
+      using  subst_dterm[OF good_interp TA safes ssafes] by auto
+      have Ieq:"Predicates I p = Predicates (adjoint I \<sigma> \<nu>) p"
+        using none unfolding adjoint_def by auto
+      have vec:"(\<chi> i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) = (\<chi> i. dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)"
+        apply(auto simp add: vec_eq_iff)
+        subgoal for i using IH[of i, OF safes[of i]] by auto
+        done
+      show "?thesis \<nu>" using none IH Ieq vec by auto
+    qed
+    then show "?case" by auto
+next
+  case (Fadmit_Not \<sigma> \<phi>) then 
+  have IH:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"
+    by blast
+  have fsafe:"fsafe (Not \<phi>) \<Longrightarrow> fsafe \<phi>"
+    by (auto dest: fsafe.cases)
+  show ?case using IH[OF fsafe] by auto
+next
+  case (Fadmit_And \<sigma> \<phi> \<psi>) then
+    have IH1:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"
+    and IH2:"fsafe \<psi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<psi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<psi>))"
+      by (blast)+
+    have fsafe1:"fsafe (\<phi> && \<psi>) \<Longrightarrow> fsafe \<phi>" and fsafe2:"fsafe (\<phi> && \<psi>) \<Longrightarrow> fsafe \<psi>" 
+      by (auto dest: fsafe.cases)
+    show ?case using IH1[OF fsafe1] IH2[OF fsafe2] by auto
+next
+  case (Fadmit_DiffFormula \<sigma> \<phi>)
+  then show ?case sorry
+next
+  case (Fadmit_Exists \<sigma> \<phi> x)
+  then have IH:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"
+    and FUA:"FUadmit \<sigma> \<phi> {Inl x}"
+    by blast+
+  have fsafe:"fsafe (Exists x \<phi>) \<Longrightarrow> fsafe \<phi>"
+    by (auto dest: fsafe.cases)
+  have eq:"fsafe (Exists x \<phi>) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst  (Exists x \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>)  (Exists x \<phi>)))"
+    proof -
+      assume fsafe:"fsafe (Exists x \<phi>)"
+      from fsafe have fsafe':"fsafe \<phi>" by (auto dest: fsafe.cases)
+      assume ssafe:"ssafe \<sigma>"
+      fix \<nu>
+      have agree:"\<And>r. Vagree \<nu> (repv \<nu> x r) (- {Inl x})"
+        unfolding Vagree_def by auto
+      have sem_eq:"\<And>r. ((repv \<nu> x r) \<in> fml_sem (local.adjoint I \<sigma> (repv \<nu> x r)) \<phi>) =
+                        ((repv \<nu> x r) \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>)"
+        using uadmit_fml_adjoint[OF FUA agree] by auto
+      have "(\<nu> \<in> fml_sem I (Fsubst  (Exists x \<phi>) \<sigma>)) = (\<exists>r. (repv \<nu> x r) \<in> fml_sem I (Fsubst \<phi> \<sigma>))"
+        by auto
+      moreover have "... = (\<exists>r. (repv \<nu> x r) \<in> fml_sem (local.adjoint I \<sigma> (repv \<nu> x r)) \<phi>)"
+        using IH[OF fsafe' ssafe] by auto
+      moreover have "... = (\<exists>r. (repv \<nu> x r) \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>)"
+        using sem_eq by auto
+      moreover have "... = (\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) (Exists x \<phi>))"
+        by auto
+      ultimately show "(\<nu> \<in> fml_sem I (Fsubst  (Exists x \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>)  (Exists x \<phi>))"
+        by auto
+      qed
+  then show ?case by auto
+next
+  case (Fadmit_Diamond \<sigma> \<phi> a) then 
+    have FUA:"FUadmit \<sigma> \<phi> (BVP (Psubst a \<sigma>))"
+    and IH1:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>))"
+    and IH2:"hpsafe a \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (adjoint I \<sigma> \<nu>) a))"
+      by auto
+    have "fsafe (\<langle> a \<rangle> \<phi>) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst (\<langle> a \<rangle> \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) (\<langle> a \<rangle> \<phi>)))"
+    proof -
+      assume fsafe:"fsafe (\<langle> a \<rangle> \<phi>)"
+      assume ssafe:"ssafe \<sigma>"
+      from fsafe have fsafe':"fsafe \<phi>" and hpsafe:"hpsafe a" by (auto dest: fsafe.cases)
+      fix \<nu>
+      have agree:"\<And>\<omega>. (\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>) \<Longrightarrow> Vagree \<nu> \<omega> (-BVP(Psubst a \<sigma>))"
+        using bound_effect[OF good_interp, of "(Psubst a \<sigma>)" \<nu>, OF psubst_preserves_safe[OF hpsafe ssafe]] by auto
+      have sem_eq:"\<And>\<omega>. (\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>) \<Longrightarrow> 
+          (\<omega> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>) =
+          (\<omega> \<in> fml_sem (local.adjoint I \<sigma> \<omega>) \<phi>)"
+        using uadmit_fml_adjoint[OF FUA agree] by auto
+      have "(\<nu> \<in> fml_sem I (Fsubst (\<langle> a \<rangle> \<phi>) \<sigma>)) = (\<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>) \<and> \<omega> \<in> fml_sem I (Fsubst \<phi> \<sigma>))"
+        by auto
+      moreover have "... = (\<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem (adjoint I \<sigma> \<nu>) a \<and> \<omega> \<in> fml_sem (adjoint I \<sigma> \<omega>) \<phi>)"
+        using IH1[OF fsafe' ssafe] IH2[OF hpsafe ssafe, of \<nu>] by auto
+      moreover have "... = (\<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem (adjoint I \<sigma> \<nu>) a \<and> \<omega> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>)"
+        using sem_eq IH2 hpsafe ssafe by blast
+      moreover have "... = (\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) (\<langle> a \<rangle> \<phi>))"
+        by auto
+      ultimately show "?thesis \<nu>" by auto
+    qed
+  then show ?case by auto
+next
+  case (Fadmit_Context1 \<sigma> \<phi> C C') then
+   have FA:"Fadmit \<sigma> \<phi>"
+   and FUA:"FUadmit \<sigma> \<phi> UNIV"
+   and some:"SContexts \<sigma> C = Some C'"
+   and PFA:"PFadmit (\<lambda>(). Fsubst \<phi> \<sigma>) C'"
+   and IH:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"
+     by auto
+   have "fsafe (InContext C \<phi>) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst (InContext C \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) (InContext C \<phi>)))"
+     proof -
+       assume safe:"fsafe (InContext C \<phi>)"
+       from safe have fsafe:"fsafe \<phi>" by (auto dest: fsafe.cases)
+       assume ssafe:"ssafe \<sigma>"
+       fix \<nu> :: "'sz state"
+       have agree:"\<And>\<omega>. Vagree \<nu> \<omega> (-UNIV)" unfolding Vagree_def by auto
+       have adj_eq:"\<And>\<omega>. fml_sem (adjoint I \<sigma> \<nu>) \<phi> = fml_sem (adjoint I \<sigma> \<omega>) \<phi>"
+         using uadmit_fml_adjoint[OF FUA agree] by auto
+       have eq:"(\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>)"
+         using adj_eq IH[OF p args) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>.(\<nu> \<in> fml_sem I (Fsubst ($\<phi> p args) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) ($\<phi> p args)))"
       proof -
         assume fsafe:"fsafe (Prop p args)"
         and ssafe:"ssafe \<sigma>"
@@ -1080,7 +1407,152 @@ next
           dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
       using  subst_dterm[OF good_interp TA safes ssafes] by auto
       have Ieq:"Predicates I p = Predicates (adjoint I \<sigma> \<nu>) p"
+        using none unfoldings:"\<And>i. dfree (args i)" by auto
+        from frees have safes:"\<And>i. dsafe (args i)" using dfree_is_dsafe by auto
+        have IH:"(\<And>\<nu>'. \<And>i. dsafe (args i) \<Longrightarrow>
+            dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
+          using  subst_dterm[OF good_interp TA safes ssafes] by auto
+        have eqs:"\<And>i \<nu>'. dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>"
+          by (auto simp add: IH safes)
+        let ?sub = "(\<lambda> i. Tsubst (args i) \<sigma>)"
+        have subFree:"(\<And>i. dfree (?sub i))"
+          using tsubst_preserves_free[OF frees ssafes(1)]
+          by (simp add: frees ssafes tsubst_preserves_free)
+        have freef:"fsafe p'" using ssafe some unfolding ssafe_def by auto 
+        have IH2:"(\<nu> \<in> fml_sem I (NFsubst p' ?sub)) = (\<nu> \<in> fml_sem (NTadjoint I ?sub \<nu>) p')"
+          by (simp add: nsubst_fml [OF good_interp NFA freef subFree])
+        have vec:"(\<chi> i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) = (\<chi> i. dterm_sem (local.adjoint I \<sigma> \<nu>) (args i) \<nu>)"
+          apply(auto simp add: vec_eq_iff)
+          subgoal for i
+            using IH[of i, OF safes[of i]] 
+            by auto
+          done
+        show "?thesis \<nu>" 
+          using IH safes eqs apply (auto simp add:  IH2  some good_interp)
+          using some unfolding adjoint_def NTadjoint_def by auto
+      qed
+    then show "?case" by auto
+next
+   case (Fadmit_Prop2 \<sigma> args p) 
+    note TA = Fadmit_Prop2.hyps(1)
+    and none = Fadmit_Prop2.hyps(2)
+    have "fsafe (Prop p args) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>.(\<nu> \<in> fml_sem I (Fsubst ($\<phi> p args) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) ($\<phi> p args)))"
+    proof -
+      assume safe:"fsafe (Prop p args)" and ssafe:"ssafe \<sigma>"
+      from ssafe have ssafes:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
+          "(\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f')"
+          unfolding ssafe_def by auto
+      fix \<nu>
+      from safe have frees:"\<And>i. dfree (args i)" by auto
+      hence safes:"\<And>i. dsafe (args i)" using dfree_is_dsafe by auto
+      have IH:"(\<And>\<nu>'. \<And>i. dsafe (args i) \<Longrightarrow>
+          dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
+      using  subst_dterm[OF good_interp TA safes ssafes] by auto
+      have Ieq:"Predicates I p = Predicates (adjoint I \<sigma> \<nu>) p"
         using none unfolding adjoint_def by auto
+      have vec:"(\<chi> i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) = (\<chi> i. dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)"
+        apply(auto simp add: vec_eq_iff)
+        subgoal for i using IH[of i, OF safes[of i]] by auto
+        done
+      show "?thesis \<nu>" using none IH Ieq vec by auto
+    qed
+    then show "?case" by auto
+next
+  case (Fadmit_Not \<sigma> \<phi>) then 
+  have IH:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"
+    by blast
+  have fsafe:"fsafe (Not \<phi>) \<Longrightarrow> fsafe \<phi>"
+    by (auto dest: fsafe.cases)
+  show ?case using IH[OF fsafe] by auto
+next
+  case (Fadmit_And \<sigma> \<phi> \<psi>) then
+    have IH1:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"
+    and IH2:"fsafe \<psi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<psi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<psi>))"
+      by (blast)+
+    have fsafe1:"fsafe (\<phi> && \<psi>) \<Longrightarrow> fsafe \<phi>" and fsafe2:"fsafe (\<phi> && \<psi>) \<Longrightarrow> fsafe \<psi>" 
+      by (auto dest: fsafe.cases)
+    show ?case using IH1[OF fsafe1] IH2[OF fsafe2] by auto
+next
+  case (Fadmit_DiffFormula \<sigma> \<phi>)
+  then show ?case sorry
+next
+  case (Fadmit_Exists \<sigma> \<phi> x)
+  then have IH:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"
+    and FUA:"FUadmit \<sigma> \<phi> {Inl x}"
+    by blast+
+  have fsafe:"fsafe (Exists x \<phi>) \<Longrightarrow> fsafe \<phi>"
+    by (auto dest: fsafe.cases)
+  have eq:"fsafe (Exists x \<phi>) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst  (Exists x \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>)  (Exists x \<phi>)))"
+    proof -
+      assume fsafe:"fsafe (Exists x \<phi>)"
+      from fsafe have fsafe':"fsafe \<phi>" by (auto dest: fsafe.cases)
+      assume ssafe:"ssafe \<sigma>"
+      fix \<nu>
+      have agree:"\<And>r. Vagree \<nu> (repv \<nu> x r) (- {Inl x})"
+        unfolding Vagree_def by auto
+      have sem_eq:"\<And>r. ((repv \<nu> x r) \<in> fml_sem (local.adjoint I \<sigma> (repv \<nu> x r)) \<phi>) =
+                        ((repv \<nu> x r) \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>)"
+        using uadmit_fml_adjoint[OF FUA agree] by auto
+      have "(\<nu> \<in> fml_sem I (Fsubst  (Exists x \<phi>) \<sigma>)) = (\<exists>r. (repv \<nu> x r) \<in> fml_sem I (Fsubst \<phi> \<sigma>))"
+        by auto
+      moreover have "... = (\<exists>r. (repv \<nu> x r) \<in> fml_sem (local.adjoint I \<sigma> (repv \<nu> x r)) \<phi>)"
+        using IH[OF fsafe' ssafe] by auto
+      moreover have "... = (\<exists>r. (repv \<nu> x r) \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>)"
+        using sem_eq by auto
+      moreover have "... = (\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) (Exists x \<phi>))"
+        by auto
+      ultimately show "(\<nu> \<in> fml_sem I (Fsubst  (Exists x \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>)  (Exists x \<phi>))"
+        by auto
+      qed
+  then show ?case by auto
+next
+  case (Fadmit_Diamond \<sigma> \<phi> a) then 
+    have FUA:"FUadmit \<sigma> \<phi> (BVP (Psubst a \<sigma>))"
+    and IH1:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>))"
+    and IH2:"hpsafe a \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (adjoint I \<sigma> \<nu>) a))"
+      by auto
+    have "fsafe (\<langle> a \<rangle> \<phi>) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst (\<langle> a \<rangle> \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) (\<langle> a \<rangle> \<phi>)))"
+    proof -
+      assume fsafe:"fsafe (\<langle> a \<rangle> \<phi>)"
+      assume ssafe:"ssafe \<sigma>"
+      from fsafe have fsafe':"fsafe \<phi>" and hpsafe:"hpsafe a" by (auto dest: fsafe.cases)
+      fix \<nu>
+      have agree:"\<And>\<omega>. (\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>) \<Longrightarrow> Vagree \<nu> \<omega> (-BVP(Psubst a \<sigma>))"
+        using bound_effect[OF good_interp, of "(Psubst a \<sigma>)" \<nu>, OF psubst_preserves_safe[OF hpsafe ssafe]] by auto
+      have sem_eq:"\<And>\<omega>. (\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>) \<Longrightarrow> 
+          (\<omega> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>) =
+          (\<omega> \<in> fml_sem (local.adjoint I \<sigma> \<omega>) \<phi>)"
+        using uadmit_fml_adjoint[OF FUA agree] by auto
+      have "(\<nu> \<in> fml_sem I (Fsubst (\<langle> a \<rangle> \<phi>) \<sigma>)) = (\<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>) \<and> \<omega> \<in> fml_sem I (Fsubst \<phi> \<sigma>))"
+        by auto
+      moreover have "... = (\<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem (adjoint I \<sigma> \<nu>) a \<and> \<omega> \<in> fml_sem (adjoint I \<sigma> \<omega>) \<phi>)"
+        using IH1[OF fsafe' ssafe] IH2[OF hpsafe ssafe, of \<nu>] by auto
+      moreover have "... = (\<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem (adjoint I \<sigma> \<nu>) a \<and> \<omega> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>)"
+        using sem_eq IH2 hpsafe ssafe by blast
+      moreover have "... = (\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) (\<langle> a \<rangle> \<phi>))"
+        by auto
+      ultimately show "?thesis \<nu>" by auto
+    qed
+  then show ?case by auto
+next
+  case (Fadmit_Context1 \<sigma> \<phi> C C') then
+   have FA:"Fadmit \<sigma> \<phi>"
+   and FUA:"FUadmit \<sigma> \<phi> UNIV"
+   and some:"SContexts \<sigma> C = Some C'"
+   and PFA:"PFadmit (\<lambda>(). Fsubst \<phi> \<sigma>) C'"
+   and IH:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"
+     by auto
+   have "fsafe (InContext C \<phi>) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst (InContext C \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) (InContext C \<phi>)))"
+     proof -
+       assume safe:"fsafe (InContext C \<phi>)"
+       from safe have fsafe:"fsafe \<phi>" by (auto dest: fsafe.cases)
+       assume ssafe:"ssafe \<sigma>"
+       fix \<nu> :: "'sz state"
+       have agree:"\<And>\<omega>. Vagree \<nu> \<omega> (-UNIV)" unfolding Vagree_def by auto
+       have adj_eq:"\<And>\<omega>. fml_sem (adjoint I \<sigma> \<nu>) \<phi> = fml_sem (adjoint I \<sigma> \<omega>) \<phi>"
+         using uadmit_fml_adjoint[OF FUA agree] by auto
+       have eq:"(\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>)"
+         using adj_eq IH[OF  adjoint_def by auto
       have vec:"(\<chi> i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) = (\<chi> i. dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)"
         apply(auto simp add: vec_eq_iff)
         subgoal for i using IH[of i, OF safes[of i]] by auto
