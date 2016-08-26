@@ -235,8 +235,23 @@ inductive_simps
   and dsafe_Diff_simps[simp]: "dsafe (Differential a)"
 
 inductive_simps
-      fsafe_Prop_simps[simp]: "fsafe (Prop p args)"
-  and fsafe_Context_simps[simp]: "fsafe (InContext C \<phi>)"
+      hpsafe_Pvar_simps[simp]: "hpsafe (Pvar a)"
+  and hpsafe_Sequence_simps[simp]: "hpsafe (a ;; b)"
+  and hpsafe_Loop_simps[simp]: "hpsafe (a**)"
+  and hpsafe_ODE_simps[simp]: "hpsafe (EvolveODE ODE p)"
+  and hpsafe_Choice_simps[simp]: "hpsafe (a \<union>\<union> b)"
+  and hpsafe_Assign_simps[simp]: "hpsafe (Assign x e)"
+  and hpsafe_DiffAssign_simps[simp]: "hpsafe (DiffAssign x e)"
+  and hpsafe_Test_simps[simp]: "hpsafe (? p)"
+  
+  and fsafe_Geq_simps[simp]: "fsafe (Geq t1 t2)"
+  and fsafe_Prop_simps[simp]: "fsafe (Prop p args)"
+  and fsafe_Not_simps[simp]: "fsafe (Not p)"
+  and fsafe_And_simps[simp]: "fsafe (And p q)"
+  and fsafe_DiffFormula_simps[simp]: "fsafe (DiffFormula p)"
+  and fsafe_Exists_simps[simp]: "fsafe (Exists x p)"
+  and fsafe_Diamond_simps[simp]: "fsafe (Diamond a p)"
+  and fsafe_Context_simps[simp]: "fsafe (InContext C p)"
 
 (* Basic reasoning principles about syntactic constructs, including inductive principles *)
 lemma dfree_is_dsafe: "dfree \<theta> \<Longrightarrow> dsafe \<theta>"

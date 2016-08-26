@@ -1379,14 +1379,95 @@ lemma psubst_preserves_safe:
   assumes PA:"Padmit \<sigma> \<alpha>"  
   shows "hpsafe (Psubst \<alpha> \<sigma>)"
     using ssafe hpsafe PA psubst_fsubst_preserves_safe by auto
+  
+lemma nsubst_dterm:
+fixes I::"('sf, 'sc, 'sz) interp"
+fixes \<nu>::"'sz state"
+fixes \<nu>'::"'sz state"
+assumes good_interp:"is_interp I"    
+shows "NTadmit \<sigma> \<theta> \<Longrightarrow> dsafe \<theta> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> dterm_sem I (NTsubst \<theta> \<sigma>) \<nu>' = dterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> \<nu>'"
+  sorry  
+
+lemma nsubst_ode:
+fixes I::"('sf, 'sc, 'sz) interp"
+fixes \<nu>::"'sz state"
+fixes \<nu>'::"'sz state"
+assumes good_interp:"is_interp I"    
+shows "NOUadmit \<sigma> ODE U \<Longrightarrow> osafe ODE \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> ODE_sem I (NOsubst ODE \<sigma>) = ODE_sem (NTadjoint I \<sigma> \<nu>) ODE"
+  sorry  
+
+lemma nsubst_mkv:
+fixes I::"('sf, 'sc, 'sz) interp"
+fixes \<nu>::"'sz state"
+fixes \<nu>'::"'sz state"
+assumes good_interp:"is_interp I"    
+shows "NOUadmit \<sigma> ODE U \<Longrightarrow> osafe ODE \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (mk_v I (NOsubst ODE \<sigma>)) 
+  = (mk_v (NTadjoint I \<sigma> \<nu>) ODE )"
+    sorry
+
+lemma nsubst_hp_fml:
+fixes I::"('sf, 'sc, 'sz) interp"
+fixes \<nu>::"'sz state"
+assumes good_interp:"is_interp I"    
+shows " (NPadmit \<sigma> \<alpha> \<longrightarrow> (hpsafe \<alpha> \<longrightarrow> (\<forall>i. dfree (\<sigma> i)) \<longrightarrow> (prog_sem I (NPsubst \<alpha> \<sigma>)) = (prog_sem (NTadjoint I \<sigma> \<nu>) \<alpha>))) \<and>
+  (NFadmit \<sigma> \<phi> \<longrightarrow> (fsafe \<phi> \<longrightarrow> (\<forall>i. dfree (\<sigma> i)) \<longrightarrow> (fml_sem I (NFsubst \<phi> \<sigma>)) = (fml_sem (NTadjoint I \<sigma> \<nu>) \<phi>)))"
+proof (induction rule: NPadmit_NFadmit.induct)
+  case (NPadmit_Pvar \<sigma> a)
+  then show ?case unfolding NTadjoint_def by auto
+next
+  case (NPadmit_ODE \<sigma> ODE \<phi>)
+  then show ?case using nsubst_ode[OF good_interp, of \<sigma> ODE "ODE_vars ODE"] nsubst_mkv[OF good_interp, of \<sigma> ODE "ODE_vars ODE"] by (auto)
+next
+  case (NPadmit_Assign \<sigma> \<theta> x)
+  then show ?case using nsubst_dterm[OF good_interp, of \<sigma> \<theta>] by auto
+next
+  case (NPadmit_DiffAssign \<sigma> \<theta> x)
+  then show ?case using nsubst_dterm[OF good_interp, of \<sigma> \<theta>] by auto
+next
+  case (NFadmit_Geq \<sigma> \<theta>1 \<theta>2)
+  then show ?case 
+    using nsubst_dterm[OF good_interp, of \<sigma> \<theta>1] 
+    using nsubst_dterm[OF good_interp, of \<sigma> \<theta>2] by auto
+next
+  case (NFadmit_Prop \<sigma> args f)
+  assume NTA:"\<And>i. NTadmit \<sigma> (args i)"
+  have "fsafe ($\<phi> f args) \<Longrightarrow>  (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> fml_sem I (NFsubst ($\<phi> f args) \<sigma>) = fml_sem (NTadjoint I \<sigma> \<nu>) ($\<phi> f args)"
+    proof -
+      assume safe:"fsafe ($\<phi> f args)"
+      from safe have frees:"\<And>i. dfree (args i)" by (auto dest: fsafe.cases)
+      from frees have safes:"\<And>i. dsafe (args i)" using dfree_is_dsafe by auto
+      assume subFree:"(\<And>i. dfree (\<sigma> i))"
+      show "?thesis" using nsubst_dterm[OF good_interp NTA safes subFree] unfolding NTadjoint_def by auto
+    qed
+  then show ?case by auto 
+next
+  case (NFadmit_DiffFormula \<sigma> \<phi>)
+  then show ?case sorry
+next
+  case (NFadmit_Context \<sigma> \<phi> C)
+  then show ?case unfolding NTadjoint_def by auto
+qed (auto)
 
 lemma nsubst_fml:
 fixes I::"('sf, 'sc, 'sz) interp"
 fixes \<nu>::"'sz state"
+assumes good_interp:"is_interp I"
+assumes NFA:"NFadmit \<sigma> \<phi>"
+assumes fsafe:"fsafe \<phi>"
+assumes frees:"(\<forall>i. dfree (\<sigma> i))"
+shows "fml_sem I (NFsubst \<phi> \<sigma>) = fml_sem (NTadjoint I \<sigma> \<nu>) \<phi>"
+ using good_interp NFA fsafe frees nsubst_hp_fml by blast
+
+lemma nsubst_hp:
+fixes I::"('sf, 'sc, 'sz) interp"
+fixes \<nu>::"'sz state"
 assumes good_interp:"is_interp I"    
-shows "NFadmit \<sigma> \<phi> \<Longrightarrow> fsafe \<phi> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (\<nu> \<in> fml_sem I (NFsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (NTadjoint I \<sigma> \<nu>) \<phi>)"
-  sorry
-  
+assumes NPA:"NPadmit \<sigma> \<alpha>"
+assumes hpsafe:"hpsafe \<alpha>"
+assumes frees:"\<forall>i. dfree (\<sigma> i)"
+shows "prog_sem I (NPsubst \<alpha> \<sigma>) = prog_sem (NTadjoint I \<sigma> \<nu>) \<alpha>"
+ using good_interp NPA hpsafe frees nsubst_hp_fml by blast
+
 lemma psubst_fml:
 fixes I::"('sf, 'sc, 'sz) interp"
 fixes \<nu>::"'sz state"
@@ -2057,14 +2138,5 @@ next
       qed      
       using subst_sterm frechet_correctness[OF good_interp] dfree_Fun.prems[of f] sorry
 qed (auto)
-
-(* TODO: In theory useful, but not used yet. *)
-lemma nsubst_dterm:
-fixes I::"('sf, 'sc, 'sz) interp"
-fixes \<nu>::"'sz state"
-fixes \<nu>'::"'sz state"
-assumes good_interp:"is_interp I"    
-shows "NTadmit \<sigma> \<theta> \<Longrightarrow> dsafe \<theta> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> dterm_sem I (NTsubst \<theta> \<sigma>) \<nu>' = dterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> \<nu>'"
-  sorry
 
 end end
