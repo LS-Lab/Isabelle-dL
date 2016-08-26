@@ -934,16 +934,35 @@ lemma uadmit_prog_adjoint:
   assumes PUA:"PUadmit \<sigma> a U"
   assumes VA:"Vagree \<nu> \<omega> (-U)"
   assumes hpsafe:"hpsafe a"
+  assumes ssafe:"ssafe \<sigma>"
   assumes good_interp:"is_interp I"
   shows "prog_sem (adjoint I \<sigma> \<nu>) a = prog_sem (adjoint I \<sigma> \<omega>) a"
   proof -
     have sub:"(\<Union>x\<in>SDom \<sigma> \<inter> SIGP a. SFV \<sigma> x) \<subseteq> -U" using PUA unfolding PUadmit_def by auto
     have VA':"Vagree \<nu> \<omega> (\<Union>x\<in>SDom \<sigma> \<inter> SIGP a. SFV \<sigma> x)" using agree_sub[OF sub VA] by auto
-    show ?thesis sorry
+    show ?thesis 
+      apply(rule uadmit_prog_fml_adjoint'[OF ssafe good_interp])
+      subgoal by (rule VA')
+      subgoal by (rule hpsafe)
+      done
   qed
 
-lemma uadmit_fml_adjoint:"FUadmit \<sigma> \<phi> U \<Longrightarrow> Vagree \<nu> \<omega> (-U) \<Longrightarrow> fml_sem (adjoint I \<sigma> \<nu>) \<phi> = fml_sem (adjoint I \<sigma> \<omega>) \<phi>"
-  sorry
+lemma uadmit_fml_adjoint:
+  assumes FUA:"FUadmit \<sigma> \<phi> U"
+  assumes VA:"Vagree \<nu> \<omega> (-U)"
+  assumes fsafe:"fsafe \<phi>"
+  assumes ssafe:"ssafe \<sigma>"
+  assumes good_interp:"is_interp I"
+  shows "fml_sem (adjoint I \<sigma> \<nu>) \<phi> = fml_sem (adjoint I \<sigma> \<omega>) \<phi>"
+  proof -
+    have sub:"(\<Union>x\<in>SDom \<sigma> \<inter> SIGF \<phi>. SFV \<sigma> x) \<subseteq> -U" using FUA unfolding FUadmit_def by auto
+    have VA':"Vagree \<nu> \<omega> (\<Union>x\<in>SDom \<sigma> \<inter> SIGF \<phi>. SFV \<sigma> x)" using agree_sub[OF sub VA] by auto
+    show ?thesis 
+      apply(rule uadmit_prog_fml_adjoint'[OF ssafe good_interp])
+      subgoal by (rule VA')
+      subgoal by (rule fsafe)
+      done
+  qed
 
 lemma nsubst_sterm:
 fixes I::"('sf, 'sc, 'sz) interp"
