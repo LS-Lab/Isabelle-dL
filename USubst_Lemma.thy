@@ -521,7 +521,16 @@ lemma adj_sub_prop_fact:"\<And>i j x1 x2 k. i\<in>SIGT (x2 k) \<Longrightarrow> 
     apply (cases "SFunctions \<sigma> i")
     by auto
   done
-    
+
+lemma adj_sub_ode_fact:"\<And>i j x1 x2. Inl i \<in> SIGO x1 \<Longrightarrow> j \<in> (case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<Longrightarrow> Inl i \<in>({Inl x |x. x \<in> dom (SFunctions \<sigma>)} \<union> {Inr (Inl x) |x. x \<in> dom (SContexts \<sigma>)} \<union> {Inr (Inr x) |x. x \<in> dom (SPredicates \<sigma>)} \<union>
+         {Inr (Inr x) |x. x \<in> dom (SPrograms \<sigma>)}) \<inter>
+         (SIGF x2 \<union> {Inl x |x. Inl x \<in> SIGO x1} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO x1})"
+  unfolding SDom_def apply auto
+  subgoal for i j
+    apply (cases "SFunctions \<sigma> i")
+    by auto
+  done
+
 lemma adj_sub_assign:"\<And>e \<sigma> x. (\<Union>i\<in>SIGT e. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (x := e). SFV \<sigma> a)"
 subgoal for e \<sigma> x
  unfolding SDom_def apply auto
@@ -587,7 +596,20 @@ lemma adj_sub_prop:"\<And>\<sigma> x1 x2 j . (\<Union>i\<in>SIGT (x2 j). case SF
     done
   done
 done
- 
+
+lemma adj_sub_ode:"\<And>\<sigma> x1 x2. (\<Union>i\<in>{i |i. Inl i \<in> SIGO x1}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (EvolveODE x1 x2). SFV \<sigma> a)"
+ subgoal for \<sigma> x1 x2
+ unfolding SDom_def apply auto
+  subgoal for x i
+    apply (cases "SFunctions \<sigma> i")
+    apply auto
+    subgoal for a
+      using adj_sub_ode_fact[of i x1 x \<sigma> x2]
+      by (metis (mono_tags, lifting) SFV.simps(1) option.simps(5)) 
+    done
+  done
+done
+
 lemma uadmit_ode_adjoint':
   fixes \<sigma> I
   assumes ssafe:"ssafe \<sigma>"
@@ -681,8 +703,15 @@ next
     then have VAF:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a)"
       using agree_sub[OF sub1 VA] by auto 
     note IH' = IH[OF VAF fsafe]
+    have sub:"(\<Union>i\<in>{i |i. Inl i \<in> SIGO x1}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (EvolveODE x1 x2). SFV \<sigma> a)"
+      using adj_sub_ode[of \<sigma> x1 x2] by auto
     moreover have IH2:"ODE_sem (local.adjoint I \<sigma> \<nu>) x1 = ODE_sem (local.adjoint I \<sigma> \<omega>) x1"
-      sorry
+      apply (rule uadmit_ode_adjoint')
+      subgoal by (rule ssafe)
+      subgoal by (rule good_interp)
+      subgoal using agree_sub[OF sub VA] by auto
+      subgoal by (rule osafe)
+      done
     ultimately show ?case apply auto
       sorry
 next
