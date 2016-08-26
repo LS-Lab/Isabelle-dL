@@ -1425,6 +1425,7 @@ proof (induction rule: Padmit_Fadmit.induct)
 next
   case (Padmit_Sequence \<sigma> a b) then 
   have PUA:"PUadmit \<sigma> b (BVP (Psubst a \<sigma>))"
+   and PA:"Padmit \<sigma> a"
    and IH1:"hpsafe a \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) a))"
    and IH2:"hpsafe b \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst b \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) b))"
     by auto
@@ -1436,7 +1437,7 @@ next
       fix \<nu> \<omega>
       have agree:"\<And>\<mu>. (\<nu>, \<mu>) \<in> prog_sem I (Psubst a \<sigma>) \<Longrightarrow> Vagree \<nu> \<mu> (-BVP(Psubst a \<sigma>))"
         subgoal for \<mu>
-          using bound_effect[OF good_interp, of "(Psubst a \<sigma>)" \<nu>, OF psubst_preserves_safe[OF safe1 ssafe]] by auto
+          using bound_effect[OF good_interp, of "(Psubst a \<sigma>)" \<nu>, OF psubst_preserves_safe[OF ssafe safe1 PA]] by auto
         done
       have sem_eq:"\<And>\<mu>. (\<nu>, \<mu>) \<in> prog_sem I (Psubst a \<sigma>) \<Longrightarrow> 
           ((\<mu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) b) =
@@ -1463,7 +1464,8 @@ next
   then show ?case by auto
 next
   case (Padmit_Loop \<sigma> a) then 
-    have PUA:"PUadmit \<sigma> a (BVP (Psubst a \<sigma>))"
+    have PA:"Padmit \<sigma> a"
+    and PUA:"PUadmit \<sigma> a (BVP (Psubst a \<sigma>))"
     and IH:"hpsafe a \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) a))"
       by auto
     have "hpsafe (a**) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst (a**) \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) (a**)))"
@@ -1473,7 +1475,7 @@ next
         assume ssafe:"ssafe \<sigma>"
         have agree:"\<And>\<nu> \<mu>. (\<nu>, \<mu>) \<in> prog_sem I (Psubst a \<sigma>) \<Longrightarrow> Vagree \<nu> \<mu> (-BVP(Psubst a \<sigma>))"
         subgoal for \<nu> \<mu>
-          using bound_effect[OF good_interp, of "(Psubst a \<sigma>)" \<nu>, OF psubst_preserves_safe[OF hpsafe ssafe]] by auto
+          using bound_effect[OF good_interp, of "(Psubst a \<sigma>)" \<nu>, OF psubst_preserves_safe[OF ssafe hpsafe PA]] by auto
         done
       have sem_eq:"\<And>\<nu> \<mu> \<omega>. (\<nu>, \<mu>) \<in> prog_sem I (Psubst a \<sigma>) \<Longrightarrow> 
           ((\<mu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) a) =
@@ -1804,7 +1806,8 @@ next
   then show ?case by auto
 next
   case (Fadmit_Diamond \<sigma> \<phi> a) then 
-    have FUA:"FUadmit \<sigma> \<phi> (BVP (Psubst a \<sigma>))"
+    have PA:"Padmit \<sigma> a" 
+    and FUA:"FUadmit \<sigma> \<phi> (BVP (Psubst a \<sigma>))"
     and IH1:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>))"
     and IH2:"hpsafe a \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (adjoint I \<sigma> \<nu>) a))"
       by auto
@@ -1815,7 +1818,7 @@ next
       from fsafe have fsafe':"fsafe \<phi>" and hpsafe:"hpsafe a" by (auto dest: fsafe.cases)
       fix \<nu>
       have agree:"\<And>\<omega>. (\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>) \<Longrightarrow> Vagree \<nu> \<omega> (-BVP(Psubst a \<sigma>))"
-        using bound_effect[OF good_interp, of "(Psubst a \<sigma>)" \<nu>, OF psubst_preserves_safe[OF hpsafe ssafe]] by auto
+        using bound_effect[OF good_interp, of "(Psubst a \<sigma>)" \<nu>, OF psubst_preserves_safe[OF ssafe hpsafe PA]] by auto
       have sem_eq:"\<And>\<omega>. (\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>) \<Longrightarrow> 
           (\<omega> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>) =
           (\<omega> \<in> fml_sem (local.adjoint I \<sigma> \<omega>) \<phi>)"
@@ -1892,7 +1895,7 @@ next
        have eq':"?R1 = ?R2"
          using adj_eq IH[OF fsafe ssafe] by auto
        have subSafe:"(\<And>i. fsafe (?sub i))"
-         using fsubst_preserves_safe[OF fsafe ssafe]
+         using fsubst_preserves_safe[OF ssafe fsafe FA]
          by (simp add: case_unit_Unity)
        have freef:"fsafe C'" using ssafe some unfolding ssafe_def by auto 
        have IH2:"(\<nu> \<in> fml_sem I (PFsubst C' ?sub)) = (\<nu> \<in> fml_sem (PFadjoint I ?sub) C')"
