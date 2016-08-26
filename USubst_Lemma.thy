@@ -496,6 +496,32 @@ lemma adj_sub_assign_fact:"\<And>i j e. i\<in>SIGT e \<Longrightarrow> j \<in> (
     by auto
   done
 
+lemma adj_sub_geq1_fact:"\<And>i j x1 x2. i\<in>SIGT x1 \<Longrightarrow> j \<in> (case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<Longrightarrow> Inl i \<in>({Inl x |x. x \<in> dom (SFunctions \<sigma>)} \<union> {Inr (Inl x) |x. x \<in> dom (SContexts \<sigma>)} \<union> {Inr (Inr x) |x. x \<in> dom (SPredicates \<sigma>)} \<union>
+         {Inr (Inr x) |x. x \<in> dom (SPrograms \<sigma>)}) \<inter>
+        {Inl x |x. x \<in> SIGT x1 \<or> x \<in> SIGT x2}"
+  unfolding SDom_def apply auto
+  subgoal for i j
+    apply (cases "SFunctions \<sigma> i")
+    by auto
+  done
+
+lemma adj_sub_geq2_fact:"\<And>i j x1 x2. i\<in>SIGT x2 \<Longrightarrow> j \<in> (case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<Longrightarrow> Inl i \<in>({Inl x |x. x \<in> dom (SFunctions \<sigma>)} \<union> {Inr (Inl x) |x. x \<in> dom (SContexts \<sigma>)} \<union> {Inr (Inr x) |x. x \<in> dom (SPredicates \<sigma>)} \<union>
+         {Inr (Inr x) |x. x \<in> dom (SPrograms \<sigma>)}) \<inter>
+        {Inl x |x. x \<in> SIGT x1 \<or> x \<in> SIGT x2}"
+  unfolding SDom_def apply auto
+  subgoal for i j
+    apply (cases "SFunctions \<sigma> i")
+    by auto
+  done
+lemma adj_sub_prop_fact:"\<And>i j x1 x2 k. i\<in>SIGT (x2 k) \<Longrightarrow> j \<in> (case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<Longrightarrow> Inl i \<in>({Inl x |x. x \<in> dom (SFunctions \<sigma>)} \<union> {Inr (Inl x) |x. x \<in> dom (SContexts \<sigma>)} \<union> {Inr (Inr x) |x. x \<in> dom (SPredicates \<sigma>)} \<union>
+         {Inr (Inr x) |x. x \<in> dom (SPrograms \<sigma>)}) \<inter>
+         insert (Inr (Inr x1)) {Inl x |x. \<exists>xa. x \<in> SIGT (x2 xa)}"
+  unfolding SDom_def apply auto
+  subgoal for i j
+    apply (cases "SFunctions \<sigma> i")
+    by auto
+  done
+    
 lemma adj_sub_assign:"\<And>e \<sigma> x. (\<Union>i\<in>SIGT e. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (x := e). SFV \<sigma> a)"
 subgoal for e \<sigma> x
  unfolding SDom_def apply auto
@@ -510,17 +536,58 @@ subgoal for e \<sigma> x
 done
 
 lemma adj_sub_diff_assign:"\<And>e \<sigma> x. (\<Union>i\<in>SIGT e. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (DiffAssign x e). SFV \<sigma> a)"
-  sorry
-
+subgoal for e \<sigma> x
+ unfolding SDom_def apply auto
+  subgoal for i j
+    apply (cases "SFunctions \<sigma> j")
+    apply auto
+    subgoal for a
+      using adj_sub_assign_fact[of j e i]
+      by (metis (mono_tags, lifting) SFV.simps(1) option.simps(5))
+    done
+  done
+done
+   
 lemma adj_sub_geq1:"\<And>\<sigma> x1 x2. (\<Union>i\<in>SIGT x1. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Geq x1 x2). SFV \<sigma> a)"
-  sorry
+ subgoal for \<sigma> x1 x2
+ unfolding SDom_def apply auto
+  subgoal for x i
+    apply (cases "SFunctions \<sigma> i")
+    apply auto
+    subgoal for a
+      using adj_sub_geq1_fact[of i x1 x \<sigma>] 
+      by (metis (mono_tags, lifting) SFV.simps(1) option.simps(5))
+    done
+  done
+done
 
 lemma adj_sub_geq2:"\<And>\<sigma> x1 x2. (\<Union>i\<in>SIGT x2. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Geq x1 x2). SFV \<sigma> a)"
- sorry
+ subgoal for \<sigma> x1 x2
+ unfolding SDom_def apply auto
+  subgoal for x i
+    apply (cases "SFunctions \<sigma> i")
+    apply auto
+    subgoal for a
+      using adj_sub_geq2_fact[of i x2 x \<sigma>] 
+      by (metis (mono_tags, lifting) SFV.simps(1) option.simps(5))
+    done
+  done
+done
 
 lemma adj_sub_prop:"\<And>\<sigma> x1 x2 j . (\<Union>i\<in>SIGT (x2 j). case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF ($\<phi> x1 x2). SFV \<sigma> a)"
-  sorry      
-
+ subgoal for \<sigma> x1 x2 j
+ unfolding SDom_def apply auto
+  subgoal for x i
+    apply (cases "SFunctions \<sigma> i")
+    apply auto
+    subgoal for a
+      using adj_sub_prop_fact[of i x2 j x \<sigma> x1] 
+      by (metis (mono_tags, lifting) SFV.simps(1) option.simps(5))
+       
+    done
+  done
+done
+ 
 lemma uadmit_prog_fml_adjoint':
   fixes \<sigma> I
   assumes ssafe:"ssafe \<sigma>"
