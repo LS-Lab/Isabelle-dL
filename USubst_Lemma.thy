@@ -487,6 +487,28 @@ proof -
     using good_interp ssafe VA dsafe unfolding ssafe_def by auto 
 qed
 
+lemma adj_sub_assign_fact:"\<And>i j e. i\<in>SIGT e \<Longrightarrow> j \<in> (case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<Longrightarrow> Inl i \<in>({Inl x |x. x \<in> dom (SFunctions \<sigma>)} \<union> {Inr (Inl x) |x. x \<in> dom (SContexts \<sigma>)} \<union> {Inr (Inr x) |x. x \<in> dom (SPredicates \<sigma>)} \<union>
+         {Inr (Inr x) |x. x \<in> dom (SPrograms \<sigma>)}) \<inter>
+        {Inl x |x. x \<in> SIGT e}"
+  unfolding SDom_def apply auto
+  subgoal for i j
+    apply (cases "SFunctions \<sigma> i")
+    by auto
+  done
+
+lemma adj_sub_assign:"\<And>e \<sigma> x. (\<Union>i\<in>SIGT e. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (x := e). SFV \<sigma> a)"
+subgoal for e \<sigma> x
+ unfolding SDom_def apply auto
+  subgoal for i j
+    apply (cases "SFunctions \<sigma> j")
+    apply auto
+    subgoal for a
+      using adj_sub_assign_fact[of j e i]
+      by (metis (mono_tags, lifting) SFV.simps(1) option.simps(5))
+    done
+  done
+done
+
 lemma uadmit_prog_fml_adjoint':
   assumes ssafe:"ssafe \<sigma>"
   assumes good_interp:"is_interp I"
@@ -500,25 +522,8 @@ next
     assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (x := e). SFV \<sigma> a)"
     assume safe:"hpsafe (x := e)"
     from safe have dsafe:"dsafe e" by (auto dest: hpsafe.cases)
-    have fact:"\<And>i j. i\<in>SIGT e \<Longrightarrow> j \<in> (case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<Longrightarrow> Inl i \<in>({Inl x |x. x \<in> dom (SFunctions \<sigma>)} \<union> {Inr (Inl x) |x. x \<in> dom (SContexts \<sigma>)} \<union> {Inr (Inr x) |x. x \<in> dom (SPredicates \<sigma>)} \<union>
-         {Inr (Inr x) |x. x \<in> dom (SPrograms \<sigma>)}) \<inter>
-        {Inl x |x. x \<in> SIGT e}"
-      unfolding SDom_def apply auto
-      subgoal for i j
-        apply (cases "SFunctions \<sigma> i")
-        by auto
-      done
     have sub:"(\<Union>i\<in>SIGT e. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (x := e). SFV \<sigma> a)"
-      unfolding SDom_def apply auto
-      subgoal for i j
-        apply (cases "SFunctions \<sigma> j")
-        apply auto
-        subgoal for a
-          using fact[of j i]
-          by (metis (mono_tags, lifting) SFV.simps(1) option.simps(5))
-        done
-      done
-    
+      using adj_sub_assign[of \<sigma> e x] by auto
     have "dterm_sem (local.adjoint I \<sigma> \<nu>) e = dterm_sem (local.adjoint I \<sigma> \<omega>) e"
       by (rule uadmit_dterm_adjointS[OF ssafe good_interp agree_sub[OF sub VA] dsafe])
     then show ?case by (auto simp add: vec_eq_iff)
