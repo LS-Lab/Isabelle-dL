@@ -229,6 +229,25 @@ where
 | NFadmit_Diamond:"NFadmit \<sigma> \<phi> \<Longrightarrow> NPadmit \<sigma> a \<Longrightarrow> NFUadmit \<sigma> \<phi> (BVP (NPsubst a \<sigma>)) \<Longrightarrow> NFadmit \<sigma> (Diamond a \<phi>)"
 | NFadmit_Context:"NFadmit \<sigma> \<phi> \<Longrightarrow> NFUadmit \<sigma> \<phi> UNIV \<Longrightarrow> NFadmit \<sigma> (InContext C \<phi>)"
 
+inductive_simps
+      NPadmit_Pvar_simps[simp]: "NPadmit \<sigma> (Pvar a)"
+  and NPadmit_Sequence_simps[simp]: "NPadmit \<sigma> (a ;; b)"
+  and NPadmit_Loop_simps[simp]: "NPadmit \<sigma> (a**)"
+  and NPadmit_ODE_simps[simp]: "NPadmit \<sigma> (EvolveODE ODE p)"
+  and NPadmit_Choice_simps[simp]: "NPadmit \<sigma> (a \<union>\<union> b)"
+  and NPadmit_Assign_simps[simp]: "NPadmit \<sigma> (Assign x e)"
+  and NPadmit_DiffAssign_simps[simp]: "NPadmit \<sigma> (DiffAssign x e)"
+  and NPadmit_Test_simps[simp]: "NPadmit \<sigma> (? p)"
+  
+  and NFadmit_Geq_simps[simp]: "NFadmit \<sigma> (Geq t1 t2)"
+  and NFadmit_Prop_simps[simp]: "NFadmit \<sigma> (Prop p args)"
+  and NFadmit_Not_simps[simp]: "NFadmit \<sigma> (Not p)"
+  and NFadmit_And_simps[simp]: "NFadmit \<sigma> (And p q)"
+  and NFadmit_DiffFormula_simps[simp]: "NFadmit \<sigma> (DiffFormula p)"
+  and NFadmit_Exists_simps[simp]: "NFadmit \<sigma> (Exists x p)"
+  and NFadmit_Diamond_simps[simp]: "NFadmit \<sigma> (Diamond a p)"
+  and NFadmit_Context_simps[simp]: "NFadmit \<sigma> (InContext C p)"
+
 definition PFUadmit :: "('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b + 'd, 'c) formula \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
 where "PFUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i. FVF (\<sigma> i)) \<inter> U) = {}"
 
@@ -298,9 +317,7 @@ inductive_simps
   and Fadmit_Exists_simps[simp]: "Fadmit \<sigma> (Exists x p)"
   and Fadmit_Diamond_simps[simp]: "Fadmit \<sigma> (Diamond a p)"
   and Fadmit_Context_simps[simp]: "Fadmit \<sigma> (InContext C p)"
-  
-  
-  
+    
 fun extendf :: "('sf, 'sc, 'sz) interp \<Rightarrow> 'sz Rvec \<Rightarrow> ('sf + 'sz, 'sc, 'sz) interp"
 where "extendf I R =
 \<lparr>Functions = (\<lambda>f. case f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> (\<lambda>_. R $ f')),

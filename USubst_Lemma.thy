@@ -1209,6 +1209,63 @@ next
   ultimately show ?case by (auto intro: osafe.intros)
 qed
 
+lemma nosubst_preserves_safe:
+assumes sfree:"\<And>i. dfree (\<sigma> i)"
+fixes \<alpha> ::"('a + 'd, 'b, 'c) hp" and \<phi> ::"('a + 'd, 'b, 'c) formula"
+shows "(osafe ODE \<Longrightarrow> NOUadmit \<sigma> ODE U \<Longrightarrow> osafe (NOsubst ODE \<sigma>))"
+proof (induction rule: osafe.induct)
+  case (osafe_Var c)
+  then show ?case by (auto intro: osafe.intros)
+next
+  case (osafe_Sing \<theta> x)
+  then show ?case using sfree ntsubst_preserves_free[of \<theta> \<sigma>] unfolding NOUadmit_def by (auto intro: osafe.intros)
+next
+  case (osafe_Prod ODE1 ODE2)
+    assume safe1:"osafe ODE1"
+    and safe2:"osafe ODE2"
+    and disj:"ODE_dom ODE1 \<inter> ODE_dom ODE2 = {}"
+    and IH1:"NOUadmit \<sigma> ODE1 U \<Longrightarrow> osafe (NOsubst ODE1 \<sigma>)"
+    and IH2:"NOUadmit \<sigma> ODE2 U \<Longrightarrow> osafe (NOsubst ODE2 \<sigma>)"
+    and NOUA:"NOUadmit \<sigma> (OProd ODE1 ODE2) U"    
+    have nosubst_preserves_ODE_dom:"\<And>ODE. ODE_dom (NOsubst ODE \<sigma>) = ODE_dom ODE"
+      subgoal for ODE
+        apply(induction "ODE")
+        by auto
+      done
+    have disj':"ODE_dom (NOsubst ODE1 \<sigma>) \<inter> ODE_dom (NOsubst ODE2 \<sigma>) = {}"
+      using disj nosubst_preserves_ODE_dom by auto
+    from NOUA have NOUA1:"NOUadmit \<sigma> ODE1 U" and NOUA2:"NOUadmit \<sigma>  ODE2 U"  unfolding NOUadmit_def by auto
+  then show ?case using IH1[OF NOUA1] IH2[OF NOUA2] disj' by (auto intro: osafe.intros)
+qed
+  
+lemma npsubst_nfsubst_preserves_safe:
+assumes sfree:"\<And>i. dfree (\<sigma> i)"
+fixes \<alpha> ::"('a + 'd, 'b, 'c) hp" and \<phi> ::"('a + 'd, 'b, 'c) formula"
+shows "(hpsafe \<alpha> \<longrightarrow> NPadmit \<sigma> \<alpha> \<longrightarrow> hpsafe (NPsubst \<alpha> \<sigma>)) \<and> 
+    (fsafe \<phi> \<longrightarrow> NFadmit \<sigma> \<phi> \<longrightarrow> fsafe (NFsubst \<phi> \<sigma>))"
+proof (induction rule: hpsafe_fsafe.induct)
+  case (hpsafe_Pvar x)
+  then show ?case by (auto intro: hpsafe_fsafe.intros)
+next
+  case (hpsafe_Assign e x)
+  then show ?case using ntsubst_preserves_safe sfree by (auto intro: hpsafe_fsafe.intros)
+next
+  case (hpsafe_DiffAssign e x)
+  then show ?case using ntsubst_preserves_safe sfree by (auto intro: hpsafe_fsafe.intros)
+next
+  case (hpsafe_Evolve ODE P)
+  then show ?case using nosubst_preserves_safe sfree by (auto intro: hpsafe_fsafe.intros) 
+next
+  case (fsafe_Geq t1 t2)
+  then show ?case using ntsubst_preserves_safe sfree by (auto intro: hpsafe_fsafe.intros)
+next
+  case (fsafe_Prop args p)
+  then show ?case using sfree ntsubst_preserves_free sfree by (auto intro: hpsafe_fsafe.intros)
+next
+  case (fsafe_DiffFormula p)
+  then show ?case sorry
+qed (auto intro: hpsafe_fsafe.intros)
+
 lemma psubst_fsubst_preserves_safe:
 assumes ssafe:"ssafe \<sigma>"
 shows "(hpsafe \<alpha> \<longrightarrow> Padmit \<sigma> \<alpha> \<longrightarrow> hpsafe (Psubst \<alpha> \<sigma>)) \<and>
