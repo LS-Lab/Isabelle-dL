@@ -509,7 +509,20 @@ subgoal for e \<sigma> x
   done
 done
 
+lemma adj_sub_diff_assign:"\<And>e \<sigma> x. (\<Union>i\<in>SIGT e. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (DiffAssign x e). SFV \<sigma> a)"
+  sorry
+
+lemma adj_sub_geq1:"\<And>\<sigma> x1 x2. (\<Union>i\<in>SIGT x1. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Geq x1 x2). SFV \<sigma> a)"
+  sorry
+
+lemma adj_sub_geq2:"\<And>\<sigma> x1 x2. (\<Union>i\<in>SIGT x2. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Geq x1 x2). SFV \<sigma> a)"
+ sorry
+
+lemma adj_sub_prop:"\<And>\<sigma> x1 x2 j . (\<Union>i\<in>SIGT (x2 j). case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF ($\<phi> x1 x2). SFV \<sigma> a)"
+  sorry      
+
 lemma uadmit_prog_fml_adjoint':
+  fixes \<sigma> I
   assumes ssafe:"ssafe \<sigma>"
   assumes good_interp:"is_interp I"
   shows "\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>x\<in>SDom \<sigma> \<inter> SIGP \<alpha>. SFV \<sigma> x) \<Longrightarrow> hpsafe \<alpha> \<Longrightarrow> prog_sem (adjoint I \<sigma> \<nu>) \<alpha> = prog_sem (adjoint I \<sigma> \<omega>) \<alpha>"
@@ -533,7 +546,7 @@ next
     assume safe:"hpsafe (DiffAssign x e)"
     from safe have dsafe:"dsafe e" by (auto dest: hpsafe.cases)
     have sub:"(\<Union>i\<in>SIGT e. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (DiffAssign x e). SFV \<sigma> a)"
-      sorry
+      using adj_sub_diff_assign[of \<sigma> e] by auto
     have "dterm_sem (local.adjoint I \<sigma> \<nu>) e = dterm_sem (local.adjoint I \<sigma> \<omega>) e"
       by (rule uadmit_dterm_adjointS[OF ssafe good_interp agree_sub[OF sub VA] dsafe])
     then show ?case by (auto simp add: vec_eq_iff)
@@ -610,28 +623,29 @@ next
     assume safe:"fsafe (Geq x1 x2)"
     then have dsafe1:"dsafe x1" and dsafe2:"dsafe x2" by (auto dest: fsafe.cases)
     have sub1:"(\<Union>i\<in>SIGT x1. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Geq x1 x2). SFV \<sigma> a)"
-      sorry
+      using adj_sub_geq1[of \<sigma> x1 x2] by auto
     have sub2:"(\<Union>i\<in>SIGT x2. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Geq x1 x2). SFV \<sigma> a)"
-      sorry
+      using adj_sub_geq2[of \<sigma> x2 x1] by auto
     have "dterm_sem (local.adjoint I \<sigma> \<nu>) x1 = dterm_sem (local.adjoint I \<sigma> \<omega>) x1"
       by (rule uadmit_dterm_adjointS[OF ssafe good_interp agree_sub[OF sub1 VA] dsafe1])
     moreover have "dterm_sem (local.adjoint I \<sigma> \<nu>) x2 = dterm_sem (local.adjoint I \<sigma> \<omega>) x2"
       by (rule uadmit_dterm_adjointS[OF ssafe good_interp agree_sub[OF sub2 VA] dsafe2])
     ultimately show ?case by auto
 next
-  case (Prop x1 x2)
+  case (Prop x1 x2 \<nu> \<omega>)
     assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF ($\<phi> x1 x2). SFV \<sigma> a)"
     assume safe:"fsafe ($\<phi> x1 x2)"
     from safe have frees:"\<And>i. dfree (x2 i)"
       by (auto dest: fsafe.cases)
     then have safes:"\<And>i. dsafe (x2 i)" using dfree_is_dsafe by auto
     have subs:"\<And>j. (\<Union>i\<in>SIGT (x2 j). case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF ($\<phi> x1 x2). SFV \<sigma> a)"
-      sorry
+      subgoal for j using adj_sub_prop[of \<sigma> x2 j x1] by auto
+      done
     have "\<And>i. dterm_sem (local.adjoint I \<sigma> \<nu>) (x2 i) = dterm_sem (local.adjoint I \<sigma> \<omega>) (x2 i)"
       by (rule uadmit_dterm_adjointS[OF ssafe good_interp agree_sub[OF subs VA] safes])
     then have vec_eq:"\<And>R. (\<chi> i. dterm_sem (local.adjoint I \<sigma> \<nu>) (x2 i) R) = (\<chi> i. dterm_sem (local.adjoint I \<sigma> \<omega>) (x2 i) R)"
       by (auto simp add: vec_eq_iff)
-    from VA have VAs:"\<And>j. Vagree \<nu> \<omega> (\<Union>i\<in>SIGT (x2 j). case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a)"
+    from VA have VAs:"\<And>j. Vagree \<nu> \<omega> (\<Union>i\<in>SIGT (x2 j). case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a | None \<Rightarrow> {})"
       unfolding Vagree_def SIGT.simps using rangeI 
       by (metis (no_types, lifting) set_mp subs)
     have SIGF:"Inr (Inr x1) \<in> SDom \<sigma> \<inter> SIGF ($\<phi> x1 x2)" unfolding SDom_def
