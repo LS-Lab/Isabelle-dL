@@ -1363,10 +1363,7 @@ next
 next
   case (fsafe_InContext f C) then 
   show ?case
-    apply(cases "SContexts \<sigma> C")
-    apply(auto intro: hpsafe_fsafe.intros)
-    (* TODO: PFsubst_preserves_safe *)
-    sorry
+    using ssafe unfolding ssafe_def by (cases "SContexts \<sigma> C", auto simp add: case_unit_Unity ppsubst_pfsubst_preserves_safe)
 qed (auto intro: hpsafe_fsafe.intros)
     
 lemma fsubst_preserves_safe:
