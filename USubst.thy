@@ -275,6 +275,25 @@ where
 | PFadmit_Diamond:"PFadmit \<sigma> \<phi> \<Longrightarrow> PPadmit \<sigma> a \<Longrightarrow> PFUadmit \<sigma> \<phi> (BVP (PPsubst a \<sigma>)) \<Longrightarrow> PFadmit \<sigma> (Diamond a \<phi>)"
 | PFadmit_Context:"PFadmit \<sigma> \<phi> \<Longrightarrow> PFUadmit \<sigma> \<phi> UNIV \<Longrightarrow> PFadmit \<sigma> (InContext C \<phi>)"
 
+inductive_simps
+      PPadmit_Pvar_simps[simp]: "PPadmit \<sigma> (Pvar a)"
+  and PPadmit_Sequence_simps[simp]: "PPadmit \<sigma> (a ;; b)"
+  and PPadmit_Loop_simps[simp]: "PPadmit \<sigma> (a**)"
+  and PPadmit_ODE_simps[simp]: "PPadmit \<sigma> (EvolveODE ODE p)"
+  and PPadmit_Choice_simps[simp]: "PPadmit \<sigma> (a \<union>\<union> b)"
+  and PPadmit_Assign_simps[simp]: "PPadmit \<sigma> (Assign x e)"
+  and PPadmit_DiffAssign_simps[simp]: "PPadmit \<sigma> (DiffAssign x e)"
+  and PPadmit_Test_simps[simp]: "PPadmit \<sigma> (? p)"
+  
+  and PFadmit_Geq_simps[simp]: "PFadmit \<sigma> (Geq t1 t2)"
+  and PFadmit_Prop_simps[simp]: "PFadmit \<sigma> (Prop p args)"
+  and PFadmit_Not_simps[simp]: "PFadmit \<sigma> (Not p)"
+  and PFadmit_And_simps[simp]: "PFadmit \<sigma> (And p q)"
+  and PFadmit_DiffFormula_simps[simp]: "PFadmit \<sigma> (DiffFormula p)"
+  and PFadmit_Exists_simps[simp]: "PFadmit \<sigma> (Exists x p)"
+  and PFadmit_Diamond_simps[simp]: "PFadmit \<sigma> (Diamond a p)"
+  and PFadmit_Context_simps[simp]: "PFadmit \<sigma> (InContext C p)"
+
   
 inductive Padmit:: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) hp \<Rightarrow> bool"
 and Fadmit:: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> bool"

@@ -1282,6 +1282,38 @@ assumes admit:"NFadmit \<sigma> \<phi>"
 shows "fsafe (NFsubst \<phi> \<sigma>)"
 using npsubst_nfsubst_preserves_safe sfree safe admit by auto
 
+lemma ppsubst_pfsubst_preserves_safe:
+assumes sfree:"\<And>i. fsafe (\<sigma> i)"
+fixes \<alpha> ::"('a, 'b + 'd, 'c) hp" and \<phi> ::"('a, 'b + 'd, 'c) formula"
+shows "(hpsafe \<alpha> \<longrightarrow> PPadmit \<sigma> \<alpha> \<longrightarrow> hpsafe (PPsubst \<alpha> \<sigma>)) \<and> 
+    (fsafe \<phi> \<longrightarrow> PFadmit \<sigma> \<phi> \<longrightarrow> fsafe (PFsubst \<phi> \<sigma>))"
+proof (induction rule: hpsafe_fsafe.induct)
+  case (fsafe_InContext f C)
+  then show ?case using sfree ntsubst_preserves_free sfree 
+    by (cases "C", auto intro: hpsafe_fsafe.intros)
+next
+  case (hpsafe_Evolve ODE P)
+  then show ?case using nosubst_preserves_safe sfree 
+    by (auto intro: hpsafe_fsafe.intros)
+next
+  case (fsafe_DiffFormula p)
+  then show ?case sorry
+qed (auto intro: hpsafe_fsafe.intros)
+
+lemma ppsubst_preserves_safe:
+assumes sfree:"\<And>i. fsafe (\<sigma> i)"
+assumes safe:"hpsafe \<alpha>"
+assumes PPA:"PPadmit \<sigma> \<alpha>"
+shows "hpsafe (PPsubst \<alpha> \<sigma>)"
+    using sfree safe PPA ppsubst_pfsubst_preserves_safe by auto
+
+lemma pfsubst_preserves_safe:
+assumes sfree:"\<And>i. fsafe (\<sigma> i)"
+assumes safe:"fsafe \<phi>"
+assumes PFA:"PFadmit \<sigma> \<phi>"
+shows "fsafe (PFsubst \<phi> \<sigma>)"
+    using sfree safe PFA ppsubst_pfsubst_preserves_safe by auto
+
 lemma psubst_fsubst_preserves_safe:
 assumes ssafe:"ssafe \<sigma>"
 shows "(hpsafe \<alpha> \<longrightarrow> Padmit \<sigma> \<alpha> \<longrightarrow> hpsafe (Psubst \<alpha> \<sigma>)) \<and>
