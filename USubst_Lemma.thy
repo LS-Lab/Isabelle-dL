@@ -1191,11 +1191,28 @@ next
             free sem_eq]
         by auto
   qed auto  
-  
+
+lemma osubst_preserves_safe:
+assumes ssafe:"ssafe \<sigma>"
+shows "(osafe ODE \<Longrightarrow> Oadmit \<sigma> ODE U \<Longrightarrow> osafe (Osubst ODE \<sigma>))"
+proof (induction rule: osafe.induct)
+  case (osafe_Var c)
+  then show ?case using ssafe unfolding ssafe_def by (cases "SODEs \<sigma> c", auto intro: osafe.intros)
+next
+  case (osafe_Sing \<theta> x)
+    then show ?case 
+      using tsubst_preserves_free ssafe unfolding ssafe_def by (auto intro: osafe.intros)
+next
+  case (osafe_Prod ODE1 ODE2)
+  moreover have "Oadmit \<sigma> ODE1 U" "Oadmit \<sigma> ODE2 U" "ODE_dom (Osubst ODE1 \<sigma>) \<inter>  ODE_dom (Osubst ODE2 \<sigma>) = {}"
+    using osafe_Prod.prems by (auto dest: Oadmit.cases) 
+  ultimately show ?case by (auto intro: osafe.intros)
+qed
+
 lemma psubst_fsubst_preserves_safe:
 assumes ssafe:"ssafe \<sigma>"
-shows "(hpsafe \<alpha> \<longrightarrow> hpsafe (Psubst \<alpha> \<sigma>)) \<and>
-   (fsafe \<phi> \<longrightarrow> fsafe (Fsubst \<phi> \<sigma>))"
+shows "(hpsafe \<alpha> \<longrightarrow> Padmit \<sigma> \<alpha> \<longrightarrow> hpsafe (Psubst \<alpha> \<sigma>)) \<and>
+   (fsafe \<phi> \<longrightarrow> Fadmit \<sigma> \<phi> \<longrightarrow> fsafe (Fsubst \<phi> \<sigma>))"
 proof (induction rule: hpsafe_fsafe.induct)
   case (hpsafe_Pvar x)
   then show ?case 
@@ -1209,11 +1226,19 @@ next
   show ?case
     using tsubst_preserves_safe ssafe unfolding ssafe_def by (auto intro: hpsafe_fsafe.intros)
 next
-  case (hpsafe_Evolve ODE P)
-  then show ?case 
-    apply (auto intro: hpsafe_fsafe.intros)
-    (* TODO: Osubst_preserves_safe *)
-    sorry
+  case (hpsafe_Evolve ODE P) then
+    have osafe:"osafe ODE"
+    and fsafe:"fsafe P"
+    and IH:"Fadmit \<sigma> P \<Longrightarrow> fsafe (Fsubst P \<sigma>)"
+      by auto
+    have "Padmit \<sigma> (EvolveODE ODE P) \<Longrightarrow>  hpsafe (Psubst (EvolveODE ODE P) \<sigma>)"
+    proof -
+      assume PA:"Padmit \<sigma> (EvolveODE ODE P)"
+      have OA:"Oadmit \<sigma> ODE (ODE_vars ODE)" and FA:"Fadmit \<sigma>  P" using PA by (auto dest: Padmit.cases)
+      show "?thesis"
+        using osubst_preserves_safe[of \<sigma> ODE, OF ssafe osafe OA] IH[OF FA] by (auto intro: hpsafe_fsafe.intros)
+    qed
+    then show ?case by auto
 next
   case (fsafe_Geq t1 t2) then 
   show ?case
@@ -1226,7 +1251,7 @@ next
     apply (auto intro: hpsafe_fsafe.intros) apply blast
     using tsubst_preserves_safe tsubst_preserves_free ssafe unfolding ssafe_def 
     apply (auto intro: hpsafe_fsafe.intros)
-    (* TODO: nsubst_preserves_safe *)
+    (* TODO: nfsubst_preserves_safe *)
     sorry
 next
   case (fsafe_DiffFormula p)

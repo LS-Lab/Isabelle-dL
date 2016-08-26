@@ -67,8 +67,6 @@ where
 | "Tsubst (Plus \<theta>1 \<theta>2) \<sigma> = Plus (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"  
 | "Tsubst (Times \<theta>1 \<theta>2) \<sigma> = Times (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"  
 | "Tsubst (Differential \<theta>) \<sigma> = Differential (Tsubst \<theta> \<sigma>)"
-
-
   
 primrec NOsubst::"('a + 'b, 'c) ODE \<Rightarrow> ('b \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'c) ODE"
 where
@@ -81,7 +79,7 @@ where
   "Osubst (OVar c) \<sigma> = (case SODEs \<sigma> c of Some c' \<Rightarrow> c' | None \<Rightarrow> OVar c)"
 | "Osubst (OSing x \<theta>) \<sigma> = OSing x (Tsubst \<theta> \<sigma>)"
 | "Osubst (OProd ODE1 ODE2) \<sigma> = OProd (Osubst ODE1 \<sigma>) (Osubst ODE2 \<sigma>)"
-
+  
 fun NPsubst::"('a + 'd, 'b, 'c) hp \<Rightarrow> ('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'b, 'c) hp"
 and NFsubst::"('a + 'd, 'b, 'c) formula \<Rightarrow> ('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'b, 'c) formula"
 where
@@ -186,11 +184,15 @@ inductive_simps
 
 inductive Oadmit:: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) ODE \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
 where 
-  "Oadmit \<sigma> (OVar c) U"
-| "TUadmit \<sigma> \<theta> U \<Longrightarrow> Oadmit \<sigma> (OSing x \<theta>) U"
-| "Oadmit \<sigma> ODE1 U \<Longrightarrow> Oadmit \<sigma> ODE2 U \<Longrightarrow> Oadmit \<sigma> (OProd ODE1 ODE2) U"
+  Oadmit_Var:"Oadmit \<sigma> (OVar c) U"
+| Oadmit_Sing:"TUadmit \<sigma> \<theta> U \<Longrightarrow> Oadmit \<sigma> (OSing x \<theta>) U"
+| Oadmit_Prod:"Oadmit \<sigma> ODE1 U \<Longrightarrow> Oadmit \<sigma> ODE2 U \<Longrightarrow> ODE_dom (Osubst ODE1 \<sigma>) \<inter> ODE_dom (Osubst ODE2 \<sigma>) = {} \<Longrightarrow> Oadmit \<sigma> (OProd ODE1 ODE2) U"
 
-  
+inductive_simps
+      Oadmit_Var_simps[simp]: "Oadmit \<sigma> (OVar c) U"
+  and Oadmit_Sing_simps[simp]: "Oadmit \<sigma> (OSing x e) U"
+  and Oadmit_Prod_simps[simp]: "Oadmit \<sigma> (OProd ODE1 ODE2) U"
+
 definition PUadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) hp \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
 where "PUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> (SDom \<sigma> \<inter> SIGP \<theta>).  SFV \<sigma> i) \<inter> U) = {}"
 
@@ -277,6 +279,27 @@ where
 | Fadmit_Diamond:"Fadmit \<sigma> \<phi> \<Longrightarrow> Padmit \<sigma> a \<Longrightarrow> FUadmit \<sigma> \<phi> (BVP (Psubst a \<sigma>)) \<Longrightarrow> Fadmit \<sigma> (Diamond a \<phi>)"
 | Fadmit_Context1:"Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> UNIV \<Longrightarrow> SContexts \<sigma> C = Some C' \<Longrightarrow> PFadmit (\<lambda> (). Fsubst \<phi> \<sigma>) C' \<Longrightarrow> Fadmit \<sigma> (InContext C \<phi>)"
 | Fadmit_Context2:"Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> UNIV \<Longrightarrow> SContexts \<sigma> C = None \<Longrightarrow> Fadmit \<sigma> (InContext C \<phi>)"
+  
+inductive_simps
+      Padmit_Pvar_simps[simp]: "Padmit \<sigma> (Pvar a)"
+  and Padmit_Sequence_simps[simp]: "Padmit \<sigma> (a ;; b)"
+  and Padmit_Loop_simps[simp]: "Padmit \<sigma> (a**)"
+  and Padmit_ODE_simps[simp]: "Padmit \<sigma> (EvolveODE ODE p)"
+  and Padmit_Choice_simps[simp]: "Padmit \<sigma> (a \<union>\<union> b)"
+  and Padmit_Assign_simps[simp]: "Padmit \<sigma> (Assign x e)"
+  and Padmit_DiffAssign_simps[simp]: "Padmit \<sigma> (DiffAssign x e)"
+  and Padmit_Test_simps[simp]: "Padmit \<sigma> (? p)"
+  
+  and Fadmit_Geq_simps[simp]: "Fadmit \<sigma> (Geq t1 t2)"
+  and Fadmit_Prop_simps[simp]: "Fadmit \<sigma> (Prop p args)"
+  and Fadmit_Not_simps[simp]: "Fadmit \<sigma> (Not p)"
+  and Fadmit_And_simps[simp]: "Fadmit \<sigma> (And p q)"
+  and Fadmit_DiffFormula_simps[simp]: "Fadmit \<sigma> (DiffFormula p)"
+  and Fadmit_Exists_simps[simp]: "Fadmit \<sigma> (Exists x p)"
+  and Fadmit_Diamond_simps[simp]: "Fadmit \<sigma> (Diamond a p)"
+  and Fadmit_Context_simps[simp]: "Fadmit \<sigma> (InContext C p)"
+  
+  
   
 fun extendf :: "('sf, 'sc, 'sz) interp \<Rightarrow> 'sz Rvec \<Rightarrow> ('sf + 'sz, 'sc, 'sz) interp"
 where "extendf I R =
