@@ -1367,10 +1367,18 @@ next
 qed (auto intro: hpsafe_fsafe.intros)
     
 lemma fsubst_preserves_safe:
-  assumes "fsafe \<alpha>"
-  assumes "ssafe \<sigma>"
-  shows "fsafe (Fsubst \<alpha> \<sigma>)"
-    sorry
+  assumes ssafe:"ssafe \<sigma>"
+  assumes fsafe:"fsafe \<phi>"
+  assumes FA:"Fadmit \<sigma> \<phi>"  
+  shows "fsafe (Fsubst \<phi> \<sigma>)"
+    using ssafe fsafe FA psubst_fsubst_preserves_safe by auto
+
+lemma psubst_preserves_safe:
+  assumes ssafe:"ssafe \<sigma>"
+  assumes hpsafe:"hpsafe \<alpha>"
+  assumes PA:"Padmit \<sigma> \<alpha>"  
+  shows "hpsafe (Psubst \<alpha> \<sigma>)"
+    using ssafe hpsafe PA psubst_fsubst_preserves_safe by auto
 
 lemma nsubst_fml:
 fixes I::"('sf, 'sc, 'sz) interp"
