@@ -651,7 +651,29 @@ next
       by auto
   then show ?case using IH1[OF agree_sub[OF sub1 VA] safe1] IH2[OF agree_sub[OF sub2 VA] safe2] by auto
 qed
-    
+
+lemma uadmit_mkv_adjoint:
+  assumes ssafe:"ssafe \<sigma>"
+  assumes good_interp:"is_interp I"
+  assumes VA:"Vagree \<nu> \<omega> (\<Union>i \<in> {i | i. (Inl i\<in>SIGO ODE)}. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {})"
+  assumes osafe:"osafe ODE"
+  shows "mk_v (adjoint I \<sigma> \<nu>) ODE = mk_v (adjoint I \<sigma> \<omega>) ODE"
+  apply(rule ext)
+  subgoal for R
+    apply(rule ext)
+    subgoal for solt
+      apply(rule agree_UNIV_eq)
+      using mk_v_agree[of "(adjoint I \<sigma> \<nu>)" ODE "R" solt]
+      using mk_v_agree[of "(adjoint I \<sigma> \<omega>)" ODE "R" solt]
+      using uadmit_ode_adjoint'[OF ssafe good_interp VA osafe]
+      unfolding Vagree_def
+      apply auto
+      apply metis
+      apply metis
+      done
+    done
+  done
+
 lemma uadmit_prog_fml_adjoint':
   fixes \<sigma> I
   assumes ssafe:"ssafe \<sigma>"
@@ -712,8 +734,30 @@ next
       subgoal using agree_sub[OF sub VA] by auto
       subgoal by (rule osafe)
       done
-    ultimately show ?case apply auto
-      sorry
+    have mkv:"mk_v (adjoint I \<sigma> \<nu>) x1 = mk_v (adjoint I \<sigma> \<omega>) x1"
+      apply (rule uadmit_mkv_adjoint)
+      using ssafe good_interp osafe agree_sub[OF sub VA] by auto
+    show ?case 
+      apply auto
+      subgoal for aa ba bb sol t
+        apply(rule exI[where x = sol])
+        apply(rule conjI)
+        subgoal by auto
+        apply(rule exI[where x=t])
+        apply(rule conjI)
+        subgoal using mkv by auto
+        apply(rule conjI)
+        subgoal by auto using IH2 mkv IH' by auto
+      subgoal for aa ba bb sol t
+        apply(rule exI[where x = sol])
+        apply(rule conjI)
+        subgoal by auto
+        apply(rule exI[where x=t])
+        apply(rule conjI)
+        subgoal using mkv by auto
+        apply(rule conjI)
+        subgoal by auto using IH2 mkv IH' by auto
+      done
 next
   case (Choice x1 x2)
     assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP x1. SFV \<sigma> a) \<Longrightarrow> hpsafe x1 \<Longrightarrow> prog_sem (local.adjoint I \<sigma> \<nu>) x1 = prog_sem (local.adjoint I \<sigma> \<omega>) x1"
