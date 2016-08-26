@@ -586,7 +586,54 @@ next
     ultimately show ?case by auto
 next
   case (Prop x1 x2)
-  then show ?case sorry
+    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF ($\<phi> x1 x2). SFV \<sigma> a)"
+    assume safe:"fsafe ($\<phi> x1 x2)"
+    from safe have frees:"\<And>i. dfree (x2 i)"
+      by (auto dest: fsafe.cases)
+    then have safes:"\<And>i. dsafe (x2 i)" using dfree_is_dsafe by auto
+    have subs:"\<And>j. (\<Union>i\<in>SIGT (x2 j). case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF ($\<phi> x1 x2). SFV \<sigma> a)"
+      sorry
+    have "\<And>i. dterm_sem (local.adjoint I \<sigma> \<nu>) (x2 i) = dterm_sem (local.adjoint I \<sigma> \<omega>) (x2 i)"
+      by (rule uadmit_dterm_adjointS[OF ssafe good_interp agree_sub[OF subs VA] safes])
+    then have vec_eq:"\<And>R. (\<chi> i. dterm_sem (local.adjoint I \<sigma> \<nu>) (x2 i) R) = (\<chi> i. dterm_sem (local.adjoint I \<sigma> \<omega>) (x2 i) R)"
+      by (auto simp add: vec_eq_iff)
+    from VA have VAs:"\<And>j. Vagree \<nu> \<omega> (\<Union>i\<in>SIGT (x2 j). case SFunctions \<sigma> i of Some a \<Rightarrow> FVT a)"
+      unfolding Vagree_def SIGT.simps using rangeI 
+      by (metis (no_types, lifting) set_mp subs)
+    have SIGF:"Inr (Inr x1) \<in> SDom \<sigma> \<inter> SIGF ($\<phi> x1 x2)" unfolding SDom_def
+      (* TODO: Might actually be a problem with definition of substitution stuff *)
+      sorry
+    have VAsub:"\<And>a. SPredicates \<sigma> x1 = Some a \<Longrightarrow> (FVF a) \<subseteq> (\<Union>i\<in>SDom \<sigma> \<inter> SIGF ($\<phi> x1 x2). SFV \<sigma> i)"
+      using SIGF by auto
+    have VAf:"\<And>a. SPredicates \<sigma> x1 = Some a \<Longrightarrow> Vagree \<nu> \<omega> (FVF a)"
+      using agree_sub[OF VAsub VA] by auto
+    then show ?case 
+      apply(cases "SPredicates \<sigma> x1")
+      defer
+      subgoal for a
+      proof -
+        assume some:"SPredicates \<sigma> x1 = Some a"
+        note FVF = VAf[OF some]
+        have dsafe:"\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dsafe f'"
+          using ssafe dfree_is_dsafe unfolding ssafe_def by auto
+        have dsem:"\<And>R . (\<nu> \<in> fml_sem (extendf I R) a) = (\<omega> \<in> fml_sem (extendf I R) a)"
+          subgoal for R
+            apply (rule coincidence_formula)
+            subgoal using ssafe unfolding ssafe_def using some by auto
+            subgoal unfolding Iagree_def by auto
+            subgoal by (rule FVF)
+          done
+        done
+        have pred_eq:"\<And>R. Predicates (local.adjoint I \<sigma> \<nu>) x1 R = Predicates (local.adjoint I \<sigma> \<omega>) x1 R"
+          using dsem some unfolding adjoint_def by auto
+         show "fml_sem (local.adjoint I \<sigma> \<nu>) ($\<phi> x1 x2) = fml_sem (local.adjoint I \<sigma> \<omega>) ($\<phi> x1 x2)"
+          apply auto
+          subgoal for a b using pred_eq[of "(\<chi> i. dterm_sem (local.adjoint I \<sigma> \<nu>) (x2 i) (a, b))"] vec_eq by auto
+          subgoal for a b using pred_eq[of "(\<chi> i. dterm_sem (local.adjoint I \<sigma> \<nu>) (x2 i) (a, b))"] vec_eq by auto
+          done
+      qed
+      unfolding adjoint_def using local.adjoint_def local.vec_eq apply auto
+      done
 next
   case (Not x)
     assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF x. SFV \<sigma> a) \<Longrightarrow> fsafe x \<Longrightarrow> fml_sem (local.adjoint I \<sigma> \<nu>) x = fml_sem (local.adjoint I \<sigma> \<omega>) x"
@@ -643,7 +690,15 @@ next
   then show ?case sorry
 next
   case (InContext x1 x2)
-  then show ?case sorry
+    assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (local.adjoint I \<sigma> \<nu>) x2 = fml_sem (local.adjoint I \<sigma> \<omega>) x2"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (InContext x1 x2). SFV \<sigma> a)"
+    assume safe:"fsafe (InContext x1 x2)"
+    from safe have  safe1:"fsafe x2"
+      by (auto dest: fsafe.cases)
+    have sub:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (InContext x1 x2). SFV \<sigma> a)"
+      by auto
+    show ?case using IH1[OF agree_sub[OF sub VA] safe1]  
+      unfolding adjoint_def by auto
 qed
  
 lemma uadmit_prog_adjoint:
