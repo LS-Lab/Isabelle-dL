@@ -20,8 +20,10 @@ lemma interp_eq:
   by auto
 
 lemma sterm_determines_frechet:
-fixes I J::"('sf, 'sc, 'sz) interp" 
-  and \<theta>1 \<theta>2 :: "('sf, 'sz) trm"
+fixes I ::"('a1::finite, 'b1::finite, 'c::finite) interp"
+  and J ::"('a2::finite, 'b2::finite, 'c::finite) interp"
+  and \<theta>1 :: "('a1::finite, 'c::finite) trm"
+  and \<theta>2 :: "('a2::finite, 'c::finite) trm"
   and \<nu> 
 assumes good_interp1:"is_interp I"
 assumes good_interp2:"is_interp J"
@@ -190,6 +192,12 @@ shows "is_interp (adjoint I \<sigma> \<nu>)"
         qed
     done
   done
+
+lemma NTadjoint_safe:
+assumes good_interp:"is_interp I"
+assumes good_subst:"(\<And>i. dfree (\<sigma> i))"
+shows "is_interp (NTadjoint I \<sigma> \<nu>)"
+sorry
 
 (* Properties of adjoints *)
 lemma adjoint_consequence:"(\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dsafe f') \<Longrightarrow> (\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f') \<Longrightarrow> Vagree \<nu> \<omega> (FVS \<sigma>) \<Longrightarrow> adjoint I \<sigma> \<nu> = adjoint I \<sigma> \<omega>"
@@ -362,6 +370,15 @@ lemma uadmit_sterm_adjoint:
     then show "?thesis" using uadmit_sterm_adjoint'[OF dsafe fsafe VA'] by auto
   qed
 
+lemma uadmit_sterm_ntadjoint:
+  assumes TUA:"NTUadmit \<sigma> \<theta> U"
+  assumes VA:"Vagree \<nu> \<omega> (-U)"
+  assumes dfree:"\<And>i . dfree (\<sigma> i)"
+  assumes dsafe:"dsafe \<theta>"
+  assumes good_interp:"is_interp I"
+  shows  "sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> = sterm_sem (NTadjoint I \<sigma> \<omega>) \<theta>"
+sorry
+
 lemma uadmit_dterm_adjoint':
   assumes dfree:"\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dfree f'"
   assumes fsafe:"\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f'"
@@ -454,17 +471,38 @@ lemma uadmit_dterm_adjoint:
   assumes good_interp:"is_interp I"
   shows  "dterm_sem (adjoint I \<sigma> \<nu>) \<theta> = dterm_sem (adjoint I \<sigma> \<omega>) \<theta>"
 proof -
-    have duh:"\<And>A B. A \<inter> B = {} \<Longrightarrow> A \<subseteq> -B"
-      by auto
-    have "\<And>x. x \<in> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<Longrightarrow> x \<in> (-U)"
-      using TUA unfolding TUadmit_def by auto
-    then have sub1:"(\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> -U"
-      by auto
-    then have VA':"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {})"
-      using agree_sub[OF sub1 VA] by auto
-    then show "?thesis" using uadmit_dterm_adjoint'[OF dfree fsafe good_interp VA' dsafe] 
-      by auto
-  qed
+  have duh:"\<And>A B. A \<inter> B = {} \<Longrightarrow> A \<subseteq> -B"
+    by auto
+  have "\<And>x. x \<in> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<Longrightarrow> x \<in> (-U)"
+    using TUA unfolding TUadmit_def by auto
+  then have sub1:"(\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> -U"
+    by auto
+  then have VA':"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {})"
+    using agree_sub[OF sub1 VA] by auto
+  then show "?thesis" using uadmit_dterm_adjoint'[OF dfree fsafe good_interp VA' dsafe] 
+    by auto
+qed
+
+lemma uadmit_dterm_ntadjoint:
+  assumes TUA:"NTUadmit \<sigma> \<theta> U"
+  assumes VA:"Vagree \<nu> \<omega> (-U)"
+  assumes dfree:"\<And>i . dfree (\<sigma> i)"
+  assumes dsafe:"dsafe \<theta>"
+  assumes good_interp:"is_interp I"
+  shows  "dterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> = dterm_sem (NTadjoint I \<sigma> \<omega>) \<theta>"
+proof -
+  have duh:"\<And>A B. A \<inter> B = {} \<Longrightarrow> A \<subseteq> -B"
+    by auto
+  (*have "\<And>x. x \<in> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<Longrightarrow> x \<in> (-U)"
+    using TUA unfolding TUadmit_def by auto
+  then have sub1:"(\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> -U"
+    by auto
+  then have VA':"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {})"
+    using agree_sub[OF sub1 VA] by auto
+  then *)show "?thesis" 
+    sorry (*using uadmit_dterm_adjoint'[OF dfree fsafe good_interp VA' dsafe] 
+    by auto*)
+qed
 
 definition ssafe ::"('sf, 'sc, 'sz) subst \<Rightarrow> bool"
 where "ssafe \<sigma> \<equiv>
@@ -974,6 +1012,11 @@ proof (induction rule: dfree.induct)
       by(cases "f") (auto simp add:  NTadjoint_free)
 qed (auto)
 
+lemma nsubst_sterm':
+fixes I::"('sf, 'sc, 'sz) interp"
+fixes a b::"'sz simple_state"
+shows "dfree \<theta> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> sterm_sem I (NTsubst \<theta> \<sigma>) a = sterm_sem (NTadjoint I \<sigma> (a,b)) \<theta> a"
+  using nsubst_sterm by (metis fst_conv)
 
 lemma ntsubst_preserves_free:
 "dfree \<theta> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> dfree(NTsubst \<theta> \<sigma>)"
@@ -1385,9 +1428,40 @@ fixes I::"('sf, 'sc, 'sz) interp"
 fixes \<nu>::"'sz state"
 fixes \<nu>'::"'sz state"
 assumes good_interp:"is_interp I"    
-shows "NTadmit \<sigma> \<theta> \<Longrightarrow> dsafe \<theta> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> dterm_sem I (NTsubst \<theta> \<sigma>) \<nu>' = dterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> \<nu>'"
-  sorry  
-
+shows "NTadmit \<sigma> \<theta> \<Longrightarrow> dsafe \<theta> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> dterm_sem I (NTsubst \<theta> \<sigma>) \<nu> = dterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> \<nu>"
+proof (induction rule: NTadmit.induct)
+  case (NTadmit_Diff \<sigma> \<theta>)
+  then show ?case
+    apply auto
+    apply (unfold directional_derivative_def) 
+    apply (rule sterm_determines_frechet)
+    apply (auto)
+    subgoal using good_interp by auto
+    subgoal using NTadjoint_safe[OF good_interp, of \<sigma>] by auto
+    subgoal using ntsubst_preserves_free[of \<theta> \<sigma>] by auto
+    subgoal
+      apply(rule ext)
+      subgoal for x
+        using nsubst_sterm'[of \<theta> \<sigma> I "(fst \<nu>)" "(snd \<nu>)"] apply auto
+        proof -
+          assume NT:"NTadmit \<sigma> \<theta>"
+          assume NTU:"NTUadmit \<sigma> \<theta> UNIV"
+          assume IH:"(dsafe \<theta> \<Longrightarrow> dterm_sem I (NTsubst \<theta> \<sigma>) \<nu> = dterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> \<nu>)"
+          assume free:"dfree \<theta>"
+          assume frees: "(\<And>i. dfree (\<sigma> i))"
+          assume sem:"sterm_sem I (NTsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
+          have VA:"\<And>\<nu> \<omega>. Vagree \<nu> (x,snd \<nu>) (-UNIV)" unfolding Vagree_def by auto
+          show "sterm_sem I (NTsubst \<theta> \<sigma>) x = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> x"
+            using uadmit_sterm_ntadjoint[OF NTU VA frees, OF dfree_is_dsafe[OF free] good_interp, of "(x, snd \<nu>)"] nsubst_sterm[OF free frees, of I "(\<lambda>x. x)"] apply auto
+            by (metis NTU VA dfree_is_dsafe free frees good_interp uadmit_sterm_ntadjoint)
+        qed
+        done
+      done
+next
+  case (NTadmit_Fun \<sigma> args f)
+  then show ?case apply auto apply(cases f) unfolding NTadjoint_def by auto
+qed (auto)
+  
 lemma nsubst_ode:
 fixes I::"('sf, 'sc, 'sz) interp"
 fixes \<nu>::"'sz state"
