@@ -1793,8 +1793,9 @@ assumes good_interp:"is_interp I"
 assumes NFA:"NFadmit \<sigma> \<phi>"
 assumes fsafe:"fsafe \<phi>"
 assumes frees:"(\<forall>i. dfree (\<sigma> i))"
-shows "fml_sem I (NFsubst \<phi> \<sigma>) = fml_sem (NTadjoint I \<sigma> \<nu>) \<phi>"
- using good_interp NFA fsafe frees nsubst_hp_fml by blast
+shows "(\<nu> \<in> fml_sem I (NFsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (NTadjoint I \<sigma> \<nu>) \<phi>)"
+  using good_interp NFA fsafe frees 
+  by (auto simp add: nsubst_hp_fml)
 
 lemma nsubst_hp:
 fixes I::"('sf, 'sc, 'sz) interp"
@@ -1802,8 +1803,8 @@ fixes \<nu>::"'sz state"
 assumes good_interp:"is_interp I"    
 assumes NPA:"NPadmit \<sigma> \<alpha>"
 assumes hpsafe:"hpsafe \<alpha>"
-assumes frees:"\<forall>i. dfree (\<sigma> i)"
-shows "prog_sem I (NPsubst \<alpha> \<sigma>) = prog_sem (NTadjoint I \<sigma> \<nu>) \<alpha>"
+assumes frees:"\<And>i. dfree (\<sigma> i)"
+shows "((\<nu>, \<omega>) \<in> prog_sem I (NPsubst \<alpha> \<sigma>)) = ((\<nu>, \<omega>) \<in>  prog_sem (NTadjoint I \<sigma> \<nu>) \<alpha>)"
  using good_interp NPA hpsafe frees nsubst_hp_fml by blast
 
 lemma psubst_fml:
