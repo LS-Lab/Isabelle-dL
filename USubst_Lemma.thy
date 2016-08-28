@@ -1488,16 +1488,38 @@ next
   then show ?case by auto
 qed
     
+lemma osubst_preserves_ODE_vars:
+shows "ODE_vars (NOsubst ODE \<sigma>) = ODE_vars ODE"
+proof (induction "ODE")
+qed (auto)
 
 lemma nsubst_mkv:
 fixes I::"('sf, 'sc, 'sz) interp"
 fixes \<nu>::"'sz state"
 fixes \<nu>'::"'sz state"
-assumes good_interp:"is_interp I"    
-shows "NOUadmit \<sigma> ODE U \<Longrightarrow> osafe ODE \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (mk_v I (NOsubst ODE \<sigma>)) 
-  = (mk_v (NTadjoint I \<sigma> \<nu>) ODE )"
-    sorry
-
+assumes good_interp:"is_interp I"  
+assumes NOU:"NOUadmit \<sigma> ODE U"
+assumes osafe:"osafe ODE "
+assumes frees:"(\<And>i. dfree (\<sigma> i))"
+shows "(mk_v I (NOsubst ODE \<sigma>) \<nu> (fst \<nu>)) 
+  = (mk_v (NTadjoint I \<sigma> \<nu>) ODE \<nu> (fst \<nu>))"
+    apply(rule agree_UNIV_eq)
+    using mk_v_agree[of "NTadjoint I \<sigma> \<nu>" "ODE" \<nu> "(fst \<nu>)"]
+    using mk_v_agree[of "I" "NOsubst ODE \<sigma>" \<nu> "(fst \<nu>)"] 
+    unfolding Vagree_def osubst_preserves_ODE_vars
+    using nsubst_ode[OF good_interp osafe NOU frees]
+    apply auto
+    subgoal for i
+      apply(erule allE[where x=i])+
+      apply(cases "Inl i \<in> ODE_vars ODE")
+      by auto
+    subgoal for i
+      apply(erule allE[where x=i])+
+      apply(cases "Inr i \<in> ODE_vars ODE")
+      using osubst_preserves_ODE_vars[of ODE \<sigma>]
+      by auto
+    done
+        
 lemma nsubst_hp_fml:
 fixes I::"('sf, 'sc, 'sz) interp"
 fixes \<nu>::"'sz state"
