@@ -1467,8 +1467,27 @@ fixes I::"('sf, 'sc, 'sz) interp"
 fixes \<nu>::"'sz state"
 fixes \<nu>'::"'sz state"
 assumes good_interp:"is_interp I"    
-shows "NOUadmit \<sigma> ODE U \<Longrightarrow> osafe ODE \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> ODE_sem I (NOsubst ODE \<sigma>) = ODE_sem (NTadjoint I \<sigma> \<nu>) ODE"
-  sorry  
+shows "osafe ODE \<Longrightarrow> NOUadmit \<sigma> ODE U \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> ODE_sem I (NOsubst ODE \<sigma>) (fst \<nu>)= ODE_sem (NTadjoint I \<sigma> \<nu>) ODE (fst \<nu>)"
+proof (induction rule: osafe.induct)
+  case (osafe_Var c)
+  then show ?case unfolding NOUadmit_def NTadjoint_def by auto
+next
+  case (osafe_Sing \<theta> x)
+  then show ?case apply auto
+    apply(rule vec_extensionality)
+    apply auto
+    using nsubst_sterm' [of \<theta> \<sigma> I "(fst \<nu>)" "(snd \<nu>)"]
+    by auto
+next
+  case (osafe_Prod ODE1 ODE2) then
+  have NOU1:"NOUadmit \<sigma> ODE1 U" and NOU2:"NOUadmit \<sigma> ODE2 U" 
+    unfolding NOUadmit_def by auto
+  have "ODE_sem I (NOsubst ODE1 \<sigma>) (fst \<nu>) = ODE_sem (NTadjoint I \<sigma> \<nu>) ODE1 (fst \<nu>)"
+    "ODE_sem I (NOsubst ODE2 \<sigma>) (fst \<nu>) = ODE_sem (NTadjoint I \<sigma> \<nu>) ODE2 (fst \<nu>)" using osafe_Prod.IH osafe_Prod.prems osafe_Prod.hyps
+    using NOU1 NOU2 by auto
+  then show ?case by auto
+qed
+    
 
 lemma nsubst_mkv:
 fixes I::"('sf, 'sc, 'sz) interp"
@@ -1490,7 +1509,9 @@ proof (induction rule: NPadmit_NFadmit.induct)
   then show ?case unfolding NTadjoint_def by auto
 next
   case (NPadmit_ODE \<sigma> ODE \<phi>)
-  then show ?case using nsubst_ode[OF good_interp, of \<sigma> ODE "ODE_vars ODE"] nsubst_mkv[OF good_interp, of \<sigma> ODE "ODE_vars ODE"] by (auto)
+  then show ?case 
+    using nsubst_ode[OF good_interp, of ODE \<sigma> "ODE_vars ODE"] nsubst_mkv[OF good_interp, of \<sigma> ODE "ODE_vars ODE"] 
+    sorry
 next
   case (NPadmit_Assign \<sigma> \<theta> x)
   then show ?case using nsubst_dterm[OF good_interp, of \<sigma> \<theta>] by auto
