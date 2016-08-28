@@ -1807,12 +1807,71 @@ assumes frees:"\<And>i. dfree (\<sigma> i)"
 shows "((\<nu>, \<omega>) \<in> prog_sem I (NPsubst \<alpha> \<sigma>)) = ((\<nu>, \<omega>) \<in>  prog_sem (NTadjoint I \<sigma> \<nu>) \<alpha>)"
  using good_interp NPA hpsafe frees nsubst_hp_fml by blast
 
+lemma psubst_sterm:
+fixes I::"('sf, 'sc, 'sz) interp"
+assumes good_interp:"is_interp I"    
+shows "(sterm_sem I \<theta> = sterm_sem (PFadjoint I \<sigma>) \<theta>)"
+proof (induction \<theta>)
+qed (auto simp add: PFadjoint_def)
+
+lemma psubst_dterm:
+fixes I::"('sf, 'sc, 'sz) interp"
+assumes good_interp:"is_interp I"    
+shows "(dsafe \<theta> \<Longrightarrow> dterm_sem I \<theta> = dterm_sem (PFadjoint I \<sigma>) \<theta>)"
+proof (induction \<theta>)
+  case (Differential \<theta>)
+  assume safe:"dsafe (Differential \<theta>)"
+  from safe have free:"dfree \<theta>" by auto
+  assume sem:"dsafe \<theta> \<Longrightarrow> dterm_sem I \<theta> = dterm_sem (PFadjoint I \<sigma>) \<theta>"
+  have "\<And>\<nu>. frechet I \<theta> (fst \<nu>) (snd \<nu>) = frechet (PFadjoint I \<sigma>) \<theta> (fst \<nu>) (snd \<nu>)"
+    apply(rule sterm_determines_frechet)
+    using good_interp free apply auto
+    subgoal unfolding is_interp_def PFadjoint_def by auto
+    using psubst_sterm[of I \<theta>] by auto
+  then show "?case"
+    by (auto simp add: directional_derivative_def)
+ qed (auto simp add: PFadjoint_def)
+    
 lemma psubst_fml:
 fixes I::"('sf, 'sc, 'sz) interp"
-fixes \<nu>::"'sz state"
 assumes good_interp:"is_interp I"    
-shows "PFadmit \<sigma> \<phi> \<Longrightarrow> fsafe \<phi> \<Longrightarrow> (\<And>i. fsafe (\<sigma> i)) \<Longrightarrow> (\<nu> \<in> fml_sem I (PFsubst C' \<sigma>) = (\<nu> \<in> fml_sem (PFadjoint I \<sigma>) C'))"
-  sorry
+shows "(PPadmit \<sigma> \<alpha>  \<longrightarrow> hpsafe \<alpha> \<longrightarrow> (\<forall>i. fsafe (\<sigma> i)) \<longrightarrow> ((\<nu>,\<omega>) \<in> prog_sem I (PPsubst \<alpha> \<sigma>) = ((\<nu>,\<omega>) \<in> prog_sem (PFadjoint I \<sigma>) \<alpha>))) \<and> 
+  (PFadmit \<sigma> \<phi> \<longrightarrow> fsafe \<phi> \<longrightarrow> (\<forall>i. fsafe (\<sigma> i)) \<longrightarrow> (\<nu> \<in> fml_sem I (PFsubst \<phi> \<sigma>) = (\<nu> \<in> fml_sem (PFadjoint I \<sigma>) \<phi>)))"
+proof (induction rule: PPadmit_PFadmit.induct)
+  case (PPadmit_Sequence \<sigma> a b)
+  then show ?case apply auto sorry
+next
+  case (PPadmit_Loop \<sigma> a)
+  then show ?case apply auto sorry
+next
+  case (PPadmit_ODE \<sigma> \<phi> ODE)
+  then show ?case apply auto sorry
+next
+  case (PPadmit_Assign \<sigma> x \<theta>)
+  then show ?case apply auto sorry
+next
+  case (PPadmit_DiffAssign \<sigma> x \<theta>)
+  then show ?case apply auto sorry
+next
+  case (PFadmit_Geq \<sigma> \<theta>1 \<theta>2)
+  then show ?case 
+    
+next
+  case (PFadmit_Prop \<sigma> f args)
+  then show ?case sorry
+next
+  case (PFadmit_DiffFormula \<sigma> \<phi>)
+  then show ?case sorry
+next
+  case (PFadmit_Exists \<sigma> \<phi> x)
+  then show ?case apply auto sorry
+next
+  case (PFadmit_Diamond \<sigma> \<phi> a)
+  then show ?case apply auto sorry
+next
+  case (PFadmit_Context \<sigma> \<phi> C)
+  then show ?case apply auto sorry
+qed (auto simp add: PFadjoint_def)
 
 lemma subst_ode:
 fixes I:: "('sf, 'sc, 'sz) interp" and \<nu> :: "'sz state"
@@ -2139,7 +2198,8 @@ next
             by (simp add: frees ssafes tsubst_preserves_free)
           have freef:"fsafe p'" using ssafe some unfolding ssafe_def by auto 
           have IH2:"(\<nu> \<in> fml_sem I (NFsubst p' ?sub)) = (\<nu> \<in> fml_sem (NTadjoint I ?sub \<nu>) p')"
-            by (simp add: nsubst_fml [OF good_interp NFA freef subFree])
+            using nsubst_fml good_interp NFA freef subFree
+            by blast
           have vec:"(\<chi> i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) = (\<chi> i. dterm_sem (local.adjoint I \<sigma> \<nu>) (args i) \<nu>)"
             apply(auto simp add: vec_eq_iff)
             subgoal for i
