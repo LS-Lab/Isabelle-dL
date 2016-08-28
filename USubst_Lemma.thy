@@ -1835,27 +1835,53 @@ proof (induction \<theta>)
 lemma psubst_fml:
 fixes I::"('sf, 'sc, 'sz) interp"
 assumes good_interp:"is_interp I"    
-shows "(PPadmit \<sigma> \<alpha>  \<longrightarrow> hpsafe \<alpha> \<longrightarrow> (\<forall>i. fsafe (\<sigma> i)) \<longrightarrow> ((\<nu>,\<omega>) \<in> prog_sem I (PPsubst \<alpha> \<sigma>) = ((\<nu>,\<omega>) \<in> prog_sem (PFadjoint I \<sigma>) \<alpha>))) \<and> 
-  (PFadmit \<sigma> \<phi> \<longrightarrow> fsafe \<phi> \<longrightarrow> (\<forall>i. fsafe (\<sigma> i)) \<longrightarrow> (\<nu> \<in> fml_sem I (PFsubst \<phi> \<sigma>) = (\<nu> \<in> fml_sem (PFadjoint I \<sigma>) \<phi>)))"
+shows "(PPadmit \<sigma> \<alpha>  \<longrightarrow> hpsafe \<alpha> \<longrightarrow> (\<forall>i. fsafe (\<sigma> i)) \<longrightarrow> (\<forall> \<nu> \<omega>. (\<nu>,\<omega>) \<in> prog_sem I (PPsubst \<alpha> \<sigma>) = ((\<nu>,\<omega>) \<in> prog_sem (PFadjoint I \<sigma>) \<alpha>))) \<and> 
+  (PFadmit \<sigma> \<phi> \<longrightarrow> fsafe \<phi> \<longrightarrow> (\<forall>i. fsafe (\<sigma> i)) \<longrightarrow> (\<forall> \<nu>. \<nu> \<in> fml_sem I (PFsubst \<phi> \<sigma>) = (\<nu> \<in> fml_sem (PFadjoint I \<sigma>) \<phi>)))"
 proof (induction rule: PPadmit_PFadmit.induct)
-  case (PPadmit_Sequence \<sigma> a b)
-  then show ?case apply auto sorry
-next
-  case (PPadmit_Loop \<sigma> a)
-  then show ?case apply auto sorry
-next
   case (PPadmit_ODE \<sigma> \<phi> ODE)
   then show ?case apply auto sorry
 next
   case (PPadmit_Assign \<sigma> x \<theta>)
-  then show ?case apply auto sorry
+  have "hpsafe (x := \<theta>) \<Longrightarrow> (\<forall>i. fsafe (\<sigma> i)) \<Longrightarrow> (\<forall> \<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PPsubst (x := \<theta>) \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (PFadjoint I \<sigma>) (x := \<theta>)))"
+    proof -
+      assume safe:"hpsafe (x := \<theta>)"
+      then have dsafe:"dsafe \<theta>" by auto
+      assume safes:"(\<forall>i. fsafe (\<sigma> i))"
+      show "?thesis"
+        apply(auto)
+         apply(rule vec_extensionality)
+         subgoal using psubst_dterm[OF good_interp dsafe, of \<sigma>] by auto
+         apply(rule vec_extensionality)
+         using psubst_dterm[OF good_interp dsafe, of \<sigma>] by auto
+    qed
+  then show "?case" by auto 
 next
   case (PPadmit_DiffAssign \<sigma> x \<theta>)
-  then show ?case apply auto sorry
+  have "hpsafe (DiffAssign x \<theta>) \<Longrightarrow> (\<forall>i. fsafe (\<sigma> i)) \<Longrightarrow> (\<forall> \<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PPsubst (DiffAssign x \<theta>) \<sigma>)) = (((\<nu>, \<omega>) \<in> prog_sem (PFadjoint I \<sigma>) (DiffAssign x \<theta>))))"
+    proof -
+      assume safe:"hpsafe (DiffAssign x \<theta>)"
+      then have dsafe:"dsafe \<theta>" by auto
+      assume safes:"(\<forall>i. fsafe (\<sigma> i))"
+      show "?thesis"
+        apply(auto)
+         apply(rule vec_extensionality)
+         subgoal using psubst_dterm[OF good_interp dsafe, of \<sigma>] by auto
+         apply(rule vec_extensionality)
+         using psubst_dterm[OF good_interp dsafe, of \<sigma>] by auto
+    qed
+  then show ?case by auto
 next
-  case (PFadmit_Geq \<sigma> \<theta>1 \<theta>2)
-  then show ?case 
-    
+  case (PFadmit_Geq \<sigma> \<theta>1 \<theta>2) then 
+  have "fsafe (Geq \<theta>1 \<theta>2) \<Longrightarrow> (\<forall>i. fsafe (\<sigma> i)) \<Longrightarrow> (\<forall> \<nu>. (\<nu> \<in> fml_sem I (PFsubst (Geq \<theta>1 \<theta>2) \<sigma>)) = (\<nu> \<in> fml_sem (PFadjoint I \<sigma>) (Geq \<theta>1 \<theta>2)))"
+    proof -
+      assume safe:"fsafe (Geq \<theta>1 \<theta>2)"
+      then have safe1:"dsafe \<theta>1" 
+        and safe2:"dsafe \<theta>2" by auto
+      assume safes:"(\<forall>i. fsafe (\<sigma> i))"
+      show "?thesis"
+        using psubst_dterm[OF good_interp safe1, of \<sigma>] psubst_dterm[OF good_interp safe2, of \<sigma>] by  auto
+    qed
+  then show ?case by auto
 next
   case (PFadmit_Prop \<sigma> f args)
   then show ?case sorry
@@ -1863,11 +1889,100 @@ next
   case (PFadmit_DiffFormula \<sigma> \<phi>)
   then show ?case sorry
 next
-  case (PFadmit_Exists \<sigma> \<phi> x)
-  then show ?case apply auto sorry
+  case (PPadmit_Sequence \<sigma> a b) then 
+  have PUA:"PPUadmit \<sigma> b (BVP (PPsubst a \<sigma>))"
+   and PA:"PPadmit \<sigma> a"
+   and IH1:"hpsafe a \<Longrightarrow> (\<And>i. fsafe (\<sigma> i)) \<Longrightarrow> (\<forall> \<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PPsubst a \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (PFadjoint I \<sigma>) a))"
+   and IH2:"hpsafe b \<Longrightarrow> (\<And>i. fsafe (\<sigma> i)) \<Longrightarrow> (\<forall> \<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PPsubst b \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (PFadjoint I \<sigma>) b))"
+     by auto
+  have "hpsafe (a ;; b) \<Longrightarrow> (\<And>i. fsafe (\<sigma> i)) \<Longrightarrow> (\<And> \<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PPsubst (a ;; b) \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (PFadjoint I \<sigma>) (a ;; b)))"
+    proof -
+      assume hpsafe:"hpsafe (a ;; b)"
+      assume ssafe:"(\<And>i. fsafe (\<sigma> i))"
+      from hpsafe have safe1:"hpsafe a" and safe2:"hpsafe b" by (auto dest: hpsafe.cases)
+      fix \<nu> \<omega>
+      have agree:"\<And>\<mu>. (\<nu>, \<mu>) \<in> prog_sem I (PPsubst a \<sigma>) \<Longrightarrow> Vagree \<nu> \<mu> (-BVP(PPsubst a \<sigma>))"
+        subgoal for \<mu>
+          using bound_effect[OF good_interp, of "(PPsubst a \<sigma>)" \<nu>, OF ppsubst_preserves_safe[OF ssafe safe1 PA]] by auto
+        done
+      have sem_eq:"\<And>\<mu>. (\<nu>, \<mu>) \<in> prog_sem I (PPsubst a \<sigma>) \<Longrightarrow> 
+          ((\<mu>, \<omega>) \<in> prog_sem (PFadjoint I \<sigma>) b) =
+          ((\<mu>, \<omega>) \<in> prog_sem (PFadjoint I \<sigma>) b)"
+        subgoal for \<mu>
+          proof -
+            assume assm:"(\<nu>, \<mu>) \<in> prog_sem I (PPsubst a \<sigma>)"
+            show "((\<mu>, \<omega>) \<in> prog_sem (PFadjoint I \<sigma>) b) = ((\<mu>, \<omega>) \<in> prog_sem (PFadjoint I \<sigma>) b)"
+              using PUA agree[OF assm] safe2 ssafe good_interp by auto
+          qed
+        done      
+      have "((\<nu>, \<omega>) \<in> prog_sem I (PPsubst (a ;; b) \<sigma>)) = (\<exists> \<mu>. (\<nu>, \<mu>) \<in> prog_sem I (PPsubst a \<sigma>) \<and> (\<mu>, \<omega>) \<in> prog_sem I (PPsubst b \<sigma>))"
+        by auto
+      moreover have "... = (\<exists> \<mu>. (\<nu>, \<mu>) \<in> prog_sem I (PPsubst a \<sigma>) \<and> (\<mu>, \<omega>) \<in> prog_sem (PFadjoint I \<sigma>) b)"
+        using IH2[OF safe2 ssafe] by blast 
+      moreover have "... = (\<exists> \<mu>. (\<nu>, \<mu>) \<in> prog_sem (PFadjoint I \<sigma>) a \<and> (\<mu>, \<omega>) \<in> prog_sem (PFadjoint I \<sigma>) b)"
+        using IH1[OF safe1 ssafe] sem_eq by blast
+      ultimately
+      show "((\<nu>, \<omega>) \<in> prog_sem I (PPsubst (a ;; b) \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (PFadjoint I \<sigma>) (a ;; b))"
+        by auto
+    qed
+  then show ?case by auto
 next
-  case (PFadmit_Diamond \<sigma> \<phi> a)
-  then show ?case apply auto sorry
+  case (PPadmit_Loop \<sigma> a) then 
+    have PA:"PPadmit \<sigma> a"
+    and PUA:"PPUadmit \<sigma> a (BVP (PPsubst a \<sigma>))"
+    and IH:"hpsafe a \<Longrightarrow> (\<And>i. fsafe (\<sigma> i)) \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PPsubst a \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (PFadjoint I \<sigma>) a))"
+      by auto
+    have "hpsafe (a**) \<Longrightarrow> (\<And>i. fsafe (\<sigma> i)) \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PPsubst (a**) \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (PFadjoint I \<sigma>) (a**)))"
+      proof -
+        assume "hpsafe (a**)"
+        then have hpsafe:"hpsafe a" by (auto dest: hpsafe.cases)
+        assume ssafe:"\<And>i. fsafe (\<sigma> i)"
+        have agree:"\<And>\<nu> \<mu>. (\<nu>, \<mu>) \<in> prog_sem I (PPsubst a \<sigma>) \<Longrightarrow> Vagree \<nu> \<mu> (-BVP(PPsubst a \<sigma>))"
+        subgoal for \<nu> \<mu>
+          using bound_effect[OF good_interp, of "(PPsubst a \<sigma>)" \<nu>, OF ppsubst_preserves_safe[OF ssafe hpsafe PA]] by auto
+        done
+      fix \<nu> \<omega>
+      have UN_rule:"\<And> a S S'. (\<And>n b. (a,b) \<in> S n \<longleftrightarrow> (a,b) \<in> S' n) \<Longrightarrow> (\<And>b. (a,b) \<in> (\<Union>n. S n) \<longleftrightarrow> (a,b) \<in> (\<Union>n. S' n))"
+        by auto
+      have eqL:"((\<nu>, \<omega>) \<in> prog_sem I (PPsubst (a**) \<sigma>)) = ((\<nu>, \<omega>) \<in> (\<Union>n. (prog_sem I (PPsubst a \<sigma>)) ^^ n))"
+        using rtrancl_is_UN_relpow by auto
+      moreover have eachEq:"\<And>n. ((\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> (prog_sem I (PPsubst a \<sigma>)) ^^ n) = ((\<nu>, \<omega>) \<in> (prog_sem (PFadjoint I \<sigma>) a)^^ n)))"
+        proof -
+          fix n
+          show "((\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> (prog_sem I (PPsubst a \<sigma>)) ^^ n) = ((\<nu>, \<omega>) \<in> (prog_sem (PFadjoint I \<sigma>) a)^^ n)))"
+      proof (induct n)
+        case 0
+        then show ?case by auto
+      next
+        case (Suc n) then
+        have IH2:"\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PPsubst a \<sigma>) ^^ n) = ((\<nu>, \<omega>) \<in> prog_sem (PFadjoint I \<sigma>) a ^^ n)"
+          by auto
+        have relpow:"\<And>R n. R ^^ Suc n = R O R ^^ n"
+          using relpow.simps(2) relpow_commute by metis
+        show ?case 
+          apply (simp only: relpow[of n "prog_sem I (PPsubst a \<sigma>)"] relpow[of n "prog_sem (PFadjoint I \<sigma>) a"])
+          apply(unfold relcomp_unfold)
+          apply auto
+          subgoal for ab b
+             apply(rule exI[where x=ab])
+             apply(rule exI[where x=b])
+             using IH2 IH[OF hpsafe ssafe]  by auto
+          subgoal for ab b
+             apply(rule exI[where x=ab])
+             apply(rule exI[where x=b])
+             using IH2 IH[OF hpsafe ssafe] by auto
+        done
+      qed
+      qed
+     moreover have "((\<nu>, \<omega>) \<in> (\<Union>n. (prog_sem I (PPsubst a \<sigma>)) ^^ n)) = ((\<nu>, \<omega>) \<in> (\<Union> n.(prog_sem (PFadjoint I \<sigma>) a)^^ n))"
+       apply(rule UN_rule)
+       using eachEq by auto
+     moreover have eqR:"((\<nu>, \<omega>) \<in> prog_sem (PFadjoint I \<sigma>) (a**)) = ((\<nu>, \<omega>) \<in> (\<Union>n. (prog_sem (PFadjoint I \<sigma>) a) ^^ n))"
+        using rtrancl_is_UN_relpow by auto
+     ultimately show "((\<nu>, \<omega>) \<in> prog_sem I (PPsubst (a**) \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (PFadjoint I \<sigma>) (a**))"
+       by auto
+      qed
+  then show ?case by auto
 next
   case (PFadmit_Context \<sigma> \<phi> C)
   then show ?case apply auto sorry
