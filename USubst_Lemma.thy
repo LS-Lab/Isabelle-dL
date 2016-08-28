@@ -1701,17 +1701,70 @@ next
   then show ?case by auto
 next
   case (NFadmit_Exists \<sigma> \<phi> x)
-  then show ?case  apply auto sorry
-next
-  case (NFadmit_Diamond \<sigma> \<phi> a)
+  then have IH:"fsafe \<phi> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (NFsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (NTadjoint I \<sigma> \<nu>) \<phi>))"
+    and FUA:"NFUadmit \<sigma> \<phi> {Inl x}"
+    by blast+
+  have fsafe:"fsafe (Exists x \<phi>) \<Longrightarrow> fsafe \<phi>"
+    by (auto dest: fsafe.cases)
+  have eq:"fsafe (Exists x \<phi>) \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (NFsubst (Exists x \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (NTadjoint I \<sigma> \<nu>)  (Exists x \<phi>)))"
+    proof -
+      assume fsafe:"fsafe (Exists x \<phi>)"
+      from fsafe have fsafe':"fsafe \<phi>" by (auto dest: fsafe.cases)
+      assume ssafe:"(\<And>i. dfree (\<sigma> i))"
+      fix \<nu>
+      have agree:"\<And>r. Vagree \<nu> (repv \<nu> x r) (- {Inl x})"
+        unfolding Vagree_def by auto
+      have sem_eq:"\<And>r. ((repv \<nu> x r) \<in> fml_sem (NTadjoint I \<sigma> (repv \<nu> x r)) \<phi>) =
+                        ((repv \<nu> x r) \<in> fml_sem (NTadjoint I \<sigma> \<nu>) \<phi>)"
+        using uadmit_fml_ntadjoint[OF FUA agree ssafe fsafe' good_interp] by auto
+      have "(\<nu> \<in> fml_sem I (NFsubst  (Exists x \<phi>) \<sigma>)) = (\<exists>r. (repv \<nu> x r) \<in> fml_sem I (NFsubst \<phi> \<sigma>))"
+        by auto
+      moreover have "... = (\<exists>r. (repv \<nu> x r) \<in> fml_sem (NTadjoint I \<sigma> (repv \<nu> x r)) \<phi>)"
+        using IH[OF fsafe' ssafe] by auto
+      moreover have "... = (\<exists>r. (repv \<nu> x r) \<in> fml_sem (NTadjoint I \<sigma> \<nu>) \<phi>)"
+        using sem_eq by auto
+      moreover have "... = (\<nu> \<in> fml_sem (NTadjoint I \<sigma> \<nu>) (Exists x \<phi>))"
+        by auto
+      ultimately show "(\<nu> \<in> fml_sem I (NFsubst  (Exists x \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (NTadjoint I \<sigma> \<nu>) (Exists x \<phi>))"
+        by auto
+      qed
   then show ?case by auto
 next
-
+  case (NFadmit_Diamond \<sigma> \<phi> a) then 
+    have PA:"NPadmit \<sigma> a" 
+    and FUA:"NFUadmit \<sigma> \<phi> (BVP (NPsubst a \<sigma>))"
+    and IH1:"fsafe \<phi> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (NFsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (NTadjoint I \<sigma> \<nu>) \<phi>))"
+    and IH2:"hpsafe a \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (NPsubst a \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (NTadjoint I \<sigma> \<nu>) a))"
+      by auto
+    have "fsafe (\<langle> a \<rangle> \<phi>) \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (NFsubst (\<langle> a \<rangle> \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (NTadjoint I \<sigma> \<nu>) (\<langle> a \<rangle> \<phi>)))"
+    proof -
+      assume fsafe:"fsafe (\<langle> a \<rangle> \<phi>)"
+      assume ssafe:"(\<And>i. dfree (\<sigma> i))"
+      from fsafe have fsafe':"fsafe \<phi>" and hpsafe:"hpsafe a" by (auto dest: fsafe.cases)
+      fix \<nu>
+      have agree:"\<And>\<omega>. (\<nu>, \<omega>) \<in> prog_sem I (NPsubst a \<sigma>) \<Longrightarrow> Vagree \<nu> \<omega> (-BVP(NPsubst a \<sigma>))"
+        using bound_effect[OF good_interp, of "(NPsubst a \<sigma>)" \<nu>, OF npsubst_preserves_safe[OF ssafe hpsafe PA]] by auto
+      have sem_eq:"\<And>\<omega>. (\<nu>, \<omega>) \<in> prog_sem I (NPsubst a \<sigma>) \<Longrightarrow> 
+          (\<omega> \<in> fml_sem (NTadjoint I \<sigma> \<nu>) \<phi>) =
+          (\<omega> \<in> fml_sem (NTadjoint I \<sigma> \<omega>) \<phi>)"
+        using uadmit_fml_ntadjoint[OF FUA agree ssafe fsafe' good_interp] by auto
+      have "(\<nu> \<in> fml_sem I (NFsubst (\<langle> a \<rangle> \<phi>) \<sigma>)) = (\<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I (NPsubst a \<sigma>) \<and> \<omega> \<in> fml_sem I (NFsubst \<phi> \<sigma>))"
+        by auto
+      moreover have "... = (\<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem (NTadjoint I \<sigma> \<nu>) a \<and> \<omega> \<in> fml_sem (NTadjoint I \<sigma> \<omega>) \<phi>)"
+        using IH1[OF fsafe' ssafe] IH2[OF hpsafe ssafe, of \<nu>] by auto
+      moreover have "... = (\<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem (NTadjoint I \<sigma> \<nu>) a \<and> \<omega> \<in> fml_sem (NTadjoint I \<sigma> \<nu>) \<phi>)"
+        using sem_eq IH2 hpsafe ssafe by blast
+      moreover have "... = (\<nu> \<in> fml_sem (NTadjoint I \<sigma> \<nu>) (\<langle> a \<rangle> \<phi>))"
+        by auto
+      ultimately show "?thesis \<nu>" by auto
+    qed
+  then show ?case by auto
+next
   case (NFadmit_Context \<sigma> \<phi> C)
   then show ?case 
     sorry
     (*unfolding NTadjoint_def apply auto sledgehammer *)
-qed
+qed (auto)
 
 lemma nsubst_fml:
 fixes I::"('sf, 'sc, 'sz) interp"
