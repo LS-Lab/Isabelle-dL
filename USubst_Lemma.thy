@@ -1760,10 +1760,30 @@ next
     qed
   then show ?case by auto
 next
-  case (NFadmit_Context \<sigma> \<phi> C)
-  then show ?case 
-    sorry
-    (*unfolding NTadjoint_def apply auto sledgehammer *)
+  case (NFadmit_Context \<sigma> \<phi> C) then
+    have FA:"NFadmit \<sigma> \<phi>"
+    and FUA:"NFUadmit \<sigma> \<phi> UNIV"
+    and IH:"fsafe \<phi> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (NFsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (NTadjoint I \<sigma> \<nu>) \<phi>))"
+      by auto
+    have "fsafe (InContext C \<phi>) \<Longrightarrow>
+             (\<And>i. dfree (\<sigma> i))\<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (NFsubst (InContext C \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (NTadjoint I \<sigma> \<nu>) (InContext C \<phi>)))"
+      proof -
+        assume safe:"fsafe (InContext C \<phi>)"
+        then have fsafe:"fsafe \<phi>" by (auto dest: fsafe.cases)
+        assume ssafe:"\<And>i. dfree (\<sigma> i)"
+        fix \<nu>
+        have Ieq:" Contexts (NTadjoint I \<sigma> \<nu>) C = Contexts I C"
+          unfolding NTadjoint_def by auto
+        have IH':"\<And>\<nu>. (\<nu> \<in> fml_sem I (NFsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (NTadjoint I \<sigma> \<nu>) \<phi>)"
+          using IH[OF fsafe ssafe] by auto
+        have agree:"\<And>\<omega>. Vagree \<nu> \<omega> (-UNIV)" unfolding Vagree_def by auto
+        have adj_eq:"\<And>\<omega>. fml_sem (NTadjoint I \<sigma> \<nu>) \<phi> = fml_sem (NTadjoint I \<sigma> \<omega>) \<phi>"
+          using uadmit_fml_ntadjoint[OF FUA agree ssafe fsafe good_interp] by auto
+        then have sem:"fml_sem I (NFsubst \<phi> \<sigma>) =  fml_sem (NTadjoint I \<sigma> \<nu>) \<phi>"
+          using IH' agree adj_eq by auto
+        show "?thesis \<nu>"  using Ieq sem by auto
+      qed
+  then show ?case by auto
 qed (auto)
 
 lemma nsubst_fml:
