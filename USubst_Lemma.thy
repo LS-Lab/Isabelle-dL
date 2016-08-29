@@ -1883,8 +1883,23 @@ next
     qed
   then show ?case by auto
 next
-  case (PFadmit_Prop \<sigma> f args)
-  then show ?case sorry
+  case (PFadmit_Prop \<sigma> p args) then
+    have "fsafe (Prop p args) \<Longrightarrow> (\<And>i. fsafe (\<sigma> i)) \<Longrightarrow> (\<And>\<nu>.(\<nu> \<in> fml_sem I (PFsubst ($\<phi> p args) \<sigma>)) = (\<nu> \<in> fml_sem (PFadjoint I \<sigma>) ($\<phi> p args)))"
+    proof -
+      assume safe:"fsafe (Prop p args)" and ssafe:" (\<And>i. fsafe (\<sigma> i))"
+      fix \<nu>
+      from safe have frees:"\<And>i. dfree (args i)" by auto
+      hence safes:"\<And>i. dsafe (args i)" using dfree_is_dsafe by auto
+      have Ieq:"Predicates I p = Predicates (PFadjoint I \<sigma>) p"
+        unfolding PFadjoint_def by auto
+      have vec:"(\<chi> i. dterm_sem I (args i) \<nu>) = (\<chi> i. dterm_sem (PFadjoint I \<sigma>) (args i) \<nu>)"
+        apply(auto simp add: vec_eq_iff)
+        subgoal for i using safes[of i] 
+          by (metis good_interp psubst_dterm)
+        done
+      show "?thesis \<nu>" using  Ieq vec by auto
+    qed
+    then show "?case" by auto
 next
   case (PFadmit_DiffFormula \<sigma> \<phi>)
   then show ?case sorry
@@ -1984,8 +1999,33 @@ next
       qed
   then show ?case by auto
 next
-  case (PFadmit_Context \<sigma> \<phi> C)
-  then show ?case apply auto sorry
+next
+case (PFadmit_Context \<sigma> \<phi> C) then
+    have FA:"PFadmit \<sigma> \<phi>"
+    and FUA:"PFUadmit \<sigma> \<phi> UNIV"
+    and IH:"fsafe \<phi> \<Longrightarrow> (\<And>i. fsafe (\<sigma> i)) \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (PFsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (PFadjoint I \<sigma>) \<phi>))"
+      by auto
+    have "fsafe (InContext C \<phi>) \<Longrightarrow>
+             (\<And>i. fsafe (\<sigma> i)) \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (PFsubst (InContext C \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (PFadjoint I \<sigma>) (InContext C \<phi>)))"
+      proof -
+        assume safe:"fsafe (InContext C \<phi>)"
+        then have fsafe:"fsafe \<phi>" by (auto dest: fsafe.cases)
+        assume ssafe:"(\<And>i. fsafe (\<sigma> i))"
+        fix \<nu> :: "(real, 'sz) vec \<times> (real, 'sz) vec"
+        have IH':"\<And>\<nu>. (\<nu> \<in> fml_sem I (PFsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (PFadjoint I \<sigma>) \<phi>)"
+          using IH[OF fsafe ssafe] by auto
+        have agree:"\<And>\<omega>. Vagree \<nu> \<omega> (-UNIV)" unfolding Vagree_def by auto
+        then have sem:"fml_sem I (PFsubst \<phi> \<sigma>) =  fml_sem (PFadjoint I \<sigma>) \<phi>"
+          using IH' agree  by auto
+        show "?thesis \<nu>"  using sem 
+          apply auto
+          apply(cases C)
+          unfolding PFadjoint_def apply auto
+          apply(cases C)
+          by auto
+      qed
+  then show ?case by auto
+
 qed (auto simp add: PFadjoint_def)
 
 lemma subst_ode:
