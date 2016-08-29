@@ -836,6 +836,25 @@ lemma adj_sub_ode:"\<And>\<sigma> x1 x2. (\<Union>i\<in>{i |i. Inl i \<in> SIGO 
   done
 done
 
+lemma ntadj_sub_assign:"\<And>e \<sigma> x. (\<Union>y\<in>{y. Inl y \<in> SIGT e}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGP (Assign x e)}. FVT (\<sigma> y))"
+ by auto
+
+lemma ntadj_sub_diff_assign:"\<And>e \<sigma> x. (\<Union>y\<in>{y. Inl y \<in> SIGT e}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGP (DiffAssign x e)}. FVT (\<sigma> y))"
+  by auto
+   
+lemma ntadj_sub_geq1:"\<And>\<sigma> x1 x2. (\<Union>y\<in>{y. Inl y \<in> SIGT x1}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGF (Geq x1 x2)}. FVT (\<sigma> y))"
+  by auto
+
+lemma ntadj_sub_geq2:"\<And>\<sigma> x1 x2. (\<Union>y\<in>{y. Inl y \<in> SIGT x2}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGF (Geq x1 x2)}. FVT (\<sigma> y))"
+  by auto
+
+lemma ntadj_sub_prop:"\<And>\<sigma> x1 x2 j . (\<Union>y\<in>{y. Inl y \<in> SIGT (x2 j)}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGF ($\<phi> x1 x2)}.FVT (\<sigma> y))"
+  by auto
+
+lemma ntadj_sub_ode:"\<And>\<sigma> x1 x2. (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGO x1}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGP (EvolveODE x1 x2)}. FVT (\<sigma> y))"
+  by auto
+
+
 lemma uadmit_ode_adjoint':
   fixes \<sigma> I
   assumes ssafe:"ssafe \<sigma>"
@@ -1191,22 +1210,23 @@ lemma uadmit_fml_adjoint:
   qed
 
 lemma uadmit_prog_fml_ntadjoint':
+  fixes \<alpha> :: "('sf + 'sf,'sc,'sz) hp"
+  fixes \<phi> :: "('sf + 'sf,'sc,'sz) formula"
   fixes \<sigma> I
   assumes ssafe:"\<And>i. dfree (\<sigma> i)"
   assumes good_interp:"is_interp I"
   shows "\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>x\<in>{x. Inl (Inl x) \<in> SIGP \<alpha>}. FVT (\<sigma> x)) \<Longrightarrow> hpsafe \<alpha> \<Longrightarrow> prog_sem (NTadjoint I \<sigma> \<nu>) \<alpha> = prog_sem (NTadjoint I \<sigma> \<omega>) \<alpha>"
   and "\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>x\<in>{x. Inl (Inl x) \<in> SIGF \<phi>}. FVT (\<sigma> x)) \<Longrightarrow> fsafe \<phi> \<Longrightarrow> fml_sem (NTadjoint I \<sigma> \<nu>) \<phi> = fml_sem (NTadjoint I \<sigma> \<omega>) \<phi>"
-    sorry
-(*proof (induct "\<alpha>" and "\<phi>")
+proof (induct "\<alpha>" and "\<phi>")
   case (Pvar x)
-  then show ?case unfolding adjoint_def by auto
+  then show ?case unfolding NTadjoint_def by auto
 next
   case (Assign x e)
-    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (x := e). SFV \<sigma> a)"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGP (Assign x e)}. FVT (\<sigma> y))"
     assume safe:"hpsafe (x := e)"
     from safe have dsafe:"dsafe e" by (auto dest: hpsafe.cases)
-    have sub:"(\<Union>i\<in>SIGT e. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (x := e). SFV \<sigma> a)"
-      using adj_sub_assign[of \<sigma> e x] by auto
+    have sub:"(\<Union>y\<in>{y. Inl y \<in> SIGT e}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGP (Assign x e)}. FVT (\<sigma> y))"
+      using ntadj_sub_assign[of \<sigma> e x] by auto
     have "dterm_sem (local.adjoint I \<sigma> \<nu>) e = dterm_sem (local.adjoint I \<sigma> \<omega>) e"
       by (rule uadmit_dterm_adjointS[OF ssafe good_interp agree_sub[OF sub VA] dsafe])
     then show ?case by (auto simp add: vec_eq_iff)
@@ -1446,7 +1466,7 @@ next
     show ?case using IH1[OF agree_sub[OF sub VA] safe1]  
       unfolding adjoint_def by auto
 qed
-*)
+
 
 lemma uadmit_prog_ntadjoint:
   fixes \<alpha> :: "('sf + 'sf::finite,'sc,'sz) hp"
