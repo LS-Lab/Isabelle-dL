@@ -197,7 +197,37 @@ lemma NTadjoint_safe:
 assumes good_interp:"is_interp I"
 assumes good_subst:"(\<And>i. dfree (\<sigma> i))"
 shows "is_interp (NTadjoint I \<sigma> \<nu>)"
-sorry
+  apply(unfold NTadjoint_def)
+  apply(unfold is_interp_def)
+  apply(auto simp del: extendf.simps extendc.simps FunctionFrechet.simps)
+  subgoal for x i
+    apply(cases "i")
+    subgoal
+      apply(auto  simp del: extendf.simps extendc.simps)
+      using good_interp unfolding is_interp_def by simp
+    apply(auto  simp del: extendf.simps extendc.simps)
+    subgoal for f'
+      proof -
+        assume some:"i = Inr f'"
+        have free:"dfree (\<sigma> f')" using good_subst by auto
+        let ?f = "(\<lambda>_. dterm_sem I (\<sigma> f') \<nu>)"
+        let ?Poo = "(\<lambda>fd. (\<forall>x. (?f has_derivative (fd x)) (at x)))"
+        let ?f''="(\<lambda>_ _. 0)"
+        have Pf:"?Poo ?f''"
+          proof (induction "\<sigma> f'")
+          qed (auto)
+        have "(THE G. (?f has_derivative G) (at x)) = ?f'' x"
+          apply(rule the_deriv)
+          using Pf by auto
+        then have the_eq:"(THE G. \<forall> x. (?f has_derivative G x) (at x)) = ?f''"
+          using Pf the_all_deriv[of ?f ?f''] by auto
+        have another_eq:"(THE f'a. \<forall>x. ((\<lambda>_. dterm_sem I (\<sigma> f') \<nu>) has_derivative f'a x) (at x)) x = (\<lambda> _. 0)"
+          using Pf by (simp add: the_eq) 
+        then show "((\<lambda>_. dterm_sem I (\<sigma> f') \<nu>) has_derivative (THE f'a. \<forall>x. ((\<lambda>_. dterm_sem I (\<sigma> f') \<nu>) has_derivative f'a x) (at x)) x) (at x)"
+          using the_eq Pf by simp
+        qed
+    done
+  done
 
 (* Properties of adjoints *)
 lemma adjoint_consequence:"(\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dsafe f') \<Longrightarrow> (\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f') \<Longrightarrow> Vagree \<nu> \<omega> (FVS \<sigma>) \<Longrightarrow> adjoint I \<sigma> \<nu> = adjoint I \<sigma> \<omega>"
