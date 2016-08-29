@@ -582,6 +582,94 @@ proof -
     by auto
 qed
 
+lemma uadmit_dterm_ntadjoint':
+  assumes dfree:"\<And>i. dfree (\<sigma> i)"
+  assumes good_interp:"is_interp I"
+  shows  "\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta> \<Longrightarrow> dterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> = dterm_sem (NTadjoint I \<sigma> \<omega>) \<theta>"
+proof (induct "\<theta>")
+  case (Plus \<theta>1 \<theta>2 \<nu> \<omega>)
+    assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (NTadjoint I \<sigma> \<nu>) \<theta>1 = dterm_sem (NTadjoint I \<sigma> \<omega>) \<theta>1"
+    assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>2}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (NTadjoint I \<sigma> \<nu>) \<theta>2 = dterm_sem (NTadjoint I \<sigma> \<omega>) \<theta>2"
+    assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT (Plus \<theta>1 \<theta>2)}. FVT (\<sigma> i))"
+    then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
+      and VA2:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>2}. FVT (\<sigma> i))"
+      unfolding Vagree_def by auto
+    assume safe:"dsafe (Plus \<theta>1 \<theta>2)"
+  show ?case 
+    using IH1[OF VA1] IH2[OF VA2] safe by auto
+next
+  case (Times \<theta>1 \<theta>2 \<nu> \<omega>)
+    assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (NTadjoint I \<sigma> \<nu>) \<theta>1 = dterm_sem (NTadjoint I \<sigma> \<omega>) \<theta>1"
+    assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>2}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (NTadjoint I \<sigma> \<nu>) \<theta>2 = dterm_sem (NTadjoint I \<sigma> \<omega>) \<theta>2"
+    assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT (Times \<theta>1 \<theta>2)}. FVT (\<sigma> i))"
+    then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
+      and VA2:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>2}. FVT (\<sigma> i))"
+      unfolding Vagree_def by auto
+    assume safe:"dsafe (Times \<theta>1 \<theta>2)"
+  show ?case 
+    using IH1[OF VA1] IH2[OF VA2] safe by auto
+next
+  case (Function x1a x2a)
+    assume IH:"\<And>x. \<And>\<nu> \<omega>. x \<in> range x2a \<Longrightarrow> Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT x}. FVT (\<sigma> i)) \<Longrightarrow>
+      dsafe x \<Longrightarrow> dterm_sem (NTadjoint I \<sigma> \<nu>) x = dterm_sem (NTadjoint I \<sigma> \<omega>) x"
+    assume safe:"dsafe (Function x1a x2a)"
+    from safe have safes:"\<And>j. dsafe (x2a j)" by auto
+    from IH have IH':"\<And>j. Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT (x2a j)}. FVT (\<sigma> i)) \<Longrightarrow>
+      dterm_sem (NTadjoint I \<sigma> \<nu>) (x2a j) = dterm_sem (NTadjoint I \<sigma> \<omega>) (x2a j)"
+      using rangeI safes by auto
+    assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT ($f x1a x2a)}. FVT (\<sigma> i))"
+    from VA have VAs:"\<And>j. Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT (x2a j)}. FVT (\<sigma> i))"
+      unfolding Vagree_def SIGT.simps using rangeI by blast
+    have SIGT:"x1a \<in> SIGT ($f x1a x2a)" by auto
+    have VAsub:"\<And>a. x1a = Inr a\<Longrightarrow> (FVT (\<sigma> a)) \<subseteq> (\<Union> i\<in>{i. Inr i \<in> SIGT ($f x1a x2a)}. FVT (\<sigma> i))"
+      using SIGT by auto
+    have VAf:"\<And>a. x1a = Inr a \<Longrightarrow> Vagree \<nu> \<omega> (FVT (\<sigma> a))"
+      using agree_sub[OF VAsub VA] by auto
+  then show ?case 
+    using IH'[OF VAs] apply (auto simp add: fun_eq_iff)
+    apply(cases "x1a")
+    defer
+    subgoal for x1 x2 a
+      proof -
+        assume VA:"(\<And>a. x1a = Inr a \<Longrightarrow> Vagree \<nu> \<omega> (FVT (\<sigma> a)))"
+        assume sems:"(\<And>j. \<forall>x1 x2. dterm_sem (NTadjoint I \<sigma> \<nu>) (x2a j) (x1,x2) = dterm_sem (NTadjoint I \<sigma> \<omega>) (x2a j) (x1,x2))"
+        assume some:"x1a = Inr a"
+        note FVT = VAf[OF some]
+        have dsafe:"\<And>i. dsafe (\<sigma> i)"
+          using dfree dfree_is_dsafe by auto
+        have dsem:"\<And>R . dterm_sem I (\<sigma> a) \<nu> = dterm_sem I (\<sigma> a) \<omega>"
+          using coincidence_dterm[OF dsafe FVT] by auto
+        have "\<And>R. Functions (NTadjoint I \<sigma> \<nu>) x1a R = Functions (NTadjoint I \<sigma> \<omega>) x1a R"
+          using dsem some unfolding NTadjoint_def by auto
+        then show "Functions (NTadjoint I \<sigma> \<nu>) x1a (\<chi> i. dterm_sem (NTadjoint I \<sigma> \<omega>) (x2a i) (x1,x2)) =
+                   Functions (NTadjoint I \<sigma> \<omega>) x1a (\<chi> i. dterm_sem (NTadjoint I \<sigma> \<omega>) (x2a i) (x1,x2))"
+          by auto
+      qed
+    unfolding NTadjoint_def apply auto    
+    done
+next
+  case (Differential \<theta>)
+    assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta> \<Longrightarrow> dterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> = dterm_sem (NTadjoint I \<sigma> \<omega>) \<theta>"
+    assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT (Differential \<theta>)}. FVT (\<sigma> i))"
+    assume safe:"dsafe (Differential \<theta>)"
+    then have free:"dfree \<theta>" by (auto dest: dsafe.cases)
+    from VA have VA':"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>}. FVT (\<sigma> i))"
+      by auto
+    have dsafe:"\<And>i. dsafe (\<sigma> i)"
+          using dfree dfree_is_dsafe by auto
+    have sem:"sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> = sterm_sem (NTadjoint I \<sigma> \<omega>) \<theta>"
+      using uadmit_sterm_ntadjoint'[OF dfree  VA'] by auto
+    have good1:"is_interp (NTadjoint I \<sigma> \<nu>)" using NTadjoint_safe[OF good_interp dfree, of "\<lambda>i. i"] by auto
+    have good2:"is_interp (NTadjoint I \<sigma> \<omega>)" using NTadjoint_safe[OF good_interp dfree, of "\<lambda>i. i"] by auto
+    have frech:"frechet (NTadjoint I \<sigma> \<nu>) \<theta> = frechet (NTadjoint I \<sigma> \<omega>) \<theta>"
+      apply (auto simp add: fun_eq_iff)
+      subgoal for a b
+        using sterm_determines_frechet [OF good1 good2 free free sem, of "(a,b)"] by auto
+      done
+    then show "dterm_sem (NTadjoint I \<sigma> \<nu>) (Differential \<theta>) = dterm_sem (NTadjoint I \<sigma> \<omega>) (Differential \<theta>)"
+      by (auto simp add: directional_derivative_def)
+qed (auto)  
+
 lemma uadmit_dterm_ntadjoint:
   assumes TUA:"NTUadmit \<sigma> \<theta> U"
   assumes VA:"Vagree \<nu> \<omega> (-U)"
@@ -592,15 +680,16 @@ lemma uadmit_dterm_ntadjoint:
 proof -
   have duh:"\<And>A B. A \<inter> B = {} \<Longrightarrow> A \<subseteq> -B"
     by auto
-  (*have "\<And>x. x \<in> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<Longrightarrow> x \<in> (-U)"
-    using TUA unfolding TUadmit_def by auto
-  then have sub1:"(\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> -U"
+have duh:"\<And>A B. A \<inter> B = {} \<Longrightarrow> A \<subseteq> -B"
     by auto
-  then have VA':"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {})"
+  have "\<And>x. x \<in> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>}. FVT (\<sigma> i)) \<Longrightarrow> x \<in> (-U)"
+    using TUA unfolding NTUadmit_def by auto
+  then have sub1:"(\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>}. FVT (\<sigma> i)) \<subseteq> -U"
+    by auto
+  then have VA':"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>}. FVT (\<sigma> i))"
     using agree_sub[OF sub1 VA] by auto
-  then *)show "?thesis" 
-    sorry (*using uadmit_dterm_adjoint'[OF dfree fsafe good_interp VA' dsafe] 
-    by auto*)
+  then show "?thesis" using uadmit_dterm_ntadjoint'[OF dfree good_interp VA' dsafe] 
+    by auto
 qed
 
 definition ssafe ::"('sf, 'sc, 'sz) subst \<Rightarrow> bool"
