@@ -836,30 +836,11 @@ lemma adj_sub_ode:"\<And>\<sigma> x1 x2. (\<Union>i\<in>{i |i. Inl i \<in> SIGO 
   done
 done
 
-lemma ntadj_sub_assign:"\<And>e \<sigma> x. (\<Union>y\<in>{y. Inl y \<in> SIGT e}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGP (Assign x e)}. FVT (\<sigma> y))"
- by auto
-
-lemma ntadj_sub_diff_assign:"\<And>e \<sigma> x. (\<Union>y\<in>{y. Inl y \<in> SIGT e}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGP (DiffAssign x e)}. FVT (\<sigma> y))"
-  by auto
-   
-lemma ntadj_sub_geq1:"\<And>\<sigma> x1 x2. (\<Union>y\<in>{y. Inl y \<in> SIGT x1}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGF (Geq x1 x2)}. FVT (\<sigma> y))"
-  by auto
-
-lemma ntadj_sub_geq2:"\<And>\<sigma> x1 x2. (\<Union>y\<in>{y. Inl y \<in> SIGT x2}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGF (Geq x1 x2)}. FVT (\<sigma> y))"
-  by auto
-
-lemma ntadj_sub_prop:"\<And>\<sigma> x1 x2 j . (\<Union>y\<in>{y. Inl y \<in> SIGT (x2 j)}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGF ($\<phi> x1 x2)}.FVT (\<sigma> y))"
-  by auto
-
-lemma ntadj_sub_ode:"\<And>\<sigma> x1 x2. (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGO x1}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGP (EvolveODE x1 x2)}. FVT (\<sigma> y))"
-  by auto
-
-
 lemma uadmit_ode_adjoint':
   fixes \<sigma> I
   assumes ssafe:"ssafe \<sigma>"
   assumes good_interp:"is_interp I"
-  shows"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>i \<in> {i | i. (Inl i\<in>SIGO ODE)}. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<Longrightarrow> osafe ODE \<Longrightarrow> ODE_sem (local.adjoint I \<sigma> \<nu>) ODE = ODE_sem (local.adjoint I \<sigma> \<omega>) ODE"
+  shows"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x)\<Longrightarrow> osafe ODE \<Longrightarrow> ODE_sem (adjoint I \<sigma> \<nu>) ODE = ODE_sem (adjoint I \<sigma> \<omega>) ODE"
 proof (induction ODE)
   case (OVar x)
   then show ?case unfolding adjoint_def by auto
@@ -897,6 +878,51 @@ next
   then show ?case using IH1[OF agree_sub[OF sub1 VA] safe1] IH2[OF agree_sub[OF sub2 VA] safe2] by auto
 qed
 
+
+lemma uadmit_ode_ntadjoint':
+  fixes \<sigma> I
+  assumes ssafe:"\<And>i. dfree (\<sigma> i)"
+  assumes good_interp:"is_interp I"
+  shows"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO x1}. FVT (\<sigma> y)) \<Longrightarrow> osafe ODE \<Longrightarrow> ODE_sem (NTadjoint I \<sigma> \<nu>) ODE = ODE_sem (NTadjoint I \<sigma> \<omega>) ODE"
+sorry (*    
+proof (induction ODE)
+  case (OVar x)
+  then show ?case unfolding adjoint_def by auto
+next
+  case (OSing x1a x2)
+    assume VA:"Vagree \<nu> \<omega> (\<Union>i\<in>{i |i. Inl i \<in> SIGO (OSing x1a x2)}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some a \<Rightarrow> FVT a)"
+    assume osafe:"osafe (OSing x1a x2)"
+    then have dfree:"dfree x2" by (auto dest: osafe.cases)
+    have safes:"(\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dsafe f')"
+      "(\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f')"
+      using ssafe unfolding ssafe_def using dfree_is_dsafe by auto
+    have sem:"sterm_sem (local.adjoint I \<sigma> \<nu>) x2 = sterm_sem (local.adjoint I \<sigma> \<omega>) x2"
+       using uadmit_sterm_adjoint'[of \<sigma> \<nu> \<omega> x2 I, OF safes, of "(\<lambda> x y. x)" "(\<lambda> x y. x)"] VA
+       by auto
+    show ?case 
+      apply auto
+      apply (rule ext)
+      subgoal for x
+        apply (rule vec_extensionality)
+        using sem by auto
+      done
+next
+  case (OProd ODE1 ODE2)
+    assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE1}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some a \<Rightarrow> FVT a) \<Longrightarrow>
+      osafe ODE1 \<Longrightarrow> ODE_sem (local.adjoint I \<sigma> \<nu>) ODE1 = ODE_sem (local.adjoint I \<sigma> \<omega>) ODE1"
+    assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE2}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some a \<Rightarrow> FVT a) \<Longrightarrow>
+    osafe ODE2 \<Longrightarrow> ODE_sem (local.adjoint I \<sigma> \<nu>) ODE2 = ODE_sem (local.adjoint I \<sigma> \<omega>) ODE2"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>i\<in>{i |i. Inl i \<in> SIGO (OProd ODE1 ODE2)}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some a \<Rightarrow> FVT a)"
+    assume safe:"osafe (OProd ODE1 ODE2)"
+    from safe have safe1:"osafe ODE1" and safe2:"osafe ODE2" by (auto dest: osafe.cases) 
+    have sub1:"(\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE1}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some a \<Rightarrow> FVT a) \<subseteq> (\<Union>i\<in>{i |i. Inl i \<in> SIGO (OProd ODE1 ODE2)}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some a \<Rightarrow> FVT a)"
+      by auto
+    have sub2:"(\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE2}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some a \<Rightarrow> FVT a) \<subseteq> (\<Union>i\<in>{i |i. Inl i \<in> SIGO (OProd ODE1 ODE2)}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some a \<Rightarrow> FVT a)"
+      by auto
+  then show ?case using IH1[OF agree_sub[OF sub1 VA] safe1] IH2[OF agree_sub[OF sub2 VA] safe2] by auto
+qed
+*)
+
 lemma uadmit_mkv_adjoint:
   assumes ssafe:"ssafe \<sigma>"
   assumes good_interp:"is_interp I"
@@ -919,6 +945,14 @@ lemma uadmit_mkv_adjoint:
     done
   done
 
+lemma uadmit_mkv_ntadjoint:
+  assumes ssafe:"\<And>i. dfree (\<sigma> i)"
+  assumes good_interp:"is_interp I"
+  assumes VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO x1}. FVT (\<sigma> y))"
+  assumes osafe:"osafe ODE"
+  shows "mk_v (NTadjoint I \<sigma> \<nu>) ODE = mk_v (NTadjoint I \<sigma> \<omega>) ODE"
+sorry
+    
 lemma uadmit_prog_fml_adjoint':
   fixes \<sigma> I
   assumes ssafe:"ssafe \<sigma>"
@@ -1209,70 +1243,91 @@ lemma uadmit_fml_adjoint:
       done
   qed
 
+lemma ntadj_sub_assign:"\<And>e \<sigma> x. (\<Union>y\<in>{y. Inr y \<in> SIGT e}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGP (Assign x e)}. FVT (\<sigma> y))"
+  by auto
+
+lemma ntadj_sub_diff_assign:"\<And>e \<sigma> x. (\<Union>y\<in>{y. Inl y \<in> SIGT e}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGP (DiffAssign x e)}. FVT (\<sigma> y))"
+  by auto
+   
+lemma ntadj_sub_geq1:"\<And>\<sigma> x1 x2. (\<Union>y\<in>{y. Inl y \<in> SIGT x1}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGF (Geq x1 x2)}. FVT (\<sigma> y))"
+  by auto
+
+lemma ntadj_sub_geq2:"\<And>\<sigma> x1 x2. (\<Union>y\<in>{y. Inl y \<in> SIGT x2}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGF (Geq x1 x2)}. FVT (\<sigma> y))"
+  by auto
+
+lemma ntadj_sub_prop:"\<And>\<sigma> x1 x2 j. (\<Union>y\<in>{y. Inl y \<in> SIGT (x2 j)}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGF ($\<phi> x1 x2)}.FVT (\<sigma> y))"
+  by auto
+
+lemma ntadj_sub_ode:"\<And>\<sigma> x1 x2. (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGO x1}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGP (EvolveODE x1 x2)}. FVT (\<sigma> y))"
+  by auto
+
 lemma uadmit_prog_fml_ntadjoint':
   fixes \<alpha> :: "('sf + 'sf,'sc,'sz) hp"
   fixes \<phi> :: "('sf + 'sf,'sc,'sz) formula"
   fixes \<sigma> I
   assumes ssafe:"\<And>i. dfree (\<sigma> i)"
   assumes good_interp:"is_interp I"
-  shows "\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>x\<in>{x. Inl (Inl x) \<in> SIGP \<alpha>}. FVT (\<sigma> x)) \<Longrightarrow> hpsafe \<alpha> \<Longrightarrow> prog_sem (NTadjoint I \<sigma> \<nu>) \<alpha> = prog_sem (NTadjoint I \<sigma> \<omega>) \<alpha>"
-  and "\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>x\<in>{x. Inl (Inl x) \<in> SIGF \<phi>}. FVT (\<sigma> x)) \<Longrightarrow> fsafe \<phi> \<Longrightarrow> fml_sem (NTadjoint I \<sigma> \<nu>) \<phi> = fml_sem (NTadjoint I \<sigma> \<omega>) \<phi>"
+  shows "\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>x\<in>{x. Inl (Inr x) \<in> SIGP \<alpha>}. FVT (\<sigma> x)) \<Longrightarrow> hpsafe \<alpha> \<Longrightarrow> prog_sem (NTadjoint I \<sigma> \<nu>) \<alpha> = prog_sem (NTadjoint I \<sigma> \<omega>) \<alpha>"
+  and "\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>x\<in>{x. Inl (Inr x) \<in> SIGF \<phi>}. FVT (\<sigma> x)) \<Longrightarrow> fsafe \<phi> \<Longrightarrow> fml_sem (NTadjoint I \<sigma> \<nu>) \<phi> = fml_sem (NTadjoint I \<sigma> \<omega>) \<phi>"
 proof (induct "\<alpha>" and "\<phi>")
   case (Pvar x)
   then show ?case unfolding NTadjoint_def by auto
 next
   case (Assign x e)
-    assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGP (Assign x e)}. FVT (\<sigma> y))"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGP (Assign x e)}. FVT (\<sigma> y))"
     assume safe:"hpsafe (x := e)"
     from safe have dsafe:"dsafe e" by (auto dest: hpsafe.cases)
-    have sub:"(\<Union>y\<in>{y. Inl y \<in> SIGT e}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inl y) \<in> SIGP (Assign x e)}. FVT (\<sigma> y))"
+    have sub:"(\<Union>y\<in>{y. Inr y \<in> SIGT e}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGP (Assign x e)}. FVT (\<sigma> y))"
       using ntadj_sub_assign[of \<sigma> e x] by auto
-    have "dterm_sem (local.adjoint I \<sigma> \<nu>) e = dterm_sem (local.adjoint I \<sigma> \<omega>) e"
-      by (rule uadmit_dterm_adjointS[OF ssafe good_interp agree_sub[OF sub VA] dsafe])
+    have VA':"(Vagree \<nu> \<omega> (\<Union>i\<in>{i. Inr i \<in> SIGT e}. FVT (\<sigma> i)))"
+      using agree_sub[OF sub VA] by auto
+    have "dterm_sem (NTadjoint I \<sigma> \<nu>) e = dterm_sem (NTadjoint I \<sigma> \<omega>) e"
+      using uadmit_dterm_ntadjoint'[of \<sigma> I \<nu> \<omega> e] ssafe good_interp agree_sub[OF sub VA] dsafe by auto
     then show ?case by (auto simp add: vec_eq_iff)
 next
   case (DiffAssign x e)
-    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (DiffAssign x e). SFV \<sigma> a)"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGP (DiffAssign x e)}. FVT (\<sigma> y))"
     assume safe:"hpsafe (DiffAssign x e)"
     from safe have dsafe:"dsafe e" by (auto dest: hpsafe.cases)
-    have sub:"(\<Union>i\<in>SIGT e. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (DiffAssign x e). SFV \<sigma> a)"
-      using adj_sub_diff_assign[of \<sigma> e] by auto
-    have "dterm_sem (local.adjoint I \<sigma> \<nu>) e = dterm_sem (local.adjoint I \<sigma> \<omega>) e"
-      by (rule uadmit_dterm_adjointS[OF ssafe good_interp agree_sub[OF sub VA] dsafe])
+    have sub:"(\<Union>y\<in>{y. Inr y \<in> SIGT e}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGP (DiffAssign x e)}. FVT (\<sigma> y))"
+      using ntadj_sub_assign[of \<sigma> e x] by auto
+    have VA':"(Vagree \<nu> \<omega> (\<Union>i\<in>{i. Inr i \<in> SIGT e}. FVT (\<sigma> i)))"
+      using agree_sub[OF sub VA] by auto
+    have "dterm_sem (NTadjoint I \<sigma> \<nu>) e = dterm_sem (NTadjoint I \<sigma> \<omega>) e"
+      using uadmit_dterm_ntadjoint'[of \<sigma> I \<nu> \<omega> e] ssafe good_interp agree_sub[OF sub VA] dsafe by auto
     then show ?case by (auto simp add: vec_eq_iff)
 next
   case (Test x)
-    assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF x. SFV \<sigma> a) \<Longrightarrow> fsafe x \<Longrightarrow> fml_sem (adjoint I \<sigma> \<nu>) x = fml_sem (adjoint I \<sigma> \<omega>) x"
-    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (? x). SFV \<sigma> a)"
+    assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF x}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x \<Longrightarrow> fml_sem (NTadjoint I \<sigma> \<nu>) x = fml_sem (NTadjoint I \<sigma> \<omega>) x"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGP (? x)}. FVT (\<sigma> y))"
     assume hpsafe:"hpsafe (? x)"
     then have fsafe:"fsafe x" by (auto dest: hpsafe.cases)
-    have sub:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGF x. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (? x). SFV \<sigma> a)"
+    have sub:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF x}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGP (? x)}. FVT (\<sigma> y))"
       by auto
-    have "fml_sem (adjoint I \<sigma> \<nu>) x = fml_sem (adjoint I \<sigma> \<omega>) x"
+    have "fml_sem (NTadjoint I \<sigma> \<nu>) x = fml_sem (NTadjoint I \<sigma> \<omega>) x"
       using IH[OF agree_sub[OF sub VA] fsafe] by auto
   then show ?case by auto
 next
   case (EvolveODE x1 x2)
-    assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (local.adjoint I \<sigma> \<nu>) x2 = fml_sem (local.adjoint I \<sigma> \<omega>) x2"
-    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (EvolveODE x1 x2). SFV \<sigma> a)"
+    assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF x2}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (NTadjoint I \<sigma> \<nu>) x2 = fml_sem (NTadjoint I \<sigma> \<omega>) x2"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGP (EvolveODE x1 x2)}. FVT (\<sigma> y))"
     assume safe:"hpsafe (EvolveODE x1 x2)"
     then have osafe:"osafe x1" and fsafe:"fsafe x2" by (auto dest: hpsafe.cases)
-    have sub1:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (EvolveODE x1 x2). SFV \<sigma> a)"
+    have sub1:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF x2}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGP (EvolveODE x1 x2)}. FVT (\<sigma> y))"
       by auto
-    then have VAF:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a)"
+    then have VAF:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF x2}. FVT (\<sigma> y))"
       using agree_sub[OF sub1 VA] by auto 
     note IH' = IH[OF VAF fsafe]
-    have sub:"(\<Union>i\<in>{i |i. Inl i \<in> SIGO x1}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP (EvolveODE x1 x2). SFV \<sigma> a)"
-      using adj_sub_ode[of \<sigma> x1 x2] by auto
-    moreover have IH2:"ODE_sem (local.adjoint I \<sigma> \<nu>) x1 = ODE_sem (local.adjoint I \<sigma> \<omega>) x1"
-      apply (rule uadmit_ode_adjoint')
+    have sub:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO x1}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGP (EvolveODE x1 x2)}. FVT (\<sigma> y))"
+      using ntadj_sub_ode[of \<sigma> x1 x2] by auto
+    moreover have IH2:"ODE_sem (NTadjoint I \<sigma> \<nu>) x1 = ODE_sem (NTadjoint I \<sigma> \<omega>) x1"
+      apply (rule uadmit_ode_ntadjoint')
       subgoal by (rule ssafe)
       subgoal by (rule good_interp)
-      subgoal using agree_sub[OF sub VA] by auto
-      subgoal by (rule osafe)
-      done
-    have mkv:"mk_v (adjoint I \<sigma> \<nu>) x1 = mk_v (adjoint I \<sigma> \<omega>) x1"
-      apply (rule uadmit_mkv_adjoint)
+      defer subgoal by (rule osafe)
+      using agree_sub[OF sub VA] by auto
+    have mkv:"mk_v (NTadjoint I \<sigma> \<nu>) x1 = mk_v (NTadjoint I \<sigma> \<omega>) x1"
+      apply (rule uadmit_mkv_ntadjoint)
       using ssafe good_interp osafe agree_sub[OF sub VA] by auto
     show ?case 
       apply auto
