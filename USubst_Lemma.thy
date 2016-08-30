@@ -1987,7 +1987,7 @@ proof (induction rule: NTadmit.induct)
           assume sem:"sterm_sem I (NTsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
           have VA:"\<And>\<nu> \<omega>. Vagree \<nu> (x,snd \<nu>) (-UNIV)" unfolding Vagree_def by auto
           show "sterm_sem I (NTsubst \<theta> \<sigma>) x = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> x"
-            using uadmit_sterm_ntadjoint[OF NTU VA frees, OF dfree_is_dsafe[OF free] good_interp, of "(x, snd \<nu>)"] nsubst_sterm[OF free frees, of I "(\<lambda>x. x)"] apply auto
+            using uadmit_sterm_ntadjoint[OF NTU VA frees, OF  good_interp, of "(x, snd \<nu>)"] nsubst_sterm[OF free frees, of I "(\<lambda>x. x)"] apply auto
             by (metis NTU VA dfree_is_dsafe free frees good_interp uadmit_sterm_ntadjoint)
         qed
         done
@@ -2552,7 +2552,44 @@ shows "osafe ODE \<Longrightarrow>
        ssafe \<sigma> \<Longrightarrow> 
        Oadmit \<sigma> ODE (ODE_vars ODE) \<Longrightarrow>
        ODE_sem I (Osubst ODE \<sigma>) (fst \<nu>) = ODE_sem (adjoint I \<sigma> \<nu>) ODE (fst \<nu>)"
-sorry
+proof (induction rule: osafe.induct)
+  case (osafe_Var c)
+  then show ?case unfolding adjoint_def by (cases "SODEs \<sigma> c", auto)
+next
+  case (osafe_Sing \<theta> x)
+  then show ?case apply auto
+    apply(rule vec_extensionality)
+    apply auto
+    using subst_sterm [of \<theta> \<sigma> I "\<nu>"]
+    unfolding ssafe_def by auto
+next
+  case (osafe_Prod ODE1 ODE2) then
+  have NOU1:"Oadmit \<sigma> ODE1  (ODE_vars (OProd ODE1 ODE2))" and NOU2:"Oadmit \<sigma> ODE2  (ODE_vars (OProd ODE1 ODE2))" 
+     by auto
+  have TUA_sub:"\<And>\<sigma> \<theta> A B. TUadmit \<sigma> \<theta> B \<Longrightarrow> A \<subseteq> B \<Longrightarrow> TUadmit \<sigma> \<theta> A"
+    unfolding TUadmit_def by auto
+  have OA_sub:"\<And>ODE A B. Oadmit \<sigma> ODE B \<Longrightarrow> A \<subseteq> B \<Longrightarrow> Oadmit \<sigma> ODE A"
+    subgoal for ODE A B
+    proof (induction rule: Oadmit.induct)
+      case (Oadmit_Var \<sigma> c U)
+      then show ?case by auto
+    next
+      case (Oadmit_Sing \<sigma> \<theta> U x)
+      then show ?case using TUA_sub[of \<sigma> \<theta> U A] by auto
+    next
+      case (Oadmit_Prod \<sigma> ODE1 U ODE2)
+      then show ?case by auto
+    qed
+    done
+  have sub1:"(ODE_vars ODE1) \<subseteq> (ODE_vars (OProd ODE1 ODE2))"
+    by auto
+  have sub2: "(ODE_vars ODE2) \<subseteq> (ODE_vars (OProd ODE1 ODE2))"
+    by auto
+  have "ODE_sem I (Osubst ODE1 \<sigma>) (fst \<nu>) = ODE_sem (adjoint I \<sigma> \<nu>) ODE1 (fst \<nu>)"
+    "ODE_sem I (Osubst ODE2 \<sigma>) (fst \<nu>) = ODE_sem (adjoint I \<sigma> \<nu>) ODE2 (fst \<nu>)" using osafe_Prod.IH osafe_Prod.prems osafe_Prod.hyps
+    using OA_sub[OF NOU1 sub1] OA_sub[OF NOU2 sub2] by auto
+  then show ?case by auto
+qed
 
 lemma subst_fml_hp:
 fixes I::"('sf, 'sc, 'sz) interp"
