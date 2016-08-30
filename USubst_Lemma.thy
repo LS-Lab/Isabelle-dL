@@ -1427,53 +1427,53 @@ next
       using vec_eq by (auto simp add: NTadjoint_def)
 next
   case (Not x)
-    assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF x. SFV \<sigma> a) \<Longrightarrow> fsafe x \<Longrightarrow> fml_sem (local.adjoint I \<sigma> \<nu>) x = fml_sem (local.adjoint I \<sigma> \<omega>) x"
-    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Not x). SFV \<sigma> a)"
+    assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF x}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x \<Longrightarrow> fml_sem (NTadjoint I \<sigma> \<nu>) x = fml_sem (NTadjoint I \<sigma> \<omega>) x"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF (Not x)}. FVT (\<sigma> y))"
     assume safe:"fsafe (Not x)"
     from safe have
       safe:"fsafe x"
       by (auto dest: fsafe.cases)
-    have sub:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGF x. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Not x). SFV \<sigma> a)"
+    have sub:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF x}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF (Not x)}. FVT (\<sigma> y))"
       by auto
     show ?case using IH[OF agree_sub[OF sub VA] safe] by auto
 next
   case (And x1 x2)
-    assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF x1. SFV \<sigma> a) \<Longrightarrow> fsafe x1 \<Longrightarrow> fml_sem (local.adjoint I \<sigma> \<nu>) x1 = fml_sem (local.adjoint I \<sigma> \<omega>) x1"
-    assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (local.adjoint I \<sigma> \<nu>) x2 = fml_sem (local.adjoint I \<sigma> \<omega>) x2"
-    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (And x1 x2). SFV \<sigma> a)"
+    assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF x1}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x1 \<Longrightarrow> fml_sem (NTadjoint I \<sigma> \<nu>) x1 = fml_sem (NTadjoint I \<sigma> \<omega>) x1"
+    assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF x2}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (NTadjoint I \<sigma> \<nu>) x2 = fml_sem (NTadjoint I \<sigma> \<omega>) x2"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF (And x1 x2)}. FVT (\<sigma> y))"
     assume safe:"fsafe (And x1 x2)"
     from safe have
       safe1:"fsafe x1"
   and safe2:"fsafe x2"
       by (auto dest: fsafe.cases)
-    have sub1:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGF x1. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (And x1 x2). SFV \<sigma> a)"
+    have sub1:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF x1}. FVT (\<sigma> y))  \<subseteq> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF (And x1 x2)}. FVT (\<sigma> y))"
       by auto
-    have sub2:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (And x1 x2). SFV \<sigma> a)"
+    have sub2:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF x2}. FVT (\<sigma> y))  \<subseteq> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF (And x1 x2)}. FVT (\<sigma> y))"
       by auto
     show ?case using IH1[OF agree_sub[OF sub1 VA] safe1] IH2[OF agree_sub[OF sub2 VA] safe2] by auto
 next
   case (Exists x1 x2)
-    assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (local.adjoint I \<sigma> \<nu>) x2 = fml_sem (local.adjoint I \<sigma> \<omega>) x2"
-    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Exists x1 x2). SFV \<sigma> a)"
+    assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF x2}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (NTadjoint I \<sigma> \<nu>) x2 = fml_sem (NTadjoint I \<sigma> \<omega>) x2"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF (Exists x1 x2)}. FVT (\<sigma> y))"
     assume safe:"fsafe (Exists x1 x2)"
     from safe have safe1:"fsafe x2"
       by (auto dest: fsafe.cases)
-    have sub1:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Exists x1 x2). SFV \<sigma> a)"
+    have sub1:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF x2}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF (Exists x1 x2)}. FVT (\<sigma> y))"
       by auto
     show ?case using IH1[OF agree_sub[OF sub1 VA] safe1] by auto
 next
   case (Diamond x1 x2)
-    assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGP x1. SFV \<sigma> a) \<Longrightarrow> hpsafe x1 \<Longrightarrow> prog_sem (local.adjoint I \<sigma> \<nu>) x1 = prog_sem (local.adjoint I \<sigma> \<omega>) x1"
-    assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (local.adjoint I \<sigma> \<nu>) x2 = fml_sem (local.adjoint I \<sigma> \<omega>) x2"
-    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Diamond x1 x2). SFV \<sigma> a)"
+    assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGP x1}. FVT (\<sigma> y)) \<Longrightarrow> hpsafe x1 \<Longrightarrow> prog_sem (NTadjoint I \<sigma> \<nu>) x1 = prog_sem (NTadjoint I \<sigma> \<omega>) x1"
+    assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF x2}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (NTadjoint I \<sigma> \<nu>) x2 = fml_sem (NTadjoint I \<sigma> \<omega>) x2"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF (Diamond x1 x2)}. FVT (\<sigma> y))"
     assume safe:"fsafe (Diamond x1 x2)"
     from safe have
       safe1:"hpsafe x1"
   and safe2:"fsafe x2"
       by (auto dest: fsafe.cases)
-    have sub1:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGP x1. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Diamond x1 x2). SFV \<sigma> a)"
+    have sub1:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGP x1}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF (Diamond x1 x2)}. FVT (\<sigma> y))"
       by auto
-    have sub2:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (Diamond x1 x2). SFV \<sigma> a)"
+    have sub2:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF x2}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF (Diamond x1 x2)}. FVT (\<sigma> y))"
       by auto
     show ?case using IH1[OF agree_sub[OF sub1 VA] safe1] IH2[OF agree_sub[OF sub2 VA] safe2] by auto
 next
