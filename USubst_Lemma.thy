@@ -943,10 +943,24 @@ lemma uadmit_mkv_adjoint:
 lemma uadmit_mkv_ntadjoint:
   assumes ssafe:"\<And>i. dfree (\<sigma> i)"
   assumes good_interp:"is_interp I"
-  assumes VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO x1}. FVT (\<sigma> y))"
+  assumes VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y))"
   assumes osafe:"osafe ODE"
   shows "mk_v (NTadjoint I \<sigma> \<nu>) ODE = mk_v (NTadjoint I \<sigma> \<omega>) ODE"
-sorry
+apply(rule ext)
+  subgoal for R
+    apply(rule ext)
+    subgoal for solt
+      apply(rule agree_UNIV_eq)
+      using mk_v_agree[of "(NTadjoint I \<sigma> \<nu>)" ODE "R" solt]
+      using mk_v_agree[of "(NTadjoint I \<sigma> \<omega>)" ODE "R" solt]
+      using uadmit_ode_ntadjoint'[OF ssafe good_interp VA osafe]
+      unfolding Vagree_def
+      apply auto
+      apply metis
+      apply metis
+      done
+    done
+  done
     
 lemma uadmit_prog_fml_adjoint':
   fixes \<sigma> I
