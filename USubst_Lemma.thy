@@ -1262,8 +1262,8 @@ lemma ntadj_sub_ode:"\<And>\<sigma> x1 x2. (\<Union>y\<in>{y. Inl (Inl y) \<in> 
   by auto
 
 lemma uadmit_prog_fml_ntadjoint':
-  fixes \<alpha> :: "('sf + 'sf,'sc,'sz) hp"
-  fixes \<phi> :: "('sf + 'sf,'sc,'sz) formula"
+  (*fixes \<alpha> :: "('sf + 'sf,'sc,'sz) hp"*)
+  (*fixes \<phi> :: "('sf + 'sf,'sc,'sz) formula"*)
   fixes \<sigma> I
   assumes ssafe:"\<And>i. dfree (\<sigma> i)"
   assumes good_interp:"is_interp I"
@@ -1319,7 +1319,7 @@ next
       using agree_sub[OF sub1 VA] by auto 
     note IH' = IH[OF VAF fsafe]
     have sub:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO x1}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGP (EvolveODE x1 x2)}. FVT (\<sigma> y))"
-      using ntadj_sub_ode[of \<sigma> x1 x2] by auto
+       by auto
     moreover have IH2:"ODE_sem (NTadjoint I \<sigma> \<nu>) x1 = ODE_sem (NTadjoint I \<sigma> \<omega>) x1"
       apply (rule uadmit_ode_ntadjoint')
       subgoal by (rule ssafe)
@@ -1397,9 +1397,9 @@ next
     assume safe:"fsafe (Geq x1 x2)"
     then have dsafe1:"dsafe x1" and dsafe2:"dsafe x2" by (auto dest: fsafe.cases)
     have sub1:"(\<Union>y\<in>{y. Inr y \<in> SIGT x1}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF (Geq x1 x2)}. FVT (\<sigma> y))"
-      using ntadj_sub_geq1[of \<sigma> x1 x2] by auto
+      by auto
     have sub2:"(\<Union>y\<in>{y. Inr y \<in> SIGT x2}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF (Geq x1 x2)}. FVT (\<sigma> y))"
-      using ntadj_sub_geq2[of \<sigma> x2 x1] by auto
+      by auto
     have "dterm_sem (NTadjoint I \<sigma> \<nu>) x1 = dterm_sem (NTadjoint I \<sigma> \<omega>) x1"
       by (rule uadmit_dterm_ntadjoint'[OF ssafe good_interp agree_sub[OF sub1 VA] dsafe1])
     moreover have "dterm_sem (NTadjoint I \<sigma> \<nu>) x2 = dterm_sem (NTadjoint I \<sigma> \<omega>) x2"
@@ -1413,7 +1413,7 @@ next
       by (auto dest: fsafe.cases)
     then have safes:"\<And>i. dsafe (x2 i)" using dfree_is_dsafe by auto
     have subs:"\<And>j. (\<Union>y\<in>{y. Inr y \<in> SIGT (x2 j)}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF ($\<phi> x1 x2)}. FVT (\<sigma> y))"
-      subgoal for j using ntadj_sub_prop[of \<sigma> x2 j x1] by auto
+      subgoal for j  by auto
       done
     have "\<And>i. dterm_sem (NTadjoint I \<sigma> \<nu>) (x2 i) = dterm_sem (NTadjoint I \<sigma> \<omega>) (x2 i)"
       by (rule uadmit_dterm_ntadjoint'[OF ssafe good_interp agree_sub[OF subs VA] safes])
@@ -1481,20 +1481,19 @@ next
   then show ?case sorry
 next
   case (InContext x1 x2)
-    assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (local.adjoint I \<sigma> \<nu>) x2 = fml_sem (local.adjoint I \<sigma> \<omega>) x2"
-    assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (InContext x1 x2). SFV \<sigma> a)"
+    assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF x2}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (NTadjoint I \<sigma> \<nu>) x2 = fml_sem (NTadjoint I \<sigma> \<omega>) x2"
+    assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF (InContext x1 x2)}. FVT (\<sigma> y))"
     assume safe:"fsafe (InContext x1 x2)"
     from safe have  safe1:"fsafe x2"
       by (auto dest: fsafe.cases)
-    have sub:"(\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a) \<subseteq> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (InContext x1 x2). SFV \<sigma> a)"
+    have sub:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF x2}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF (InContext x1 x2)}. FVT (\<sigma> y))"
       by auto
     show ?case using IH1[OF agree_sub[OF sub VA] safe1]  
-      unfolding adjoint_def by auto
+      unfolding NTadjoint_def by auto
 qed
 
-
 lemma uadmit_prog_ntadjoint:
-  fixes \<alpha> :: "('sf + 'sf::finite,'sc,'sz) hp"
+  (*fixes \<alpha> :: "('sf + 'sf::finite,'sc,'sz) hp"*)
   assumes TUA:"NPUadmit \<sigma> \<alpha> U"
   assumes VA:"Vagree \<nu> \<omega> (-U)"
   assumes dfree:"\<And>i . dfree (\<sigma> i)"
@@ -1502,8 +1501,8 @@ lemma uadmit_prog_ntadjoint:
   assumes good_interp:"is_interp I"
   shows  "prog_sem (NTadjoint I \<sigma> \<nu>) \<alpha> = prog_sem (NTadjoint I \<sigma> \<omega>) \<alpha>"
 proof -
-    have sub:"(\<Union>x\<in>{x. Inl (Inl x) \<in> SIGP \<alpha>}. FVT (\<sigma> x)) \<subseteq> -U" using TUA unfolding NPUadmit_def by auto
-    have VA':"Vagree \<nu> \<omega> (\<Union>x\<in>{x. Inl (Inl x) \<in> SIGP \<alpha>}. FVT (\<sigma> x))" using agree_sub[OF sub VA] by auto
+    have sub:"(\<Union>x\<in>{x. Inl (Inr x) \<in> SIGP \<alpha>}. FVT (\<sigma> x)) \<subseteq> -U" using TUA unfolding NPUadmit_def by auto
+    have VA':"Vagree \<nu> \<omega> (\<Union>x\<in>{x. Inl (Inr x) \<in> SIGP \<alpha>}. FVT (\<sigma> x))" using agree_sub[OF sub VA] by auto
     show ?thesis 
       apply(rule uadmit_prog_fml_ntadjoint'[OF dfree good_interp])
       subgoal by (rule VA')
@@ -1512,7 +1511,7 @@ proof -
 qed
 
 lemma uadmit_fml_ntadjoint:
-  fixes \<phi> :: "('sf + 'sf::finite,'sc,'sz) formula"
+  (*fixes \<phi> :: "('sf + 'sf::finite,'sc,'sz) formula"*)
   assumes TUA:"NFUadmit \<sigma> \<phi> U"
   assumes VA:"Vagree \<nu> \<omega> (-U)"
   assumes dfree:"\<And>i . dfree (\<sigma> i)"
@@ -1520,8 +1519,8 @@ lemma uadmit_fml_ntadjoint:
   assumes good_interp:"is_interp I"
   shows  "fml_sem (NTadjoint I \<sigma> \<nu>) \<phi> = fml_sem (NTadjoint I \<sigma> \<omega>) \<phi>"
 proof -
-  have sub:"(\<Union>x\<in>{x. Inl (Inl x) \<in> SIGF \<phi>}. FVT (\<sigma> x)) \<subseteq> -U" using TUA unfolding NFUadmit_def by auto
-  have VA':"Vagree \<nu> \<omega> (\<Union>x\<in>{x. Inl (Inl x) \<in> SIGF \<phi>}. FVT (\<sigma> x))" using agree_sub[OF sub VA] by auto
+  have sub:"(\<Union>x\<in>{x. Inl (Inr x) \<in> SIGF \<phi>}. FVT (\<sigma> x)) \<subseteq> -U" using TUA unfolding NFUadmit_def by auto
+  have VA':"Vagree \<nu> \<omega> (\<Union>x\<in>{x. Inl (Inr x) \<in> SIGF \<phi>}. FVT (\<sigma> x))" using agree_sub[OF sub VA] by auto
   show ?thesis 
     apply(rule uadmit_prog_fml_ntadjoint'[OF dfree good_interp])
     subgoal by (rule VA')
@@ -2114,9 +2113,9 @@ next
           proof -
             assume assm:"(\<nu>, \<mu>) \<in> prog_sem I (NPsubst a \<sigma>)"
             show "((\<mu>, \<omega>) \<in> prog_sem (NTadjoint I \<sigma> \<nu>) b) = ((\<mu>, \<omega>) \<in> prog_sem (NTadjoint I \<sigma> \<mu>) b)"
-              using uadmit_prog_ntadjoint[OF PUA agree[OF assm] ssafe safe2 good_interp] 
+              using uadmit_prog_ntadjoint [OF PUA agree[OF assm] ssafe safe2 good_interp] 
               by auto
-          qed
+            qed
         done      
       have "((\<nu>, \<omega>) \<in> prog_sem I (NPsubst (a ;; b) \<sigma>)) = (\<exists> \<mu>. (\<nu>, \<mu>) \<in> prog_sem I (NPsubst a \<sigma>) \<and> (\<mu>, \<omega>) \<in> prog_sem I (NPsubst b \<sigma>))"
         by auto
@@ -2256,7 +2255,7 @@ next
       have sem_eq:"\<And>\<omega>. (\<nu>, \<omega>) \<in> prog_sem I (NPsubst a \<sigma>) \<Longrightarrow> 
           (\<omega> \<in> fml_sem (NTadjoint I \<sigma> \<nu>) \<phi>) =
           (\<omega> \<in> fml_sem (NTadjoint I \<sigma> \<omega>) \<phi>)"
-        using uadmit_fml_ntadjoint[OF FUA agree ssafe fsafe' good_interp] by auto
+        using uadmit_fml_ntadjoint [OF FUA agree ssafe fsafe' good_interp] by auto
       have "(\<nu> \<in> fml_sem I (NFsubst (\<langle> a \<rangle> \<phi>) \<sigma>)) = (\<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I (NPsubst a \<sigma>) \<and> \<omega> \<in> fml_sem I (NFsubst \<phi> \<sigma>))"
         by auto
       moreover have "... = (\<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem (NTadjoint I \<sigma> \<nu>) a \<and> \<omega> \<in> fml_sem (NTadjoint I \<sigma> \<omega>) \<phi>)"
