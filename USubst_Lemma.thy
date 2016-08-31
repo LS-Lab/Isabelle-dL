@@ -2110,31 +2110,36 @@ next
             using NOU unfolding NOUadmit_def by auto
           have agrees:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (a,b) (sol s, b) (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y))" 
             subgoal for s using agree_sub[OF FVT_sub hmm[of s]] by auto done
-          have "\<And>t. mk_v (NTadjoint I \<sigma> (sol t, b)) ODE  = mk_v (NTadjoint I \<sigma> (a, b)) ODE"
-            apply (rule uadmit_mkv_ntadjoint)
-            prefer 3
-            subgoal for t  using NOU hmm[of t] unfolding NOUadmit_def Vagree_def by fastforce   
-            using frees good_interp osafe by auto
-          then have mkva:"\<And>t. mk_v (NTadjoint I \<sigma> (sol t, b)) ODE (a, b) (sol t) = mk_v (NTadjoint I \<sigma> (a, b)) ODE (a, b) (sol t)"
+          have "\<And>s. s \<in> {0..t} \<Longrightarrow> mk_v (NTadjoint I \<sigma> (sol s, b)) ODE  = mk_v (NTadjoint I \<sigma> (a, b)) ODE"
+            subgoal for s
+              apply (rule uadmit_mkv_ntadjoint)
+              prefer 3
+              using NOU hmm[of s] unfolding NOUadmit_def Vagree_def
+              apply fastforce   
+              using frees good_interp osafe by auto
+            done
+          then have mkva:"\<And>s. s \<in> {0..t} \<Longrightarrow> mk_v (NTadjoint I \<sigma> (sol s, b)) ODE (a, b) (sol s) = mk_v (NTadjoint I \<sigma> (a, b)) ODE (a, b) (sol s)"
             by auto
-          have main_eq:"\<And>t. mk_v I (NOsubst ODE \<sigma>) (a, b) (sol t) = mk_v (NTadjoint I \<sigma> (a, b)) ODE (a, b) (sol t) "
+          have main_eq:"\<And>s. s \<in> {0..t} \<Longrightarrow>  mk_v I (NOsubst ODE \<sigma>) (a, b) (sol s) = mk_v (NTadjoint I \<sigma> (a, b)) ODE (a, b) (sol s) "
             using mkv mkva by auto
           note mkvt = main_eq[of t]
-          have fml_eq1:"\<And>t. 
-              (mk_v I (NOsubst ODE \<sigma>) (a, b) (sol t) \<in> fml_sem I (NFsubst \<phi> \<sigma>)) 
-            = (mk_v I (NOsubst ODE \<sigma>) (a, b) (sol t) \<in> fml_sem (NTadjoint I \<sigma> (mk_v I (NOsubst ODE \<sigma>) (a, b) (sol t))) \<phi>)"
+          have fml_eq1:"\<And>s. s \<in> {0..t} \<Longrightarrow> 
+              (mk_v I (NOsubst ODE \<sigma>) (a, b) (sol s) \<in> fml_sem I (NFsubst \<phi> \<sigma>)) 
+            = (mk_v I (NOsubst ODE \<sigma>) (a, b) (sol s) \<in> fml_sem (NTadjoint I \<sigma> (mk_v I (NOsubst ODE \<sigma>) (a, b) (sol s))) \<phi>)"
             using IH[OF fsafe frees] by auto
-          moreover have fml_eq2:" ... = (\<lambda>t. mk_v I (NOsubst ODE \<sigma>) (a, b) (sol t) \<in> fml_sem (NTadjoint I \<sigma> (a, b)) \<phi>)"
-            apply(rule ext)
-            subgoal for t
+          have fml_eq2:"\<And>s. s \<in> {0..t} \<Longrightarrow> 
+            ((mk_v I (NOsubst ODE \<sigma>) (a, b) (sol s) \<in> fml_sem (NTadjoint I \<sigma> (mk_v I (NOsubst ODE \<sigma>) (a, b) (sol s))) \<phi>)
+            =(mk_v I (NOsubst ODE \<sigma>) (a, b) (sol s) \<in> fml_sem (NTadjoint I \<sigma> (a, b)) \<phi>))"
+            subgoal for s
               by (metis NFU frees fsafe good_interp mk_v_agree osubst_preserves_ODE_vars uadmit_fml_ntadjoint)
             done
-          moreover have fml_eq3:" ... = (\<lambda>t. mk_v (NTadjoint I \<sigma> (a,b)) ODE (a, b) (sol t) \<in> fml_sem (NTadjoint I \<sigma> (a, b)) \<phi>) "
+           have fml_eq3:"\<And>s. s \<in> {0..t} \<Longrightarrow>
+            (mk_v I (NOsubst ODE \<sigma>) (a, b) (sol s) \<in> fml_sem (NTadjoint I \<sigma> (a, b)) \<phi>) = (mk_v (NTadjoint I \<sigma> (a,b)) ODE (a, b) (sol s) \<in> fml_sem (NTadjoint I \<sigma> (a, b)) \<phi>) "
             using main_eq by auto
-          ultimately have fml_eq: 
-            "\<And>t. (mk_v I (NOsubst ODE \<sigma>) (a, b) (sol t) \<in> fml_sem I (NFsubst \<phi> \<sigma>)) 
-              =  (mk_v (NTadjoint I \<sigma> (a,b)) ODE (a, b) (sol t) \<in> fml_sem (NTadjoint I \<sigma> (a, b)) \<phi>)"
-             by meson
+           have fml_eq: "\<And>s. s \<in> {0..t} \<Longrightarrow>
+             (mk_v I (NOsubst ODE \<sigma>) (a, b) (sol s) \<in> fml_sem I (NFsubst \<phi> \<sigma>)) 
+              =  (mk_v (NTadjoint I \<sigma> (a,b)) ODE (a, b) (sol s) \<in> fml_sem (NTadjoint I \<sigma> (a, b)) \<phi>)"
+             using fml_eq1 fml_eq2 fml_eq3 by meson
           have sem_eq:"\<And>t. ODE_sem I (NOsubst ODE \<sigma>) (sol t) = ODE_sem (NTadjoint I \<sigma> (sol t, b)) ODE (sol t)"
             subgoal for t
             using nsubst_ode[OF good_interp osafe NOU frees, of "(sol t,b)"] by auto
@@ -2165,7 +2170,7 @@ next
             apply (rule solves_odeI)
             subgoal using sol' solves_ode_vderivD by blast
             using sub by auto
-          show"\<exists>sola ta. mk_v I (NOsubst ODE \<sigma>) (a, b) (sol t) = mk_v (NTadjoint I \<sigma> (a, b)) ODE (a, b) (sola ta) \<and>
+          show "\<exists>sola ta. mk_v I (NOsubst ODE \<sigma>) (a, b) (sol t) = mk_v (NTadjoint I \<sigma> (a, b)) ODE (a, b) (sola ta) \<and>
                  0 \<le> ta \<and>
                  (sola solves_ode (\<lambda>c. ODE_sem (NTadjoint I \<sigma> (a, b)) ODE)) {0..ta}
                   {x. mk_v (NTadjoint I \<sigma> (a, b)) ODE (a, b) x \<in> fml_sem (NTadjoint I \<sigma> (a, b)) \<phi>} \<and>
@@ -2173,7 +2178,7 @@ next
             apply(rule exI[where x=sol])
             apply(rule exI[where x=t])
             apply(rule conjI)
-            subgoal by (rule mkvt)
+            subgoal using  mkvt t by auto
             apply(rule conjI)
             subgoal by (rule t)
             apply(rule conjI)
