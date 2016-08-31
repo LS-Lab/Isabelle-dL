@@ -2054,7 +2054,7 @@ shows "(mk_v I (NOsubst ODE \<sigma>) \<nu> (fst \<nu>))
       using osubst_preserves_ODE_vars[of ODE \<sigma>]
       by auto
     done
-        
+  
 lemma nsubst_hp_fml:
 fixes I::"('sf, 'sc, 'sz) interp"
 assumes good_interp:"is_interp I"    
@@ -2095,9 +2095,9 @@ next
     proof -
       assume safe:"hpsafe (EvolveODE ODE \<phi>)"
       then have osafe:"osafe ODE" and fsafe:"fsafe \<phi>" by auto
-      have osafe':"osafe (NOsubst ODE \<sigma>)" and fsafe':"fsafe (NFsubst \<phi> \<sigma>)" 
-        sorry
       assume frees:"(\<And>i. dfree (\<sigma> i))"
+      have osafe':"osafe (NOsubst ODE \<sigma>)" and fsafe':"fsafe (NFsubst \<phi> \<sigma>)" 
+        using nosubst_preserves_safe[OF frees osafe NOU] nfsubst_preserves_safe[OF frees fsafe NFA] by auto 
       fix \<nu> \<omega>
       show "((\<nu>, \<omega>) \<in> prog_sem I (NPsubst (EvolveODE ODE \<phi>) \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (NTadjoint I \<sigma> \<nu>) (EvolveODE ODE \<phi>))"
         proof (auto simp del: prog_sem.simps(8) simp add: ode_alt_sem[OF osafe' fsafe'] ode_alt_sem[OF osafe fsafe])
@@ -2135,6 +2135,15 @@ next
               using osubst_preserves_ODE_vars by blast
             done
           done
+          have "mk_v I (NOsubst ODE \<sigma>) (sol t, b) (fst (sol t, b)) = mk_v (NTadjoint I \<sigma> (sol t,b)) ODE (sol t, b) (fst (sol t, b))"
+            apply (rule nsubst_mkv) 
+            using NOU good_interp osafe frees by auto
+          have "mk_v (NTadjoint I \<sigma> (sol t,b)) ODE = mk_v (NTadjoint I \<sigma> (sol 0,b)) ODE"
+            apply(rule uadmit_mkv_ntadjoint)
+            using frees good_interp osafe apply auto
+            sorry
+          have "mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t) = mk_v (NTadjoint I \<sigma> (sol 0,b)) ODE (sol 0, b) (sol t)"
+            using uadmit_mkv_ntadjoint sorry
           have fml_eq1:"\<And>t. 
               (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t) \<in> fml_sem I (NFsubst \<phi> \<sigma>)) 
             = (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t) \<in> fml_sem (NTadjoint I \<sigma> (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t))) \<phi>)"
@@ -2146,7 +2155,43 @@ next
               by blast
             done
           moreover have fml_eq3:" ... = (\<lambda>t. mk_v (NTadjoint I \<sigma> (sol 0,b)) ODE (sol 0, b) (sol t) \<in> fml_sem (NTadjoint I \<sigma> (sol 0, b)) \<phi>) "
-            sorry
+            apply (rule ext)
+            subgoal for t
+              apply auto
+              apply (smt IH atLeastAtMost_iff fml_eq2 frees fsafe mem_Collect_eq mkv_eq' sol solves_ode_domainD t)
+            proof -
+              have "mk_v (NTadjoint I \<sigma> (sol 0, b)) ODE (sol 0, b) (sol t) 
+                =   mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t)"
+              proof (induction ODE)
+                case (OVar x)
+                then show ?case 
+                  apply (rule agree_UNIV_eq)
+                  unfolding NTadjoint_def apply auto
+                  using mk_v_agree[of "(NTadjoint I \<sigma> (sol 0, b))" ODE "(sol 0, b)" "(sol t)"]
+                  mk_v_agree[of I "(NOsubst ODE \<sigma>)" "(sol 0, b)" "(sol t)"] 
+                  unfolding Vagree_def unfolding NTadjoint_def apply auto
+                  subgoal for i
+                    apply (erule allE[where x=i])+
+                    sledgehammer
+              next
+                case (OSing x1a x2)
+                then show ?case sorry
+              next
+                case (OProd ODE1 ODE2)
+                then show ?case sorry
+              qed
+                  
+              
+              case (OVar x)
+              then show ?case apply auto
+            next
+              case (OSing x1a x2)
+              then show ?case sorry
+            next
+              case (OProd ODE1 ODE2)
+              then show ?case sorry
+                  qed
+              qed
           ultimately have fml_eq: 
             "\<And>t. (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t) \<in> fml_sem I (NFsubst \<phi> \<sigma>)) 
               =  (mk_v (NTadjoint I \<sigma> (sol 0,b)) ODE (sol 0, b) (sol t) \<in> fml_sem (NTadjoint I \<sigma> (sol 0, b)) \<phi>)"
