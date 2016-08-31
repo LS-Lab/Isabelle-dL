@@ -1398,12 +1398,15 @@ lemma ode_sem_eq:
   qed
 
 
-lemma ode_alt_sem:"\<And>I::('a::finite,'b::finite,'c::finite) interp. \<And>ODE::('a,'c) ODE. \<And>\<phi>::('a,'b,'c)formula. osafe ODE \<Longrightarrow> fsafe \<phi>  \<Longrightarrow> prog_sem I (EvolveODE ODE \<phi>)
+lemma ode_alt_sem:"\<And>I::('a::finite,'b::finite,'c::finite) interp. \<And>ODE::('a,'c) ODE. \<And>\<phi>::('a,'b,'c)formula. osafe ODE \<Longrightarrow> fsafe \<phi>  \<Longrightarrow> 
+  prog_sem I (EvolveODE ODE \<phi>)
 = 
-({(\<nu>, mk_v I ODE \<nu> (sol t)) | \<nu> sol t.
+{(\<nu>, mk_v I ODE \<nu> (sol t)) | \<nu> sol t.
       t \<ge> 0 \<and>
       (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu> x \<in> fml_sem I \<phi>} \<and>
-      (sol 0) = (fst \<nu>)})
-" using ode_sem_eq by auto 
+      VSagree (sol 0) (fst \<nu>) {x | x. Inl x \<in> FVP (EvolveODE ODE \<phi>)}}
+" 
+  sorry
+  (*using ode_sem_eq by auto*) 
 end
 end
