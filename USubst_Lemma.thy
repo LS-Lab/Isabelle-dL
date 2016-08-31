@@ -2054,7 +2054,44 @@ shows "(mk_v I (NOsubst ODE \<sigma>) \<nu> (fst \<nu>'))
       using osubst_preserves_ODE_vars[of ODE \<sigma>]
       by simp+
     done
+
+lemma constant_when_zero:
+  fixes v::"real \<Rightarrow> (real, 'i::finite) vec"
+  assumes x0: "(v 0) $ i = x0"
+  assumes sol: "(v solves_ode f) {0..t} X"
+  assumes f0: "\<And>s x. s \<in> {0..t} \<Longrightarrow>  f s x $ i = 0"
+  assumes t:"0 \<le> t"
+  shows "v t $ i = x0"
+    sorry
   
+lemma ODE_unbound_zero:
+fixes i
+shows "Inl i \<notin> ODE_vars ODE \<Longrightarrow> ODE_sem I ODE x $ i = 0"
+proof (induction ODE)
+qed (auto)
+
+lemma ODE_bound_effect:
+fixes s t sol ODE X b
+assumes s:"s \<in> {0..t}"
+assumes sol:"(sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t}  X"
+shows "Vagree (sol 0,b) (sol s, b) (-(ODE_vars ODE))"
+proof -
+  have "\<And>i. Inl i \<notin> ODE_vars ODE \<Longrightarrow>  (\<forall> s. s \<in> {0..t} \<longrightarrow> sol s $ i = sol 0 $ i)"
+    subgoal for i
+      apply auto
+      subgoal for s
+      apply (rule constant_when_zero[of sol i "sol 0 $ i" "(\<lambda> _. ODE_sem I ODE)" s X])
+      using s sol apply auto
+      using ODE_unbound_zero[of i]
+        solves_ode_subset 
+      by fastforce+
+    done
+  done
+  then show "Vagree (sol 0, b) (sol s, b) (- ODE_vars ODE)"
+    unfolding Vagree_def 
+    using s  by (metis Compl_iff fst_conv  snd_conv)
+qed
+
 lemma nsubst_hp_fml:
 fixes I::"('sf, 'sc, 'sz) interp"
 assumes good_interp:"is_interp I"    
@@ -2104,7 +2141,8 @@ next
             using nsubst_mkv[OF good_interp NOU osafe frees]
             by auto
           have hmm:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,b) (sol s, b) (-(ODE_vars ODE))"
-            sorry
+            using ODE_bound_effect sol
+            by (metis osubst_preserves_ODE_vars)
           have FVT_sub:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y)) \<subseteq> (-(ODE_vars ODE))"
             using NOU unfolding NOUadmit_def by auto
           have agrees:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,b) (sol s, b) (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y))" 
@@ -2149,10 +2187,6 @@ next
             uadmit_ode_ntadjoint'[OF frees good_interp agrees[of s] osafe]
             by auto
           done
-          have vsub:" 
-            {x. Inl x \<in> ODE_vars (NOsubst ODE \<sigma>) \<or> Inl x \<in> FVO (NOsubst ODE \<sigma>) \<or> Inl x \<in> FVF (NFsubst \<phi> \<sigma>)}
-            \<subseteq> {x. Inl x \<in> ODE_vars ODE \<or> Inl x \<in> FVO ODE \<or> Inl x \<in> FVF \<phi>}"
-            sorry
           have sol':"(sol solves_ode (\<lambda>_. ODE_sem (NTadjoint I \<sigma> (sol 0, b)) ODE)) {0..t}
              {x. mk_v I (NOsubst ODE \<sigma>) (sol 0, b) x \<in> fml_sem I (NFsubst \<phi> \<sigma>)}"
             apply (rule solves_ode_congI)
