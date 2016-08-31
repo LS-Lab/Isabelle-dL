@@ -411,6 +411,14 @@ shows "osafe ODE \<Longrightarrow>
     apply(auto)
     unfolding VSagree_def Vagree_def apply auto
     done
+(*
+lemma coincidence_mkv:
+  fixes I J :: "('a::finite, 'b::finite, 'c::finite) interp" and \<nu> :: "'c state" and \<nu>'::"'c simple_state"
+  assumes "osafe ODE" 
+  assumes "VSagree \<omega> \<omega>' {x | x. Inl x \<in> FVO ODE}" 
+  assumes "Iagree I J ({Inl x | x. Inl x \<in> SIGO ODE}  \<union>  {Inr (Inr x) | x. Inr x \<in> SIGO ODE})" 
+  shows "mk_v I ODE \<nu> \<omega> = mk_v J ODE  \<nu> \<omega>'"
+    sorry*)
   
 lemma alt_sem_lemma:"\<And> I::('a::finite,'b::finite,'c::finite) interp. \<And>  ODE::('a::finite,'c::finite) ODE. \<And>sol. \<And>t::real. \<And> ab. osafe ODE \<Longrightarrow> ODE_sem I ODE (sol t) = ODE_sem I ODE (\<chi> i. if Inl i \<in> FVO ODE then sol t $ i else ab $ i)"
   proof -
