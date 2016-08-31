@@ -2124,29 +2124,38 @@ next
             sorry
           then have mkv_eq':"\<And>t. mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol 0) = mk_v (NTadjoint I \<sigma> (sol 0, b)) ODE (sol 0, b) (sol t)"
             sorry
-
+          have agree:"\<And>t. Vagree (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t)) (sol 0, b) (- ODE_vars ODE)"
+            subgoal for t
+            using mk_v_agree[of I "NOsubst ODE \<sigma>" "(sol 0, b)" "sol t"] unfolding Vagree_def apply auto
+            subgoal for i
+              apply(erule allE[where x=i])+
+              using osubst_preserves_ODE_vars by blast
+            subgoal for i
+              apply(erule allE[where x=i])+
+              using osubst_preserves_ODE_vars by blast
+            done
+          done
           have fml_eq1:"\<And>t. 
               (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t) \<in> fml_sem I (NFsubst \<phi> \<sigma>)) 
             = (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t) \<in> fml_sem (NTadjoint I \<sigma> (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t))) \<phi>)"
-            sorry
+            using IH[OF fsafe frees] by auto
           moreover have fml_eq2:" ... = (\<lambda>t. mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t) \<in> fml_sem (NTadjoint I \<sigma> (sol 0, b)) \<phi>)"
-            sorry
+            apply(rule ext)
+            subgoal for t
+              using uadmit_fml_ntadjoint[OF NFU agree[of t] frees fsafe good_interp] 
+              by blast
+            done
           moreover have fml_eq3:" ... = (\<lambda>t. mk_v (NTadjoint I \<sigma> (sol 0,b)) ODE (sol 0, b) (sol t) \<in> fml_sem (NTadjoint I \<sigma> (sol 0, b)) \<phi>) "
             sorry
           ultimately have fml_eq: 
             "\<And>t. (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t) \<in> fml_sem I (NFsubst \<phi> \<sigma>)) 
               =  (mk_v (NTadjoint I \<sigma> (sol 0,b)) ODE (sol 0, b) (sol t) \<in> fml_sem (NTadjoint I \<sigma> (sol 0, b)) \<phi>)"
             by meson
-          assume sol:"(sol solves_ode (\<lambda>a. ODE_sem I (NOsubst ODE \<sigma>))) {0..t} 
-             {x. mk_v I (NOsubst ODE \<sigma>) (sol 0, b) x \<in> fml_sem I (NFsubst \<phi> \<sigma>)}"
           have sem_eq:"(\<lambda>a. ODE_sem I (NOsubst ODE \<sigma>)) = (\<lambda>a. ODE_sem (NTadjoint I \<sigma> (sol 0, b)) ODE)"
             sorry
-          (*have sub:"(\<Union>s \<in>{0..t}. {sol s}) \<subseteq> {x. mk_v I (NOsubst ODE \<sigma>) (sol 0, b) x \<in> fml_sem I (NFsubst \<phi> \<sigma>)}"
-            using sol unfolding solves_ode_def by auto*)
-          (* {x. mk_v (NTadjoint I \<sigma> (sol 0, b)) ODE (sol 0, b) x \<in> fml_sem (NTadjoint I \<sigma> (sol 0, b)) \<phi>}*)
           have sub:"\<And>s. s \<in> {0..t} 
                   \<Longrightarrow> sol s \<in> {x. (mk_v (NTadjoint I \<sigma> (sol 0,b)) ODE (sol 0, b) x \<in> fml_sem (NTadjoint I \<sigma> (sol 0, b)) \<phi>)}"
-            using fml_eq rangeI sorry 
+            using fml_eq rangeI t sol solves_ode_domainD by fastforce
           have sol':"(sol solves_ode (\<lambda>a. ODE_sem (NTadjoint I \<sigma> (sol 0, b)) ODE)) {0..t}
              {x. mk_v I (NOsubst ODE \<sigma>) (sol 0, b) x \<in> fml_sem I (NFsubst \<phi> \<sigma>)}"
             (* using sol unfolding solves_ode_def *)
