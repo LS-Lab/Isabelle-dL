@@ -2104,10 +2104,12 @@ next
           have mkv:"\<And>t. mk_v I (NOsubst ODE \<sigma>) (a, b) (sol t) = mk_v (NTadjoint I \<sigma> (sol t, b)) ODE (a, b) (sol t)"
             using nsubst_mkv[OF good_interp NOU osafe frees]
             by auto
-          have hmm:"\<And>t. Vagree (a,b) (sol t,b) (-(ODE_vars ODE))"
+          have hmm:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (a,b) (sol s, b) (-(ODE_vars ODE))"
             sorry
+          have FVT_sub:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y)) \<subseteq> (-(ODE_vars ODE))"
+            using NOU unfolding NOUadmit_def by auto
           have agrees:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (a,b) (sol s, b) (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y))" 
-            sorry
+            subgoal for s using agree_sub[OF FVT_sub hmm[of s]] by auto done
           have "\<And>t. mk_v (NTadjoint I \<sigma> (sol t, b)) ODE  = mk_v (NTadjoint I \<sigma> (a, b)) ODE"
             apply (rule uadmit_mkv_ntadjoint)
             prefer 3
