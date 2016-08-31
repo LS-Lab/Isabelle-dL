@@ -76,6 +76,9 @@ by (auto simp add: Vagree_def)
 lemma agree_refl:"Vagree \<nu> \<nu> A"
 by (auto simp add: Vagree_def)
 
+lemma VSagree_sub:"\<And>\<nu> \<omega> A B . A \<subseteq> B \<Longrightarrow> VSagree \<nu> \<omega> B \<Longrightarrow> VSagree \<nu> \<omega> A"
+  unfolding VSagree_def by auto
+
 lemma VSagree_refl:"VSagree \<nu> \<nu> A"
   by (auto simp add: VSagree_def)
 
