@@ -2106,6 +2106,8 @@ next
             by auto
           have hmm:"\<And>t. Vagree (a,b) (sol t,b) (-(ODE_vars ODE))"
             sorry
+          have agrees:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (a,b) (sol s, b) (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y))" 
+            sorry
           have "\<And>t. mk_v (NTadjoint I \<sigma> (sol t, b)) ODE  = mk_v (NTadjoint I \<sigma> (a, b)) ODE"
             apply (rule uadmit_mkv_ntadjoint)
             prefer 3
@@ -2135,8 +2137,6 @@ next
             subgoal for t
             using nsubst_ode[OF good_interp osafe NOU frees, of "(sol t,b)"] by auto
           done
-          have agrees:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (a,b) (sol s, b) (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y))" 
-            sorry
           have sem_fact:"\<And>s. s \<in> {0..t} \<Longrightarrow> ODE_sem I (NOsubst ODE \<sigma>) (sol s) = ODE_sem (NTadjoint I \<sigma> (a, b)) ODE (sol s)"
             subgoal for s
             using nsubst_ode[OF good_interp osafe NOU frees, of "(sol s, b)"]
