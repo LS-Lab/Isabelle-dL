@@ -124,28 +124,29 @@ where "Iagree I J V \<equiv>
     (\<forall>x. i = Inr (Inl x) \<longrightarrow> Contexts I x = Contexts J x) \<and>
     (\<forall>x. i = Inr (Inr x) \<longrightarrow> Predicates I x = Predicates J x) \<and>
     (\<forall>x. i = Inr (Inr x) \<longrightarrow> Programs I x = Programs J x) \<and>
-    (\<forall>x. i = Inr (Inr x) \<longrightarrow> ODEs I x = ODEs J x))"
+    (\<forall>x. i = Inr (Inr x) \<longrightarrow> ODEs I x = ODEs J x) \<and>
+    (\<forall>x. i = Inr (Inr x) \<longrightarrow> ODEBV I x = ODEBV J x))"
 
 lemma Iagree_Func:"Iagree I J V \<Longrightarrow> Inl f \<in> V \<Longrightarrow> Functions I f = Functions J f"
-  unfolding Iagree_def by blast
+  unfolding Iagree_def by auto
 
 lemma Iagree_Contexts:"Iagree I J V \<Longrightarrow> Inr (Inl C) \<in> V \<Longrightarrow> Contexts I C = Contexts J C"
-  unfolding Iagree_def by blast
+  unfolding Iagree_def by auto
 
 lemma Iagree_Pred:"Iagree I J V \<Longrightarrow> Inr (Inr p) \<in> V \<Longrightarrow> Predicates I p = Predicates J p"
-  unfolding Iagree_def by blast
+  unfolding Iagree_def by auto
 
 lemma Iagree_Prog:"Iagree I J V \<Longrightarrow> Inr (Inr a) \<in> V \<Longrightarrow> Programs I a = Programs J a"
-  unfolding Iagree_def by blast
+  unfolding Iagree_def by auto
 
 lemma Iagree_ODE:"Iagree I J V \<Longrightarrow> Inr (Inr a) \<in> V \<Longrightarrow> ODEs I a = ODEs J a"
-  unfolding Iagree_def by blast  
+  unfolding Iagree_def by auto  
 
 lemma Iagree_comm:"\<And>A B V. Iagree A B V \<Longrightarrow> Iagree B A V" 
-  unfolding Iagree_def by metis
+  unfolding Iagree_def by auto
 
 lemma Iagree_sub:"\<And>I J A B . A \<subseteq> B \<Longrightarrow> Iagree I J B \<Longrightarrow> Iagree I J A"
-  unfolding Iagree_def by blast
+  unfolding Iagree_def by auto
 
 lemma Iagree_refl:"Iagree I I A"
   by (auto simp add: Iagree_def)
