@@ -215,7 +215,7 @@ where
   NPadmit_Pvar:"NPadmit \<sigma> (Pvar a)"
 | NPadmit_Sequence:"NPadmit \<sigma> a \<Longrightarrow> NPadmit \<sigma> b \<Longrightarrow> NPUadmit \<sigma> b (BVP (NPsubst a \<sigma>))\<Longrightarrow> NPadmit \<sigma> (Sequence a b)"  
 | NPadmit_Loop:"NPadmit \<sigma> a \<Longrightarrow> NPUadmit \<sigma> a (BVP (NPsubst a \<sigma>)) \<Longrightarrow> NPadmit \<sigma> (Loop a)"        
-| NPadmit_ODE:"NOUadmit \<sigma> ODE (ODE_vars ODE) \<Longrightarrow> NFadmit \<sigma> \<phi> \<Longrightarrow> NFUadmit \<sigma> \<phi> (ODE_vars ODE) \<Longrightarrow> NPadmit \<sigma> (EvolveODE ODE \<phi>)"
+| NPadmit_ODE:"NOUadmit \<sigma> ODE (BVO ODE) \<Longrightarrow> NFadmit \<sigma> \<phi> \<Longrightarrow> NFUadmit \<sigma> \<phi> (BVO ODE) \<Longrightarrow> NPadmit \<sigma> (EvolveODE ODE \<phi>)"
 | NPadmit_Choice:"NPadmit \<sigma> a \<Longrightarrow> NPadmit \<sigma> b \<Longrightarrow> NPadmit \<sigma> (Choice a b)"            
 | NPadmit_Assign:"NTadmit \<sigma> \<theta> \<Longrightarrow> NPadmit \<sigma> (Assign x \<theta>)"  
 | NPadmit_DiffAssign:"NTadmit \<sigma> \<theta> \<Longrightarrow> NPadmit \<sigma> (DiffAssign x \<theta>)"  
@@ -261,7 +261,7 @@ where
   PPadmit_Pvar:"PPadmit \<sigma> (Pvar a)"
 | PPadmit_Sequence:"PPadmit \<sigma> a \<Longrightarrow> PPadmit \<sigma> b \<Longrightarrow> PPUadmit \<sigma> b (BVP (PPsubst a \<sigma>))\<Longrightarrow> PPadmit \<sigma> (Sequence a b)"  
 | PPadmit_Loop:"PPadmit \<sigma> a \<Longrightarrow> PPUadmit \<sigma> a (BVP (PPsubst a \<sigma>)) \<Longrightarrow> PPadmit \<sigma> (Loop a)"        
-| PPadmit_ODE:"PFadmit \<sigma> \<phi> \<Longrightarrow> PFUadmit \<sigma> \<phi> (ODE_vars ODE) \<Longrightarrow> PPadmit \<sigma> (EvolveODE ODE \<phi>)"
+| PPadmit_ODE:"PFadmit \<sigma> \<phi> \<Longrightarrow> PFUadmit \<sigma> \<phi> (BVO ODE) \<Longrightarrow> PPadmit \<sigma> (EvolveODE ODE \<phi>)"
 | PPadmit_Choice:"PPadmit \<sigma> a \<Longrightarrow> PPadmit \<sigma> b \<Longrightarrow> PPadmit \<sigma> (Choice a b)"            
 | PPadmit_Assign:"PPadmit \<sigma> (Assign x \<theta>)"  
 | PPadmit_DiffAssign:"PPadmit \<sigma> (DiffAssign x \<theta>)"  
@@ -302,7 +302,7 @@ where
   Padmit_Pvar:"Padmit \<sigma> (Pvar a)"
 | Padmit_Sequence:"Padmit \<sigma> a \<Longrightarrow> Padmit \<sigma> b \<Longrightarrow> PUadmit \<sigma> b (BVP (Psubst a \<sigma>))\<Longrightarrow> Padmit \<sigma> (Sequence a b)"  
 | Padmit_Loop:"Padmit \<sigma> a \<Longrightarrow> PUadmit \<sigma> a (BVP (Psubst a \<sigma>)) \<Longrightarrow> Padmit \<sigma> (Loop a)"        
-| Padmit_ODE:"Oadmit \<sigma> ODE (ODE_vars ODE) \<Longrightarrow> Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> (ODE_vars ODE) \<Longrightarrow> Padmit \<sigma> (EvolveODE ODE \<phi>)"
+| Padmit_ODE:"Oadmit \<sigma> ODE (BVO ODE) \<Longrightarrow> Fadmit \<sigma> \<phi> \<Longrightarrow> FUadmit \<sigma> \<phi> (BVO ODE) \<Longrightarrow> Padmit \<sigma> (EvolveODE ODE \<phi>)"
 | Padmit_Choice:"Padmit \<sigma> a \<Longrightarrow> Padmit \<sigma> b \<Longrightarrow> Padmit \<sigma> (Choice a b)"            
 | Padmit_Assign:"Tadmit \<sigma> \<theta> \<Longrightarrow> Padmit \<sigma> (Assign x \<theta>)"  
 | Padmit_DiffAssign:"Tadmit \<sigma> \<theta> \<Longrightarrow> Padmit \<sigma> (DiffAssign x \<theta>)"  
@@ -344,7 +344,9 @@ where "extendf I R =
  Predicates = Predicates I,
  Contexts = Contexts I,
  Programs = Programs I,
- ODEs = ODEs I\<rparr>"
+ ODEs = ODEs I,
+ ODEBV = ODEBV I
+ \<rparr>"
 
 fun extendc :: "('sf, 'sc, 'sz) interp \<Rightarrow> 'sz state set \<Rightarrow> ('sf, 'sc + unit, 'sz) interp"
 where "extendc I R =
@@ -352,7 +354,8 @@ where "extendc I R =
  Predicates = Predicates I,
  Contexts = (\<lambda>C. case C of Inl C' \<Rightarrow> Contexts I C' | Inr () \<Rightarrow> (\<lambda>_.  R)),
  Programs = Programs I,
- ODEs = ODEs I\<rparr>"
+ ODEs = ODEs I,
+ ODEBV = ODEBV I\<rparr>"
 
 definition adjoint :: "('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sc, 'sz) subst \<Rightarrow> 'sz state \<Rightarrow> ('sf, 'sc, 'sz) interp" 
 where "adjoint I \<sigma> \<nu> =
@@ -360,7 +363,9 @@ where "adjoint I \<sigma> \<nu> =
  Predicates = (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda>R. \<nu> \<in> fml_sem (extendf I R) p') | None \<Rightarrow> Predicates I p),
  Contexts =   (\<lambda>c. case SContexts \<sigma> c of Some c' \<Rightarrow> (\<lambda>R. fml_sem (extendc I R) c') | None \<Rightarrow> Contexts I c),
  Programs =   (\<lambda>a. case SPrograms \<sigma> a of Some a' \<Rightarrow> prog_sem I a' | None \<Rightarrow> Programs I a),
- ODEs =     (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_sem I ode' | None \<Rightarrow> ODEs I ode)\<rparr>"
+ ODEs =     (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_sem I ode' | None \<Rightarrow> ODEs I ode),
+ ODEBV = (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_vars I ode' | None \<Rightarrow> ODEBV I ode)
+ \<rparr>"
 
 lemma dsem_to_ssem:"dfree \<theta> \<Longrightarrow> dterm_sem I \<theta> \<nu> = sterm_sem I \<theta> (fst \<nu>)"
   by (induct rule: dfree.induct) (auto)
@@ -371,7 +376,9 @@ where "NTadjoint I \<sigma> \<nu> =
  Predicates = Predicates I,
  Contexts = Contexts I,
  Programs = Programs I,
- ODEs = ODEs I\<rparr>"
+ ODEs = ODEs I,
+ ODEBV = ODEBV I
+ \<rparr>"
 
 (* TODO: simplify*)
 lemma adjoint_free:
@@ -381,7 +388,8 @@ lemma adjoint_free:
    Predicates = (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda>R. \<nu> \<in> fml_sem (extendf I R) p') | None \<Rightarrow> Predicates I p),
    Contexts =   (\<lambda>c. case SContexts \<sigma> c of Some c' \<Rightarrow> (\<lambda>R. fml_sem (extendc I R) c') | None \<Rightarrow> Contexts I c),
    Programs =   (\<lambda>a. case SPrograms \<sigma> a of Some a' \<Rightarrow> prog_sem I a' | None \<Rightarrow> Programs I a),
-   ODEs =     (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_sem I ode' | None \<Rightarrow> ODEs I ode)\<rparr>"
+   ODEs =     (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_sem I ode' | None \<Rightarrow> ODEs I ode),
+   ODEBV = (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_vars I ode' | None \<Rightarrow> ODEBV I ode)\<rparr>"
   using dsem_to_ssem[OF sfree] 
   by (cases \<nu>) (auto simp add: adjoint_def fun_eq_iff split: option.split)
 
@@ -390,7 +398,8 @@ lemma NTadjoint_free:"(\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (NTadjoint
  Predicates = Predicates I,
  Contexts = Contexts I,
  Programs = Programs I,
- ODEs = ODEs I\<rparr>)" 
+ ODEs = ODEs I,
+ ODEBV = ODEBV I\<rparr>)" 
   by (auto simp add: dsem_to_ssem NTadjoint_def)
 
 definition PFadjoint::"('sf, 'sc, 'sz) interp \<Rightarrow> ('d::finite \<Rightarrow> ('sf, 'sc, 'sz) formula) \<Rightarrow> ('sf, 'sc  + 'd, 'sz) interp" 
@@ -399,6 +408,7 @@ where "PFadjoint I \<sigma> =
  Predicates = Predicates I,
  Contexts = (\<lambda>f. case f of Inl f' \<Rightarrow> Contexts I f' | Inr f' \<Rightarrow> (\<lambda>_. fml_sem I (\<sigma> f'))),
  Programs = Programs I,
- ODEs = ODEs I\<rparr>"
+ ODEs = ODEs I,
+ ODEBV = ODEBV I\<rparr>"
 
 end end
