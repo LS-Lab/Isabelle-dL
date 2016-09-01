@@ -106,6 +106,7 @@ record ('a, 'b, 'c) interp =
   Contexts        :: "'b \<Rightarrow> 'c state set \<Rightarrow> 'c state set"
   Programs        :: "'c \<Rightarrow> ('c state * 'c state) set"
   ODEs            :: "'c \<Rightarrow> 'c simple_state \<Rightarrow> 'c simple_state"
+  ODEBV           :: "'c \<Rightarrow> 'c set"
 
 fun FunctionFrechet :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> 'a \<Rightarrow> 'c Rvec \<Rightarrow> 'c Rvec \<Rightarrow> real"
   where "FunctionFrechet I i = (THE f'. \<forall> x. (Functions I i has_derivative f' x) (at x))"
@@ -210,27 +211,31 @@ fun ODE_sem:: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'c
 (* TODO: Redefine using SOME operator in a way that more closely matches above description. *)
 | "ODE_sem I (OProd ODE1 ODE2) = (\<lambda>\<nu>. ODE_sem I ODE1 \<nu> + ODE_sem I ODE2 \<nu>)"
 
-(* The bound variables of an ODE (which will also be included as free variables) *)
-fun ODE_vars :: "('a, 'c) ODE \<Rightarrow> ('c + 'c) set"
+(* The bound variables of an ODE *)
+fun ODE_vars :: "('a,'b,'c) interp \<Rightarrow> ('a, 'c) ODE \<Rightarrow> 'c set"
   where 
-  "ODE_vars (OVar c) = UNIV"
-| "ODE_vars (OSing x \<theta>) = {Inl x, Inr x}"
-| "ODE_vars (OProd ODE1 ODE2) = ODE_vars ODE1 \<union> ODE_vars ODE2"
+  "ODE_vars I (OVar c) = ODEBV I c"
+| "ODE_vars I (OSing x \<theta>) = {x}"
+| "ODE_vars I (OProd ODE1 ODE2) = ODE_vars I ODE1 \<union> ODE_vars I ODE2"
+
+fun semBV ::"('a, 'b,'c) interp \<Rightarrow> ('a, 'c) ODE \<Rightarrow> ('c + 'c) set"
+  where "semBV I ODE = Inl ` (ODE_vars I ODE) \<union> Inr ` (ODE_vars I ODE)"
 
 lemma ODE_vars_lr:
-  fixes x::"'sz" and ODE::"('sf,'sz) ODE"
-  shows "Inl x \<in> ODE_vars ODE \<longleftrightarrow> Inr x \<in> ODE_vars ODE"
+  fixes x::"'sz" and ODE::"('sf,'sz) ODE" and I::"('sf,'sc,'sz) interp"
+  shows "Inl x \<in> semBV I ODE \<longleftrightarrow> Inr x \<in> semBV I ODE"
     by (induction "ODE", auto)
-  
+
 fun mk_xode::"('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'c::finite) ODE \<Rightarrow> 'c::finite simple_state \<Rightarrow> 'c::finite state"
   where "mk_xode I ODE sol = (sol, ODE_sem I ODE sol)"
 
+ 
 (* Given an initial state \<nu> and solution to an ODE at some point, construct the resulting state \<omega>.
  * This is defined using the SOME operator because the concrete definition is unwieldy. *)
 definition mk_v::"('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'c::finite) ODE \<Rightarrow> 'c::finite state \<Rightarrow> 'c::finite simple_state \<Rightarrow> 'c::finite state"
 where "mk_v I ODE \<nu> sol = (SOME \<omega>. 
-  Vagree \<omega> \<nu> (- ODE_vars ODE) 
-\<and> Vagree \<omega> (mk_xode I ODE sol) (ODE_vars ODE))"
+  Vagree \<omega> \<nu> (- semBV I ODE) 
+\<and> Vagree \<omega> (mk_xode I ODE sol) (semBV I ODE))"
 
 (* repv \<nu> x r replaces the value of (unprimed) variable x in the state \<nu> with r *)
 fun repv :: "'c::finite state \<Rightarrow> 'c \<Rightarrow> real \<Rightarrow> 'c state"
@@ -289,15 +294,15 @@ end
  to do anything useful *)
 fun concrete_v::"('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'c::finite) ODE \<Rightarrow> 'c::finite state \<Rightarrow> 'c::finite simple_state \<Rightarrow> 'c::finite state"
 where "concrete_v I ODE \<nu> sol =
-((\<chi> i. (if Inl i \<in> ODE_vars ODE then sol else (fst \<nu>)) $ i),
- (\<chi> i. (if Inr i \<in> ODE_vars ODE then ODE_sem I ODE sol else (snd \<nu>)) $ i))"
+((\<chi> i. (if Inl i \<in> semBV I ODE then sol else (fst \<nu>)) $ i),
+ (\<chi> i. (if Inr i \<in> semBV I ODE then ODE_sem I ODE sol else (snd \<nu>)) $ i))"
 
-lemma mk_v_exists:"\<exists>\<omega>. Vagree \<omega> \<nu> (- ODE_vars ODE) 
-\<and> Vagree \<omega> (mk_xode I ODE sol) (ODE_vars ODE)"
+lemma mk_v_exists:"\<exists>\<omega>. Vagree \<omega> \<nu> (- semBV I ODE) 
+\<and> Vagree \<omega> (mk_xode I ODE sol) (semBV I ODE)"
   by(rule exI[where x="(concrete_v I ODE \<nu> sol)"], auto simp add: Vagree_def)
 
-lemma mk_v_agree:"Vagree (mk_v I ODE \<nu> sol) \<nu> (- ODE_vars ODE) 
-\<and> Vagree (mk_v I ODE \<nu> sol) (mk_xode I ODE sol) (ODE_vars ODE)"
+lemma mk_v_agree:"Vagree (mk_v I ODE \<nu> sol) \<nu> (- semBV I ODE) 
+\<and> Vagree (mk_v I ODE \<nu> sol) (mk_xode I ODE sol) (semBV I ODE)"
   unfolding mk_v_def by (rule someI_ex, rule mk_v_exists)
 
 subsection \<open>Trivial Simplification Lemmas\<close>
