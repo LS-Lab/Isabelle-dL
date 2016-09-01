@@ -1111,8 +1111,9 @@ next
          Vagree (a, ba) (aa, bb) V \<longrightarrow>
          FVP b \<subseteq> V \<longrightarrow> ((a, ba), ab, bc) \<in> prog_sem I b \<longrightarrow> (\<exists>a ba. ((aa, bb), a, ba) \<in> prog_sem J b \<and> Vagree (ab, bc) (a, ba) (MBV b \<union> V))))
          \<and> ode_sem_equiv b I"
-      assume "Iagree I J (SIGP a \<union> SIGP b)"
-      hence IA:"Iagree I J (SIGP a)" "Iagree I J (SIGP b)" unfolding Iagree_def by auto
+      assume IAab:"Iagree I J (SIGP a \<union> SIGP b)"
+      have IAsubs:"SIGP a \<subseteq> (SIGP a \<union> SIGP b)" "SIGP b \<subseteq> (SIGP a \<union> SIGP b)" by auto
+      from IAab have  IA:"Iagree I J (SIGP a)" "Iagree I J (SIGP b)" using Iagree_sub[OF IAsubs(1)] Iagree_sub[OF IAsubs(2)] by auto
       from IH2'' have IH2':"\<And>a ba aa bb ab bc V .
          Iagree I J (SIGP b) \<Longrightarrow>
          Vagree (a, ba) (aa, bb) V \<Longrightarrow>
@@ -1246,8 +1247,9 @@ next
     proof -
       fix \<nu> \<nu>' I J
       assume IA:"Iagree I J (SIGF (And p1 p2))"
-      hence IAs:"Iagree I J (SIGF p1)" "Iagree I J (SIGF p2)"
-        unfolding SIGF.simps Iagree_def by auto
+      have IAsubs:"(SIGF p1) \<subseteq> (SIGF (And p1 p2))" "(SIGF p2) \<subseteq> (SIGF (And p1 p2))" by auto
+      from IA have IAs:"Iagree I J (SIGF p1)" "Iagree I J (SIGF p2)"
+        using Iagree_sub[OF IAsubs(1)] Iagree_sub[OF IAsubs(2)] by auto
       assume VA:"Vagree \<nu> \<nu>' (FVF (And p1 p2))"
       hence VAs:"Vagree \<nu> \<nu>' (FVF p1)" "Vagree \<nu> \<nu>' (FVF p2)"
         unfolding FVF.simps Vagree_def by auto
@@ -1307,8 +1309,9 @@ next
     proof -
       fix \<nu> \<nu>' I J
       assume IA:"Iagree I J (SIGF (Diamond a p))"
-      hence IAP:"Iagree I J (SIGP a)"
-      and IAF:"Iagree I J (SIGF p)" unfolding SIGP.simps Iagree_def by auto
+      have IAsubs:"(SIGP a) \<subseteq> (SIGF (Diamond a p))" "(SIGF p) \<subseteq> (SIGF (Diamond a p))" by auto
+      from IA have IAP:"Iagree I J (SIGP a)"
+      and IAF:"Iagree I J (SIGF p)" using Iagree_sub[OF IAsubs(1)] Iagree_sub[OF IAsubs(2)] by auto
       from IAP have IAP':"Iagree J I (SIGP a)" by (rule Iagree_comm)
       from IAF have IAF':"Iagree J I (SIGF p)" by (rule Iagree_comm)
 
