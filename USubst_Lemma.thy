@@ -3134,7 +3134,34 @@ next
               by auto
             done
           have deleted_right_agree:"\<And>s. s \<in> {0..t} \<Longrightarrow> VSagree bb (ODE_sem I (Osubst ODE \<sigma>) (sol s)) {x. Inr x \<in> (ODE_vars ODE - ODE_vars (Osubst ODE \<sigma>))}"
-            sorry
+            unfolding VSagree_def apply auto
+            subgoal for s i
+              using hmmm'[of s] unfolding VSagree_def
+              using osubst_dec_ODE_vars[of ODE \<sigma>] 
+              apply auto
+              apply (erule allE[where x=i])
+              apply auto
+              defer
+              subgoal
+                proof -
+                  assume s: "0 \<le> s"
+                  and t: "s \<le> t"
+                  and v1:"Inr i \<in> ODE_vars ODE"
+                  and v2:"Inr i \<notin> ODE_vars (Osubst ODE \<sigma>)"
+                  and sub:"ODE_vars (Osubst ODE \<sigma>) \<subseteq> ODE_vars ODE"
+                  and sol:"sol 0 $ i = sol s $ i"
+                  have bb0:"bb $ i = 0"
+                    sorry
+                  have "\<And>ODE i t. Inr i \<notin> ODE_vars ODE \<Longrightarrow> ODE_sem I ODE t $ i = 0"
+                    subgoal for ODE i t
+                      apply(induction ODE)
+                      by auto
+                    done
+                  then have sem0:"ODE_sem I (Osubst ODE \<sigma>) (sol s) $ i = 0"
+                    using v2 by auto
+                  show "bb $ i = ODE_sem I (Osubst ODE \<sigma>) (sol s) $ i"
+                    using bb0 sem0 by auto
+            done
           have deleted_vars_agree:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0, bb) (sol s, ODE_sem I (Osubst ODE \<sigma>) (sol s)) (ODE_vars ODE - ODE_vars (Osubst ODE \<sigma>))"
             subgoal for s
             using Vagree_of_VSagree[of "sol 0" "sol s" "(ODE_vars ODE - ODE_vars (Osubst ODE \<sigma>))" 
