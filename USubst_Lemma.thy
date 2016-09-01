@@ -2858,38 +2858,45 @@ next
   then show ?case by auto
 qed
 
+lemma osubst_dec_ODE_vars: "ODE_vars (Osubst ODE \<sigma>) \<subseteq> ODE_vars ODE"
+  by (induction ODE, auto)
+
 lemma subst_mkv:
 fixes I::"('sf, 'sc, 'sz) interp"
 fixes \<nu>::"'sz state"
 fixes \<nu>'::"'sz state"
 assumes good_interp:"is_interp I"  
-assumes NOU:"Oadmit \<sigma> ODE U"
+assumes NOU:"Oadmit \<sigma> ODE (ODE_vars ODE)"
 assumes osafe:"osafe ODE "
 assumes frees:"ssafe \<sigma>"
 shows "(mk_v I (Osubst ODE \<sigma>) \<nu> (fst \<nu>')) 
   = (mk_v (adjoint I \<sigma> \<nu>') ODE \<nu> (fst \<nu>'))"
-    (*apply(rule agree_UNIV_eq)
-    using mk_v_agree[of "NTadjoint I \<sigma> \<nu>'" "ODE" \<nu> "fst \<nu>'"]
-    using mk_v_agree[of "I" "NOsubst ODE \<sigma>" \<nu> "fst \<nu>'"] 
-    unfolding Vagree_def osubst_preserves_ODE_vars
-    using nsubst_ode[OF good_interp osafe NOU frees, of \<nu>']
-    apply auto
-    subgoal for i
-      apply(erule allE[where x=i])+
-      apply(cases "Inl i \<in> ODE_vars ODE")
-      by auto
-    subgoal for i
-      apply(erule allE[where x=i])+
-      apply(cases "Inr i \<in> ODE_vars ODE")
-      using osubst_preserves_ODE_vars[of ODE \<sigma>]
-      by simp+
-    done *)
+  apply(rule agree_UNIV_eq)
+  using mk_v_agree[of "adjoint I \<sigma> \<nu>'" "ODE" \<nu> "fst \<nu>'"]
+  using mk_v_agree[of "I" "Osubst ODE \<sigma>" \<nu> "fst \<nu>'"] 
+  unfolding Vagree_def osubst_dec_ODE_vars
+  using subst_ode[OF good_interp osafe  frees NOU, of \<nu>']
+  apply auto
+  subgoal for i
+    apply(erule allE[where x=i])+
+    apply(cases "Inl i \<in> ODE_vars ODE")
+    apply(cases "Inl i \<in> ODE_vars (Osubst ODE \<sigma>)")
+    using ODE_vars_lr osubst_dec_ODE_vars[of ODE \<sigma>] osubst_dec_ODE_vars[of "Osubst ODE \<sigma>" \<sigma>]
+    apply (auto simp add: ODE_vars_lr osubst_dec_ODE_vars[of ODE \<sigma>] osubst_dec_ODE_vars[of "Osubst ODE \<sigma>" \<sigma>])
+    using ODE_vars_lr osubst_dec_ODE_vars[of ODE \<sigma>] osubst_dec_ODE_vars[of "Osubst ODE \<sigma>" \<sigma>]
+    
     sorry
-
-
-lemma osubst_dec_ODE_vars: "ODE_vars (Osubst ODE \<sigma>) \<subseteq> ODE_vars ODE"
-  sorry
-  
+  subgoal for i
+    apply(erule allE[where x=i])+
+    apply(cases "Inl i \<in> ODE_vars ODE")
+    apply(cases "Inl i \<in> ODE_vars (Osubst ODE \<sigma>)")
+    using osubst_dec_ODE_vars[of ODE \<sigma>]
+    apply auto
+    using osubst_dec_ODE_vars[of ODE \<sigma>]
+      ODE_vars_lr 
+    apply (simp add: ODE_vars_lr)
+    sorry
+  done 
   
 lemma subst_fml_hp:
 fixes I::"('sf, 'sc, 'sz) interp"
@@ -3087,14 +3094,12 @@ next
             using lem[OF OA] by auto
           have agrees: "\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x)"
              subgoal for s using agree_sub[OF FVT_sub hmm[of s]] by auto done
-          have "\<And>s. s \<in> {0..t} \<Longrightarrow> mk_v (adjoint I \<sigma> (sol s, bb)) ODE  = mk_v (adjoint I \<sigma> (sol 0, bb)) ODE"
-            subgoal for s
+          have "\<And>s. s \<in> {0..t} \<Longrightarrow> mk_v (adjoint I \<sigma> (sol 0, bb)) ODE = mk_v (adjoint I \<sigma> (sol s, bb)) ODE"
+            subgoal for s         
               apply (rule uadmit_mkv_adjoint)
               prefer 3
+              subgoal using agrees by auto
               using OA hmm[of s] unfolding  Vagree_def
-              (*sledgehammer *)
-              (* apply fastforce *)
-              subgoal sorry
               using ssafe good_interp osafe by auto
             done
           then have mkva:"\<And>s. s \<in> {0..t} \<Longrightarrow> mk_v (adjoint I \<sigma> (sol s, bb)) ODE (sol 0, bb) (sol s) = mk_v (adjoint I \<sigma> (sol 0, bb)) ODE (sol 0, bb) (sol s)"
