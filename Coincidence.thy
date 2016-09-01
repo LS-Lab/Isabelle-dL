@@ -871,15 +871,20 @@ next
            "\<And>s. Vagree (mk_v I ODE (a, b) (sol s)) (mk_xode I ODE (sol s)) (semBV I ODE)"
            "\<And>s. Vagree (mk_v J ODE (aa, ba) (sol s)) (aa, ba) (- semBV J ODE)"
            "\<And>s. Vagree (mk_v J ODE (aa, ba) (sol s)) (mk_xode J ODE (sol s)) (semBV J ODE)"
-        subgoal for s
-           using mk_v_agree[of I ODE "(a,b)" "sol s"] by auto
-        subgoal for s
-           using mk_v_agree[of I ODE "(a,b)" "sol s"] by auto
-        subgoal for s
-           using mk_v_agree[of J ODE "(aa,ba)" "sol s"] by auto
-        subgoal for s
-           using mk_v_agree[of J ODE "(aa,ba)" "sol s"] by auto
+        subgoal for s using mk_v_agree[of I ODE "(a,b)" "sol s"] by auto
+        subgoal for s using mk_v_agree[of I ODE "(a,b)" "sol s"] by auto
+        subgoal for s using mk_v_agree[of J ODE "(aa,ba)" "sol s"] by auto
+        subgoal for s using mk_v_agree[of J ODE "(aa,ba)" "sol s"] by auto
         done  
+      have sem_sub_BVO:"\<And>I. semBV I ODE \<subseteq> BVO ODE"
+        subgoal for I
+          apply(induction ODE)
+          by auto
+        done
+      have ag_BVO:
+        "\<And>s. Vagree (mk_v I ODE (a, b) (sol s)) (a, b) (- BVO ODE)"
+        "\<And>s. Vagree (mk_v J ODE (aa, ba) (sol s)) (aa, ba) (- BVO ODE)"
+        using ag(1) ag(3)  sem_sub_BVO[of I] sem_sub_BVO[of J] agree_sub by blast+ 
       have IOsub:"({Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE}) \<subseteq> (SIGF P \<union> {Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
         by auto
       from IA 
@@ -899,7 +904,7 @@ next
       then have halpp:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (sol s, ODE_sem I ODE (sol s)) (sol s, ODE_sem J ODE (sol s)) (BVO ODE)"
         by auto
       then have halpp':"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (a, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) (BVO ODE)"
-        subgoal for s using ag[of s] Oag agree_trans
+        subgoal for s using ag[of s] ag_BVO[of s] Oag agree_trans
           unfolding Vagree_def sorry
         done
       have eqV:"V = (BVO ODE) \<union> (V \<inter> (-BVO ODE))" using OVsub by auto
@@ -908,10 +913,10 @@ next
           apply(unfold Vagree_def)
           apply(rule conjI | rule allI)+
           subgoal for i
-            using VA ag(1)[of s] ag(3)[of s] unfolding Vagree_def sorry (*by (auto)*)
+            using VA ag(1)[of s] ag(3)[of s] ag_BVO unfolding Vagree_def by (auto)
           apply(rule allI)+
           subgoal for i
-            using VA ag(1)[of s] ag(3)[of s] unfolding Vagree_def sorry (*by (auto)*)
+            using VA ag(1)[of s] ag(3)[of s] ag_BVO unfolding Vagree_def by (auto)
           done
         done
       have VAfoo:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (a, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) V"
