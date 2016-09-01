@@ -91,6 +91,13 @@ fun FVO :: "('a, 'c) ODE \<Rightarrow> ('c + 'c) set"
 | "FVO (OProd ODE1 ODE2) = FVO ODE1 \<union> FVO ODE2"
 (* Bound variables of a formula
    Bound variables of a program *)
+  
+fun BVO :: "('a, 'c) ODE \<Rightarrow> ('c + 'c) set"
+where 
+  "BVO (OVar c) = UNIV"
+| "BVO (OSing x \<theta>) = {Inl x, Inr x}"
+| "BVO (OProd ODE1 ODE2) = BVO ODE1 \<union> BVO ODE2"
+  
 fun BVF :: "('a, 'b, 'c) formula \<Rightarrow> ('c + 'c) set"
 and BVP :: "('a, 'b, 'c) hp \<Rightarrow> ('c + 'c) set"
 where
@@ -107,7 +114,7 @@ where
 | "BVP (Assign x \<theta>) = {Inl x}"
 | "BVP (DiffAssign x \<theta>) = {Inr x}"
 | "BVP (Test \<phi>) = {}"
-| "BVP (EvolveODE ODE \<phi>) = ODE_vars ODE"
+| "BVP (EvolveODE ODE \<phi>) = BVO ODE"
 | "BVP (Choice \<alpha> \<beta>) = BVP \<alpha> \<union> BVP \<beta>"
 | "BVP (Sequence \<alpha> \<beta>) = BVP \<alpha> \<union> BVP \<beta>"
 | "BVP (Loop \<alpha>) = BVP \<alpha>"
@@ -139,7 +146,7 @@ where
  | "FVP (Assign x \<theta>) = FVT \<theta>"
  | "FVP (DiffAssign x \<theta>) = FVT \<theta>"
  | "FVP (Test \<phi>) = FVF \<phi>"
- | "FVP (EvolveODE ODE \<phi>) = ODE_vars ODE \<union> FVO ODE \<union> FVF \<phi>"
+ | "FVP (EvolveODE ODE \<phi>) = BVO ODE \<union> FVO ODE \<union> FVF \<phi>"
  | "FVP (Choice \<alpha> \<beta>) = FVP \<alpha> \<union> FVP \<beta>"
  | "FVP (Sequence \<alpha> \<beta>) = FVP \<alpha> \<union> (FVP \<beta> - MBV \<alpha>)"
  | "FVP (Loop \<alpha>) = FVP \<alpha>"
