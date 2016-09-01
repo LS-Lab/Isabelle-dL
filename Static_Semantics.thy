@@ -126,8 +126,8 @@ where
 | "MBV (Choice \<alpha> \<beta>) = MBV \<alpha> \<inter> MBV \<beta>"
 | "MBV (Sequence \<alpha> \<beta>) = MBV \<alpha> \<union> MBV \<beta>"
 | "MBV (Loop \<alpha>) = {}"
+| "MBV (EvolveODE ODE _) = (Inl ` (ODE_dom ODE)) \<union> (Inr ` (ODE_dom ODE))"
 | "MBV \<alpha> = BVP \<alpha>"
-
 
 (* Free variables of a formula *)
 (* Free variables of a program *)
