@@ -881,10 +881,16 @@ next
           apply(induction ODE)
           by auto
         done
+      have MBV_sub_sem:"\<And>I. (Inl ` ODE_dom ODE \<union> Inr ` ODE_dom ODE) \<subseteq> semBV I ODE"
+        subgoal for I by (induction ODE, auto) done
       have ag_BVO:
         "\<And>s. Vagree (mk_v I ODE (a, b) (sol s)) (a, b) (- BVO ODE)"
         "\<And>s. Vagree (mk_v J ODE (aa, ba) (sol s)) (aa, ba) (- BVO ODE)"
-        using ag(1) ag(3)  sem_sub_BVO[of I] sem_sub_BVO[of J] agree_sub by blast+ 
+        using ag(1) ag(3)  sem_sub_BVO[of I] sem_sub_BVO[of J] agree_sub by blast+
+      have ag_semBV:
+           "\<And>s. Vagree (mk_v I ODE (a, b) (sol s)) (mk_xode I ODE (sol s)) (semBV I ODE)"
+           "\<And>s. Vagree (mk_v J ODE (aa, ba) (sol s)) (mk_xode J ODE (sol s)) (semBV J ODE)"
+        using ag(2) ag(4)  MBV_sub_sem[of I] MBV_sub_sem[of J] agree_sub by blast+
       have IOsub:"({Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE}) \<subseteq> (SIGF P \<union> {Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
         by auto
       from IA 
@@ -898,25 +904,30 @@ next
       from Osem
       have Oag:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> VSagree (ODE_sem I ODE (sol s)) (ODE_sem J ODE (sol s)) {x. Inr x \<in> BVO ODE}"
         unfolding VSagree_def by auto
-      have halp:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow>  Vagree (mk_xode I ODE (sol s)) (mk_xode J ODE (sol s)) (BVO ODE)"
+      from Osem
+      have Oagsem:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> VSagree (ODE_sem I ODE (sol s)) (ODE_sem J ODE (sol s)) (ODE_dom ODE)"
+        unfolding VSagree_def by auto
+      from Osem
+      have halp:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow>  Vagree (mk_xode I ODE (sol s)) (mk_xode J ODE (sol s)) (Inl ` ODE_dom ODE \<union> Inr ` ODE_dom ODE)"
         apply(auto)
-        using Oag unfolding Vagree_def VSagree_def by auto
-      then have halpp:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (sol s, ODE_sem I ODE (sol s)) (sol s, ODE_sem J ODE (sol s)) (BVO ODE)"
+        using Oag unfolding Vagree_def VSagree_def by blast
+      then have halpp:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (sol s, ODE_sem I ODE (sol s)) (sol s, ODE_sem J ODE (sol s)) (Inl ` ODE_dom ODE \<union> Inr ` ODE_dom ODE)"
         by auto
-      then have halpp':"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (a, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) (BVO ODE)"
-        subgoal for s using ag[of s] ag_BVO[of s] Oag agree_trans
-          unfolding Vagree_def sorry
+      then have halpp':"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (a, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) (Inl ` ODE_dom ODE \<union> Inr ` ODE_dom ODE)"
+        subgoal for s using ag[of s] (*ag_BVO[of s] *)ag_semBV[of s] Oagsem agree_trans
+            (*Osem *)unfolding Vagree_def apply auto sorry
+          (*apply (smt MBV_sub_sem Osem Un_subset_iff Vagree_def \<open>Vagree (mk_v I ODE (a, b) (sol s)) (mk_xode I ODE (sol s)) (semBV I ODE)\<close> \<open>Vagree (mk_v J ODE (aa, ba) (sol s)) (mk_xode J ODE (sol s)) (semBV J ODE)\<close> contra_subsetD image_eqI mk_xode.elims)*)
         done
-      have eqV:"V = (BVO ODE) \<union> (V \<inter> (-BVO ODE))" using OVsub by auto
-      have VAbar:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (a, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) (V \<inter> (-BVO ODE))"
+      have eqV:"V = (Inl ` ODE_dom ODE \<union> Inr ` ODE_dom ODE) \<union> (V \<inter> (-(Inl ` ODE_dom ODE \<union> Inr ` ODE_dom ODE)))" using OVsub' by auto
+      have VAbar:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (a, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) (V \<inter> (-(Inl ` ODE_dom ODE \<union> Inr ` ODE_dom ODE)))"
         subgoal for s
           apply(unfold Vagree_def)
           apply(rule conjI | rule allI)+
           subgoal for i
-            using VA ag(1)[of s] ag(3)[of s] ag_BVO unfolding Vagree_def by (auto)
+            using VA ag(1)[of s] ag(3)[of s] ag_BVO ag_semBV unfolding Vagree_def apply auto sorry 
           apply(rule allI)+
           subgoal for i
-            using VA ag(1)[of s] ag(3)[of s] ag_BVO unfolding Vagree_def by (auto)
+            using VA ag(1)[of s] ag(3)[of s] ag_BVO ag_semBV unfolding Vagree_def sorry
           done
         done
       have VAfoo:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (a, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) V"
