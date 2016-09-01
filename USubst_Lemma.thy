@@ -3060,8 +3060,31 @@ next
             then show "Vagree (sol 0, bb) (sol s, bb) (- ODE_vars ODE)"
               by (meson Compl_subset_Compl_iff ODE_bound_effect agree_sub osubst_dec_ODE_vars sol)
           qed
+          have lem:"\<And>ODE. Oadmit \<sigma> ODE (ODE_vars ODE) \<Longrightarrow> (\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x) \<subseteq> (-(ODE_vars ODE))"
+            subgoal for ODE
+              apply(induction rule: Oadmit.induct)
+              apply auto
+              subgoal for \<sigma> \<theta> U x xa
+              apply (cases "SFunctions \<sigma> xa")
+                apply auto
+                unfolding TUadmit_def
+                proof -
+                  fix a
+                  assume un:"(\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x) \<inter> U = {}"
+                  assume sig:"xa \<in> SIGT \<theta>"
+                  assume some:"SFunctions \<sigma> xa = Some a"
+                  assume fvt:"x \<in> FVT a"
+                  assume xU:"x \<in> U"
+                  from un sig have "(case SFunctions \<sigma> xa of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x) \<inter> U = {}"
+                    by auto 
+                  then have "(FVT a) \<inter> U = {}"
+                   using some by auto
+                  then show "False" using fvt xU by auto
+                qed
+                done
+              done
           have FVT_sub:"(\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x) \<subseteq> (-(ODE_vars ODE))"
-            using OA sorry
+            using lem[OF OA] by auto
           have agrees: "\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x)"
              subgoal for s using agree_sub[OF FVT_sub hmm[of s]] by auto done
           have "\<And>s. s \<in> {0..t} \<Longrightarrow> mk_v (adjoint I \<sigma> (sol s, bb)) ODE  = mk_v (adjoint I \<sigma> (sol 0, bb)) ODE"
