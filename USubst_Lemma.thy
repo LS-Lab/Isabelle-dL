@@ -2869,34 +2869,76 @@ assumes good_interp:"is_interp I"
 assumes NOU:"Oadmit \<sigma> ODE (ODE_vars ODE)"
 assumes osafe:"osafe ODE "
 assumes frees:"ssafe \<sigma>"
+(* I hereby name this assumption "wow" because it's a little surprising that we need it. 
+  Recall that when we have an ODE constant, it binds every variable, and that when we substitute it
+  away we might stop binding some of the variables. This means variables which used to come from the
+  "ODE solution" part of the state now come from the "previous state" part of the state. Which means
+  they need to be the same.
+  
+  Note this is not the case with nsubst_mkv because nsubst does not replace ODE constants, only function constants!
+*)
+assumes wow:"Vagree \<nu> (mk_xode I (Osubst ODE \<sigma>) (fst \<nu>')) (ODE_vars ODE - (ODE_vars (Osubst ODE \<sigma>)))"
 shows "(mk_v I (Osubst ODE \<sigma>) \<nu> (fst \<nu>')) 
   = (mk_v (adjoint I \<sigma> \<nu>') ODE \<nu> (fst \<nu>'))"
   apply(rule agree_UNIV_eq)
   using mk_v_agree[of "adjoint I \<sigma> \<nu>'" "ODE" \<nu> "fst \<nu>'"]
   using mk_v_agree[of "I" "Osubst ODE \<sigma>" \<nu> "fst \<nu>'"] 
-  unfolding Vagree_def osubst_dec_ODE_vars
-  using subst_ode[OF good_interp osafe  frees NOU, of \<nu>']
+  wow
+  unfolding Vagree_def 
+  using subst_ode[OF good_interp osafe  frees NOU, of \<nu>'] 
   apply auto
   subgoal for i
     apply(erule allE[where x=i])+
     apply(cases "Inl i \<in> ODE_vars ODE")
     apply(cases "Inl i \<in> ODE_vars (Osubst ODE \<sigma>)")
-    using ODE_vars_lr osubst_dec_ODE_vars[of ODE \<sigma>] osubst_dec_ODE_vars[of "Osubst ODE \<sigma>" \<sigma>]
-    apply (auto simp add: ODE_vars_lr osubst_dec_ODE_vars[of ODE \<sigma>] osubst_dec_ODE_vars[of "Osubst ODE \<sigma>" \<sigma>])
-    using ODE_vars_lr osubst_dec_ODE_vars[of ODE \<sigma>] osubst_dec_ODE_vars[of "Osubst ODE \<sigma>" \<sigma>]
-    
-    sorry
-  subgoal for i
+    apply simp
+    proof -
+    assume assms:"ODE_sem I (Osubst ODE \<sigma>) (fst \<nu>') = ODE_sem (local.adjoint I \<sigma> \<nu>') ODE (fst \<nu>')"
+     "Inl i \<notin> ODE_vars (Osubst ODE \<sigma>) \<longrightarrow> fst (mk_v I (Osubst ODE \<sigma>) \<nu> (fst \<nu>')) $ i = fst \<nu> $ i"
+     "Inl i \<in> ODE_vars ODE \<longrightarrow> fst (mk_v (local.adjoint I \<sigma> \<nu>') ODE \<nu> (fst \<nu>')) $ i = fst \<nu>' $ i"
+     "Inl i \<in> ODE_vars ODE"
+     "Inl i \<notin> ODE_vars (Osubst ODE \<sigma>)"
+    from assms have "fst \<nu> $ i = fst (mk_xode I ODE (fst \<nu>')) $ i"
+      using wow unfolding Vagree_def by auto
+    then show "fst (mk_v I (Osubst ODE \<sigma>) \<nu> (fst \<nu>')) $ i = fst (mk_v (local.adjoint I \<sigma> \<nu>') ODE \<nu> (fst \<nu>')) $ i"
+      using assms by auto
+    next
+      assume assms:"ODE_sem I (Osubst ODE \<sigma>) (fst \<nu>') = ODE_sem (local.adjoint I \<sigma> \<nu>') ODE (fst \<nu>')"
+    "Inl i \<notin> ODE_vars ODE \<longrightarrow> fst (mk_v (local.adjoint I \<sigma> \<nu>') ODE \<nu> (fst \<nu>')) $ i = fst \<nu> $ i"
+    "Inl i \<notin> ODE_vars (Osubst ODE \<sigma>) \<longrightarrow> fst (mk_v I (Osubst ODE \<sigma>) \<nu> (fst \<nu>')) $ i = fst \<nu> $ i"
+    "Inl i \<notin> ODE_vars ODE" 
+    then have notin2:"Inl i \<notin> ODE_vars (Osubst ODE \<sigma>)" using osubst_dec_ODE_vars[of ODE \<sigma>] by auto 
+    then show "fst (mk_v I (Osubst ODE \<sigma>) \<nu> (fst \<nu>')) $ i = fst (mk_v (local.adjoint I \<sigma> \<nu>') ODE \<nu> (fst \<nu>')) $ i"
+      using assms by auto
+    qed
+subgoal for i
     apply(erule allE[where x=i])+
-    apply(cases "Inl i \<in> ODE_vars ODE")
-    apply(cases "Inl i \<in> ODE_vars (Osubst ODE \<sigma>)")
-    using osubst_dec_ODE_vars[of ODE \<sigma>]
-    apply auto
-    using osubst_dec_ODE_vars[of ODE \<sigma>]
-      ODE_vars_lr 
-    apply (simp add: ODE_vars_lr)
-    sorry
-  done 
+    apply(cases "Inr i \<in> ODE_vars ODE")
+    apply(cases "Inr i \<in> ODE_vars (Osubst ODE \<sigma>)")
+    apply simp
+    proof -
+    assume assms: "ODE_sem I (Osubst ODE \<sigma>) (fst \<nu>') = ODE_sem (local.adjoint I \<sigma> \<nu>') ODE (fst \<nu>')"
+    "Inr i \<in> ODE_vars ODE \<and> Inr i \<notin> ODE_vars (Osubst ODE \<sigma>) \<longrightarrow> snd \<nu> $ i = ODE_sem (local.adjoint I \<sigma> \<nu>') ODE (fst \<nu>') $ i"
+    "Inr i \<notin> ODE_vars (Osubst ODE \<sigma>) \<longrightarrow> snd (mk_v I (Osubst ODE \<sigma>) \<nu> (fst \<nu>')) $ i = snd \<nu> $ i"
+    "Inr i \<in> ODE_vars ODE \<longrightarrow> snd (mk_v (local.adjoint I \<sigma> \<nu>') ODE \<nu> (fst \<nu>')) $ i = ODE_sem (local.adjoint I \<sigma> \<nu>') ODE (fst \<nu>') $ i"
+    "Inr i \<in> ODE_vars ODE"
+    "Inr i \<notin> ODE_vars (Osubst ODE \<sigma>)"
+    then have sem:"snd \<nu> $ i =  ODE_sem (local.adjoint I \<sigma> \<nu>') ODE (fst \<nu>') $ i" by auto 
+    have "ODE_sem I (Osubst ODE \<sigma>)(fst \<nu>') $ i = ODE_sem (local.adjoint I \<sigma> \<nu>') ODE (fst \<nu>') $ i"
+      using wow sem assms ODE_vars_lr osubst_dec_ODE_vars[of ODE \<sigma>] 
+      unfolding Vagree_def by auto
+    then show "snd (mk_v I (Osubst ODE \<sigma>) \<nu> (fst \<nu>')) $ i = snd (mk_v (local.adjoint I \<sigma> \<nu>') ODE \<nu> (fst \<nu>')) $ i"
+    using assms sem by auto
+    next
+      assume assms:"ODE_sem I (Osubst ODE \<sigma>) (fst \<nu>') = ODE_sem (local.adjoint I \<sigma> \<nu>') ODE (fst \<nu>')"
+    "Inr i \<notin> ODE_vars ODE \<longrightarrow> snd (mk_v (local.adjoint I \<sigma> \<nu>') ODE \<nu> (fst \<nu>')) $ i = snd \<nu> $ i" 
+    "Inr i \<notin> ODE_vars (Osubst ODE \<sigma>) \<longrightarrow> snd (mk_v I (Osubst ODE \<sigma>) \<nu> (fst \<nu>')) $ i = snd \<nu> $ i" 
+    "Inr i \<notin> ODE_vars ODE"
+    then have notin2:"Inr i \<notin> ODE_vars (Osubst ODE \<sigma>)" using osubst_dec_ODE_vars[of ODE \<sigma>] by auto 
+    then show "snd (mk_v I (Osubst ODE \<sigma>) \<nu> (fst \<nu>')) $ i = snd (mk_v (local.adjoint I \<sigma> \<nu>') ODE \<nu> (fst \<nu>')) $ i"
+      using assms by auto
+    qed
+done 
   
 lemma subst_fml_hp:
 fixes I::"('sf, 'sc, 'sz) interp"
