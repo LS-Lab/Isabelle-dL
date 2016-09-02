@@ -918,6 +918,11 @@ next
   then show ?case using IH1[OF agree_sub[OF sub1 VA] safe1] IH2[OF agree_sub[OF sub2 VA] safe2] by auto
 qed
 
+lemma adjoint_ode_vars:
+shows "ODE_vars (local.adjoint I \<sigma> \<nu>) ODE = ODE_vars (local.adjoint I \<sigma> \<omega>) ODE"
+ apply(induction ODE)
+ unfolding adjoint_def by auto
+
 lemma uadmit_mkv_adjoint:
   assumes ssafe:"ssafe \<sigma>"
   assumes good_interp:"is_interp I"
@@ -1010,6 +1015,11 @@ lemma uadmit_mkv_adjoint:
     done
   done
 
+lemma NTadjoint_ode_vars:
+shows "ODE_vars (NTadjoint I \<sigma> \<nu>) ODE = ODE_vars (NTadjoint I \<sigma> \<omega>) ODE"
+ apply(induction ODE)
+ unfolding NTadjoint_def by auto
+
 lemma uadmit_mkv_ntadjoint:
   assumes ssafe:"\<And>i. dfree (\<sigma> i)"
   assumes good_interp:"is_interp I"
@@ -1026,11 +1036,7 @@ apply(rule ext)
       using uadmit_ode_ntadjoint'[OF ssafe good_interp VA osafe]
       unfolding Vagree_def
       apply auto
-      subgoal sorry
-      subgoal sorry
-      (*apply metis
-      apply metis*)
-      done
+      using NTadjoint_ode_vars by metis+
     done
   done
     
