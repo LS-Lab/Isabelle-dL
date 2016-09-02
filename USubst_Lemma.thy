@@ -2157,10 +2157,12 @@ next
             using mk_v_agree[of I "NOsubst ODE \<sigma>" "(sol 0, b)" "sol t"] unfolding Vagree_def apply auto
             subgoal for i
               apply(erule allE[where x=i])+
-              using osubst_preserves_ODE_vars by blast
+              using osubst_preserves_BVO 
+              sorry
             subgoal for i
               apply(erule allE[where x=i])+
-              using osubst_preserves_ODE_vars by blast
+              using osubst_preserves_BVO
+              sorry
             done
           done
           (* Necessary *)
@@ -3335,9 +3337,9 @@ next
             done
           done
           (* Necessary *)
-          have mkv:"\<And>t. mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol t) = mk_v (adjoint I \<sigma> (sol t, bb)) ODE (sol 0, bb) (sol t)"
+          (*have mkv:"\<And>t. mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol t) = mk_v (adjoint I \<sigma> (sol t, bb)) ODE (sol 0, bb) (sol t)"
             using nsubst_mkv[OF good_interp NOU osafe frees]
-            by auto
+            sorry
           have hmm:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (-(BVO ODE))"
             using ODE_bound_effect sol
             by (metis osubst_preserves_ODE_vars)
@@ -3400,12 +3402,15 @@ next
           have sol'':"(sol solves_ode (\<lambda>a. ODE_sem I (NOsubst ODE \<sigma>))) {0..t} {x. mk_v I (NOsubst ODE \<sigma>) (sol 0, b) x \<in> fml_sem I (NFsubst \<phi> \<sigma>)}"
             apply (rule solves_odeI)
             subgoal using sol' solves_ode_vderivD by blast
-            using sub fml_eq by blast
+            using sub fml_eq by blast*)
         show "\<exists>sola. sol 0 = sola 0 \<and>
-              (\<exists>ta. mk_v (NTadjoint I \<sigma> (sol 0, b)) ODE (sol 0, b) (sol t) = mk_v I (NOsubst ODE \<sigma>) (sola 0, b) (sola ta) \<and>
+              (\<exists>ta. mk_v (adjoint I \<sigma> (sol 0, bb)) ODE (sol 0, bb) (sol t) = mk_v I (Osubst ODE \<sigma>) (sola 0, bb) (sola ta) \<and>
                     0 \<le> ta \<and>
-                    (sola solves_ode (\<lambda>a. ODE_sem I (NOsubst ODE \<sigma>))) {0..ta} {x. mk_v I (NOsubst ODE \<sigma>) (sola 0, b) x \<in> fml_sem I (NFsubst \<phi> \<sigma>)})"
-      show "?thesis \<nu> \<omega>" 
+                    (sola solves_ode (\<lambda>a. ODE_sem I (Osubst ODE \<sigma>))) {0..ta} {x. mk_v I (Osubst ODE \<sigma>) (sola 0, bb) x \<in> fml_sem I (Fsubst \<phi> \<sigma>)})"
+          sorry
+        qed
+      then show "?case" by auto 
+        (*
         apply simp
         apply auto
         subgoal for  b sol t
@@ -3483,7 +3488,7 @@ next
       have eq3:"\<And>sol b. mk_v (local.adjoint I \<sigma> (sol 0, b)) ODE  (sol 0, b) =  mk_v I (Osubst ODE \<sigma>) (sol 0, b)"
         sorry
       have eq4:"\<And>sol b t x. fml_sem (adjoint I \<sigma> \<nu>) \<phi> = fml_sem (adjoint I \<sigma> (mk_v I (Osubst ODE \<sigma>) (sol 0, b) x)) \<phi> "
-        sorry*)
+        sorry*)*)
 next
   case (Padmit_Choice \<sigma> a b) then 
   have IH1:"hpsafe a \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (Psubst a \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (local.adjoint I \<sigma> \<nu>) a))"
@@ -3826,106 +3831,5 @@ next
   then show ?case by auto
 qed
 
-  
-subsection \<open>Unused, unproven lemmas\<close>
-  (* TODO: In principle useful, not used yet *)
-lemma extendf_safe:
-assumes good_interp:"is_interp I"
-shows "is_interp (extendf I R)"
-  sorry
-
-(* TODO: In principle useful, not used yet *)
-lemma extendc_safe:
-assumes good_interp:"is_interp I"
-shows "is_interp (extendc I R)"
-  sorry
-
-
-(* TODO: In principle useful, but not actually used. *)
-lemma nsubst_frechet:
-fixes I::"('sf, 'sc, 'sz) interp"
-fixes \<nu>::"'sz state"
-assumes good_interp:"is_interp I"
-shows "dfree \<theta> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> frechet I (NTsubst \<theta> \<sigma>) (fst \<nu>) = frechet (NTadjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
-proof (induct rule: dfree.induct)
-  case (dfree_Times \<theta>\<^sub>1 \<theta>\<^sub>2)
-    assume free1:"dfree \<theta>\<^sub>1"
-    assume IH1:"(\<And>i. dfree (\<sigma> i)) \<Longrightarrow> frechet I (NTsubst \<theta>\<^sub>1 \<sigma>) (fst \<nu>) = frechet (NTadjoint I \<sigma> \<nu>) \<theta>\<^sub>1 (fst \<nu>)"
-    assume free2:"dfree \<theta>\<^sub>2"
-    assume IH2:"(\<And>i. dfree (\<sigma> i)) \<Longrightarrow> frechet I (NTsubst \<theta>\<^sub>2 \<sigma>) (fst \<nu>) = frechet (NTadjoint I \<sigma> \<nu>) \<theta>\<^sub>2 (fst \<nu>)"
-    assume freeSub:"\<And>i. dfree (\<sigma> i)"
-    show "frechet I (NTsubst (Times \<theta>\<^sub>1 \<theta>\<^sub>2) \<sigma>) (fst \<nu>) = frechet (NTadjoint I \<sigma> \<nu>) (Times \<theta>\<^sub>1 \<theta>\<^sub>2) (fst \<nu>)"
-      using IH1[OF freeSub] IH2[OF freeSub] apply (auto simp add: fun_eq_iff)
-      using nsubst_sterm[OF free1, of \<sigma> I \<nu>] nsubst_sterm[OF free2, of \<sigma> I \<nu>] 
-      by (simp add: freeSub) 
-next
-  case (dfree_Fun args f) then
-  show "?case"
-    unfolding NTsubst.simps NTadjoint_def
-    apply (cases "f")
-    subgoal
-      apply (auto simp add:  NTadjoint_free nsubst_sterm good_interp)
-      proof -
-      fix a :: 'sf
-      assume a1: "\<And>i. dfree (\<sigma> i)"
-      { fix vv :: "(real, 'sz) vec"
-        have "\<And>i p. \<lparr>Functions = case_sum (Functions i) (\<lambda>a v. sterm_sem i (\<sigma> a) (fst p)), Predicates = Predicates i, Contexts = Contexts i, Programs = Programs i, ODEs = ODEs i\<rparr> = NTadjoint i \<sigma> p"
-          using a1 by (simp add: NTadjoint_free)
-        then have "(THE f. \<forall>v. (Functions I a has_derivative f v) (at v)) (\<chi> s. sterm_sem \<lparr>Functions = case_sum (Functions I) (\<lambda>a v. sterm_sem I (\<sigma> a) (fst \<nu>)), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I\<rparr> (args s) (fst \<nu>)) (\<chi> s. frechet \<lparr>Functions = case_sum (Functions I) (\<lambda>a v. dterm_sem I (\<sigma> a) \<nu>), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I\<rparr> (args s) (fst \<nu>) vv) = (THE f. \<forall>v. (Functions I a has_derivative f v) (at v)) (\<chi> s. sterm_sem \<lparr>Functions = case_sum (Functions I) (\<lambda>a v. dterm_sem I (\<sigma> a) \<nu>), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I\<rparr> (args s) (fst \<nu>)) (\<chi> s. frechet \<lparr>Functions = case_sum (Functions I) (\<lambda>a v. dterm_sem I (\<sigma> a) \<nu>), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I\<rparr> (args s) (fst \<nu>) vv)"
-          by (simp add: NTadjoint_def) }
-      then show "(\<lambda>v. (THE f. \<forall>v. (Functions I a has_derivative f v) (at v)) (\<chi> s. sterm_sem \<lparr>Functions = case_sum (Functions I) (\<lambda>a v. sterm_sem I (\<sigma> a) (fst \<nu>)), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I\<rparr> (args s) (fst \<nu>)) (\<chi> s. frechet \<lparr>Functions = case_sum (Functions I) (\<lambda>a v. dterm_sem I (\<sigma> a) \<nu>), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I\<rparr> (args s) (fst \<nu>) v)) = (\<lambda>v. (THE f. \<forall>v. (Functions I a has_derivative f v) (at v)) (\<chi> s. sterm_sem \<lparr>Functions = case_sum (Functions I) (\<lambda>a v. dterm_sem I (\<sigma> a) \<nu>), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I\<rparr> (args s) (fst \<nu>)) (\<chi> s. frechet \<lparr>Functions = case_sum (Functions I) (\<lambda>a v. dterm_sem I (\<sigma> a) \<nu>), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I\<rparr> (args s) (fst \<nu>) v))"
-        by blast
-      qed
-    subgoal for b
-     (* using frechet_correctness[OF good_interp] dfree_Fun.hyps apply auto*)
-      (* apply (auto simp add:  NTadjoint_free nsubst_sterm good_interp)
-    *)
-      sorry
-    done
-qed (auto) (*(auto  simp add: nsubst_sterm)*)
-
-(* TODO: Actually also not used so no need to prove it. *)
-lemma subst_frechet:
-fixes I::"('sf, 'sc, 'sz) interp"
-fixes \<nu>::"'sz state"
-assumes good_interp:"is_interp I"
-shows "dfree \<theta> \<Longrightarrow> (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> frechet I (Tsubst \<theta> \<sigma>) (fst \<nu>) = frechet (adjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
-proof (induct rule: dfree.induct)
-  case (dfree_Times \<theta>\<^sub>1 \<theta>\<^sub>2)
-  assume free1:"(dfree \<theta>\<^sub>1)"
-  assume IH1:"((\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> frechet I (Tsubst \<theta>\<^sub>1 \<sigma>) (fst \<nu>) = frechet (local.adjoint I \<sigma> \<nu>) \<theta>\<^sub>1 (fst \<nu>))"
-  assume free2:"(dfree \<theta>\<^sub>2)"
-  assume IH2:"((\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> frechet I (Tsubst \<theta>\<^sub>2 \<sigma>) (fst \<nu>) = frechet (local.adjoint I \<sigma> \<nu>) \<theta>\<^sub>2 (fst \<nu>))"
-  assume subFree:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
-  show "frechet I (Tsubst (Times \<theta>\<^sub>1 \<theta>\<^sub>2) \<sigma>) (fst \<nu>) = frechet (local.adjoint I \<sigma> \<nu>) (Times \<theta>\<^sub>1 \<theta>\<^sub>2) (fst \<nu>)"
-    using IH1[OF subFree] IH2[OF subFree] subst_sterm[OF free1 subFree] subst_sterm[OF free2 subFree] by auto 
-next
-  case (dfree_Fun args f) then
-  show "?case"
-    unfolding NTsubst.simps NTadjoint_def
-    apply (cases "SFunctions \<sigma> f")
-    apply (auto simp add:  NTadjoint_free nsubst_sterm good_interp)
-    subgoal using subst_sterm frechet_correctness apply auto sorry
-    subgoal for a 
-      proof -
-        assume frees:"(\<And>i. dfree (args i))"
-        assume freches:"(\<And>i. frechet I (Tsubst (args i) \<sigma>) (fst \<nu>) = frechet (local.adjoint I \<sigma> \<nu>) (args i) (fst \<nu>))"
-        assume freeSub:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
-        assume some: "SFunctions \<sigma> f = Some a"
-        have P:"\<forall>x. (Functions (local.adjoint I \<sigma> \<nu>) f has_derivative (frechet I (NTsubst a (\<lambda>i. Tsubst (args i) \<sigma>)) (fst \<nu>))) (at x)"
-          sorry
-        have eqThe:"(THE f'. \<forall>x. (Functions (local.adjoint I \<sigma> \<nu>) f has_derivative f' x) (at x)) 
-          = (\<lambda> _. frechet I (NTsubst a (\<lambda>i. Tsubst (args i) \<sigma>)) (fst \<nu>))"
-          apply (rule the_all_deriv)
-          using P by auto
-        show "frechet I (NTsubst a (\<lambda>i. Tsubst (args i) \<sigma>)) (fst \<nu>) =
-          (\<lambda>a. (THE f'. \<forall>x. (Functions (local.adjoint I \<sigma> \<nu>) f has_derivative f' x) (at x)) 
-            (\<chi> i. sterm_sem (local.adjoint I \<sigma> \<nu>) (args i) (fst \<nu>))
-          (\<chi> i. frechet (local.adjoint I \<sigma> \<nu>) (args i) (fst \<nu>) a))"
-          using eqThe apply auto
-          sorry
-      qed      
-      using subst_sterm frechet_correctness[OF good_interp] dfree_Fun.prems[of f] sorry
-qed (auto)
 
 end end
