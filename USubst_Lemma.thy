@@ -3230,14 +3230,27 @@ next
               (mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s) \<in> fml_sem I (Fsubst \<phi> \<sigma>)) 
             = (mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s) \<in> fml_sem (adjoint I \<sigma> (mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s))) \<phi>)"
             using IH[OF fsafe ssafe] by auto
+          have fml_vagree:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s)) (sol 0, bb) (- semBV I (Osubst ODE \<sigma>))"
+          subgoal for s
+              using mk_v_agree[of I "Osubst ODE \<sigma>" "(sol 0,bb)" "sol s"] osubst_eq_ODE_vars[of I ODE \<sigma>]
+              unfolding Vagree_def
+              by auto
+          done
+          have sembv_eq:"semBV I (Osubst ODE \<sigma>) = semBV (adjoint I \<sigma> (sol 0, bb)) ODE"
+            using subst_semBV by auto
+          have fml_vagree':"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s)) (sol 0, bb) (- semBV (adjoint I \<sigma> (sol 0,bb)) ODE)"
+              using sembv_eq fml_vagree by auto
+          have mysub:"-BVO ODE \<subseteq> -(semBV I (Osubst ODE \<sigma>))"
+            by(induction ODE,auto)
+          have fml_vagree:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s)) (sol 0, bb) (- BVO ODE)"
+            subgoal for s using agree_sub[OF mysub fml_vagree[of s]] by auto done
+          have fml_sem_eq:"\<And>s. s \<in> {0..t} \<Longrightarrow> fml_sem (adjoint I \<sigma> (mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s))) \<phi> = fml_sem (adjoint I \<sigma> (sol 0, bb)) \<phi>"
+            apply (rule uadmit_fml_adjoint)
+            using FUA fsafe ssafe  good_interp fml_vagree by auto
           have fml_eq2:"\<And>s. s \<in> {0..t} \<Longrightarrow> 
             ((mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s) \<in> fml_sem (adjoint I \<sigma> (mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s))) \<phi>)
             =(mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s) \<in> fml_sem (adjoint I \<sigma> (sol 0, bb)) \<phi>))"
-            subgoal for s
-              using FA ssafe fsafe good_interp mk_v_agree osubst_dec_ODE_vars agree_sub uadmit_fml_adjoint
-              Compl_anti_mono FUA agrees
-              sorry
-            done
+            using fml_sem_eq by auto
            have fml_eq3:"\<And>s. s \<in> {0..t} \<Longrightarrow>
             (mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s) \<in> fml_sem (adjoint I \<sigma> (sol 0, bb)) \<phi>) = (mk_v (adjoint I \<sigma> (sol 0,bb)) ODE (sol 0, bb) (sol s) \<in> fml_sem (adjoint I \<sigma> (sol 0, bb)) \<phi>) "
             using main_eq by auto
