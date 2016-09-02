@@ -2328,17 +2328,15 @@ next
          assume t:"0 \<le> t"
          assume sol:"(sol solves_ode (\<lambda>a. ODE_sem (NTadjoint I \<sigma> (sol 0, b)) ODE)) {0..t}
         {x. mk_v (NTadjoint I \<sigma> (sol 0, b)) ODE (sol 0, b) x \<in> fml_sem (NTadjoint I \<sigma> (sol 0, b)) \<phi>}"
-         have agree:"\<And>t. Vagree (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t)) (sol 0, b) (- BVO ODE)"
-          subgoal for t
+         have agree_sem:"\<And>t. Vagree (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t)) (sol 0, b) (- (Inl ` ODE_vars I (NOsubst ODE \<sigma>) \<union> Inr ` ODE_vars I (NOsubst ODE \<sigma>)))"
+            subgoal for t
             using mk_v_agree[of I "NOsubst ODE \<sigma>" "(sol 0, b)" "sol t"] unfolding Vagree_def apply auto
-            subgoal for i
-              apply(erule allE[where x=i])+
-              using osubst_preserves_BVO sorry
-            subgoal for i
-              apply(erule allE[where x=i])+
-              using osubst_preserves_BVO sorry
             done
           done
+          have bv_sub:"(-BVO ODE) \<subseteq> - (Inl ` ODE_vars I (NOsubst ODE \<sigma>) \<union> Inr ` ODE_vars I (NOsubst ODE \<sigma>))"
+            by(induction ODE, auto) 
+          have agree:"\<And>t. Vagree (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t)) (sol 0, b) (- BVO ODE)"
+            using agree_sub[OF bv_sub agree_sem] by auto
           (* Necessary *)
           have mkv:"\<And>t. mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t) = mk_v (NTadjoint I \<sigma> (sol t, b)) ODE (sol 0, b) (sol t)"
             using nsubst_mkv[OF good_interp NOU osafe frees]
