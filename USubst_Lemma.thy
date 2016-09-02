@@ -2167,10 +2167,10 @@ next
           have mkv:"\<And>t. mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t) = mk_v (NTadjoint I \<sigma> (sol t, b)) ODE (sol 0, b) (sol t)"
             using nsubst_mkv[OF good_interp NOU osafe frees]
             by auto
-          have hmm:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,b) (sol s, b) (-(ODE_vars ODE))"
+          have hmm:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,b) (sol s, b) (-(BVO ODE))"
             using ODE_bound_effect sol
-            by (metis osubst_preserves_ODE_vars)
-          have FVT_sub:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y)) \<subseteq> (-(ODE_vars ODE))"
+            by (metis osubst_preserves_BVO)
+          have FVT_sub:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y)) \<subseteq> (-(BVO ODE))"
             using NOU unfolding NOUadmit_def by auto
           have agrees:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,b) (sol s, b) (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y))" 
             subgoal for s using agree_sub[OF FVT_sub hmm[of s]] by auto done
@@ -2195,7 +2195,8 @@ next
             ((mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol s) \<in> fml_sem (NTadjoint I \<sigma> (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol s))) \<phi>)
             =(mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol s) \<in> fml_sem (NTadjoint I \<sigma> (sol 0, b)) \<phi>))"
             subgoal for s
-              by (metis NFU frees fsafe good_interp mk_v_agree osubst_preserves_ODE_vars uadmit_fml_ntadjoint)
+              using NFU frees fsafe good_interp mk_v_agree osubst_preserves_ODE_vars uadmit_fml_ntadjoint
+              using agree by blast
             done
            have fml_eq3:"\<And>s. s \<in> {0..t} \<Longrightarrow>
             (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol s) \<in> fml_sem (NTadjoint I \<sigma> (sol 0, b)) \<phi>) = (mk_v (NTadjoint I \<sigma> (sol 0,b)) ODE (sol 0, b) (sol s) \<in> fml_sem (NTadjoint I \<sigma> (sol 0, b)) \<phi>) "
@@ -2255,25 +2256,25 @@ next
          assume t:"0 \<le> t"
          assume sol:"(sol solves_ode (\<lambda>a. ODE_sem (NTadjoint I \<sigma> (sol 0, b)) ODE)) {0..t}
         {x. mk_v (NTadjoint I \<sigma> (sol 0, b)) ODE (sol 0, b) x \<in> fml_sem (NTadjoint I \<sigma> (sol 0, b)) \<phi>}"
-         have agree:"\<And>t. Vagree (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t)) (sol 0, b) (- ODE_vars ODE)"
+         have agree:"\<And>t. Vagree (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t)) (sol 0, b) (- BVO ODE)"
           subgoal for t
             using mk_v_agree[of I "NOsubst ODE \<sigma>" "(sol 0, b)" "sol t"] unfolding Vagree_def apply auto
             subgoal for i
               apply(erule allE[where x=i])+
-              using osubst_preserves_ODE_vars by blast
+              using osubst_preserves_BVO sorry
             subgoal for i
               apply(erule allE[where x=i])+
-              using osubst_preserves_ODE_vars by blast
+              using osubst_preserves_BVO sorry
             done
           done
           (* Necessary *)
           have mkv:"\<And>t. mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t) = mk_v (NTadjoint I \<sigma> (sol t, b)) ODE (sol 0, b) (sol t)"
             using nsubst_mkv[OF good_interp NOU osafe frees]
             by auto
-          have hmm:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,b) (sol s, b) (-(ODE_vars ODE))"
+          have hmm:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,b) (sol s, b) (-(BVO ODE))"
             using ODE_bound_effect sol
             by (metis osubst_preserves_ODE_vars)
-          have FVT_sub:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y)) \<subseteq> (-(ODE_vars ODE))"
+          have FVT_sub:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y)) \<subseteq> (-(BVO ODE))"
             using NOU unfolding NOUadmit_def by auto
           have agrees:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,b) (sol s, b) (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y))" 
             subgoal for s using agree_sub[OF FVT_sub hmm[of s]] by auto done
@@ -2297,9 +2298,8 @@ next
           have fml_eq2:"\<And>s. s \<in> {0..t} \<Longrightarrow> 
             ((mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol s) \<in> fml_sem (NTadjoint I \<sigma> (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol s))) \<phi>)
             =(mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol s) \<in> fml_sem (NTadjoint I \<sigma> (sol 0, b)) \<phi>))"
-            subgoal for s
-              by (metis NFU frees fsafe good_interp mk_v_agree osubst_preserves_ODE_vars uadmit_fml_ntadjoint)
-            done
+              using  NFU frees fsafe good_interp mk_v_agree osubst_preserves_ODE_vars uadmit_fml_ntadjoint agree by blast
+            
            have fml_eq3:"\<And>s. s \<in> {0..t} \<Longrightarrow>
             (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol s) \<in> fml_sem (NTadjoint I \<sigma> (sol 0, b)) \<phi>) = (mk_v (NTadjoint I \<sigma> (sol 0,b)) ODE (sol 0, b) (sol s) \<in> fml_sem (NTadjoint I \<sigma> (sol 0, b)) \<phi>) "
             using main_eq by auto
@@ -2832,7 +2832,7 @@ fixes I:: "('sf, 'sc, 'sz) interp" and \<nu> :: "'sz state"
 assumes good_interp:"is_interp I"
 shows "osafe ODE \<Longrightarrow> 
        ssafe \<sigma> \<Longrightarrow> 
-       Oadmit \<sigma> ODE (ODE_vars ODE) \<Longrightarrow>
+       Oadmit \<sigma> ODE (BVO ODE) \<Longrightarrow>
        ODE_sem I (Osubst ODE \<sigma>) (fst \<nu>) = ODE_sem (adjoint I \<sigma> \<nu>) ODE (fst \<nu>)"
 proof (induction rule: osafe.induct)
   case (osafe_Var c)
@@ -2846,7 +2846,7 @@ next
     unfolding ssafe_def by auto
 next
   case (osafe_Prod ODE1 ODE2) then
-  have NOU1:"Oadmit \<sigma> ODE1  (ODE_vars (OProd ODE1 ODE2))" and NOU2:"Oadmit \<sigma> ODE2  (ODE_vars (OProd ODE1 ODE2))" 
+  have NOU1:"Oadmit \<sigma> ODE1  (BVO (OProd ODE1 ODE2))" and NOU2:"Oadmit \<sigma> ODE2  (BVO (OProd ODE1 ODE2))" 
      by auto
   have TUA_sub:"\<And>\<sigma> \<theta> A B. TUadmit \<sigma> \<theta> B \<Longrightarrow> A \<subseteq> B \<Longrightarrow> TUadmit \<sigma> \<theta> A"
     unfolding TUadmit_def by auto
@@ -2863,9 +2863,9 @@ next
       then show ?case by auto
     qed
     done
-  have sub1:"(ODE_vars ODE1) \<subseteq> (ODE_vars (OProd ODE1 ODE2))"
+  have sub1:"(BVO ODE1) \<subseteq> (BVO (OProd ODE1 ODE2))"
     by auto
-  have sub2: "(ODE_vars ODE2) \<subseteq> (ODE_vars (OProd ODE1 ODE2))"
+  have sub2: "(BVO ODE2) \<subseteq> (BVO (OProd ODE1 ODE2))"
     by auto
   have "ODE_sem I (Osubst ODE1 \<sigma>) (fst \<nu>) = ODE_sem (adjoint I \<sigma> \<nu>) ODE1 (fst \<nu>)"
     "ODE_sem I (Osubst ODE2 \<sigma>) (fst \<nu>) = ODE_sem (adjoint I \<sigma> \<nu>) ODE2 (fst \<nu>)" using osafe_Prod.IH osafe_Prod.prems osafe_Prod.hyps
@@ -2873,15 +2873,27 @@ next
   then show ?case by auto
 qed
 
-lemma osubst_dec_ODE_vars: "ODE_vars (Osubst ODE \<sigma>) \<subseteq> ODE_vars ODE"
-  by (induction ODE, auto)
+(* TODO: ODE admissibility needs extra assumption that it doesn't bind too many things *)
+lemma osubst_dec_ODE_vars: "ODE_vars I (Osubst ODE \<sigma>) \<subseteq> ODE_vars I ODE"
+(*proof (induction ODE)
+  case (OVar x)
+  then show ?case apply (cases "SODEs \<sigma> x", auto)
+next
+  case (OSing x1a x2)
+  then show ?case sorry
+next
+  case (OProd ODE1 ODE2)
+  then show ?case sorry
+qed (auto)*)
+  sorry
+    
 
 lemma subst_mkv:
 fixes I::"('sf, 'sc, 'sz) interp"
 fixes \<nu>::"'sz state"
 fixes \<nu>'::"'sz state"
 assumes good_interp:"is_interp I"  
-assumes NOU:"Oadmit \<sigma> ODE (ODE_vars ODE)"
+assumes NOU:"Oadmit \<sigma> ODE (BVO ODE)"
 assumes osafe:"osafe ODE "
 assumes frees:"ssafe \<sigma>"
 (* I hereby name this assumption "wow" because it's a little surprising that we need it. 
@@ -2892,7 +2904,7 @@ assumes frees:"ssafe \<sigma>"
   
   Note this is not the case with nsubst_mkv because nsubst does not replace ODE constants, only function constants!
 *)
-assumes wow:"Vagree \<nu> (mk_xode I (Osubst ODE \<sigma>) (fst \<nu>')) (ODE_vars ODE - (ODE_vars (Osubst ODE \<sigma>)))"
+assumes wow:"Vagree \<nu> (mk_xode I (Osubst ODE \<sigma>) (fst \<nu>')) (semBV (adjoint I \<sigma> \<nu>') ODE - (semBV I (Osubst ODE \<sigma>)))"
 shows "(mk_v I (Osubst ODE \<sigma>) \<nu> (fst \<nu>')) 
   = (mk_v (adjoint I \<sigma> \<nu>') ODE \<nu> (fst \<nu>'))"
   apply(rule agree_UNIV_eq)
@@ -2904,9 +2916,10 @@ shows "(mk_v I (Osubst ODE \<sigma>) \<nu> (fst \<nu>'))
   apply auto
   subgoal for i
     apply(erule allE[where x=i])+
-    apply(cases "Inl i \<in> ODE_vars ODE")
-    apply(cases "Inl i \<in> ODE_vars (Osubst ODE \<sigma>)")
-    apply simp
+    apply(cases "Inl i \<in> BVO ODE")
+    apply(cases "Inl i \<in> BVO (Osubst ODE \<sigma>)")
+    sorry
+    (*apply simp
     proof -
     assume assms:"ODE_sem I (Osubst ODE \<sigma>) (fst \<nu>') = ODE_sem (local.adjoint I \<sigma> \<nu>') ODE (fst \<nu>')"
      "Inl i \<notin> ODE_vars (Osubst ODE \<sigma>) \<longrightarrow> fst (mk_v I (Osubst ODE \<sigma>) \<nu> (fst \<nu>')) $ i = fst \<nu> $ i"
@@ -2925,12 +2938,13 @@ shows "(mk_v I (Osubst ODE \<sigma>) \<nu> (fst \<nu>'))
     then have notin2:"Inl i \<notin> ODE_vars (Osubst ODE \<sigma>)" using osubst_dec_ODE_vars[of ODE \<sigma>] by auto 
     then show "fst (mk_v I (Osubst ODE \<sigma>) \<nu> (fst \<nu>')) $ i = fst (mk_v (local.adjoint I \<sigma> \<nu>') ODE \<nu> (fst \<nu>')) $ i"
       using assms by auto
-    qed
+    qed*)
 subgoal for i
     apply(erule allE[where x=i])+
-    apply(cases "Inr i \<in> ODE_vars ODE")
-    apply(cases "Inr i \<in> ODE_vars (Osubst ODE \<sigma>)")
-    apply simp
+    apply(cases "Inr i \<in> BVO ODE")
+    apply(cases "Inr i \<in> BVO (Osubst ODE \<sigma>)")
+    sorry
+    (*apply simp
     proof -
     assume assms: "ODE_sem I (Osubst ODE \<sigma>) (fst \<nu>') = ODE_sem (local.adjoint I \<sigma> \<nu>') ODE (fst \<nu>')"
     "Inr i \<in> ODE_vars ODE \<and> Inr i \<notin> ODE_vars (Osubst ODE \<sigma>) \<longrightarrow> snd \<nu> $ i = ODE_sem (local.adjoint I \<sigma> \<nu>') ODE (fst \<nu>') $ i"
@@ -2952,7 +2966,7 @@ subgoal for i
     then have notin2:"Inr i \<notin> ODE_vars (Osubst ODE \<sigma>)" using osubst_dec_ODE_vars[of ODE \<sigma>] by auto 
     then show "snd (mk_v I (Osubst ODE \<sigma>) \<nu> (fst \<nu>')) $ i = snd (mk_v (local.adjoint I \<sigma> \<nu>') ODE \<nu> (fst \<nu>')) $ i"
       using assms by auto
-    qed
+    qed*)
 done 
   
 lemma subst_fml_hp:
@@ -3093,9 +3107,9 @@ next
   then show ?case by auto
 next
   case (Padmit_ODE \<sigma> ODE \<phi>) then
-    have OA:"Oadmit \<sigma> ODE (ODE_vars ODE)"
+    have OA:"Oadmit \<sigma> ODE (BVO ODE)"
     and FA:"Fadmit \<sigma> \<phi>"
-    and FUA:"FUadmit \<sigma> \<phi> (ODE_vars ODE)"
+    and FUA:"FUadmit \<sigma> \<phi> (BVO ODE)"
     and IH:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"
       by auto
     have "hpsafe (EvolveODE ODE \<phi>) \<Longrightarrow>
@@ -3112,47 +3126,50 @@ next
           assume sol:"(sol solves_ode (\<lambda>a. ODE_sem I (Osubst ODE \<sigma>))) {0..t} 
             {x. mk_v I (Osubst ODE \<sigma>) (sol 0, bb) x \<in> fml_sem I (Fsubst \<phi> \<sigma>)}"
           have silly:"
-            \<And>t. Vagree (sol 0, bb) (mk_xode I (Osubst ODE \<sigma>) (fst (sol t, bb))) (ODE_vars ODE - ODE_vars (Osubst ODE \<sigma>)) \<Longrightarrow>
+            \<And>t. Vagree (sol 0, bb) (mk_xode I (Osubst ODE \<sigma>) (fst (sol t, bb))) (semBV (adjoint I \<sigma> (sol 0, bb)) ODE - semBV I (Osubst ODE \<sigma>)) \<Longrightarrow>
             mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol t) = mk_v (local.adjoint I \<sigma> (sol t, bb)) ODE (sol 0, bb) (sol t)"
-            subgoal for t using subst_mkv[OF good_interp OA osafe ssafe, of "(sol 0, bb)" "(sol t, bb)"] by auto done
-          have hmm:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (-(ODE_vars ODE))"
+            (*subgoal for t using subst_mkv[OF good_interp OA osafe ssafe, of "(sol 0, bb)" "(sol t, bb)"] by auto done*)
+            sorry
+          have hmm:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (-(BVO ODE))"
             using ODE_bound_effect sol
             using osubst_dec_ODE_vars
           proof -
             fix s :: real
             assume "s \<in> {0..t}"
-            then show "Vagree (sol 0, bb) (sol s, bb) (- ODE_vars ODE)"
-              by (meson Compl_subset_Compl_iff ODE_bound_effect agree_sub osubst_dec_ODE_vars sol)
+            then show "Vagree (sol 0, bb) (sol s, bb) (- BVO ODE)"
+              sorry
+              (*by (meson Compl_subset_Compl_iff ODE_bound_effect agree_sub osubst_dec_ODE_vars sol)*)
           qed
-          from hmm have hmm':"\<And>s. s \<in> {0..t} \<Longrightarrow> VSagree (sol 0) (sol s) {x. Inl x \<in> (-(ODE_vars ODE))}"
+          from hmm have hmm':"\<And>s. s \<in> {0..t} \<Longrightarrow> VSagree (sol 0) (sol s) {x. Inl x \<in> (-(BVO ODE))}"
             unfolding VSagree_def Vagree_def by auto
-          have hmmm:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (-(ODE_vars (Osubst ODE \<sigma>)))"
+          have hmmm:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (-(BVO (Osubst ODE \<sigma>)))"
             using ODE_bound_effect sol
             using osubst_dec_ODE_vars
           proof -
             fix s :: real
             assume "s \<in> {0..t}"
-            then show "Vagree (sol 0, bb) (sol s, bb) (- ODE_vars (Osubst ODE \<sigma>))"
+            then show "Vagree (sol 0, bb) (sol s, bb) (- BVO (Osubst ODE \<sigma>))"
               by (meson Compl_subset_Compl_iff ODE_bound_effect agree_sub osubst_dec_ODE_vars sol)
           qed
-          from hmmm have hmmm':"\<And>s. s \<in> {0..t} \<Longrightarrow> VSagree (sol 0) (sol s) {x. Inl x \<in> (-(ODE_vars (Osubst ODE \<sigma>)))}"
+          from hmmm have hmmm':"\<And>s. s \<in> {0..t} \<Longrightarrow> VSagree (sol 0) (sol s) {x. Inl x \<in> (-(BVO (Osubst ODE \<sigma>)))}"
             unfolding VSagree_def Vagree_def by auto
           
           (* Necessary *)
           have Vagree_of_VSagree:"\<And>\<nu>1 \<nu>2 \<omega>1 \<omega>2 S. VSagree \<nu>1 \<nu>2 {x. Inl x \<in> S} \<Longrightarrow> VSagree \<omega>1 \<omega>2 {x. Inr x \<in> S} \<Longrightarrow> Vagree (\<nu>1, \<omega>1) (\<nu>2, \<omega>2) S"
             unfolding VSagree_def Vagree_def by auto
-          have deleted_left_agree:"\<And>s. s \<in> {0..t} \<Longrightarrow> VSagree (sol 0) (sol s) {x. Inl x \<in> (ODE_vars ODE - ODE_vars (Osubst ODE \<sigma>))}"
+          have deleted_left_agree:"\<And>s. s \<in> {0..t} \<Longrightarrow> VSagree (sol 0) (sol s) {x. Inl x \<in> (semBV (adjoint I \<sigma> (sol 0,bb)) ODE - semBV I (Osubst ODE \<sigma>))}"
           unfolding VSagree_def apply auto
             subgoal for s i
               using hmmm'[of s] unfolding VSagree_def 
-              using osubst_dec_ODE_vars[of ODE \<sigma>] 
-              by auto
+              using osubst_dec_ODE_vars[of I ODE \<sigma>] 
+              (*by auto*)
+              sorry
             done
-          have deleted_right_agree:"\<And>s. s \<in> {0..t} \<Longrightarrow> VSagree bb (ODE_sem I (Osubst ODE \<sigma>) (sol s)) {x. Inr x \<in> (ODE_vars ODE - ODE_vars (Osubst ODE \<sigma>))}"
+          have deleted_right_agree:"\<And>s. s \<in> {0..t} \<Longrightarrow> VSagree bb  (sol s) {x. Inr x \<in> (semBV (adjoint I \<sigma> (sol 0,bb)) ODE - semBV I (Osubst ODE \<sigma>))}"
             unfolding VSagree_def apply auto
             subgoal for s i
               using hmmm'[of s] unfolding VSagree_def
-              using osubst_dec_ODE_vars[of ODE \<sigma>] 
+              using osubst_dec_ODE_vars[of I ODE \<sigma>] 
               apply auto
               apply (erule allE[where x=i])
               apply auto
@@ -3161,37 +3178,41 @@ next
                 proof -
                   assume s: "0 \<le> s"
                   and t: "s \<le> t"
-                  and v1:"Inr i \<in> ODE_vars ODE"
-                  and v2:"Inr i \<notin> ODE_vars (Osubst ODE \<sigma>)"
-                  and sub:"ODE_vars (Osubst ODE \<sigma>) \<subseteq> ODE_vars ODE"
+                  and v0:"Inr i \<notin> Inl ` ODE_vars I (Osubst ODE \<sigma>)"
+                  and v1:"Inr i \<notin> Inr ` ODE_vars I (Osubst ODE \<sigma>)"
+                  and v2:"i \<in> ODE_vars (local.adjoint I \<sigma> (sol 0, bb)) ODE"
+                  and sub:"ODE_vars I (Osubst ODE \<sigma>) \<subseteq> ODE_vars I ODE"
                   and sol:"sol 0 $ i = sol s $ i"
                   have bb0:"bb $ i = 0"
                     sorry
-                  have "\<And>ODE i t. Inr i \<notin> ODE_vars ODE \<Longrightarrow> ODE_sem I ODE t $ i = 0"
+                  (*have "\<And>ODE i t. Inr i \<notin> ODE_vars  ODE \<Longrightarrow> ODE_sem I ODE t $ i = 0"
                     subgoal for ODE i t
                       apply(induction ODE)
                       by auto
-                    done
+                    done*)
                   then have sem0:"ODE_sem I (Osubst ODE \<sigma>) (sol s) $ i = 0"
-                    using v2 by auto
-                  show "bb $ i = ODE_sem I (Osubst ODE \<sigma>) (sol s) $ i"
-                    using bb0 sem0 by auto
+                    using v2 sorry (*by auto*)
+                  show "bb $ i = sol s $ i"
+                    using bb0 sem0 sorry
+                  qed
+                  sorry
             done
-          have deleted_vars_agree:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0, bb) (sol s, ODE_sem I (Osubst ODE \<sigma>) (sol s)) (ODE_vars ODE - ODE_vars (Osubst ODE \<sigma>))"
+          (*have deleted_vars_agree:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0, bb) (sol s, ODE_sem I (Osubst ODE \<sigma>) (sol s)) (ODE_vars ODE - ODE_vars (Osubst ODE \<sigma>))"
             subgoal for s
             using Vagree_of_VSagree[of "sol 0" "sol s" "(ODE_vars ODE - ODE_vars (Osubst ODE \<sigma>))" 
                 "bb" "ODE_sem I (Osubst ODE \<sigma>) (sol s)" ] 
               deleted_left_agree[of s] deleted_right_agree[of s] 
             by auto
-          done
+          done*)
           have mkv:"\<And>s. s \<in> {0..t} \<Longrightarrow> mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s) = mk_v (adjoint I \<sigma> (sol s, bb)) ODE (sol 0, bb) (sol s)"
             subgoal for s
               apply (rule silly[of s])
               apply auto
-              using deleted_vars_agree[of s] by auto
+              sorry
+              (*using deleted_vars_agree[of s] by auto*)
             done
           
-          have lem:"\<And>ODE. Oadmit \<sigma> ODE (ODE_vars ODE) \<Longrightarrow> (\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x) \<subseteq> (-(ODE_vars ODE))"
+          have lem:"\<And>ODE. Oadmit \<sigma> ODE (BVO ODE) \<Longrightarrow> (\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x) \<subseteq> (-(BVO ODE))"
             subgoal for ODE
               apply(induction rule: Oadmit.induct)
               apply auto
@@ -3214,7 +3235,7 @@ next
                 qed
                 done
               done
-          have FVT_sub:"(\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x) \<subseteq> (-(ODE_vars ODE))"
+          have FVT_sub:"(\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x) \<subseteq> (-(BVO ODE))"
             using lem[OF OA] by auto
           have agrees: "\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x)"
              subgoal for s using agree_sub[OF FVT_sub hmm[of s]] by auto done
@@ -3240,7 +3261,8 @@ next
             =(mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s) \<in> fml_sem (adjoint I \<sigma> (sol 0, bb)) \<phi>))"
             subgoal for s
               using FA ssafe fsafe good_interp mk_v_agree osubst_dec_ODE_vars agree_sub uadmit_fml_adjoint
-              by (smt Compl_anti_mono FUA)
+              Compl_anti_mono FUA agrees
+              sorry
             done
            have fml_eq3:"\<And>s. s \<in> {0..t} \<Longrightarrow>
             (mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s) \<in> fml_sem (adjoint I \<sigma> (sol 0, bb)) \<phi>) = (mk_v (adjoint I \<sigma> (sol 0,bb)) ODE (sol 0, bb) (sol s) \<in> fml_sem (adjoint I \<sigma> (sol 0, bb)) \<phi>) "
@@ -3293,37 +3315,37 @@ next
             subgoal by (rule sol'') 
             done
       next
-        fix b 
+        fix aa ba bb 
           and sol::"real \<Rightarrow> (real, 'sz) vec" 
           and t::real
-         assume eq1:"\<nu> = (sol 0, b)"
-         assume eq2:"\<omega> = mk_v (NTadjoint I \<sigma> (sol 0, b)) ODE (sol 0, b) (sol t)"
+         (*assume eq1:"(aa,ba) = (sol 0, bb)"*)
+         assume eq2:"(aa,ba) = mk_v (adjoint I \<sigma> (sol 0, bb)) ODE (sol 0, bb) (sol t)"
          assume t:"0 \<le> t"
-         assume sol:"(sol solves_ode (\<lambda>a. ODE_sem (NTadjoint I \<sigma> (sol 0, b)) ODE)) {0..t}
-        {x. mk_v (NTadjoint I \<sigma> (sol 0, b)) ODE (sol 0, b) x \<in> fml_sem (NTadjoint I \<sigma> (sol 0, b)) \<phi>}"
-         have agree:"\<And>t. Vagree (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t)) (sol 0, b) (- ODE_vars ODE)"
+         assume sol:"(sol solves_ode (\<lambda>a. ODE_sem (adjoint I \<sigma> (sol 0, bb)) ODE)) {0..t}
+        {x. mk_v (adjoint I \<sigma> (sol 0, bb)) ODE (sol 0, bb) x \<in> fml_sem (adjoint I \<sigma> (sol 0, bb)) \<phi>}"
+         have agree:"\<And>t. Vagree (mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol t)) (sol 0, bb) (- BVO ODE)"
           subgoal for t
-            using mk_v_agree[of I "NOsubst ODE \<sigma>" "(sol 0, b)" "sol t"] unfolding Vagree_def apply auto
+            using mk_v_agree[of I "Osubst ODE \<sigma>" "(sol 0, bb)" "sol t"] unfolding Vagree_def apply auto
             subgoal for i
               apply(erule allE[where x=i])+
-              using osubst_preserves_ODE_vars by blast
+              using osubst_preserves_ODE_vars sorry 
             subgoal for i
               apply(erule allE[where x=i])+
-              using osubst_preserves_ODE_vars by blast
+              using osubst_preserves_ODE_vars sorry
             done
           done
           (* Necessary *)
-          have mkv:"\<And>t. mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t) = mk_v (NTadjoint I \<sigma> (sol t, b)) ODE (sol 0, b) (sol t)"
+          have mkv:"\<And>t. mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol t) = mk_v (adjoint I \<sigma> (sol t, bb)) ODE (sol 0, bb) (sol t)"
             using nsubst_mkv[OF good_interp NOU osafe frees]
             by auto
-          have hmm:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,b) (sol s, b) (-(ODE_vars ODE))"
+          have hmm:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (-(BVO ODE))"
             using ODE_bound_effect sol
             by (metis osubst_preserves_ODE_vars)
-          have FVT_sub:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y)) \<subseteq> (-(ODE_vars ODE))"
+          have FVT_sub:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y)) \<subseteq> (-(BVO ODE))"
             using NOU unfolding NOUadmit_def by auto
-          have agrees:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,b) (sol s, b) (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y))" 
+          have agrees:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y))" 
             subgoal for s using agree_sub[OF FVT_sub hmm[of s]] by auto done
-          have "\<And>s. s \<in> {0..t} \<Longrightarrow> mk_v (NTadjoint I \<sigma> (sol s, b)) ODE  = mk_v (NTadjoint I \<sigma> (sol 0, b)) ODE"
+          have "\<And>s. s \<in> {0..t} \<Longrightarrow> mk_v (NTadjoint I \<sigma> (sol s, bb)) ODE  = mk_v (NTadjoint I \<sigma> (sol 0, bb)) ODE"
             subgoal for s
               apply (rule uadmit_mkv_ntadjoint)
               prefer 3
