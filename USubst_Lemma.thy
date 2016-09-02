@@ -14,9 +14,9 @@ imports
   "./USubst"
 begin context ids begin
 lemma interp_eq:
-  "f = f' \<Longrightarrow> p = p' \<Longrightarrow> c = c' \<Longrightarrow> PP = PP' \<Longrightarrow> ode = ode' \<Longrightarrow>
-   \<lparr>Functions = f, Predicates = p, Contexts = c, Programs = PP, ODEs = ode\<rparr> =
-   \<lparr>Functions = f', Predicates = p', Contexts = c', Programs = PP', ODEs = ode'\<rparr>"
+  "f = f' \<Longrightarrow> p = p' \<Longrightarrow> c = c' \<Longrightarrow> PP = PP' \<Longrightarrow> ode = ode' \<Longrightarrow> odebv = odebv' \<Longrightarrow>
+   \<lparr>Functions = f, Predicates = p, Contexts = c, Programs = PP, ODEs = ode, ODEBV = odebv\<rparr> =
+   \<lparr>Functions = f', Predicates = p', Contexts = c', Programs = PP', ODEs = ode', ODEBV = odebv'\<rparr>"
   by auto
 
 lemma sterm_determines_frechet:
@@ -50,7 +50,7 @@ where
     Inl ff \<Rightarrow> (THE f'. \<forall>y. (Functions I ff has_derivative f' y) (at y))
               (\<chi> i. dterm_sem
                      \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. x $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
-                        ODEs = ODEs I\<rparr>
+                        ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
                      (args i) \<nu>) \<circ>
              (\<lambda>\<nu>'. \<chi> ia. extendf_deriv I g (args ia) \<nu> x \<nu>')
   | Inr ff \<Rightarrow> (\<lambda> \<nu>'. \<nu>' $ ff))"
@@ -83,13 +83,13 @@ lemma extendf_deriv:
     assume dfrees:"(\<And>i. dfree (args i))"
     assume IH1:"(\<And>ia. \<forall>x. ((\<lambda>R. dterm_sem
                       \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
-                         ODEs = ODEs I\<rparr>
+                         ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
                       (args ia) \<nu>) has_derivative
                 extendf_deriv I i_f (args ia) \<nu> x)
                 (at x))"
     then have IH1':"(\<And>ia. \<And>x. ((\<lambda>R. dterm_sem
                       \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
-                         ODEs = ODEs I\<rparr>
+                         ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
                       (args ia) \<nu>) has_derivative
                 extendf_deriv I i_f (args ia) \<nu> x)
                 (at x))"
@@ -99,14 +99,14 @@ lemma extendf_deriv:
     let ?f = "(\<lambda>x. Functions I a x)"
     let ?g = "(\<lambda> R. (\<chi> i. dterm_sem
                        \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I,
-                          Programs = Programs I, ODEs = ODEs I\<rparr>
+                          Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
                        (args i) \<nu>))"
     let ?myf' = "(\<lambda>x. (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y)) (?g x))"
     let ?myg' = "(\<lambda>x. (\<lambda>\<nu>'. \<chi> ia. extendf_deriv I i_f (args ia) \<nu> x \<nu>'))"
     have fg_eq:"(\<lambda>R. Functions I a
            (\<chi> i. dterm_sem
                   \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
-                     ODEs = ODEs I\<rparr>
+                     ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
                   (args i) \<nu>)) = (?f \<circ> ?g)"
       by auto
     have "\<forall>x. ((?f o ?g) has_derivative (?myf' x \<circ> ?myg' x)) (at x)"
@@ -123,12 +123,12 @@ lemma extendf_deriv:
     then show "((\<lambda>R. Functions I a
            (\<chi> i. dterm_sem
                   \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
-                     ODEs = ODEs I\<rparr>
+                     ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
                   (args i) \<nu>)) has_derivative
               (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
       (\<chi> i. dterm_sem
              \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. x $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
-                ODEs = ODEs I\<rparr>
+                ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
              (args i) \<nu>) \<circ>
      (\<lambda>\<nu>'. \<chi> ia. extendf_deriv I i_f (args ia) \<nu> x \<nu>'))
      (at x) "
@@ -265,7 +265,7 @@ lemma adjoint_consequence:"(\<And>f f'. SFunctions \<sigma> f = Some f' \<Longri
         assume agrees:"Vagree \<nu> \<omega> (\<Union>x. SFV \<sigma> x)"
         assume some:"SPredicates \<sigma> xa = Some a"
         assume sem:"\<nu> \<in> fml_sem \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. xaa $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
-                    ODEs = ODEs I\<rparr>
+                    ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
           a"
         from safes some have safe:"fsafe a" by auto
         have sub:"SFV \<sigma> (Inr (Inr xa)) \<subseteq> (\<Union>x. SFV \<sigma> x)"
@@ -276,7 +276,7 @@ lemma adjoint_consequence:"(\<And>f f'. SFunctions \<sigma> f = Some f' \<Longri
         then have agree:"Vagree \<nu> \<omega> (FVF a)"
           using some by auto
         let ?I' = "\<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. xaa $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
-                    ODEs = ODEs I\<rparr>"
+                    ODEs = ODEs I, ODEBV = ODEBV I\<rparr>"
         have IA:"\<And>S. Iagree ?I' ?I' (SIGF a)" using Iagree_refl by auto
         show "?thesis"
           using coincidence_formula[of a, OF safes[of xa a, OF some] IA agree] sem by auto
@@ -291,7 +291,7 @@ lemma adjoint_consequence:"(\<And>f f'. SFunctions \<sigma> f = Some f' \<Longri
         assume agrees:"Vagree \<nu> \<omega> (\<Union>x. SFV \<sigma> x)"
         assume some:"SPredicates \<sigma> xa = Some a"
         assume sem:"\<omega> \<in> fml_sem \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. xaa $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
-                    ODEs = ODEs I\<rparr>
+                    ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
           a"
         from safes some have safe:"fsafe a" by auto
         have sub:"SFV \<sigma> (Inr (Inr xa)) \<subseteq> (\<Union>x. SFV \<sigma> x)"
@@ -302,7 +302,7 @@ lemma adjoint_consequence:"(\<And>f f'. SFunctions \<sigma> f = Some f' \<Longri
         then have agree:"Vagree \<nu> \<omega> (FVF a)"
           using some by auto
         let ?I' = "\<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. xaa $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
-                    ODEs = ODEs I\<rparr>"
+                    ODEs = ODEs I, ODEBV = ODEBV I\<rparr>"
         have IA:"\<And>S. Iagree ?I' ?I' (SIGF a)" using Iagree_refl by auto
         show "?thesis"
           using coincidence_formula[of a, OF safes[of xa a, OF some] IA agree] sem by auto
@@ -934,8 +934,10 @@ lemma uadmit_mkv_adjoint:
       using uadmit_ode_adjoint'[OF ssafe good_interp VA osafe]
       unfolding Vagree_def
       apply auto
-      apply metis
-      apply metis
+      subgoal sorry
+      subgoal sorry
+      (*apply metis
+      apply metis*)
       done
     done
   done
@@ -956,8 +958,10 @@ apply(rule ext)
       using uadmit_ode_ntadjoint'[OF ssafe good_interp VA osafe]
       unfolding Vagree_def
       apply auto
-      apply metis
-      apply metis
+      subgoal sorry
+      subgoal sorry
+      (*apply metis
+      apply metis*)
       done
     done
   done
@@ -1613,7 +1617,7 @@ proof (induction rule: NTadmit.induct)
     have vecEq:" (\<chi> i. dterm_sem (NTadjoint I \<sigma> \<nu>) (args i) \<nu>) =
      (\<chi> i. dterm_sem
             \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. dterm_sem I (\<sigma> f') \<nu>), Predicates = Predicates I, Contexts = Contexts I,
-               Programs = Programs I, ODEs = ODEs I\<rparr>
+               Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
             (args i) \<nu>) "
       apply(rule vec_extensionality)
       by (auto simp add: NTadjoint_def)
@@ -1917,7 +1921,7 @@ next
     have "Padmit \<sigma> (EvolveODE ODE P) \<Longrightarrow>  hpsafe (Psubst (EvolveODE ODE P) \<sigma>)"
     proof -
       assume PA:"Padmit \<sigma> (EvolveODE ODE P)"
-      have OA:"Oadmit \<sigma> ODE (ODE_vars ODE)" and FA:"Fadmit \<sigma>  P" using PA by (auto dest: Padmit.cases)
+      have OA:"Oadmit \<sigma> ODE (BVO ODE)" and FA:"Fadmit \<sigma>  P" using PA by (auto dest: Padmit.cases)
       show "?thesis"
         using osubst_preserves_safe[of \<sigma> ODE, OF ssafe osafe OA] IH[OF FA] by (auto intro: hpsafe_fsafe.intros)
     qed
@@ -2023,10 +2027,20 @@ next
   then show ?case by auto
 qed
     
-lemma osubst_preserves_ODE_vars:
-shows "ODE_vars (NOsubst ODE \<sigma>) = ODE_vars ODE"
+lemma osubst_preserves_BVO:
+shows "BVO (NOsubst ODE \<sigma>) = BVO ODE"
 proof (induction "ODE")
 qed (auto)
+
+lemma osubst_preserves_ODE_vars:
+shows "ODE_vars I (NOsubst ODE \<sigma>) = ODE_vars (NTadjoint I \<sigma> \<nu>) ODE"
+proof (induction "ODE")
+qed (auto simp add: NTadjoint_def)
+
+lemma osubst_preserves_semBV:
+shows "semBV I (NOsubst ODE \<sigma>) = semBV (NTadjoint I \<sigma> \<nu>) ODE"
+proof (induction "ODE")
+qed (auto simp add: NTadjoint_def)
 
 lemma nsubst_mkv:
 fixes I::"('sf, 'sc, 'sz) interp"
@@ -2041,18 +2055,19 @@ shows "(mk_v I (NOsubst ODE \<sigma>) \<nu> (fst \<nu>'))
     apply(rule agree_UNIV_eq)
     using mk_v_agree[of "NTadjoint I \<sigma> \<nu>'" "ODE" \<nu> "fst \<nu>'"]
     using mk_v_agree[of "I" "NOsubst ODE \<sigma>" \<nu> "fst \<nu>'"] 
-    unfolding Vagree_def osubst_preserves_ODE_vars
+    unfolding Vagree_def 
     using nsubst_ode[OF good_interp osafe NOU frees, of \<nu>']
     apply auto
     subgoal for i
       apply(erule allE[where x=i])+
-      apply(cases "Inl i \<in> ODE_vars ODE")
-      by auto
+      apply(cases "Inl i \<in> semBV I (NOsubst ODE \<sigma>)")
+      using  osubst_preserves_ODE_vars
+      by (metis (full_types))+
     subgoal for i
       apply(erule allE[where x=i])+
-      apply(cases "Inr i \<in> ODE_vars ODE")
-      using osubst_preserves_ODE_vars[of ODE \<sigma>]
-      by simp+
+      apply(cases "Inr i \<in> BVO ODE")
+      using  osubst_preserves_ODE_vars
+      by (metis (full_types))+
     done
 
 (* TODO: Merge with lib *)
@@ -2078,7 +2093,7 @@ qed
 
 lemma ODE_unbound_zero:
 fixes i
-shows "Inl i \<notin> ODE_vars ODE \<Longrightarrow> ODE_sem I ODE x $ i = 0"
+shows "Inl i \<notin> BVO ODE \<Longrightarrow> ODE_sem I ODE x $ i = 0"
 proof (induction ODE)
 qed (auto)
 
@@ -2086,9 +2101,9 @@ lemma ODE_bound_effect:
 fixes s t sol ODE X b
 assumes s:"s \<in> {0..t}"
 assumes sol:"(sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t}  X"
-shows "Vagree (sol 0,b) (sol s, b) (-(ODE_vars ODE))"
+shows "Vagree (sol 0,b) (sol s, b) (-(BVO ODE))"
 proof -
-  have "\<And>i. Inl i \<notin> ODE_vars ODE \<Longrightarrow>  (\<forall> s. s \<in> {0..t} \<longrightarrow> sol s $ i = sol 0 $ i)"
+  have "\<And>i. Inl i \<notin> BVO ODE \<Longrightarrow>  (\<forall> s. s \<in> {0..t} \<longrightarrow> sol s $ i = sol 0 $ i)"
     subgoal for i
       apply auto
       subgoal for s
@@ -2099,7 +2114,7 @@ proof -
       by fastforce+
     done
   done
-  then show "Vagree (sol 0, b) (sol s, b) (- ODE_vars ODE)"
+  then show "Vagree (sol 0, b) (sol s, b) (- BVO ODE)"
     unfolding Vagree_def 
     using s  by (metis Compl_iff fst_conv  snd_conv)
 qed
@@ -2114,9 +2129,9 @@ proof (induction rule: NPadmit_NFadmit.induct)
   then show ?case unfolding NTadjoint_def by auto
 next
   case (NPadmit_ODE \<sigma> ODE \<phi>) then
-  have  NOU:"NOUadmit \<sigma> ODE (ODE_vars ODE)"
+  have  NOU:"NOUadmit \<sigma> ODE (BVO ODE)"
     and NFA:"NFadmit \<sigma> \<phi>"
-    and NFU:"NFUadmit \<sigma> \<phi> (ODE_vars ODE)"
+    and NFU:"NFUadmit \<sigma> \<phi> (BVO ODE)"
     and IH:"fsafe \<phi> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (NFsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (NTadjoint I \<sigma> \<nu>) \<phi>))"
       by auto
     have "hpsafe (EvolveODE ODE \<phi>) \<Longrightarrow>  (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (NPsubst (EvolveODE ODE \<phi>) \<sigma>)) = ((\<nu>, \<omega>) \<in> prog_sem (NTadjoint I \<sigma> \<nu>) (EvolveODE ODE \<phi>)))"
@@ -2137,7 +2152,7 @@ next
           assume t:"0 \<le> t"
           assume sol:"(sol solves_ode (\<lambda>a. ODE_sem I (NOsubst ODE \<sigma>))) {0..t} 
              {x. mk_v I (NOsubst ODE \<sigma>) (sol 0, b) x \<in> fml_sem I (NFsubst \<phi> \<sigma>)}"
-          have agree:"\<And>t. Vagree (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t)) (sol 0, b) (- ODE_vars ODE)"
+          have agree:"\<And>t. Vagree (mk_v I (NOsubst ODE \<sigma>) (sol 0, b) (sol t)) (sol 0, b) (- BVO ODE)"
             subgoal for t
             using mk_v_agree[of I "NOsubst ODE \<sigma>" "(sol 0, b)" "sol t"] unfolding Vagree_def apply auto
             subgoal for i
