@@ -3161,92 +3161,31 @@ next
           assume sol:"(sol solves_ode (\<lambda>a. ODE_sem I (Osubst ODE \<sigma>))) {0..t} 
             {x. mk_v I (Osubst ODE \<sigma>) (sol 0, bb) x \<in> fml_sem I (Fsubst \<phi> \<sigma>)}"
           have silly:"
-            \<And>t. Vagree (sol 0, bb) (mk_xode I (Osubst ODE \<sigma>) (fst (sol t, bb))) (semBV (adjoint I \<sigma> (sol 0, bb)) ODE - semBV I (Osubst ODE \<sigma>)) \<Longrightarrow>
-            mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol t) = mk_v (local.adjoint I \<sigma> (sol t, bb)) ODE (sol 0, bb) (sol t)"
-            (*subgoal for t using subst_mkv[OF good_interp OA osafe ssafe, of "(sol 0, bb)" "(sol t, bb)"] by auto done*)
-            sorry
+            \<And>t. mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol t) = mk_v (local.adjoint I \<sigma> (sol t, bb)) ODE (sol 0, bb) (sol t)"
+            subgoal for t using subst_mkv[OF good_interp OA osafe ssafe, of "(sol 0, bb)" "(sol t, bb)"] by auto done
+          have hmmsubst:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (-(BVO (Osubst ODE \<sigma>)))"
+            subgoal for s
+              apply (rule ODE_bound_effect[of s])
+              apply auto[1]
+              by (rule sol)
+            done
+          have sub:"(-(BVO ODE)) \<subseteq> (-(BVO (Osubst ODE \<sigma>)))"
+            by(induction ODE, auto)
           have hmm:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (-(BVO ODE))"
-            using ODE_bound_effect sol
-            using osubst_dec_ODE_vars
-          proof -
-            fix s :: real
-            assume "s \<in> {0..t}"
-            then show "Vagree (sol 0, bb) (sol s, bb) (- BVO ODE)"
-              sorry
-              (*by (meson Compl_subset_Compl_iff ODE_bound_effect agree_sub osubst_dec_ODE_vars sol)*)
-          qed
+            subgoal for s
+              using agree_sub[OF sub hmmsubst[of s]] by auto
+            done
           from hmm have hmm':"\<And>s. s \<in> {0..t} \<Longrightarrow> VSagree (sol 0) (sol s) {x. Inl x \<in> (-(BVO ODE))}"
             unfolding VSagree_def Vagree_def by auto
-          have hmmm:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (-(BVO (Osubst ODE \<sigma>)))"
-            using ODE_bound_effect sol
-            using osubst_dec_ODE_vars
-          proof -
-            fix s :: real
-            assume "s \<in> {0..t}"
-            then show "Vagree (sol 0, bb) (sol s, bb) (- BVO (Osubst ODE \<sigma>))"
-              by (meson Compl_subset_Compl_iff ODE_bound_effect agree_sub osubst_dec_ODE_vars sol)
-          qed
+          note hmmm = hmmsubst
           from hmmm have hmmm':"\<And>s. s \<in> {0..t} \<Longrightarrow> VSagree (sol 0) (sol s) {x. Inl x \<in> (-(BVO (Osubst ODE \<sigma>)))}"
             unfolding VSagree_def Vagree_def by auto
-          
           (* Necessary *)
           have Vagree_of_VSagree:"\<And>\<nu>1 \<nu>2 \<omega>1 \<omega>2 S. VSagree \<nu>1 \<nu>2 {x. Inl x \<in> S} \<Longrightarrow> VSagree \<omega>1 \<omega>2 {x. Inr x \<in> S} \<Longrightarrow> Vagree (\<nu>1, \<omega>1) (\<nu>2, \<omega>2) S"
             unfolding VSagree_def Vagree_def by auto
-          have deleted_left_agree:"\<And>s. s \<in> {0..t} \<Longrightarrow> VSagree (sol 0) (sol s) {x. Inl x \<in> (semBV (adjoint I \<sigma> (sol 0,bb)) ODE - semBV I (Osubst ODE \<sigma>))}"
-          unfolding VSagree_def apply auto
-            subgoal for s i
-              using hmmm'[of s] unfolding VSagree_def 
-              using osubst_dec_ODE_vars[of I ODE \<sigma>] 
-              (*by auto*)
-              sorry
-            done
-          have deleted_right_agree:"\<And>s. s \<in> {0..t} \<Longrightarrow> VSagree bb  (sol s) {x. Inr x \<in> (semBV (adjoint I \<sigma> (sol 0,bb)) ODE - semBV I (Osubst ODE \<sigma>))}"
-            unfolding VSagree_def apply auto
-            subgoal for s i
-              using hmmm'[of s] unfolding VSagree_def
-              using osubst_dec_ODE_vars[of I ODE \<sigma>] 
-              apply auto
-              apply (erule allE[where x=i])
-              apply auto
-              defer
-              subgoal
-                proof -
-                  assume s: "0 \<le> s"
-                  and t: "s \<le> t"
-                  and v0:"Inr i \<notin> Inl ` ODE_vars I (Osubst ODE \<sigma>)"
-                  and v1:"Inr i \<notin> Inr ` ODE_vars I (Osubst ODE \<sigma>)"
-                  and v2:"i \<in> ODE_vars (local.adjoint I \<sigma> (sol 0, bb)) ODE"
-                  and sub:"ODE_vars I (Osubst ODE \<sigma>) \<subseteq> ODE_vars I ODE"
-                  and sol:"sol 0 $ i = sol s $ i"
-                  have bb0:"bb $ i = 0"
-                    sorry
-                  (*have "\<And>ODE i t. Inr i \<notin> ODE_vars  ODE \<Longrightarrow> ODE_sem I ODE t $ i = 0"
-                    subgoal for ODE i t
-                      apply(induction ODE)
-                      by auto
-                    done*)
-                  then have sem0:"ODE_sem I (Osubst ODE \<sigma>) (sol s) $ i = 0"
-                    using v2 sorry (*by auto*)
-                  show "bb $ i = sol s $ i"
-                    using bb0 sem0 sorry
-                  qed
-                  sorry
-            done
-          (*have deleted_vars_agree:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0, bb) (sol s, ODE_sem I (Osubst ODE \<sigma>) (sol s)) (ODE_vars ODE - ODE_vars (Osubst ODE \<sigma>))"
-            subgoal for s
-            using Vagree_of_VSagree[of "sol 0" "sol s" "(ODE_vars ODE - ODE_vars (Osubst ODE \<sigma>))" 
-                "bb" "ODE_sem I (Osubst ODE \<sigma>) (sol s)" ] 
-              deleted_left_agree[of s] deleted_right_agree[of s] 
-            by auto
-          done*)
           have mkv:"\<And>s. s \<in> {0..t} \<Longrightarrow> mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s) = mk_v (adjoint I \<sigma> (sol s, bb)) ODE (sol 0, bb) (sol s)"
-            subgoal for s
-              apply (rule silly[of s])
-              apply auto
-              sorry
-              (*using deleted_vars_agree[of s] by auto*)
+            subgoal for s by (rule silly[of s])
             done
-          
           have lem:"\<And>ODE. Oadmit \<sigma> ODE (BVO ODE) \<Longrightarrow> (\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x) \<subseteq> (-(BVO ODE))"
             subgoal for ODE
               apply(induction rule: Oadmit.induct)
