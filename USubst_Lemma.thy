@@ -934,10 +934,78 @@ lemma uadmit_mkv_adjoint:
       using uadmit_ode_adjoint'[OF ssafe good_interp VA osafe]
       unfolding Vagree_def
       apply auto
-      subgoal sorry
-      subgoal sorry
-      (*apply metis
-      apply metis*)
+      subgoal for i
+        apply (cases "Inl i \<in> Inl ` ODE_vars (adjoint I \<sigma> \<omega>) ODE")
+        proof -
+         assume sem_eq:"ODE_sem (local.adjoint I \<sigma> \<nu>) ODE = ODE_sem (local.adjoint I \<sigma> \<omega>) ODE"
+         have vars_eq:"ODE_vars (local.adjoint I \<sigma> \<nu>) ODE = ODE_vars (local.adjoint I \<sigma> \<omega>) ODE"
+           apply(induction ODE)
+           unfolding adjoint_def by auto
+         assume thing1:" 
+           \<forall>i. (Inl i \<in> Inl ` ODE_vars (local.adjoint I \<sigma> \<nu>) ODE \<longrightarrow> fst (mk_v (local.adjoint I \<sigma> \<nu>) ODE R solt) $ i = solt $ i) \<and>
+             (Inl i \<in> Inr ` ODE_vars (local.adjoint I \<sigma> \<nu>) ODE \<longrightarrow> fst (mk_v (local.adjoint I \<sigma> \<nu>) ODE R solt) $ i = solt $ i)"
+         assume thing2:" 
+           \<forall>i. (Inl i \<in> Inl ` ODE_vars (local.adjoint I \<sigma> \<omega>) ODE \<longrightarrow> fst (mk_v (local.adjoint I \<sigma> \<omega>) ODE R solt) $ i = solt $ i) \<and>
+             (Inl i \<in> Inr ` ODE_vars (local.adjoint I \<sigma> \<omega>) ODE \<longrightarrow> fst (mk_v (local.adjoint I \<sigma> \<omega>) ODE R solt) $ i = solt $ i)"
+         assume inl:"Inl i \<in> Inl ` ODE_vars (local.adjoint I \<sigma> \<omega>) ODE"
+          from thing1 and inl have eq1: "fst (mk_v (local.adjoint I \<sigma> \<nu>) ODE R solt) $ i = solt $ i"
+            using vars_eq by auto
+          from thing2 and inl have eq2: "fst (mk_v (local.adjoint I \<sigma> \<omega>) ODE R solt) $ i = solt $ i"
+            using vars_eq by auto
+         show "fst (mk_v (local.adjoint I \<sigma> \<nu>) ODE R solt) $ i = fst (mk_v (local.adjoint I \<sigma> \<omega>) ODE R solt) $ i"
+           using eq1 eq2 by auto
+       next
+         assume sem_eq:"ODE_sem (local.adjoint I \<sigma> \<nu>) ODE = ODE_sem (local.adjoint I \<sigma> \<omega>) ODE"
+         assume thing1:"\<forall>i. Inl i \<notin> Inl ` ODE_vars (local.adjoint I \<sigma> \<nu>) ODE \<and> Inl i \<notin> Inr ` ODE_vars (local.adjoint I \<sigma> \<nu>) ODE \<longrightarrow>
+        fst (mk_v (local.adjoint I \<sigma> \<nu>) ODE R solt) $ i = fst R $ i"
+         assume thing2:"\<forall>i. Inl i \<notin> Inl ` ODE_vars (local.adjoint I \<sigma> \<omega>) ODE \<and> Inl i \<notin> Inr ` ODE_vars (local.adjoint I \<sigma> \<omega>) ODE \<longrightarrow>
+        fst (mk_v (local.adjoint I \<sigma> \<omega>) ODE R solt) $ i = fst R $ i"
+         assume inl:"Inl i \<notin> Inl ` ODE_vars (local.adjoint I \<sigma> \<omega>) ODE"
+         have vars_eq:"ODE_vars (local.adjoint I \<sigma> \<nu>) ODE = ODE_vars (local.adjoint I \<sigma> \<omega>) ODE"
+           apply(induction ODE)
+           unfolding adjoint_def by auto
+         from thing1 and inl have eq1: "fst (mk_v (local.adjoint I \<sigma> \<nu>) ODE R solt) $ i = fst R $ i"
+           using vars_eq by auto
+         from thing2 and inl have eq2: "fst (mk_v (local.adjoint I \<sigma> \<omega>) ODE R solt) $ i = fst R $ i"
+           using vars_eq by auto
+         show "fst (mk_v (local.adjoint I \<sigma> \<nu>) ODE R solt) $ i = fst (mk_v (local.adjoint I \<sigma> \<omega>) ODE R solt) $ i"
+           using eq1 eq2 by auto
+       qed
+      subgoal for i
+        apply (cases "Inr i \<in> Inr ` ODE_vars (adjoint I \<sigma> \<omega>) ODE")
+        proof -
+          assume sem_eq:"ODE_sem (local.adjoint I \<sigma> \<nu>) ODE = ODE_sem (local.adjoint I \<sigma> \<omega>) ODE"
+          assume thing1:"\<forall>i. (Inr i \<in> Inl ` ODE_vars (local.adjoint I \<sigma> \<nu>) ODE \<longrightarrow>
+               snd (mk_v (local.adjoint I \<sigma> \<nu>) ODE R solt) $ i = ODE_sem (local.adjoint I \<sigma> \<omega>) ODE solt $ i) \<and>
+              (Inr i \<in> Inr ` ODE_vars (local.adjoint I \<sigma> \<nu>) ODE \<longrightarrow>
+               snd (mk_v (local.adjoint I \<sigma> \<nu>) ODE R solt) $ i = ODE_sem (local.adjoint I \<sigma> \<omega>) ODE solt $ i)"
+          assume thing2:"\<forall>i. (Inr i \<in> Inl ` ODE_vars (local.adjoint I \<sigma> \<omega>) ODE \<longrightarrow>
+               snd (mk_v (local.adjoint I \<sigma> \<omega>) ODE R solt) $ i = ODE_sem (local.adjoint I \<sigma> \<omega>) ODE solt $ i) \<and>
+              (Inr i \<in> Inr ` ODE_vars (local.adjoint I \<sigma> \<omega>) ODE \<longrightarrow>
+           snd (mk_v (local.adjoint I \<sigma> \<omega>) ODE R solt) $ i = ODE_sem (local.adjoint I \<sigma> \<omega>) ODE solt $ i)"
+          assume inr:"Inr i \<in> Inr ` ODE_vars (local.adjoint I \<sigma> \<omega>) ODE"
+          have vars_eq:"ODE_vars (local.adjoint I \<sigma> \<nu>) ODE = ODE_vars (local.adjoint I \<sigma> \<omega>) ODE"
+           apply(induction ODE)
+           unfolding adjoint_def by auto
+          show "snd (mk_v (local.adjoint I \<sigma> \<nu>) ODE R solt) $ i = snd (mk_v (local.adjoint I \<sigma> \<omega>) ODE R solt) $ i"
+            using thing1 thing2 vars_eq inr by auto
+        next
+          assume sem_eq:"ODE_sem (local.adjoint I \<sigma> \<nu>) ODE = ODE_sem (local.adjoint I \<sigma> \<omega>) ODE"
+          assume thing1:"\<forall>i. Inr i \<notin> Inl ` ODE_vars (local.adjoint I \<sigma> \<nu>) ODE \<and> Inr i \<notin> Inr ` ODE_vars (local.adjoint I \<sigma> \<nu>) ODE \<longrightarrow>
+              snd (mk_v (local.adjoint I \<sigma> \<nu>) ODE R solt) $ i = snd R $ i"
+          assume thing2:"\<forall>i. Inr i \<notin> Inl ` ODE_vars (local.adjoint I \<sigma> \<omega>) ODE \<and> Inr i \<notin> Inr ` ODE_vars (local.adjoint I \<sigma> \<omega>) ODE \<longrightarrow>
+              snd (mk_v (local.adjoint I \<sigma> \<omega>) ODE R solt) $ i = snd R $ i"
+          assume inr:"Inr i \<notin> Inr ` ODE_vars (local.adjoint I \<sigma> \<omega>) ODE"
+          have vars_eq:"ODE_vars (local.adjoint I \<sigma> \<nu>) ODE = ODE_vars (local.adjoint I \<sigma> \<omega>) ODE"
+           apply(induction ODE)
+           unfolding adjoint_def by auto
+          have eq1:"snd (mk_v (local.adjoint I \<sigma> \<nu>) ODE R solt) $ i = snd R $ i"
+            using thing1 sem_eq vars_eq inr by auto
+          have eq2:"snd (mk_v (local.adjoint I \<sigma> \<omega>) ODE R solt) $ i = snd R $ i"
+            using thing2 sem_eq vars_eq inr by auto
+          show "snd (mk_v (local.adjoint I \<sigma> \<nu>) ODE R solt) $ i = snd (mk_v (local.adjoint I \<sigma> \<omega>) ODE R solt) $ i"
+            using eq1 eq2 by auto
+        qed
       done
     done
   done
