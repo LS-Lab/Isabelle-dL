@@ -2943,20 +2943,11 @@ next
   then show ?case by auto
 qed
 
-(* TODO: ODE admissibility needs extra assumption that it doesn't bind too many things *)
-lemma osubst_dec_ODE_vars: "ODE_vars I (Osubst ODE \<sigma>) \<subseteq> ODE_vars I ODE"
-(*proof (induction ODE)
+lemma osubst_dec_ODE_vars: "ODE_vars I (Osubst ODE \<sigma>) \<subseteq> ODE_vars (adjoint I \<sigma> \<nu>) ODE"
+proof (induction ODE)
   case (OVar x)
-  then show ?case apply (cases "SODEs \<sigma> x", auto)
-next
-  case (OSing x1a x2)
-  then show ?case sorry
-next
-  case (OProd ODE1 ODE2)
-  then show ?case sorry
-qed (auto)*)
-  sorry
-    
+  then show ?case by (cases "SODEs \<sigma> x", auto simp add: adjoint_def)
+qed (auto)
 
 lemma subst_mkv:
 fixes I::"('sf, 'sc, 'sz) interp"
