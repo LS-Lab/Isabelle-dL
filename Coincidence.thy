@@ -1466,7 +1466,8 @@ lemma ode_alt_sem:"\<And>I::('a::finite,'b::finite,'c::finite) interp. \<And>ODE
       (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu> x \<in> fml_sem I \<phi>} \<and>
       VSagree (sol 0) (fst \<nu>) {x | x. Inl x \<in> FVP (EvolveODE ODE \<phi>)}}
 " 
-  sorry
-  (*using ode_sem_eq by auto*) 
+  subgoal for I ODE \<phi>
+    using ode_sem_eq[of ODE \<phi> I] by auto
+  done
 end
 end 
