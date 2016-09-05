@@ -5,7 +5,7 @@ imports
   "../afp/thys/Ordinary_Differential_Equations/ODE_Analysis"
   "./Ids"
   "./Lib"
-  "./Syntax"
+  "./Syntax"                                                                                                                  
   "./Denotational_Semantics"
   "./Frechet_Correctness"
   "./Coincidence"
@@ -105,12 +105,18 @@ lemma DW_valid:"valid DWaxiom"
   done
 
 lemma DE_lemma:
+fixes ab bb::"'sz simple_state"
+and sol::"real \<Rightarrow> 'sz simple_state"
+and I::"('sf, 'sc, 'sz) interp"
+shows
 "repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1 (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))
  = mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)"
 proof
+  have set_eq:" {Inl vid1, Inr vid1} = {Inr vid1, Inl vid1}" by auto
   have agree:"Vagree (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) (mk_xode I (OSing vid1 (f1 fid1 vid1)) (sol t))
       {Inl vid1, Inr vid1}" 
-    using mk_v_agree[of I "(OSing vid1 (f1 fid1 vid1))" "(ab, bb)" "(sol t)"] by auto
+    using mk_v_agree[of I "(OSing vid1 (f1 fid1 vid1))" "(ab, bb)" "(sol t)"] 
+    unfolding semBV.simps using set_eq by auto
   have fact:"dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t))
           = snd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) $ vid1"
     using agree apply(simp only: Vagree_def dterm_sem.simps f1_def mk_xode.simps)
@@ -158,7 +164,7 @@ lemma DE_valid:"valid DEaxiom"
       sorry (*by (metis (no_types, lifting) dsafe dsafe_Fun_simps image_iff)*)
     show "valid DEaxiom"
     apply(auto simp only: DEaxiom_def valid_def Let_def iff_sem impl_sem)
-    apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq box_sem simp del: prog_sem.simps(8) simp add: ode_alt_sem[OF osafe fsafe])
+    apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq box_sem) (* simp del: prog_sem.simps(8) simp add: ode_alt_sem[OF osafe fsafe] *)
   proof -
     fix I::"('sf,'sc,'sz) interp"
     and aa ba ab bb sol 
@@ -324,7 +330,7 @@ lemma DS_valid:"valid DSaxiom"
     have fsafe:"fsafe(p1 vid2 vid1)"
       unfolding p1_def
       apply(rule fsafe_Prop)
-      using singleton.simps dsafe_Const by auto
+      using singleton.simps dsafe_Const by (auto intro: dfree.intros)
     show "valid DSaxiom"
   apply(auto simp only: DSaxiom_def valid_def Let_def iff_sem impl_sem box_sem)
   apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq  iff_sem impl_sem box_sem forall_sem
