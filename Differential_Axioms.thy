@@ -334,7 +334,7 @@ lemma DS_valid:"valid DSaxiom"
     show "valid DSaxiom"
   apply(auto simp only: DSaxiom_def valid_def Let_def iff_sem impl_sem box_sem)
   apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq  iff_sem impl_sem box_sem forall_sem
-       simp del: prog_sem.simps(8) simp add: ode_alt_sem[OF osafe fsafe])
+       (*simp del: prog_sem.simps(8) simp add: ode_alt_sem[OF osafe fsafe]*))
   proof -
     fix I::"('sf,'sc,'sz) interp" 
     and a b r aa ba
@@ -373,9 +373,9 @@ lemma DS_valid:"valid DSaxiom"
   let ?c = "Functions I fid1 (\<chi> _. 0)"
   let ?sol = "(\<lambda>t. \<chi> i. if i = vid1 then (a $ i) + ?c * t else (a $ i))"
   have 
-  agrees:"Vagree (mk_v I (OSing vid1 (f0 fid1)) (a, b) (?sol r)) (a, b) (- ODE_vars (OSing vid1 (f0 fid1))) 
+  agrees:"Vagree (mk_v I (OSing vid1 (f0 fid1)) (a, b) (?sol r)) (a, b) (- semBV I (OSing vid1 (f0 fid1))) 
   \<and> Vagree (mk_v I (OSing vid1 (f0 fid1)) (a, b) (?sol r))
-   (mk_xode I (OSing vid1 (f0 fid1)) (?sol r)) (ODE_vars (OSing vid1 (f0 fid1)))" 
+   (mk_xode I (OSing vid1 (f0 fid1)) (?sol r)) (semBV I (OSing vid1 (f0 fid1)))" 
     using mk_v_agree[of "I" "(OSing vid1 (f0 fid1))" "(a,b)" "(?sol r)"] by auto
   
   have prereq1a:"fst ?abba
@@ -458,7 +458,7 @@ lemma DS_valid:"valid DSaxiom"
   have sem_eq:"?abba \<in> fml_sem I (p1 vid3 vid1) \<longleftrightarrow> (aa,ba) \<in> fml_sem I (p1 vid3 vid1)"
     apply(rule coincidence_formula)
     apply (auto simp add: aaba Vagree_def p1_def f0_def empty_def)
-    subgoal by (standard, auto intro: hpsafe_fsafe.intros dsafe.intros)
+    subgoal by (auto intro: dfree.intros)
     subgoal using Iagree_refl by auto
     done
   from inPred sem_eq have  inPred':"(aa,ba) \<in> fml_sem I (p1 vid3 vid1)"
