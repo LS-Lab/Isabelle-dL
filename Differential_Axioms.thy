@@ -741,51 +741,69 @@ fixes f f' ::"real \<Rightarrow> real" and t :: real
 assumes f':"\<And>s. s \<in> {0..t} \<Longrightarrow> (f has_derivative f') (at s)"
 assumes geq':"\<And>s. s \<in> {0..t} \<Longrightarrow> f' s \<ge> 0"
 assumes geq0:"f 0 \<ge> 0"
-assumes int_s:"s \<in> {0..t}"
+assumes int_s:"s > 0 \<and> s \<le> t"
 assumes t: "0 < t"
-shows "f t \<ge> 0"
+shows "f s \<ge> 0"
 proof -
-  have "\<not>(f t \<ge> 0) \<Longrightarrow> False"
+  have "\<not>(f s \<ge> 0) \<Longrightarrow> False"
     proof -
-      assume "\<not>(f t \<ge> 0)"
-      then have less:"f t < 0" by auto
-      have cont':"\<And>s. s \<in> {0..t} \<Longrightarrow> isCont f s"
+      assume "\<not>(f s \<ge> 0)"
+      then have less:"f s < 0" by auto
+      have sub:"\<And>s'. s' \<in> {0..s} \<Longrightarrow> s' \<in> {0..t}" using int_s t by auto
+      have cont':"\<And>s'. s' \<in> {0..s} \<Longrightarrow> isCont f s'"
         subgoal for s  
           using has_derivative_continuous[OF f'[of s]]
-          unfolding isCont_def by auto
+          unfolding isCont_def using sub[of s] by auto
         done
-      then have cont:"\<forall>x. 0 \<le> x \<and> x \<le> t \<longrightarrow> isCont f x" by auto
-      have "\<And>s. 0 < s \<and> s < t \<Longrightarrow> f differentiable at s"
-        subgoal for s using f'[of s] 
-          using Derivative.differentiableI by auto
+      then have cont:"\<forall>x. 0 \<le> x \<and> x \<le> s \<longrightarrow> isCont f x" by auto
+      have "\<And>s'. 0 < s' \<and> s' < s \<Longrightarrow> f differentiable at s'"
+        subgoal for s' using f'[of s'] 
+          using Derivative.differentiableI sub[of s'] by auto
         done
-      then have diff:"\<forall>x. 0 < x \<and> x < t \<longrightarrow> f differentiable at x"
+      then have diff:"\<forall>x. 0 < x \<and> x < s \<longrightarrow> f differentiable at x"
         by auto
-      then obtain l z where ozt:"0 < z \<and> z < t" and fl:"(f has_real_derivative l) (at z)" and ft:"f t - f 0 = (t - 0) * l"
-          using Deriv.MVT[OF t, of f, OF cont diff] by auto
-      then have zint:"z \<in> {0..t}" by auto
-      then have "l = f' z" using fl f'[OF zint] 
-        by (smt at_within_closed_interval ft geq' geq0 has_derivative_unique has_field_derivative_imp_has_derivative less mult_neg_pos mult_pos_pos mult_right_less_imp_less ozt zero_le_square)
+      have s:"s > 0" using t int_s by auto
+      then obtain l z where ozt:"0 < z \<and> z < s" and fl:"(f has_real_derivative l) (at z)" and ft:"f s - f 0 = (s - 0) * l"
+          using Deriv.MVT[OF s, of f, OF cont diff] by auto
+      then have zint:"z \<in> {0..s}" by auto
+      have f'':"(f has_derivative f') (at s)" using zint sub
+        by (simp add: f')
+      have geq'':"\<And>s'. s' \<in> {0..s} \<Longrightarrow> f' s' \<ge> 0" using geq' sub by auto
+      then have "l = f' z" using fl f'' 
+        at_within_closed_interval ft geq'' geq0 has_derivative_unique has_field_derivative_imp_has_derivative less mult_neg_pos mult_pos_pos mult_right_less_imp_less ozt zero_le_square
+        by (smt f' sub zint)
       have "f' s < 0" 
-        by (smt \<open>\<not> 0 \<le> f t\<close> \<open>l = f' z\<close> ft geq' geq0 left_diff_distrib' mult.commute real_mult_less_iff1 t zint)
-      then have False using geq'[OF int_s] by auto
+        using \<open>\<not> 0 \<le> f s\<close> \<open>l = f' z\<close> ft geq'' geq0 left_diff_distrib' mult.commute real_mult_less_iff1 t zint sub
+        by (smt int_s)
+      then have False using geq' int_s 
+        by (meson atLeastAtMost_iff less_eq_real_def not_le)
       then show ?thesis by auto
     qed
   then show "?thesis" by auto 
 qed
 
 lemma MVT':
-fixes f g f' g' int s
-assumes f':"\<And>s. s \<in> int \<Longrightarrow> (f has_derivative f') (at s within int)"
-assumes g':"\<And>s. s \<in> int \<Longrightarrow> (g has_derivative g') (at s within int)"
-assumes geq':"\<And>s. s \<in> int \<Longrightarrow> f' s \<ge> g' s"
+fixes f g f' g'::"real \<Rightarrow> real" 
+fixes s t ::real
+assumes f':"\<And>s. s \<in> {0..t} \<Longrightarrow> (f has_derivative f') (at s)"
+assumes g':"\<And>s. s \<in> {0..t} \<Longrightarrow> (g has_derivative g') (at s)"
+assumes geq':"\<And>s. s \<in> {0..t} \<Longrightarrow> f' s \<ge> g' s"
 assumes geq0:"f 0 \<ge> g 0"
-assumes int_s:"s \<in> int"
+assumes int_s:"s > 0 \<and> s \<le> t"
+assumes t:"t > 0"
 shows "f s \<ge> g s"
 proof -
-  show "?thesis" sorry
+  let ?h = "(\<lambda>x. f x - g x)"
+  let ?h' = "(\<lambda>x. f' x - g' x)"
+  have "?h s \<ge> 0"
+    apply(rule MVT0[of t ?h ?h' s])
+    subgoal for s using f'[of s] g'[of s] by auto
+    subgoal for s using geq'[of s] by auto
+    subgoal using geq0 by auto
+    subgoal using int_s by auto
+    using t by auto
+  then show "?thesis" by auto
 qed
-      
 
 (*  
 g(x)\<ge> h(x) \<rightarrow> p(x) \<and> [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c]g(x) \<ge> h(x)
