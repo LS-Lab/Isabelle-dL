@@ -20,6 +20,26 @@ subsection \<open>Differentiation Axioms\<close>
 definition diff_const_axiom :: "('sf, 'sc, 'sz) formula"
   where "diff_const_axiom \<equiv> Equals (Differential ($f fid1 empty)) (Const 0)"
 
+definition diff_var_axiom :: "('sf, 'sc, 'sz) formula"
+  where "diff_var_axiom \<equiv> Equals (Differential (Var vid1)) (DiffVar vid1)"
+  
+definition state_fun ::"'sf \<Rightarrow> ('sf, 'sz) trm"
+  where "state_fun f = ($f f (\<lambda>i. Var i))"
+  
+definition diff_plus_axiom :: "('sf, 'sc, 'sz) formula"
+  where "diff_plus_axiom \<equiv> Equals (Differential (Plus (state_fun fid1) (state_fun fid2))) 
+      (Plus (Differential (state_fun fid1)) (Differential (state_fun fid2)))"
+
+definition diff_times_axiom :: "('sf, 'sc, 'sz) formula"
+  where "diff_times_axiom \<equiv> Equals (Differential (Times (state_fun fid1) (state_fun fid2))) 
+      (Plus (Times (Differential (state_fun fid1)) (state_fun fid2)) 
+            (Times (state_fun fid1) (Differential (state_fun fid2))))"
+
+(* [y=g(x)][y'=1](f(g(x))' = f(y)')*)
+definition diff_chain_axiom::"('sf, 'sc, 'sz) formula"
+  where "diff_chain_axiom \<equiv> [[Assign vid2 (f1 fid2 vid1)]]([[DiffAssign vid2 (Const 1)]] 
+    (Equals (Differential ($f fid1 (singleton (f1 fid2 vid1)))) (Times (Differential (f1 fid1 vid2)) (Differential (f1 fid2 vid1)))))"
+
 subsection \<open>ODE Axioms\<close>
 definition DWaxiom :: "('sf, 'sc, 'sz) formula"
   where "DWaxiom = ([[EvolveODE (OVar vid1) (Predicational pid1)]](Predicational pid1))"
@@ -53,9 +73,14 @@ definition DSaxiom :: "('sf, 'sc, 'sz) formula"
         (Prop vid2 (singleton (Plus (Var vid1) (Times (f0 fid1) (Var vid3)))))))
    ([[Assign vid1 (Plus (Var vid1) (Times (f0 fid1) (Var vid2)))]]p1 vid3 vid1)))))"
 
-definition DIaxiom :: "('sf, 'sc, 'sz) formula"
-  where "DIaxiom = (((Predicational pid1) \<rightarrow> (And (Predicational pid2) ([[EvolveODE (OVar vid1) (Predicational pid1)]](DiffFormula (Predicational pid2))))) 
-\<rightarrow> ([[EvolveODE (OVar vid1) (Predicational pid1)]]Predicational pid2))"
+(* 
+g(x)\<ge> h(x) \<rightarrow> p(x) \<and> [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c]g(x) \<ge> h(x)
+*)
+definition DIGeqaxiom :: "('sf, 'sc, 'sz) formula"
+  where "DIGeqaxiom = 
+    (Implies (Geq (f1 fid2 vid1) (f1 fid3 vid1)) (Implies (And (p1 vid1 vid1) ([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (p1 vid1 vid1)]]
+    (Geq (Differential (f1 fid2  vid1)) (Differential (f1 fid3 vid1)))
+    )) ([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (p1 vid1 vid1)]](Geq (f1 fid2 vid1) (f1 fid3 vid1)))))"
 
 definition DGaxiom :: "('sf, 'sc, 'sz) formula"
   where "DGaxiom = (([[EvolveODE (OVar vid1) (Predicational pid1)]]Predicational pid2) \<leftrightarrow> 
@@ -93,6 +118,45 @@ theorem diff_const_axiom_valid: "valid diff_const_axiom"
   apply(simp only: dterm_sem.simps constant_deriv_zero sterm_sem.simps)
 done
 
+theorem diff_var_axiom_valid: "valid diff_var_axiom"
+  apply(auto simp add: diff_var_axiom_def valid_def directional_derivative_def)
+  by (metis basis_vector.simps inner_prod_eq)
+  
+theorem diff_plus_axiom_valid: "valid diff_plus_axiom"
+   apply(auto simp add: diff_plus_axiom_def valid_def)
+   subgoal for I a b
+      using frechet_correctness[of I "(Plus (state_fun fid1) (state_fun fid2))" b] 
+      unfolding state_fun_def apply (auto intro: dfree.intros)
+      unfolding directional_derivative_def by auto
+  done
+  
+theorem diff_times_axiom_valid: "valid diff_times_axiom"
+   apply(auto simp add: diff_times_axiom_def valid_def)
+   subgoal for I a b
+      using frechet_correctness[of I "(Times (state_fun fid1) (state_fun fid2))" b] 
+      unfolding state_fun_def apply (auto intro: dfree.intros)
+      unfolding directional_derivative_def by auto
+  done
+  
+theorem diff_chain_axiom_valid: "valid diff_chain_axiom"
+   apply(auto simp add: diff_chain_axiom_def valid_def f1_def)
+   subgoal for I a b
+     proof -
+       assume good_interp:"is_interp I"
+       have free1:"dfree ($f fid1 (singleton ($f fid2 (singleton (trm.Var vid1)))))" by (auto intro: dfree.intros)
+       have free2:"dfree ($f fid1 (singleton (Var vid2)))" by (auto intro: dfree.intros)
+       have free3:"dfree ($f fid2 (singleton (Var vid1)))" by (auto intro: dfree.intros)
+       note frech1 = frechet_correctness[OF good_interp free1]
+       note frech2 = frechet_correctness[OF good_interp free2]
+       note frech3 = frechet_correctness[OF good_interp free3]
+    show "?thesis"
+     using frech1 frech2 frech3 
+      unfolding state_fun_def local.singleton.simps  apply (auto intro: dfree.intros)
+      unfolding directional_derivative_def
+      sorry
+    qed
+    done
+  
 subsection \<open>Proofs for ODE Axioms\<close>
  
 lemma DW_valid:"valid DWaxiom"
@@ -672,16 +736,98 @@ next
     using someEq by(auto simp add:  sol_eq_exp_t' t vec_extensionality  vne12)
 qed qed
 
-(* TODO:  differential formula semantics actually bogus right now
- * I believe the only correct semantics to give a DiffFormula(Predicational P)
- * is THE x. DI_is_valid_for (x). So the validity of this axiom will be a trivial
- * appeal to the validity of the interpretation. But then in substitution we will do the
- * real work by showing that adjoints are valid interpretations, so in adjoints all of the
- * DI_is_valid_for(x)'s actually exist.
+lemma MVT0:
+fixes f f' ::"real \<Rightarrow> real" and t :: real
+assumes f':"\<And>s. s \<in> {0..t} \<Longrightarrow> (f has_derivative f') (at s)"
+assumes geq':"\<And>s. s \<in> {0..t} \<Longrightarrow> f' s \<ge> 0"
+assumes geq0:"f 0 \<ge> 0"
+assumes int_s:"s \<in> {0..t}"
+assumes t: "0 < t"
+shows "f t \<ge> 0"
+proof -
+  have "\<not>(f t \<ge> 0) \<Longrightarrow> False"
+    proof -
+      assume "\<not>(f t \<ge> 0)"
+      then have less:"f t < 0" by auto
+      have cont':"\<And>s. s \<in> {0..t} \<Longrightarrow> isCont f s"
+        subgoal for s  
+          using has_derivative_continuous[OF f'[of s]]
+          unfolding isCont_def by auto
+        done
+      then have cont:"\<forall>x. 0 \<le> x \<and> x \<le> t \<longrightarrow> isCont f x" by auto
+      have "\<And>s. 0 < s \<and> s < t \<Longrightarrow> f differentiable at s"
+        subgoal for s using f'[of s] 
+          using Derivative.differentiableI by auto
+        done
+      then have diff:"\<forall>x. 0 < x \<and> x < t \<longrightarrow> f differentiable at x"
+        by auto
+      then obtain l z where ozt:"0 < z \<and> z < t" and fl:"(f has_real_derivative l) (at z)" and ft:"f t - f 0 = (t - 0) * l"
+          using Deriv.MVT[OF t, of f, OF cont diff] by auto
+      then have zint:"z \<in> {0..t}" by auto
+      then have "l = f' z" using fl f'[OF zint] 
+        by (smt at_within_closed_interval ft geq' geq0 has_derivative_unique has_field_derivative_imp_has_derivative less mult_neg_pos mult_pos_pos mult_right_less_imp_less ozt zero_le_square)
+      have "f' s < 0" 
+        by (smt \<open>\<not> 0 \<le> f t\<close> \<open>l = f' z\<close> ft geq' geq0 left_diff_distrib' mult.commute real_mult_less_iff1 t zint)
+      then have False using geq'[OF int_s] by auto
+      then show ?thesis by auto
+    qed
+  then show "?thesis" by auto 
+qed
+
+lemma MVT':
+fixes f g f' g' int s
+assumes f':"\<And>s. s \<in> int \<Longrightarrow> (f has_derivative f') (at s within int)"
+assumes g':"\<And>s. s \<in> int \<Longrightarrow> (g has_derivative g') (at s within int)"
+assumes geq':"\<And>s. s \<in> int \<Longrightarrow> f' s \<ge> g' s"
+assumes geq0:"f 0 \<ge> g 0"
+assumes int_s:"s \<in> int"
+shows "f s \<ge> g s"
+proof -
+  show "?thesis" sorry
+qed
+      
+
+(*  
+g(x)\<ge> h(x) \<rightarrow> p(x) \<and> [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c]g(x) \<ge> h(x)
 *)
-lemma DI_valid:"valid DIaxiom"
-  apply(unfold DIaxiom_def valid_def impl_sem iff_sem)
-  sorry
+lemma DIGeq_valid:"valid DIGeqaxiom"
+  (*  f1_def p1_def local.singleton.simps local.empty_def  *)
+  apply(unfold DIGeqaxiom_def valid_def impl_sem iff_sem)
+  apply(auto)
+  proof -
+    fix I b aa ba sol t
+       assume good_interp:"is_interp I"
+       and geq0:"dterm_sem I (f1 fid3 vid1) (sol 0, b) \<le> dterm_sem I (f1 fid2 vid1) (sol 0, b)"
+       and ev0:"(sol 0, b) \<in> fml_sem I (p1 vid1 vid1)"
+       and box:"\<forall>a ba. (\<exists>sola. sol 0 = sola 0 \<and>
+                      (\<exists>t. (a, ba) = mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sola 0, b) (sola t) \<and>
+                           0 \<le> t \<and>
+                           (sola solves_ode (\<lambda>a b. (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0) + ODEs I vid1 b)) {0..t}
+                            {x. mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sola 0, b) x \<in> fml_sem I (p1 vid1 vid1)})) \<longrightarrow>
+              directional_derivative I (f1 fid3 vid1) (a, ba) \<le> directional_derivative I (f1 fid2 vid1) (a, ba)"
+       and aaba:"(aa, ba) = mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t)"
+       and t:"0 \<le> t"
+       and sol:"(sol solves_ode (\<lambda>a b. (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0) + ODEs I vid1 b)) {0..t}
+        {x. mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) x \<in> fml_sem I (p1 vid1 vid1)}"
+       let ?f1 = "(\<lambda>t. dterm_sem I (f1 fid3 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t)))"
+       let ?f2 = "(\<lambda>t. dterm_sem I (f1 fid2 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t)))"
+       let ?f1' = "(\<lambda>t. directional_derivative I (f1 fid3 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t)))"
+       let ?f2' = "(\<lambda>t. directional_derivative I (f1 fid2 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t)))"
+       let ?int = "{0..t}"
+       
+       have deriv1:"\<And>s. s \<in> ?int \<Longrightarrow> (?f1 has_derivative ?f1') (at s within ?int)"
+         sorry
+       have deriv2:"\<And>s. s \<in> ?int \<Longrightarrow> (?f2 has_derivative ?f2') (at s within ?int)"
+         sorry
+       have leq:"\<And>s. s \<in> ?int \<Longrightarrow> ?f1' s \<le> ?f2' s"
+         sorry
+       have "\<And>s. s \<in> ?int \<Longrightarrow> ?f1 s \<le> ?f2 s"
+         sorry
+       then show
+       " dterm_sem I (f1 fid3 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t))
+       \<le> dterm_sem I (f1 fid2 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t))"
+         using t by auto
+  qed
 
 lemma DG_valid:"valid DGaxiom"
   apply(auto simp add: DGaxiom_def valid_def Let_def)
