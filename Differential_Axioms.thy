@@ -832,15 +832,40 @@ lemma DIGeq_valid:"valid DIGeqaxiom"
        let ?f1' = "(\<lambda>t. directional_derivative I (f1 fid3 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t)))"
        let ?f2' = "(\<lambda>t. directional_derivative I (f1 fid2 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t)))"
        let ?int = "{0..t}"
-       
-       have deriv1:"\<And>s. s \<in> ?int \<Longrightarrow> (?f1 has_derivative ?f1') (at s within ?int)"
-         sorry
-       have deriv2:"\<And>s. s \<in> ?int \<Longrightarrow> (?f2 has_derivative ?f2') (at s within ?int)"
-         sorry
+       (*have eq_vid1:"fst (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol 0)) $ vid1 = sol 0 $ vid1"
+         using mk_v_agree[of I "(OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1))" "(sol 0, b)" "sol 0"]
+         unfolding Vagree_def by auto*)
+       have dsafe1:"dsafe (f1 fid3 vid1)" unfolding f1_def by (auto intro: dsafe.intros)
+       have dsafe2:"dsafe (f1 fid2 vid1)" unfolding f1_def by (auto intro: dsafe.intros)
+       have agree1:"Vagree (sol 0, b) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol 0)) (FVT (f1 fid3 vid1))"
+           using mk_v_agree[of I "(OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1))" "(sol 0, b)" "sol 0"]
+           unfolding f1_def Vagree_def expand_singleton by auto
+       have agree2:"Vagree (sol 0, b) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol 0)) (FVT (f1 fid2 vid1))"
+           using mk_v_agree[of I "(OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1))" "(sol 0, b)" "sol 0"]
+           unfolding f1_def Vagree_def expand_singleton by auto
+       have sem_eq1:"dterm_sem I (f1 fid3 vid1) (sol 0, b) = dterm_sem I (f1 fid3 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol 0))"
+         using coincidence_dterm[OF dsafe1 agree1] by auto
+       have sem_eq2:"dterm_sem I (f1 fid2 vid1) (sol 0, b) = dterm_sem I (f1 fid2 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol 0))"
+         using coincidence_dterm[OF dsafe2 agree2] by auto
+       have deriv1:"\<And>s. s \<in> ?int \<Longrightarrow> (?f1 has_derivative ?f1') (at s)"
+         unfolding f1_def expand_singleton apply auto sorry
+       have deriv2:"\<And>s. s \<in> ?int \<Longrightarrow> (?f2 has_derivative ?f2') (at s)"
+         unfolding f1_def expand_singleton apply auto sorry
        have leq:"\<And>s. s \<in> ?int \<Longrightarrow> ?f1' s \<le> ?f2' s"
-         sorry
+         sorry 
        have "\<And>s. s \<in> ?int \<Longrightarrow> ?f1 s \<le> ?f2 s"
-         sorry
+         subgoal for s
+           apply(cases "s = 0")
+           subgoal using geq0 sem_eq1 sem_eq2 by auto  
+           subgoal
+             apply(rule MVT'[of t ?f2 ?f2' ?f1 ?f1' s])
+             subgoal for sa using deriv2[of sa] by auto
+             subgoal for sa using deriv1[of sa] by auto
+             subgoal for sa using leq by auto
+             subgoal using geq0 sem_eq1 sem_eq2 by auto
+             by auto
+           done
+         done
        then show
        " dterm_sem I (f1 fid3 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t))
        \<le> dterm_sem I (f1 fid2 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t))"
