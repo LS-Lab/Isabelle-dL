@@ -832,6 +832,35 @@ lemma DIGeq_valid:"valid DIGeqaxiom"
        let ?f1' = "(\<lambda>t. directional_derivative I (f1 fid3 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t)))"
        let ?f2' = "(\<lambda>t. directional_derivative I (f1 fid2 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t)))"
        let ?int = "{0..t}"
+       let ?dda = "\<lambda>s. fst (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol s))"
+       let ?ddb = "\<lambda>s. snd (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol s))"
+       have bigEx:"\<And>s. s \<in> {0..t} \<Longrightarrow>(\<exists>sola. sol 0 = sola 0 \<and>
+            (\<exists>ta. (fst (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol s)),
+                   snd (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol s))) =
+                  mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sola 0, b) (sola ta) \<and>
+                  0 \<le> ta \<and>
+                  (sola solves_ode (\<lambda>a b. (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0) + ODEs I vid1 b)) {0..ta}
+                   {x. mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sola 0, b) x \<in> fml_sem I (p1 vid1 vid1)}))"
+         subgoal for s
+           apply(rule exI[where x=sol])
+           apply(rule conjI)
+           subgoal by (rule refl)
+           apply(rule exI[where x=s])
+           apply(rule conjI)
+           subgoal by auto 
+           apply(rule conjI)
+           subgoal by auto
+           using sol
+           by (meson atLeastAtMost_iff atLeastatMost_subset_iff order_refl solves_ode_on_subset)
+         done
+       have box':"\<And>s. s \<in> {0..t} \<Longrightarrow> directional_derivative I (f1 fid3 vid1) (?dda s, ?ddb s) \<le> directional_derivative I (f1 fid2 vid1) (?dda s, ?ddb s)"
+         subgoal for s
+         using box 
+         apply simp
+         apply (erule allE[where x="?dda s"])
+         apply (erule allE[where x="?ddb s"])
+         using bigEx by auto
+       done
        (*have eq_vid1:"fst (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol 0)) $ vid1 = sol 0 $ vid1"
          using mk_v_agree[of I "(OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1))" "(sol 0, b)" "sol 0"]
          unfolding Vagree_def by auto*)
@@ -847,12 +876,37 @@ lemma DIGeq_valid:"valid DIGeqaxiom"
          using coincidence_dterm[OF dsafe1 agree1] by auto
        have sem_eq2:"dterm_sem I (f1 fid2 vid1) (sol 0, b) = dterm_sem I (f1 fid2 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol 0))"
          using coincidence_dterm[OF dsafe2 agree2] by auto
+       have good_interp':"\<And>i x. (Functions I i has_derivative (THE f'. \<forall>x. (Functions I i has_derivative f' x) (at x)) x) (at x)"
+         using good_interp unfolding is_interp_def by auto
+       (*(?f has_derivative ?f') (at ?x) \<Longrightarrow> (?g has_derivative ?g') (at (?f ?x)) \<Longrightarrow> (?g \<circ> ?f has_derivative ?g' \<circ> ?f') (at ?x)*) 
+       note chain = Deriv.derivative_intros(105)
+       let ?f1a = "Functions I fid3"
+       let ?f1b = "(\<lambda>t. (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
+                  (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (OVar vid1)) (sol 0, b)
+                    (sol t))))"
+       let ?f1a' = "(\<lambda>v. (THE f'. \<forall>x. (Functions I fid3 has_derivative f' x ) (at x)) v (?f1b t))"
+       let ?f1b' = "(\<lambda>t. (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0)
+                  (fst (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (OVar vid1)) (sol 0, b) (sol t)))
+                  (snd (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (OVar vid1)) (sol 0, b) (sol t)))))"
+       have comp:"?f1 = ?f1a \<circ> ?f1b" apply (rule ext) unfolding f1_def expand_singleton by auto
+       have comp':"?f1' = ?f1a' \<circ> ?f1b'" apply (rule ext) unfolding f1_def expand_singleton sorry
+       have deriv1a:"\<And>s. s \<in> ?int \<Longrightarrow> (?f1a has_derivative ?f1a') (at (?f1b s))"
+         sorry
+       have deriv1b:"\<And>s. s \<in> ?int \<Longrightarrow> (?f1b has_derivative ?f1b') (at s)"
+         sorry
+       have deriv1':"\<And>s. s \<in> ?int \<Longrightarrow> ((?f1a \<circ> ?f1b) has_derivative (?f1a' \<circ> ?f1b')) (at s)"
+         subgoal for s
+           apply(rule chain)
+           subgoal using deriv1b[of s] by auto
+           subgoal using deriv1a[of s] by auto
+           done
+         done
        have deriv1:"\<And>s. s \<in> ?int \<Longrightarrow> (?f1 has_derivative ?f1') (at s)"
-         unfolding f1_def expand_singleton apply auto sorry
+         using deriv1' comp comp' by auto
        have deriv2:"\<And>s. s \<in> ?int \<Longrightarrow> (?f2 has_derivative ?f2') (at s)"
          unfolding f1_def expand_singleton apply auto sorry
        have leq:"\<And>s. s \<in> ?int \<Longrightarrow> ?f1' s \<le> ?f2' s"
-         sorry 
+         subgoal for s using box'[of s] by auto done 
        have "\<And>s. s \<in> ?int \<Longrightarrow> ?f1 s \<le> ?f2 s"
          subgoal for s
            apply(cases "s = 0")
@@ -861,7 +915,7 @@ lemma DIGeq_valid:"valid DIGeqaxiom"
              apply(rule MVT'[of t ?f2 ?f2' ?f1 ?f1' s])
              subgoal for sa using deriv2[of sa] by auto
              subgoal for sa using deriv1[of sa] by auto
-             subgoal for sa using leq by auto
+             subgoal for sa using leq[of sa] by auto
              subgoal using geq0 sem_eq1 sem_eq2 by auto
              by auto
            done
@@ -876,3 +930,4 @@ lemma DG_valid:"valid DGaxiom"
   apply(auto simp add: DGaxiom_def valid_def Let_def)
   sorry
 end end
+
