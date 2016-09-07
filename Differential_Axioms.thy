@@ -813,7 +813,10 @@ lemma DIGeq_valid:"valid DIGeqaxiom"
   apply(unfold DIGeqaxiom_def valid_def impl_sem iff_sem)
   apply(auto)
   proof -
-    fix I b aa ba sol t
+    fix I::"('sf,'sc,'sz) interp" and  b aa ba 
+      and sol::"real \<Rightarrow> 'sz simple_state" 
+      and t::real
+       let ?\<phi> = "(\<lambda>t. mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t))"
        assume good_interp:"is_interp I"
        and geq0:"dterm_sem I (f1 fid3 vid1) (sol 0, b) \<le> dterm_sem I (f1 fid2 vid1) (sol 0, b)"
        and ev0:"(sol 0, b) \<in> fml_sem I (p1 vid1 vid1)"
@@ -823,20 +826,33 @@ lemma DIGeq_valid:"valid DIGeqaxiom"
                            (sola solves_ode (\<lambda>a b. (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0) + ODEs I vid1 b)) {0..t}
                             {x. mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sola 0, b) x \<in> fml_sem I (p1 vid1 vid1)})) \<longrightarrow>
               directional_derivative I (f1 fid3 vid1) (a, ba) \<le> directional_derivative I (f1 fid2 vid1) (a, ba)"
-       and aaba:"(aa, ba) = mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t)"
+       and aaba:"(aa, ba) = ?\<phi> t"
        and t:"0 \<le> t"
        and sol:"(sol solves_ode (\<lambda>a b. (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0) + ODEs I vid1 b)) {0..t}
         {x. mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) x \<in> fml_sem I (p1 vid1 vid1)}"
-       let ?f1 = "(\<lambda>t. dterm_sem I (f1 fid3 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t)))"
-       let ?f2 = "(\<lambda>t. dterm_sem I (f1 fid2 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t)))"
-       let ?f1' = "(\<lambda>t. directional_derivative I (f1 fid3 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t)))"
-       let ?f2' = "(\<lambda>t. directional_derivative I (f1 fid2 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t)))"
+       let ?\<phi>s = "\<lambda>x. fst (?\<phi> x)"
+       let ?df1 = "(\<lambda>t. dterm_sem I (f1 fid3 vid1) (?\<phi> t))"
+       let ?f1 = "(\<lambda>t. sterm_sem I (f1 fid3 vid1) (?\<phi>s t))"
+       let ?f1a = "(\<lambda>\<nu>. sterm_sem I (f1 fid3 vid1) \<nu>)"
+       have dfeq:"?df1 = ?f1" sorry
+       have f1eq:"?f1 = ?f1a \<circ> ?\<phi>s" by (auto)
+       let ?f1' = "(\<lambda>t. directional_derivative I (f1 fid3 vid1) (?\<phi> t))"
+       let ?f1a' = "(\<lambda>\<nu>. frechet I ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (fst \<nu>) (snd \<nu>))"
+       have f1'eq:"?f1' = ?f1a' \<circ> ?\<phi>" unfolding directional_derivative_def f1_def expand_singleton
+         by auto
+       have free1:"dfree (f1 fid3 vid1)" unfolding f1_def by (auto intro: dfree.intros)
+       have deriv1a:"\<And>s. s \<in> {0..t} \<Longrightarrow> (?f1a has_derivative ?f1a') (at (?\<phi> s))"
+         subgoal for s
+           using frechet_correctness[OF good_interp free1] 
+       let ?f2 = "(\<lambda>t. dterm_sem I (f1 fid2 vid1) (?\<phi> t))"
+       let ?f2' = "(\<lambda>t. directional_derivative I (f1 fid2 vid1) (?\<phi> t))"
+       
        let ?int = "{0..t}"
-       let ?dda = "\<lambda>s. fst (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol s))"
-       let ?ddb = "\<lambda>s. snd (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol s))"
+       let ?dda = "\<lambda>s. fst (?\<phi> s)"
+       let ?ddb = "\<lambda>s. snd (?\<phi> s)"
        have bigEx:"\<And>s. s \<in> {0..t} \<Longrightarrow>(\<exists>sola. sol 0 = sola 0 \<and>
-            (\<exists>ta. (fst (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol s)),
-                   snd (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol s))) =
+            (\<exists>ta. (fst (?\<phi> s),
+                   snd (?\<phi> s)) =
                   mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sola 0, b) (sola ta) \<and>
                   0 \<le> ta \<and>
                   (sola solves_ode (\<lambda>a b. (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0) + ODEs I vid1 b)) {0..ta}
@@ -866,15 +882,15 @@ lemma DIGeq_valid:"valid DIGeqaxiom"
          unfolding Vagree_def by auto*)
        have dsafe1:"dsafe (f1 fid3 vid1)" unfolding f1_def by (auto intro: dsafe.intros)
        have dsafe2:"dsafe (f1 fid2 vid1)" unfolding f1_def by (auto intro: dsafe.intros)
-       have agree1:"Vagree (sol 0, b) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol 0)) (FVT (f1 fid3 vid1))"
+       have agree1:"Vagree (sol 0, b) (?\<phi> 0) (FVT (f1 fid3 vid1))"
            using mk_v_agree[of I "(OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1))" "(sol 0, b)" "sol 0"]
            unfolding f1_def Vagree_def expand_singleton by auto
-       have agree2:"Vagree (sol 0, b) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol 0)) (FVT (f1 fid2 vid1))"
+       have agree2:"Vagree (sol 0, b) (?\<phi> 0) (FVT (f1 fid2 vid1))"
            using mk_v_agree[of I "(OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1))" "(sol 0, b)" "sol 0"]
            unfolding f1_def Vagree_def expand_singleton by auto
-       have sem_eq1:"dterm_sem I (f1 fid3 vid1) (sol 0, b) = dterm_sem I (f1 fid3 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol 0))"
+       have sem_eq1:"dterm_sem I (f1 fid3 vid1) (sol 0, b) = dterm_sem I (f1 fid3 vid1) (?\<phi> 0)"
          using coincidence_dterm[OF dsafe1 agree1] by auto
-       have sem_eq2:"dterm_sem I (f1 fid2 vid1) (sol 0, b) = dterm_sem I (f1 fid2 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol 0))"
+       have sem_eq2:"dterm_sem I (f1 fid2 vid1) (sol 0, b) = dterm_sem I (f1 fid2 vid1) (?\<phi> 0)"
          using coincidence_dterm[OF dsafe2 agree2] by auto
        have good_interp':"\<And>i x. (Functions I i has_derivative (THE f'. \<forall>x. (Functions I i has_derivative f' x) (at x)) x) (at x)"
          using good_interp unfolding is_interp_def by auto
@@ -888,12 +904,31 @@ lemma DIGeq_valid:"valid DIGeqaxiom"
        let ?f1b' = "(\<lambda>t. (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0)
                   (fst (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (OVar vid1)) (sol 0, b) (sol t)))
                   (snd (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (OVar vid1)) (sol 0, b) (sol t)))))"
+       have "?f1b' = (\<lambda>t. (\<chi> i. t))" 
+         apply(rule ext)
+         apply(rule vec_extensionality)
+         apply auto
+         using mk_v_agree[of I "(OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (OVar vid1))" "(sol 0, b)" "sol t"]
+         unfolding Vagree_def apply simp
+         subgoal for ta
+           (*apply(erule allE[where x=i])*)
+             sorry
+           sorry
        have comp:"?f1 = ?f1a \<circ> ?f1b" apply (rule ext) unfolding f1_def expand_singleton by auto
-       have comp':"?f1' = ?f1a' \<circ> ?f1b'" apply (rule ext) unfolding f1_def expand_singleton sorry
+       have comp':"?f1' = ?f1a' \<circ> ?f1b'" apply (rule ext) unfolding f1_def expand_singleton 
+         apply auto
+         sorry
        have deriv1a:"\<And>s. s \<in> ?int \<Longrightarrow> (?f1a has_derivative ?f1a') (at (?f1b s))"
-         sorry
+         apply auto sorry
        have deriv1b:"\<And>s. s \<in> ?int \<Longrightarrow> (?f1b has_derivative ?f1b') (at s)"
-         sorry
+         subgoal for s
+           apply (rule has_derivative_vec)
+           subgoal for i
+             apply auto
+             using mk_v_agree[of I "(OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (OVar vid1))" "(sol 0, b)" "(sol t)"]
+             unfolding Vagree_def sorry
+           done
+         done
        have deriv1':"\<And>s. s \<in> ?int \<Longrightarrow> ((?f1a \<circ> ?f1b) has_derivative (?f1a' \<circ> ?f1b')) (at s)"
          subgoal for s
            apply(rule chain)
@@ -901,8 +936,33 @@ lemma DIGeq_valid:"valid DIGeqaxiom"
            subgoal using deriv1a[of s] by auto
            done
          done
+       have hmm1:"\<exists>f. ((\<lambda>t. dterm_sem I (if vid1 = vid1 then trm.Var vid1 else Const 0)
+                (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (OVar vid1)) (sol 0, b)
+                  (sol t))) has_derivative
+          f vid1)
+          (at t)"
+         apply(rule exI)
+         apply(auto intro: derivative_eq_intros)
+         using frechet_correctness 
+         sorry
+       have hmm2:"\<exists>f. ((\<lambda>t. dterm_sem I (Const 0)
+                (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (OVar vid1)) (sol 0, b)
+                  (sol t))) has_derivative
+          f vid1)
+          (at t)"
+         apply(rule exI)
+         by(auto intro: derivative_eq_intros)
+         
+       have deriv1':"\<exists>f. (?f1b has_derivative f) (at t)"
+         apply(rule exI)
+         apply(rule has_derivative_vec)
+         using hmm1 hmm2 
+         sorry
+         (*apply(cases "i = vid1")
+         apply auto
+         using derivative_eq_intros using frechet_correctness*) 
        have deriv1:"\<And>s. s \<in> ?int \<Longrightarrow> (?f1 has_derivative ?f1') (at s)"
-         using deriv1' comp comp' by auto
+         using deriv1' comp comp' sorry
        have deriv2:"\<And>s. s \<in> ?int \<Longrightarrow> (?f2 has_derivative ?f2') (at s)"
          unfolding f1_def expand_singleton apply auto sorry
        have leq:"\<And>s. s \<in> ?int \<Longrightarrow> ?f1' s \<le> ?f2' s"
