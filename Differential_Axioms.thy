@@ -805,6 +805,92 @@ proof -
   then show "?thesis" by auto
 qed
 
+lemma rift_in_space_time:
+  fixes sol I ODE \<psi> \<theta> t s b
+  assumes good_interp:"is_interp I"
+  assumes free:"dfree \<theta>"
+  assumes sol:"(sol solves_ode (\<lambda>_ \<nu>'. ODE_sem I ODE \<nu>')) {0..t} 
+          {x. mk_v I ODE (sol 0, b) x \<in> fml_sem I \<psi>}"
+  assumes FVT:"FVT \<theta> \<subseteq> semBV I ODE"  
+  assumes ivl:"s \<in> {0..t}"
+  shows "((\<lambda>t. sterm_sem I \<theta> (fst (mk_v I ODE (sol 0, b) (sol t)))) 
+    has_derivative (\<lambda>t. dterm_sem I (Differential \<theta>) (mk_v I ODE (sol 0, b) (sol t)))) (at s)"
+  proof -
+    let ?\<phi> = "(\<lambda>t. (mk_v I ODE (sol 0, b) (sol t)))"
+    let ?\<phi>s = "(\<lambda>t. fst (?\<phi> t))"
+    let ?h = "(\<lambda>t. sterm_sem I \<theta> (?\<phi>s t))"
+    let ?g = "(\<lambda>\<nu>. sterm_sem I \<theta> \<nu>)"
+    let ?f = "?\<phi>s"
+    let ?g' = "(\<lambda>\<nu>'. frechet I \<theta> (?f s))"
+    let ?f' = "(\<lambda>t. (\<chi> i. if i \<in> ODE_vars I ODE then (ODE_sem I ODE (sol t)) $ i else 0))"
+    have heq:"?h = ?g \<circ> ?f" by auto
+    have derp1:"\<And>i. i \<in> ODE_vars I ODE \<Longrightarrow> (\<lambda>t. fst (mk_v I ODE (sol 0, b) (sol t)) $ i) = (\<lambda>t. sol t $ i)"
+      subgoal for i
+        apply(rule ext)
+        subgoal for t
+          using mk_v_agree[of I ODE "(sol 0, b)" "sol t"]
+          unfolding Vagree_def by auto
+        done done
+    have derp2:"\<And>i. i \<in> ODE_vars I ODE \<Longrightarrow> (\<lambda>t. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol t) $ i else 0) = (\<lambda>t. ODE_sem I ODE (sol t) $ i)"
+      subgoal for i
+        apply(rule ext)
+        subgoal for t
+          using mk_v_agree[of I ODE "(sol 0, b)" "sol t"]
+          unfolding Vagree_def by auto
+        done done
+    have derp3:"\<And>i. i \<in> (-ODE_vars I ODE) \<Longrightarrow> (\<lambda>t. fst (mk_v I ODE (sol 0, b) (sol t)) $ i) = (\<lambda>t. sol 0 $ i)"
+      subgoal for i
+        apply(rule ext)
+        subgoal for t
+          using mk_v_agree[of I ODE "(sol 0, b)" "sol t"]
+          unfolding Vagree_def by auto
+        done done
+    have derp4:"\<And>i. i \<in> (-ODE_vars I ODE) \<Longrightarrow> (\<lambda>t. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol t) $ i else 0) = (\<lambda>t. 0)"
+      subgoal for i
+        apply(rule ext)
+        subgoal for t
+          using mk_v_agree[of I ODE "(sol 0, b)" "sol t"]
+          unfolding Vagree_def by auto
+        done done
+    have ode_deriv:"\<And>i. i \<in> ODE_vars I ODE \<Longrightarrow> ((\<lambda>t. sol t $ i) has_derivative (\<lambda>t. ODE_sem I ODE (sol t) $ i)) (at s)" sorry
+    have eta:"(\<lambda>t. (\<chi> i. ?f t $ i)) = ?f" by(rule ext, rule vec_extensionality, auto)
+    have "((\<lambda>t. (\<chi> i. ?f t $ i)) has_derivative ?f') (at s)"
+      apply (rule has_derivative_vec)
+      subgoal for i
+        apply(cases "i \<in> ODE_vars I ODE")
+        subgoal using derp1[of i] derp2[of i] ode_deriv[of i] by auto
+        subgoal using derp3[of i] derp4[of i] by auto
+      done
+      done
+    then have fderiv:"(?f has_derivative ?f') (at s)" using eta by auto
+    have gderiv:"(?g has_derivative (?g' (?f s))) (at (?f s))"
+      by (rule frechet_correctness[OF good_interp free, of "(fst (mk_v I ODE (sol 0, b) (sol s)))"])
+    have chain:"((?g \<circ> ?f) has_derivative (?g'(?f s) \<circ> ?f')) (at s)"
+      using fderiv gderiv diff_chain_at by blast
+    have derp5:"(\<chi> i. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol s) $ i else 0) = (snd (mk_v I ODE (sol 0, b) (sol s)))"
+      apply(rule vec_extensionality)
+      subgoal for i
+        using mk_v_agree[of I ODE "(sol 0, b)" "sol s"]
+          unfolding Vagree_def apply (cases "i \<in> ODE_vars I ODE")
+            apply(auto)
+          sorry
+        done
+        
+    have heq':"(?g'(?f s) \<circ> ?f') s = dterm_sem I (Differential \<theta>) (?\<phi> s)"
+       apply (auto simp add: directional_derivative_def)
+        using mk_v_agree[of I ODE "(sol 0, b)" "sol t"]
+        unfolding Vagree_def using derp5 by auto
+    then have heq'':"(\<lambda>s. (?g'(?f s) \<circ> ?f') s) = (\<lambda>s. dterm_sem I (Differential \<theta>) (?\<phi> s))"
+      sorry
+    have "((?g \<circ> ?f) has_derivative (\<lambda>s. (?g'(?f s) \<circ> ?f') s)) (at s)"
+      sorry
+    then have "((?g \<circ> ?f) has_derivative (\<lambda>t. dterm_sem I (Differential \<theta>) (?\<phi> t))) (at s)"
+      using heq'' by auto
+    then have result:"((\<lambda>t. sterm_sem I \<theta> (?\<phi>s t))  has_derivative (\<lambda>t. dterm_sem I (Differential \<theta>) (?\<phi> t))) (at s)"
+      using heq by auto
+    then show "?thesis" by auto
+  qed
+
 (*  
 g(x)\<ge> h(x) \<rightarrow> p(x) \<and> [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c]g(x) \<ge> h(x)
 *)
@@ -833,13 +919,52 @@ lemma DIGeq_valid:"valid DIGeqaxiom"
        let ?\<phi>s = "\<lambda>x. fst (?\<phi> x)"
        let ?df1 = "(\<lambda>t. dterm_sem I (f1 fid3 vid1) (?\<phi> t))"
        let ?f1 = "(\<lambda>t. sterm_sem I (f1 fid3 vid1) (?\<phi>s t))"
-       let ?f1a = "(\<lambda>\<nu>. sterm_sem I (f1 fid3 vid1) \<nu>)"
+       let ?sf1 = "(\<lambda>t. Functions I fid3 (\<chi> i. if i = vid1 then sol t $ vid1 else 0))"
+       let ?f1a = "Functions I fid3"
+       let ?ODE = "OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)"
+       let ?f1a' = "(\<lambda>\<nu>. FunctionFrechet I fid3 (\<chi> i. if i = vid1 then sol 0 $ vid1 else 0) \<nu>)"
+       let ?f1b = "(\<lambda>t. (\<chi> i. sterm_sem I (if i = vid1 then Var vid1 else Const 0)
+                 (fst (mk_v I (OProd (OSing vid1 ($f fid1 (singleton (Var vid1)))) (OVar vid1)) (sol 0, b) (sol t)))))"
+       let ?f1b' = "(\<lambda>t. (\<chi> i. directional_derivative I (Var vid1) (?\<phi> t)))"
+       
        have dfeq:"?df1 = ?f1" sorry
-       have f1eq:"?f1 = ?f1a \<circ> ?\<phi>s" by (auto)
+       have f1eq:"?f1 = ?f1a \<circ> ?f1b" unfolding f1_def by auto
+       have free1:"dfree ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))"
+          sorry
        let ?f1' = "(\<lambda>t. directional_derivative I (f1 fid3 vid1) (?\<phi> t))"
-       let ?f1a' = "(\<lambda>\<nu>. frechet I ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (fst \<nu>) (snd \<nu>))"
-       have f1'eq:"?f1' = ?f1a' \<circ> ?\<phi>" unfolding directional_derivative_def f1_def expand_singleton
-         by auto
+       (*have "?f1' = undefined" unfolding directional_derivative_def f1_def expand_singleton apply auto*)
+         (* (\<lambda>t. (THE f'. \<forall>x. (Functions I fid3 has_derivative f' x) (at x))
+          (\<chi>i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
+                 (fst (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (OVar vid1)) (sol 0, b) (sol t))))
+          (\<chi>i. frechet I (if i = vid1 then trm.Var vid1 else Const 0)
+                 (fst (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (OVar vid1)) (sol 0, b) (sol t)))
+                 (snd (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (OVar vid1)) (sol 0, b) (sol t)))))*)
+       let ?sf1' = "(\<lambda>t. FunctionFrechet I fid3 (\<chi> i. if i = vid1 then (sol t $ vid1) else 0)
+                    (\<chi> i. if i = vid1 then (ODE_sem I ?ODE (sol t)) $ vid1 else 0))"
+       (*  directional_derivative I (f1 fid3 vid1) (?\<phi> t))"*)
+        (*"fid3" "(\<chi> i. if i = vid1 then sol t $ vid1 else 0)"*)
+       have bluh:"\<And>x i. (Functions I i has_derivative (THE f'. \<forall>x. (Functions I i has_derivative f' x) (at x)) x) (at x)"
+         using good_interp unfolding is_interp_def by auto
+       have blah:"(Functions I fid3 has_derivative (THE f'. \<forall>x. (Functions I fid3 has_derivative f' x) (at x)) (\<chi> i. if i = vid1 then sol t $ vid1 else 0)) (at (\<chi> i. if i = vid1 then sol t $ vid1 else 0))"
+         using bluh by auto
+       (*let ?sf1a = "(\<lambda> \<nu>. Functions I fid3 (fst \<nu>))"
+       let ?sf1a' = "(\<lambda> \<nu>. FunctionFrechet I fid3 (fst \<nu>) (snd \<nu>))"
+       
+       let ?sf1b = "(\<lambda>t. (\<chi> i. if i = vid1 then sol t $ vid1 else 0, \<chi> i. if i = vid1 then ODE_sem I ?ODE (sol t) $ vid1 else 0))"*)
+       let ?ssf1a = "(\<lambda> st. Functions I fid3 (\<chi> i. if i = vid1 then st $ vid1 else 0))"
+       let ?ssf1b = "sol"
+       let ?ssf1a' ="(\<lambda> st. FunctionFrechet I fid3 )"
+       (*have "(?sf1a has_derivative ?sf1a') (at (?sf1b 0))"
+         using blah unfolding directional_derivative_def f1_def expand_singleton
+         apply auto
+         sledgehammer*)
+       have f1'eq:"?f1' = undefined" (*unfolding directional_derivative_def f1_def expand_singleton*)
+         unfolding directional_derivative_def f1_def expand_singleton apply auto sorry
+       have f1'eq:"?f1' = ?f1a' \<circ> ?f1b'" (*unfolding directional_derivative_def f1_def expand_singleton*)
+         apply(rule ext)
+         using good_interp sorry
+         (*using good_interp unfolding f1_def directional_derivative_def is_interp_def apply auto
+         sledgehammer*)
        have free1:"dfree (f1 fid3 vid1)" unfolding f1_def by (auto intro: dfree.intros)
        have deriv1a:"\<And>s. s \<in> {0..t} \<Longrightarrow> (?f1a has_derivative ?f1a') (at (?\<phi> s))"
          subgoal for s
