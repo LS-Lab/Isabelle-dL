@@ -818,6 +818,25 @@ lemma rift_in_space_time:
   proof -
     let ?\<phi> = "(\<lambda>t. (mk_v I ODE (sol 0, b) (sol t)))"
     let ?\<phi>s = "(\<lambda>t. fst (?\<phi> t))"
+    have agree1:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol s, b) (?\<phi> s) (semBV I ODE)"
+      using mk_v_agree[of I ODE "(sol 0, b)" "sol s"]
+      unfolding Vagree_def
+      sorry
+    have agree2:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol s, b) (?\<phi> s) (FVT \<theta>)"
+      using agree1 FVT agree_sub sorry
+    have dterm_sem_eq:"\<And>s. s \<in> {0..t} \<Longrightarrow> dterm_sem I \<theta> (sol s, b) = dterm_sem I \<theta> (?\<phi> s)"
+      using coincidence_dterm agree2 sorry
+    have sterm_sem_eq:"\<And>s. s \<in> {0..t} \<Longrightarrow> sterm_sem I \<theta> (sol s) = sterm_sem I \<theta> (?\<phi>s s)"
+      using coincidence_sterm agree2 sorry
+    have sol_deriv:"\<And>s. s \<in> {0..t} \<Longrightarrow> (sol has_derivative (\<lambda>xa. xa *\<^sub>R ODE_sem I ODE (sol s))) (at s within {0..t})"
+      using sol apply simp 
+      apply (drule solves_odeD(1))
+      unfolding has_vderiv_on_def has_vector_derivative_def
+      by auto
+    have sol_dom:"\<And>s. s \<in> {0..t} \<Longrightarrow> ?\<phi> s \<in> fml_sem I \<psi>"
+      using sol apply simp
+      apply (drule solves_odeD(2))
+      by auto
     let ?h = "(\<lambda>t. sterm_sem I \<theta> (?\<phi>s t))"
     let ?g = "(\<lambda>\<nu>. sterm_sem I \<theta> \<nu>)"
     let ?f = "?\<phi>s"
@@ -858,32 +877,43 @@ lemma rift_in_space_time:
       apply (rule has_derivative_vec)
       subgoal for i
         apply(cases "i \<in> ODE_vars I ODE")
-        subgoal using derp1[of i] derp2[of i] ode_deriv[of i] by auto
+        subgoal using derp1[of i] derp2[of i] ode_deriv[of i] sorry (*doneby auto*)
         subgoal using derp3[of i] derp4[of i] by auto
       done
-      done
+      
+    done
     then have fderiv:"(?f has_derivative ?f') (at s)" using eta by auto
     have gderiv:"(?g has_derivative (?g' (?f s))) (at (?f s))"
-      by (rule frechet_correctness[OF good_interp free, of "(fst (mk_v I ODE (sol 0, b) (sol s)))"])
-    have chain:"((?g \<circ> ?f) has_derivative (?g'(?f s) \<circ> ?f')) (at s)"
+      by (rule frechet_correctness[OF good_interp free, of "(fst (mk_v I ODE (sol 0, b) (sol s)))"])      
+    (*have derp6:"frechet I \<theta> (fst (mk_v I ODE (sol 0, b) (sol s))) \<circ> (\<lambda>t. \<chi> i. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol t) $ i else 0) =  
+      (\<lambda>s. (frechet I \<theta> (fst (mk_v I ODE (sol 0, b) (sol s))) \<circ> (\<lambda>t. \<chi> i. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol t) $ i else 0)) s)"
+      sorry*)
+      
+    have chain:"((?g \<circ> ?f) has_derivative (?g' (?f s) \<circ> ?f')) (at s)"
       using fderiv gderiv diff_chain_at by blast
     have derp5:"(\<chi> i. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol s) $ i else 0) = (snd (mk_v I ODE (sol 0, b) (sol s)))"
       apply(rule vec_extensionality)
       subgoal for i
         using mk_v_agree[of I ODE "(sol 0, b)" "sol s"]
           unfolding Vagree_def apply (cases "i \<in> ODE_vars I ODE")
-            apply(auto)
+            apply(auto) 
           sorry
         done
         
-    have heq':"(?g'(?f s) \<circ> ?f') s = dterm_sem I (Differential \<theta>) (?\<phi> s)"
+    have heq':"(?g' (?f s) \<circ> ?f') s = dterm_sem I (Differential \<theta>) (?\<phi> s)"
        apply (auto simp add: directional_derivative_def)
         using mk_v_agree[of I ODE "(sol 0, b)" "sol t"]
         unfolding Vagree_def using derp5 by auto
-    then have heq'':"(\<lambda>s. (?g'(?f s) \<circ> ?f') s) = (\<lambda>s. dterm_sem I (Differential \<theta>) (?\<phi> s))"
-      sorry
-    have "((?g \<circ> ?f) has_derivative (\<lambda>s. (?g'(?f s) \<circ> ?f') s)) (at s)"
-      sorry
+    have heq'':"(\<lambda>s. (?g'  (?f s) \<circ> ?f') s) = (\<lambda>s. dterm_sem I (Differential \<theta>) (?\<phi> s))"
+      apply(rule ext)
+      subgoal for sa
+        apply (auto simp add: directional_derivative_def)
+        using mk_v_agree[of I ODE "(sol 0, b)" "sol s"]
+        unfolding Vagree_def apply auto sorry 
+        done
+          (*((?g \<circ> ?f) has_derivative (?g' s (?f s) \<circ> ?f')) (at s)*)
+    have "((?g \<circ> ?f) has_derivative (\<lambda>s. (?g'  (?f s) \<circ> ?f') s)) (at s)"
+      using chain by blast
     then have "((?g \<circ> ?f) has_derivative (\<lambda>t. dterm_sem I (Differential \<theta>) (?\<phi> t))) (at s)"
       using heq'' by auto
     then have result:"((\<lambda>t. sterm_sem I \<theta> (?\<phi>s t))  has_derivative (\<lambda>t. dterm_sem I (Differential \<theta>) (?\<phi> t))) (at s)"
