@@ -829,16 +829,7 @@ lemma rift_in_space_time:
   proof -
     let ?\<phi> = "(\<lambda>t. (mk_v I ODE (sol 0, b) (sol t)))"
     let ?\<phi>s = "(\<lambda>t. fst (?\<phi> t))"
-    have agree1:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol s, b) (?\<phi> s) (semBV I ODE)"
-      using mk_v_agree[of I ODE "(sol 0, b)" "sol s"]
-      unfolding Vagree_def
-      sorry
-    have agree2:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol s, b) (?\<phi> s) (FVT \<theta>)"
-      using agree1 FVT agree_sub sorry
-    have dterm_sem_eq:"\<And>s. s \<in> {0..t} \<Longrightarrow> dterm_sem I \<theta> (sol s, b) = dterm_sem I \<theta> (?\<phi> s)"
-      using coincidence_dterm agree2 sorry
-    have sterm_sem_eq:"\<And>s. s \<in> {0..t} \<Longrightarrow> sterm_sem I \<theta> (sol s) = sterm_sem I \<theta> (?\<phi>s s)"
-      using coincidence_sterm agree2 sorry
+   
     have sol_deriv:"\<And>s. s \<in> {0..t} \<Longrightarrow> (sol has_derivative (\<lambda>xa. xa *\<^sub>R ODE_sem I ODE (sol s))) (at s within {0..t})"
       using sol apply simp 
       apply (drule solves_odeD(1))
@@ -888,7 +879,7 @@ lemma rift_in_space_time:
       apply (rule has_derivative_vec)
       subgoal for i
         apply(cases "i \<in> ODE_vars I ODE")
-        subgoal using derp1[of i] derp2[of i] ode_deriv[of i] sorry (*doneby auto*)
+        subgoal using derp1[of i] derp2[of i] ode_deriv[of i] by auto
         subgoal using derp3[of i] derp4[of i] by auto
       done
       
@@ -899,6 +890,31 @@ lemma rift_in_space_time:
        using Derivative.has_derivative_at_within by blast
     have chain:"((?g \<circ> ?f) has_derivative (\<lambda>x. ?g' (?f s) (?f' x))) (at s within {0..t})"
       using fderiv gderiv two_chainz by blast
+    let ?co\<nu>1 = "(\<lambda> sa. (?\<phi>s s, \<chi> i. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol sa) $ i else 0))"
+    let ?co\<nu>2 = "(\<lambda> sa. (?\<phi>s s, snd (mk_v I ODE (sol 0, b) (sol sa))))"
+    have sub_cont:"\<And>a .a \<notin> ODE_vars I ODE \<Longrightarrow> Inl a \<in> FVT \<theta> \<Longrightarrow> False"
+      using FVT by auto
+    have sub_cont2:"\<And>a .a \<notin> ODE_vars I ODE \<Longrightarrow> Inr a \<in> FVT \<theta> \<Longrightarrow> False"
+      using FVT by auto
+    have co_agree:"\<And>sa. Vagree (fst (mk_v I ODE (sol 0, b) (sol s)), \<chi> i. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol sa) $ i else 0)
+   (fst (mk_v I ODE (sol 0, b) (sol s)), snd (mk_v I ODE (sol 0, b) (sol sa))) (FVDiff \<theta>)"
+      subgoal for sa
+        using mk_v_agree[of I ODE "(sol 0, b)" "sol s"]
+        using mk_v_agree[of I ODE "(sol 0, b)" "sol sa"]
+        unfolding Vagree_def apply auto
+        subgoal for i x
+          apply(cases x)
+          subgoal for a
+            apply(erule allE[where x=i])+
+            apply(simp)
+            using sub_cont[of a] by simp
+          subgoal for ba
+            apply(erule allE[where x=i])+
+            apply(simp)
+            using sub_cont2[of ba] by simp
+          done
+        done
+      done
     have heq'':"(\<lambda>x. ?g' (?f s) (?f' x)) = (*(\<lambda>s. dterm_sem I (Differential \<theta>) (?\<phi> s))*)
       (\<lambda>t. frechet I \<theta> (?\<phi>s s) (snd (?\<phi> t)))
       "
@@ -906,8 +922,10 @@ lemma rift_in_space_time:
       subgoal for sa
         using mk_v_agree[of I ODE "(sol 0, b)" "sol s"]
         using mk_v_agree[of I ODE "(sol 0, b)" "sol sa"]
-        unfolding Vagree_def apply auto  sorry 
-        done
+        using coincidence_frechet[OF free, of "(?co\<nu>1 sa)" "(?co\<nu>2 sa)", OF co_agree[of sa], of I]
+        unfolding Vagree_def 
+        by auto
+      done
     have "(\<lambda>s. (?g' (?f s) \<circ> ?f') s) = (\<lambda>s. ?g' (?f s) (?f' s))"
       by (rule ext, auto)
     then have "((?g \<circ> ?f) has_derivative (\<lambda>x. ?g' (?f s) (?f' x))) (at s within {0..t})"
