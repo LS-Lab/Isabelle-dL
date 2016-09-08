@@ -805,6 +805,17 @@ proof -
   then show "?thesis" by auto
 qed
 
+lemma two_chainz:
+fixes f::"real \<Rightarrow>'a::finite Rvec"
+fixes g::"'a Rvec \<Rightarrow> real"
+fixes f'::"real \<Rightarrow>'a::finite Rvec"
+fixes g'::"'a Rvec \<Rightarrow> 'a Rvec \<Rightarrow> real"
+assumes "(f has_derivative f') (at s within {0..t})"
+assumes "(g has_derivative (g' (f s))) (at (f s) within f ` {0..t})"
+shows "((g \<circ> f) has_derivative (\<lambda>x. g' (f s) (f' x))) (at s within {0..t})"
+  using has_derivative_in_compose[OF assms]
+  using comp_def[of g f] by auto 
+
 lemma rift_in_space_time:
   fixes sol I ODE \<psi> \<theta> t s b
   assumes good_interp:"is_interp I"
@@ -814,7 +825,7 @@ lemma rift_in_space_time:
   assumes FVT:"FVT \<theta> \<subseteq> semBV I ODE"  
   assumes ivl:"s \<in> {0..t}"
   shows "((\<lambda>t. sterm_sem I \<theta> (fst (mk_v I ODE (sol 0, b) (sol t)))) 
-    has_derivative (\<lambda>t. dterm_sem I (Differential \<theta>) (mk_v I ODE (sol 0, b) (sol t)))) (at s)"
+    has_derivative (\<lambda>t. frechet I \<theta> (fst((mk_v I ODE (sol 0, b) (sol s)))) (snd (mk_v I ODE (sol 0, b) (sol t))))) (at s within {0..t})"
   proof -
     let ?\<phi> = "(\<lambda>t. (mk_v I ODE (sol 0, b) (sol t)))"
     let ?\<phi>s = "(\<lambda>t. fst (?\<phi> t))"
@@ -840,7 +851,7 @@ lemma rift_in_space_time:
     let ?h = "(\<lambda>t. sterm_sem I \<theta> (?\<phi>s t))"
     let ?g = "(\<lambda>\<nu>. sterm_sem I \<theta> \<nu>)"
     let ?f = "?\<phi>s"
-    let ?g' = "(\<lambda>\<nu>'. frechet I \<theta> (?f s))"
+    let ?g' = "(\<lambda>\<nu> \<nu>'. frechet I \<theta> \<nu> \<nu>')"
     let ?f' = "(\<lambda>t. (\<chi> i. if i \<in> ODE_vars I ODE then (ODE_sem I ODE (sol t)) $ i else 0))"
     have heq:"?h = ?g \<circ> ?f" by auto
     have derp1:"\<And>i. i \<in> ODE_vars I ODE \<Longrightarrow> (\<lambda>t. fst (mk_v I ODE (sol 0, b) (sol t)) $ i) = (\<lambda>t. sol t $ i)"
@@ -871,9 +882,9 @@ lemma rift_in_space_time:
           using mk_v_agree[of I ODE "(sol 0, b)" "sol t"]
           unfolding Vagree_def by auto
         done done
-    have ode_deriv:"\<And>i. i \<in> ODE_vars I ODE \<Longrightarrow> ((\<lambda>t. sol t $ i) has_derivative (\<lambda>t. ODE_sem I ODE (sol t) $ i)) (at s)" sorry
+    have ode_deriv:"\<And>i. i \<in> ODE_vars I ODE \<Longrightarrow> ((\<lambda>t. sol t $ i) has_derivative (\<lambda>t. ODE_sem I ODE (sol t) $ i)) (at s within {0..t})" sorry
     have eta:"(\<lambda>t. (\<chi> i. ?f t $ i)) = ?f" by(rule ext, rule vec_extensionality, auto)
-    have "((\<lambda>t. (\<chi> i. ?f t $ i)) has_derivative ?f') (at s)"
+    have "((\<lambda>t. (\<chi> i. ?f t $ i)) has_derivative ?f') (at s within {0..t})"
       apply (rule has_derivative_vec)
       subgoal for i
         apply(cases "i \<in> ODE_vars I ODE")
@@ -882,41 +893,30 @@ lemma rift_in_space_time:
       done
       
     done
-    then have fderiv:"(?f has_derivative ?f') (at s)" using eta by auto
-    have gderiv:"(?g has_derivative (?g' (?f s))) (at (?f s))"
-      by (rule frechet_correctness[OF good_interp free, of "(fst (mk_v I ODE (sol 0, b) (sol s)))"])      
-    (*have derp6:"frechet I \<theta> (fst (mk_v I ODE (sol 0, b) (sol s))) \<circ> (\<lambda>t. \<chi> i. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol t) $ i else 0) =  
-      (\<lambda>s. (frechet I \<theta> (fst (mk_v I ODE (sol 0, b) (sol s))) \<circ> (\<lambda>t. \<chi> i. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol t) $ i else 0)) s)"
-      sorry*)
-      
-    have chain:"((?g \<circ> ?f) has_derivative (?g' (?f s) \<circ> ?f')) (at s)"
-      using fderiv gderiv diff_chain_at by blast
-    have derp5:"(\<chi> i. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol s) $ i else 0) = (snd (mk_v I ODE (sol 0, b) (sol s)))"
-      apply(rule vec_extensionality)
-      subgoal for i
-        using mk_v_agree[of I ODE "(sol 0, b)" "sol s"]
-          unfolding Vagree_def apply (cases "i \<in> ODE_vars I ODE")
-            apply(auto) 
-          sorry
-        done
-        
-    have heq':"(?g' (?f s) \<circ> ?f') s = dterm_sem I (Differential \<theta>) (?\<phi> s)"
-       apply (auto simp add: directional_derivative_def)
-        using mk_v_agree[of I ODE "(sol 0, b)" "sol t"]
-        unfolding Vagree_def using derp5 by auto
-    have heq'':"(\<lambda>s. (?g'  (?f s) \<circ> ?f') s) = (\<lambda>s. dterm_sem I (Differential \<theta>) (?\<phi> s))"
+    then have fderiv:"(?f has_derivative ?f') (at s within {0..t})" using eta by auto
+    have gderiv:"(?g has_derivative (?g' (?f s))) (at (?f s) within ?f ` {0..t})"
+       using frechet_correctness[OF good_interp free, of "(fst (mk_v I ODE (sol 0, b) (sol s)))"]
+       using Derivative.has_derivative_at_within by blast
+    have chain:"((?g \<circ> ?f) has_derivative (\<lambda>x. ?g' (?f s) (?f' x))) (at s within {0..t})"
+      using fderiv gderiv two_chainz by blast
+    have heq'':"(\<lambda>x. ?g' (?f s) (?f' x)) = (*(\<lambda>s. dterm_sem I (Differential \<theta>) (?\<phi> s))*)
+      (\<lambda>t. frechet I \<theta> (?\<phi>s s) (snd (?\<phi> t)))
+      "
       apply(rule ext)
       subgoal for sa
-        apply (auto simp add: directional_derivative_def)
         using mk_v_agree[of I ODE "(sol 0, b)" "sol s"]
-        unfolding Vagree_def apply auto sorry 
+        using mk_v_agree[of I ODE "(sol 0, b)" "sol sa"]
+        unfolding Vagree_def apply auto  sorry 
         done
-          (*((?g \<circ> ?f) has_derivative (?g' s (?f s) \<circ> ?f')) (at s)*)
-    have "((?g \<circ> ?f) has_derivative (\<lambda>s. (?g'  (?f s) \<circ> ?f') s)) (at s)"
-      using chain by blast
-    then have "((?g \<circ> ?f) has_derivative (\<lambda>t. dterm_sem I (Differential \<theta>) (?\<phi> t))) (at s)"
+    have "(\<lambda>s. (?g' (?f s) \<circ> ?f') s) = (\<lambda>s. ?g' (?f s) (?f' s))"
+      by (rule ext, auto)
+    then have "((?g \<circ> ?f) has_derivative (\<lambda>x. ?g' (?f s) (?f' x))) (at s within {0..t})"
+      using chain by auto
+    (*have "(\<lambda>t. dterm_sem I (Differential \<theta>) (?\<phi> t)) = undefined"
+      apply (auto simp add: directional_derivative_def)*)
+    then have "((?g \<circ> ?f) has_derivative (\<lambda>t. frechet I \<theta> (?\<phi>s s) (snd (?\<phi> t)))) (at s within {0..t})"
       using heq'' by auto
-    then have result:"((\<lambda>t. sterm_sem I \<theta> (?\<phi>s t))  has_derivative (\<lambda>t. dterm_sem I (Differential \<theta>) (?\<phi> t))) (at s)"
+    then have result:"((\<lambda>t. sterm_sem I \<theta> (?\<phi>s t))  has_derivative (\<lambda>t. frechet I \<theta> (?\<phi>s s) (snd (?\<phi> t)))) (at s within {0..t})"
       using heq by auto
     then show "?thesis" by auto
   qed
