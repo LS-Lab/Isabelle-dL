@@ -736,21 +736,8 @@ next
     using someEq by(auto simp add:  sol_eq_exp_t' t vec_extensionality  vne12)
 qed qed
 
-lemma MVT0:
-fixes f f' ::"real \<Rightarrow> real" and t :: real
-assumes f':"\<And>s. s \<in> {0..t} \<Longrightarrow> (f has_derivative f') (at s  within {0..t})"
-assumes geq':"\<And>s. s \<in> {0..t} \<Longrightarrow> f' s \<ge> 0"
-assumes geq0:"f 0 \<ge> 0"
-assumes int_s:"s > 0 \<and> s \<le> t"
-assumes t: "0 < t"
-shows "f s \<ge> 0"
-proof -
-  have "\<not>(f s \<ge> 0) \<Longrightarrow> False"
-    proof -
-      assume "\<not>(f s \<ge> 0)"
-      then have less:"f s < 0" by auto
-      have sub:"\<And>s'. s' \<in> {0..s} \<Longrightarrow> s' \<in> {0..t}" using int_s t by auto
-      have cont':"\<And>s'. s' \<in> {0..s} \<Longrightarrow> isCont f s'"
+
+(* have cont':"\<And>s'. s' \<in> {0..s} \<Longrightarrow> isCont f s'"
         subgoal for s  
           using has_derivative_continuous[OF f'[of s]]
           unfolding isCont_def using sub[of s] sorry
@@ -762,72 +749,157 @@ proof -
         done
       then have diff:"\<forall>x. 0 < x \<and> x < s \<longrightarrow> f differentiable at x"
         sorry
-      have s:"s > 0" using t int_s by auto
-      then obtain l z where ozt:"0 < z \<and> z < s" and fl:"(f has_real_derivative l) (at z)" and ft:"f s - f 0 = (s - 0) * l"
-          using Deriv.MVT[OF s, of f, OF cont diff] by auto
-      then have zint:"z \<in> {0..s}" by auto
-      have f'':"(f has_derivative f') (at s within {0..t})" using zint sub
-        by (simp add: f')
-      have geq'':"\<And>s'. s' \<in> {0..s} \<Longrightarrow> f' s' \<ge> 0" using geq' sub by auto
-      then have "l = f' z" using fl f'' 
-        at_within_closed_interval ft geq'' geq0 has_derivative_unique has_field_derivative_imp_has_derivative less mult_neg_pos mult_pos_pos mult_right_less_imp_less ozt zero_le_square
-        (*by (smt f' sub zint)*) sorry
-      have "f' s < 0" 
-        using \<open>\<not> 0 \<le> f s\<close> \<open>l = f' z\<close> ft geq'' geq0 left_diff_distrib' mult.commute real_mult_less_iff1 t zint sub
-        by (smt int_s)
-      then have False using geq' int_s 
-        by (meson atLeastAtMost_iff less_eq_real_def not_le)
-      then show ?thesis by auto
-    qed
-  then show "?thesis" by auto 
-qed
+        *)
 
 lemma MVT0_within:
 fixes f ::"real \<Rightarrow> real"
   and f'::"real \<Rightarrow> real \<Rightarrow> real"
-  and t :: real
-assumes f':"\<And>s. s \<in> {0..t} \<Longrightarrow> (f has_derivative (f' s)) (at s  within {0..t})"
-assumes geq':"\<And>s. s \<in> {0..t} \<Longrightarrow> f' s s \<ge> 0"
-assumes geq0:"f 0 \<ge> 0"
+  and s t :: real
+assumes f':"\<And>x. x \<in> {0..t} \<Longrightarrow> (f has_derivative (f' x)) (at x  within {0..t})"
+assumes geq':"\<And>x. x \<in> {0..t} \<Longrightarrow> f' x s \<ge> 0"
 assumes int_s:"s > 0 \<and> s \<le> t"
 assumes t: "0 < t"
-shows "f s \<ge> 0"
-  sorry
+shows "f s \<ge> f 0"
+proof -
+  have "f 0 + 0 \<le> f s"   
+    apply (rule Lib.MVT_ivl'[OF f', of 0 s 0])
+    subgoal for x by assumption
+    subgoal for x using geq' by auto 
+    using t int_s t apply auto
+    subgoal for x
+      by (metis int_s mult.commute mult.right_neutral order.trans real_mult_le_cancel_iff2)
+    done
+  then show "?thesis" by auto 
+qed
 
-lemma MVT':
+(*
+lemma MVT_ivl_restricted:
+  fixes f::"'a::ordered_euclidean_space\<Rightarrow>'b::ordered_euclidean_space"
+  assumes fderiv: "\<And>x. x \<in> D \<Longrightarrow> (f has_derivative J x) (at x within D)"
+  assumes J_ivl: "\<And>x. x \<in> D \<Longrightarrow> J x x \<ge> J0"
+  assumes line_in: "\<And>x. x \<in> {0..1} \<Longrightarrow> a + x *\<^sub>R u \<in> D"
+  shows "f a - f 0 \<ge> J0"
+proof -
+  from MVT_corrected[OF fderiv line_in] obtain t where
+    t: "t\<in>Basis \<rightarrow> {0<..<1}" and
+    mvt: "f a - f a = (\<Sum>i\<in>Basis. (J (a + t i *\<^sub>R u) u \<bullet> i) *\<^sub>R i)"
+    sorry
+  note mvt
+  also have "\<dots> \<ge> J0"
+  proof -
+    have J: "\<And>i. i \<in> Basis \<Longrightarrow> J0 \<le> J (a + t i *\<^sub>R u) u"
+      using J_ivl t line_in sorry (*by (auto simp: Pi_iff)*)
+    show ?thesis
+      using J
+      unfolding atLeastAtMost_iff eucl_le[where 'a='b]
+      by auto
+  qed
+  finally show ?thesis sorry
+qed
+
+
+lemma MVT_ivl'_restricted:
+  fixes f::"'a::ordered_euclidean_space\<Rightarrow>'b::ordered_euclidean_space"
+  assumes fderiv: "(\<And>x. x \<in> D \<Longrightarrow> (f has_derivative J x) (at x within D))"
+  assumes J_ivl: "\<And>x. x \<in> D \<Longrightarrow> J x x \<ge> J0"
+  assumes line_in: "\<And>x. x \<in> {0..1} \<Longrightarrow> b + x *\<^sub>R a \<in> D"
+  shows "f a \<ge> f 0 + J0"
+proof -
+  have "f a - f 0 \<ge> J0"
+    apply (rule MVT_ivl_restricted)
+    apply (rule fderiv)
+    apply assumption
+    apply (rule J_ivl) apply assumption
+    using line_in
+    apply (auto simp: diff_le_eq le_diff_eq ac_simps)
+    sorry
+  thus ?thesis
+    by (auto simp: diff_le_eq le_diff_eq ac_simps)
+qed
+lemma MVT0_within_restricted:
+fixes f ::"real \<Rightarrow> real"
+  and f'::"real \<Rightarrow> real \<Rightarrow> real"
+  and s t :: real
+assumes f':"\<And>x. x \<in> {0..t} \<Longrightarrow> (f has_derivative (f' x)) (at x  within {0..t})"
+assumes geq':"\<And>x. x \<in> {0..t} \<Longrightarrow> f' x x \<ge> 0"
+assumes int_s:"s > 0 \<and> s \<le> t"
+assumes t: "0 < t"
+shows "f t \<ge> f 0"
+proof -
+  have "f 0 + 0 \<le> f t"   
+    apply (rule Lib.MVT_ivl'[OF f', of 0 s 0])
+    subgoal for x by assumption
+    subgoal for x using geq' by auto 
+    using t int_s t apply auto
+    subgoal for x
+      by (metis int_s mult.commute mult.right_neutral order.trans real_mult_le_cancel_iff2)
+    done
+  then show "?thesis" by auto 
+qed
+*)
+(*lemma MVT':
 fixes f g ::"real \<Rightarrow> real"
 fixes f' g'::"real \<Rightarrow> real \<Rightarrow> real"
 fixes s t ::real
 assumes f':"\<And>s. s \<in> {0..t} \<Longrightarrow> (f has_derivative (f' s)) (at s within {0..t})"
 assumes g':"\<And>s. s \<in> {0..t} \<Longrightarrow> (g has_derivative (g' s)) (at s within {0..t})"
-assumes geq':"\<And>s. s \<in> {0..t} \<Longrightarrow> f' s s \<ge> g' s s"
+assumes geq':"\<And>x. x \<in> {0..t} \<Longrightarrow> f' x s \<ge> g' x s"
 assumes geq0:"f 0 \<ge> g 0"
 assumes int_s:"s > 0 \<and> s \<le> t"
 assumes t:"t > 0"
 shows "f s \<ge> g s"
 proof -
   let ?h = "(\<lambda>x. f x - g x)"
-  let ?h' = "(\<lambda>x. f' x - g' x)"
-  have "?h s \<ge> 0"
-    apply(rule MVT0[of t ?h "?h' s" s])
-    subgoal for s using f'[of s] g'[of s] sorry
-    subgoal for s using geq'[of s] by auto
-    subgoal using geq0 by auto
+  let ?h' = "(\<lambda>s x. f' s x - g' s x)"
+  have "?h s \<ge> ?h 0"
+    apply(rule MVT0_within[of t ?h "?h'" s])
+    subgoal for s using f'[of s] g'[of s] by auto
+    subgoal for sa using geq'[of sa] by auto
     subgoal using int_s by auto
-    using t by auto
-  then show "?thesis" by auto
+    subgoal using t by auto
+    done
+  then show "?thesis" using geq0 by auto
 qed
+*)
 
-lemma two_chainz:
+lemma MVT':
+fixes f g ::"real \<Rightarrow> real"
+fixes f' g'::"real \<Rightarrow> real"
+fixes s t ::real
+assumes f':"\<And>s. s \<in> {0..t} \<Longrightarrow> (f has_derivative f') (at s within {0..t})"
+assumes g':"\<And>s. s \<in> {0..t} \<Longrightarrow> (g has_derivative g') (at s within {0..t})"
+assumes geq':"\<And>s. s \<in> {0..t} \<Longrightarrow> f' s \<ge> g' s"
+assumes geq0:"f 0 \<ge> g 0"
+assumes int_s:"s > 0 \<and> s \<le> t"
+assumes t:"t > 0"
+shows "f s \<ge> g s"
+sorry
+
+
+(*lemma vector_diff_chain_within:
+  assumes "(f has_vector_derivative f') (at x within s)"
+    and "(g has_vector_derivative g') (at (f x) within f ` s)"
+  shows "((g \<circ> f) has_vector_derivative (f' *\<^sub>R g')) (at x within s)"
+*)
+(* f(g(x))' = f'(g(x))* g'(x)*)
+lemma mychain:
 fixes f::"real \<Rightarrow>'a::finite Rvec"
 fixes g::"'a Rvec \<Rightarrow> real"
 fixes f'::"real \<Rightarrow>'a::finite Rvec"
-fixes g'::"'a Rvec \<Rightarrow> 'a Rvec \<Rightarrow> real"
-assumes "(f has_derivative f') (at s within {0..t})"
-assumes "(g has_derivative (g' (f s))) (at (f s) within f ` {0..t})"
-shows "((g \<circ> f) has_derivative (\<lambda>x. g' (f s) (f' x))) (at s within {0..t})"
-  using has_derivative_in_compose[OF assms]
-  using comp_def[of g f] by auto 
+fixes g'::"'a Rvec \<Rightarrow> real"
+assumes "\<And>s. (f has_derivative f') (at s within {0..t})"
+assumes "\<And>s. (g has_derivative g') (at (f s) within f ` {0..t})"
+shows "((g \<circ> f) has_derivative (g' \<circ> f')) (at s within {0..t})"
+  sorry
+
+lemma vec_chain:
+assumes f:"(f has_vector_derivative f') (at s within {0..t})"
+assumes g:"(g has_vector_derivative g') (at (f s) within f ` {0..t})"
+shows "((g \<circ> f) has_vector_derivative g' *\<^sub>R f') (at s within {0..t})"
+  apply(rule vector_diff_chain_within)
+  using f g sledgehammer
+  sledgehammer
+  oops
 
 lemma rift_in_space_time:
   fixes sol I ODE \<psi> \<theta> t s b
@@ -837,115 +909,142 @@ lemma rift_in_space_time:
           {x. mk_v I ODE (sol 0, b) x \<in> fml_sem I \<psi>}"
   assumes FVT:"FVT \<theta> \<subseteq> semBV I ODE"  
   assumes ivl:"s \<in> {0..t}"
-  shows "((\<lambda>t. sterm_sem I \<theta> (fst (mk_v I ODE (sol 0, b) (sol t)))) 
-    has_derivative (\<lambda>t. frechet I \<theta> (fst((mk_v I ODE (sol 0, b) (sol s)))) (snd (mk_v I ODE (sol 0, b) (sol t))))) (at s within {0..t})"
+  shows "((\<lambda>t. sterm_sem I \<theta> (fst (mk_v I ODE (sol 0, b) (sol t))))
+    (* This is Frechet derivative, so equivalent to
+       has_real_derivative frechet I \<theta> (fst((mk_v I ODE (sol 0, b) (sol s)))) (snd (mk_v I ODE (sol 0, b) (sol s))))) (at s within {0..t})*)
+    has_derivative (\<lambda>t'. t' * frechet I \<theta> (fst((mk_v I ODE (sol 0, b) (sol s)))) (snd (mk_v I ODE (sol 0, b) (sol s))))) (at s within {0..t})"
   proof -
     let ?\<phi> = "(\<lambda>t. (mk_v I ODE (sol 0, b) (sol t)))"
     let ?\<phi>s = "(\<lambda>t. fst (?\<phi> t))"
-   
     have sol_deriv:"\<And>s. s \<in> {0..t} \<Longrightarrow> (sol has_derivative (\<lambda>xa. xa *\<^sub>R ODE_sem I ODE (sol s))) (at s within {0..t})"
       using sol apply simp 
       apply (drule solves_odeD(1))
       unfolding has_vderiv_on_def has_vector_derivative_def
       by auto
-    have sol_dom:"\<And>s. s \<in> {0..t} \<Longrightarrow> ?\<phi> s \<in> fml_sem I \<psi>"
+    have sol_dom:"\<And>s. s\<in> {0..t} \<Longrightarrow> ?\<phi> s \<in> fml_sem I \<psi>"
       using sol apply simp
       apply (drule solves_odeD(2))
       by auto
     let ?h = "(\<lambda>t. sterm_sem I \<theta> (?\<phi>s t))"
     let ?g = "(\<lambda>\<nu>. sterm_sem I \<theta> \<nu>)"
     let ?f = "?\<phi>s"
-    let ?g' = "(\<lambda>\<nu> \<nu>'. frechet I \<theta> \<nu> \<nu>')"
-    let ?f' = "(\<lambda>t. (\<chi> i. if i \<in> ODE_vars I ODE then (ODE_sem I ODE (sol t)) $ i else 0))"
-    have heq:"?h = ?g \<circ> ?f" by auto
-    have derp1:"\<And>i. i \<in> ODE_vars I ODE \<Longrightarrow> (\<lambda>t. fst (mk_v I ODE (sol 0, b) (sol t)) $ i) = (\<lambda>t. sol t $ i)"
+    let ?f' = "(\<lambda>t'. t' *\<^sub>R (\<chi> i. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol s) $ i else 0))"
+    let ?g' = "(frechet I \<theta> (?\<phi>s s))"
+    have heq:"?h = ?g \<circ> ?f" by (auto)
+    have fact1:"\<And>i. i \<in> ODE_vars I ODE \<Longrightarrow> (\<lambda>t. ?\<phi>s(t) $ i) = (\<lambda>t. sol t $ i)"
       subgoal for i
         apply(rule ext)
         subgoal for t
           using mk_v_agree[of I ODE "(sol 0, b)" "sol t"]
           unfolding Vagree_def by auto
         done done
-    have derp2:"\<And>i. i \<in> ODE_vars I ODE \<Longrightarrow> (\<lambda>t. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol t) $ i else 0) = (\<lambda>t. ODE_sem I ODE (sol t) $ i)"
+    have fact2:"\<And>i. i \<in> ODE_vars I ODE \<Longrightarrow> (\<lambda>t. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol t) $ i else 0) = (\<lambda>t. ODE_sem I ODE (sol t) $ i)"
       subgoal for i
         apply(rule ext)
         subgoal for t
           using mk_v_agree[of I ODE "(sol 0, b)" "sol t"]
           unfolding Vagree_def by auto
         done done
-    have derp3:"\<And>i. i \<in> (-ODE_vars I ODE) \<Longrightarrow> (\<lambda>t. fst (mk_v I ODE (sol 0, b) (sol t)) $ i) = (\<lambda>t. sol 0 $ i)"
+    have fact3:"\<And>i. i \<in> (-ODE_vars I ODE) \<Longrightarrow> (\<lambda>t. ?\<phi>s(t) $ i) = (\<lambda>t. sol 0 $ i)"
       subgoal for i
         apply(rule ext)
         subgoal for t
           using mk_v_agree[of I ODE "(sol 0, b)" "sol t"]
           unfolding Vagree_def by auto
         done done
-    have derp4:"\<And>i. i \<in> (-ODE_vars I ODE) \<Longrightarrow> (\<lambda>t. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol t) $ i else 0) = (\<lambda>t. 0)"
+    have fact4:"\<And>i. i \<in> (-ODE_vars I ODE) \<Longrightarrow> (\<lambda>t. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol t) $ i else 0) = (\<lambda>t. 0)"
       subgoal for i
         apply(rule ext)
         subgoal for t
           using mk_v_agree[of I ODE "(sol 0, b)" "sol t"]
           unfolding Vagree_def by auto
         done done
-    have ode_deriv:"\<And>i. i \<in> ODE_vars I ODE \<Longrightarrow> ((\<lambda>t. sol t $ i) has_derivative (\<lambda>t. ODE_sem I ODE (sol t) $ i)) (at s within {0..t})" sorry
-    have eta:"(\<lambda>t. (\<chi> i. ?f t $ i)) = ?f" by(rule ext, rule vec_extensionality, auto)
-    have "((\<lambda>t. (\<chi> i. ?f t $ i)) has_derivative ?f') (at s within {0..t})"
-      apply (rule has_derivative_vec)
+    have some_eq:"(\<lambda>v'. \<chi> i. v' *\<^sub>R ODE_sem I ODE (sol s) $ i) = (\<lambda>v'. v' *\<^sub>R ODE_sem I ODE (sol s))"
+      apply(rule ext)
+      apply(rule vec_extensionality)
+      by auto
+    have some_sol:"(sol has_derivative (\<lambda>v'. v' *\<^sub>R ODE_sem I ODE (sol s))) (at s within {0..t})"
+      using sol ivl unfolding solves_ode_def has_vderiv_on_def has_vector_derivative_def by auto
+    have some_eta:"(\<lambda>t. \<chi> i. sol t $ i) = sol" by (rule ext, rule vec_extensionality, auto)
+    have ode_deriv:"\<And>i. i \<in> ODE_vars I ODE \<Longrightarrow> 
+      ((\<lambda>t. sol t $ i) has_derivative (\<lambda> v'. v' *\<^sub>R ODE_sem I ODE (sol s) $ i)) (at s within {0..t})"
       subgoal for i
-        apply(cases "i \<in> ODE_vars I ODE")
-        subgoal using derp1[of i] derp2[of i] ode_deriv[of i] by auto
-        subgoal using derp3[of i] derp4[of i] by auto
+        apply(rule has_derivative_proj)
+        using some_eq some_sol some_eta by auto
       done
-      
+    have eta:"(\<lambda>t. (\<chi> i. ?f t $ i)) = ?f" by(rule ext, rule vec_extensionality, auto)
+    have eta_esque:"(\<lambda>t'. \<chi> i. t' * (if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol s) $ i else 0)) =  
+                    (\<lambda>t'. t' *\<^sub>R (\<chi> i. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol s) $ i else 0))"
+      apply(rule ext | rule vec_extensionality)+
+      subgoal for t' i by auto done
+    have "((\<lambda>t. (\<chi> i. ?f t $ i)) has_derivative (\<lambda>t'. (\<chi> i. ?f' t' $ i))) (at s within {0..t})"
+      apply (rule has_derivative_vec)
+      subgoal for i       
+        apply(cases "i \<in> ODE_vars I ODE")
+        subgoal using fact1[of i] fact2[of i] ode_deriv[of i] by auto 
+        subgoal using fact3[of i] fact4[of i] by auto 
+      done
     done
-    then have fderiv:"(?f has_derivative ?f') (at s within {0..t})" using eta by auto
-    have gderiv:"(?g has_derivative (?g' (?f s))) (at (?f s) within ?f ` {0..t})"
-       using frechet_correctness[OF good_interp free, of "(fst (mk_v I ODE (sol 0, b) (sol s)))"]
-       using Derivative.has_derivative_at_within by blast
-    have chain:"((?g \<circ> ?f) has_derivative (\<lambda>x. ?g' (?f s) (?f' x))) (at s within {0..t})"
-      using fderiv gderiv two_chainz by blast
-    let ?co\<nu>1 = "(\<lambda> sa. (?\<phi>s s, \<chi> i. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol sa) $ i else 0))"
-    let ?co\<nu>2 = "(\<lambda> sa. (?\<phi>s s, snd (mk_v I ODE (sol 0, b) (sol sa))))"
+    then have fderiv:"(?f has_derivative ?f') (at s within {0..t})" using eta eta_esque by auto
+    have gderiv:"(?g has_derivative ?g') (at (?f s) within ?f ` {0..t})"
+       using Derivative.has_derivative_at_within 
+       using frechet_correctness free good_interp 
+       by blast
+    have chain:"((?g \<circ> ?f) has_derivative (?g' \<circ> ?f')) (at s within {0..t})"
+      using fderiv gderiv diff_chain_within by blast
+    (* (\<chi>i. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol sa) $ i else 0)
+     (ODE_sem I ODE (\<chi>i. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol sa) $ i else 0))*)
+      (* (fst (mk_v I ODE (sol 0, b) (sol sa))) (snd (mk_v I ODE (sol 0, b) (sol sa)))*)
+      
+    let ?co\<nu>1 = "(fst (mk_v I ODE (sol 0, b) (sol s)), ODE_sem I ODE (fst (mk_v I ODE (sol 0, b) (sol s))))"
+    let ?co\<nu>2 = "(fst (mk_v I ODE (sol 0, b) (sol s)), snd (mk_v I ODE (sol 0, b) (sol s)))"
     have sub_cont:"\<And>a .a \<notin> ODE_vars I ODE \<Longrightarrow> Inl a \<in> FVT \<theta> \<Longrightarrow> False"
       using FVT by auto
     have sub_cont2:"\<And>a .a \<notin> ODE_vars I ODE \<Longrightarrow> Inr a \<in> FVT \<theta> \<Longrightarrow> False"
       using FVT by auto
-    have co_agree:"\<And>sa. Vagree (fst (mk_v I ODE (sol 0, b) (sol s)), \<chi> i. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol sa) $ i else 0)
-   (fst (mk_v I ODE (sol 0, b) (sol s)), snd (mk_v I ODE (sol 0, b) (sol sa))) (FVDiff \<theta>)"
-      subgoal for sa
-        using mk_v_agree[of I ODE "(sol 0, b)" "sol s"]
-        using mk_v_agree[of I ODE "(sol 0, b)" "sol sa"]
-        unfolding Vagree_def apply auto
-        subgoal for i x
-          apply(cases x)
-          subgoal for a
+    have co_agree:"Vagree (?co\<nu>1) (?co\<nu>2) (FVDiff \<theta>)"
+      using mk_v_agree[of I ODE "(sol 0, b)" "sol s"]
+      unfolding Vagree_def apply auto
+      subgoal for i x
+        apply(cases x)
+        subgoal for a
+          apply(cases "a \<in> ODE_vars I ODE")
+          subgoal
             apply(erule allE[where x=i])+
             apply(simp)
-            using sub_cont[of a] by simp
-          subgoal for ba
-            apply(erule allE[where x=i])+
-            apply(simp)
-            using sub_cont2[of ba] by simp
-          done
+            (* TODO: use coincidence *)
+            using sub_cont[of a] coincidence_ode sorry
+        subgoal for ba
+          apply(erule allE[where x=i])+
+          apply(simp)
+          using sub_cont2[of ba] sorry
         done
+        sorry
       done
-    have heq'':"(\<lambda>x. ?g' (?f s) (?f' x)) = (*(\<lambda>s. dterm_sem I (Differential \<theta>) (?\<phi> s))*)
-      (\<lambda>t. frechet I \<theta> (?\<phi>s s) (snd (?\<phi> t)))
+        
+    have frech_linear:"\<And>x \<theta> \<nu> \<nu>' I. x * frechet I \<theta> \<nu> \<nu>' = frechet I \<theta> \<nu> (x *\<^sub>R \<nu>')" sorry
+    have heq'':"(?g' \<circ> ?f') = 
+      (\<lambda>t'. t' *\<^sub>R frechet I \<theta> (?\<phi>s s) (snd (?\<phi> s)))
+      (*(\<lambda>t. frechet I \<theta> (?\<phi>s t) (snd (?\<phi> t)))*)
       "
-      apply(rule ext)
-      subgoal for sa
         using mk_v_agree[of I ODE "(sol 0, b)" "sol s"]
-        using mk_v_agree[of I ODE "(sol 0, b)" "sol sa"]
-        using coincidence_frechet[OF free, of "(?co\<nu>1 sa)" "(?co\<nu>2 sa)", OF co_agree[of sa], of I]
-        unfolding Vagree_def 
-        by auto
-      done
-    have "(\<lambda>s. (?g' (?f s) \<circ> ?f') s) = (\<lambda>s. ?g' (?f s) (?f' s))"
-      by (rule ext, auto)
-    then have "((?g \<circ> ?f) has_derivative (\<lambda>x. ?g' (?f s) (?f' x))) (at s within {0..t})"
+        unfolding comp_def
+        using coincidence_frechet[OF free, of "(?co\<nu>1)" "(?co\<nu>2)", OF co_agree, of I]
+        apply auto
+        apply(rule ext | rule vec_extensionality)+
+        subgoal for x
+          using frech_linear[of x I \<theta> "(fst (mk_v I ODE (sol 0, b) (sol s)))" "(snd (mk_v I ODE (sol 0, b) (sol s)))"]
+          apply auto
+          using coincidence_frechet (* ... *)
+          sorry
+        sorry
+    (*have "(\<lambda>s. (?g' (?f s) \<circ> ?f') s) = (\<lambda>s. ?g' (?f s) (?f' s))"
+      by (rule ext, auto)*)
+    have "((?g \<circ> ?f) has_derivative (?g' \<circ> ?f')) (at s within {0..t})"
       using chain by auto
-    then have "((?g \<circ> ?f) has_derivative (\<lambda>t. frechet I \<theta> (?\<phi>s s) (snd (?\<phi> t)))) (at s within {0..t})"
+    then have "((?g \<circ> ?f) has_derivative (\<lambda>t'. t' * frechet I \<theta> (?\<phi>s s) (snd (?\<phi> s)))) (at s within {0..t})"
       using heq'' by auto
-    then have result:"((\<lambda>t. sterm_sem I \<theta> (?\<phi>s t))  has_derivative (\<lambda>t. frechet I \<theta> (?\<phi>s s) (snd (?\<phi> t)))) (at s within {0..t})"
+    then have result:"((\<lambda>t. sterm_sem I \<theta> (?\<phi>s t))  has_derivative (\<lambda>t. t * frechet I \<theta> (?\<phi>s s) (snd (?\<phi> s)))) (at s within {0..t})"
       using heq by auto
     then show "?thesis" by auto
   qed
@@ -983,7 +1082,7 @@ lemma DIGeq_valid:"valid DIGeqaxiom"
        let ?\<phi>t = "\<lambda>x. snd (?\<phi> x)"
        let ?df1 = "(\<lambda>t. dterm_sem I (f1 fid3 vid1) (?\<phi> t))"
        let ?f1 = "(\<lambda>t. sterm_sem I (f1 fid3 vid1) (?\<phi>s t))"
-       let ?f1' = "(\<lambda>t s. frechet I (f1 fid3 vid1) (?\<phi>s t) (?\<phi>t s))"
+       let ?f1' = "(\<lambda>s. frechet I (f1 fid3 vid1) (?\<phi>s s) (?\<phi>t s))"
        have dfeq:"?df1 = ?f1" sorry
        have free1:"dfree ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))"
          by (auto intro: dfree.intros)
@@ -992,7 +1091,7 @@ lemma DIGeq_valid:"valid DIGeqaxiom"
        have free3:"dfree (f1 fid3 vid1)" unfolding f1_def by (auto intro: dfree.intros)
        let ?df2 = "(\<lambda>t. dterm_sem I (f1 fid2 vid1) (?\<phi> t))"
        let ?f2 = "(\<lambda>t. sterm_sem I (f1 fid2 vid1) (?\<phi>s t))"
-       let ?f2' = "(\<lambda>t s. frechet I (f1 fid2 vid1) (?\<phi>s t) (?\<phi>t s))"
+       let ?f2' = "(\<lambda>s. frechet I (f1 fid2 vid1) (?\<phi>s s) (?\<phi>t s))"
        let ?int = "{0..t}"
        have bluh:"\<And>x i. (Functions I i has_derivative (THE f'. \<forall>x. (Functions I i has_derivative f' x) (at x)) x) (at x)"
          using good_interp unfolding is_interp_def by auto
@@ -1065,35 +1164,40 @@ lemma DIGeq_valid:"valid DIGeqaxiom"
            apply(cases "xa = vid1")
            by auto
          done
-       have deriv1:"\<And>s. s \<in> ?int \<Longrightarrow> (?f1 has_derivative (?f1' s)) (at s within {0..t})"
+       have deriv1:"\<And>s. s \<in> ?int \<Longrightarrow> (?f1 has_derivative (?f1')) (at s within {0..t})"
          subgoal for s
-           using  rift_in_space_time[OF good_interp free1  sol1 FVTsub1] by (auto simp add: f1_def expand_singleton directional_derivative_def)
+           using  rift_in_space_time[OF good_interp free1  sol1 FVTsub1] 
+           by (auto simp add: f1_def expand_singleton directional_derivative_def)
          done
-       have deriv2:"\<And>s. s \<in> ?int \<Longrightarrow> (?f2 has_derivative (?f2' s)) (at s within {0..t})"
+       have deriv2:"\<And>s. s \<in> ?int \<Longrightarrow> (?f2 has_derivative (?f2')) (at s within {0..t})"
          subgoal for s
            using  rift_in_space_time[OF good_interp free2 sol1 FVTsub2] by (auto simp add: f1_def expand_singleton directional_derivative_def)
          done
-       have leq:"\<And>s. s \<in> ?int \<Longrightarrow> ?f1' s s \<le> ?f2' s s"
-         subgoal for s using box'[of s]  
-           unfolding directional_derivative_def by auto
+       have leq:"\<And>s . s \<in> ?int \<Longrightarrow> ?f1' s \<le> ?f2' s"
+         subgoal for s using box'[of s] 
+           by (simp add: directional_derivative_def)
          done
-       have "\<And>s. s \<in> ?int \<Longrightarrow> ?f1 s \<le> ?f2 s"
-         subgoal for s
-           apply(cases "s = 0")
-           subgoal using geq0' sem_eq1' sem_eq2' by auto  
-           subgoal
-             apply (rule MVT'[of t ?f2 "?f2'" ?f1 "?f1'" s])
-             subgoal for sa using deriv2[of sa] by auto
-             subgoal for sa using deriv1[of sa] by auto
-             subgoal for sa using leq[of sa] by auto
-             subgoal using geq0' sem_eq1' sem_eq2' by auto
-             by auto
+       
+       have "?f1 t \<le> ?f2 t"
+         apply(cases "t = 0")
+         subgoal using geq0' sem_eq1' sem_eq2' by auto  
+         subgoal
+           apply (rule MVT'[of t ?f2 "?f2'" ?f1 "?f1'" t])
+           subgoal using deriv2 by auto
+           subgoal using deriv1 by auto
+           subgoal for sa 
+             subgoal using leq[of sa] 
+               by blast
            done
+         subgoal using geq0 sorry (* think i can actually do this one *)
+         subgoal using t by auto
+         subgoal using t by auto
          done
+       done
        then show
        " dterm_sem I (f1 fid3 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t))
        \<le> dterm_sem I (f1 fid2 vid1) (mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sol 0, b) (sol t))"
-         using t by auto
+         using t sorry (* think i can actually do this one *)
   qed
 (*
        have hmm1:"\<exists>f. ((\<lambda>t. dterm_sem I (if vid1 = vid1 then trm.Var vid1 else Const 0)

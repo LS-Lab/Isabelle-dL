@@ -168,4 +168,46 @@ proof -
   thus ?thesis by auto
  qed
 
+ 
+lemma MVT_ivl:
+  fixes f::"'a::ordered_euclidean_space\<Rightarrow>'b::ordered_euclidean_space"
+  assumes fderiv: "\<And>x. x \<in> D \<Longrightarrow> (f has_derivative J x) (at x within D)"
+  assumes J_ivl: "\<And>x. x \<in> D \<Longrightarrow> J x u \<ge> J0"
+  assumes line_in: "\<And>x. x \<in> {0..1} \<Longrightarrow> a + x *\<^sub>R u \<in> D"
+  shows "f (a + u) - f a \<ge> J0"
+proof -
+  from MVT_corrected[OF fderiv line_in] obtain t where
+    t: "t\<in>Basis \<rightarrow> {0<..<1}" and
+    mvt: "f (a + u) - f a = (\<Sum>i\<in>Basis. (J (a + t i *\<^sub>R u) u \<bullet> i) *\<^sub>R i)"
+    by auto
+  note mvt
+  also have "\<dots> \<ge> J0"
+  proof -
+    have J: "\<And>i. i \<in> Basis \<Longrightarrow> J0 \<le> J (a + t i *\<^sub>R u) u"
+      using J_ivl t line_in by (auto simp: Pi_iff)
+    show ?thesis
+      using J
+      unfolding atLeastAtMost_iff eucl_le[where 'a='b]
+      by auto
+  qed
+  finally show ?thesis .
+qed
+
+lemma MVT_ivl':
+  fixes f::"'a::ordered_euclidean_space\<Rightarrow>'b::ordered_euclidean_space"
+  assumes fderiv: "(\<And>x. x \<in> D \<Longrightarrow> (f has_derivative J x) (at x within D))"
+  assumes J_ivl: "\<And>x. x \<in> D \<Longrightarrow> J x (a - b) \<ge> J0"
+  assumes line_in: "\<And>x. x \<in> {0..1} \<Longrightarrow> b + x *\<^sub>R (a - b) \<in> D"
+  shows "f a \<ge> f b + J0"
+proof -
+  have "f (b + (a - b)) - f b \<ge> J0"
+    apply (rule MVT_ivl[OF fderiv ])
+    apply assumption
+    apply (rule J_ivl) apply assumption
+    using line_in
+    apply (auto simp: diff_le_eq le_diff_eq ac_simps)
+    done
+  thus ?thesis
+    by (auto simp: diff_le_eq le_diff_eq ac_simps)
+qed
 end
