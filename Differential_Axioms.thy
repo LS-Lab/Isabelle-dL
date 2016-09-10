@@ -442,7 +442,6 @@ lemma DS_valid:"valid DSaxiom"
   \<and> Vagree (mk_v I (OSing vid1 (f0 fid1)) (a, b) (?sol r))
    (mk_xode I (OSing vid1 (f0 fid1)) (?sol r)) (semBV I (OSing vid1 (f0 fid1)))" 
     using mk_v_agree[of "I" "(OSing vid1 (f0 fid1))" "(a,b)" "(?sol r)"] by auto
-  
   have prereq1a:"fst ?abba
   = fst (mk_v I (OSing vid1 (f0 fid1)) (a,b) (?sol r))"
     using  agrees aaba 
@@ -466,8 +465,7 @@ lemma DS_valid:"valid DSaxiom"
       apply (cases "i = vid1")
       using vne12 agrees Vagree_def  apply (auto simp add: aaba f0_def empty_def )
       done
-    done
-  
+    done  
   have "?abba = mk_v I (OSing vid1 (f0 fid1)) (a,b) (?sol r)"
     using prod_eq_iff prereq1a prereq1b by blast
   hence req1:"((a, b), ?abba) = ((a, b), mk_v I (OSing vid1 (f0 fid1)) (a,b) (?sol r))" by auto
@@ -475,9 +473,6 @@ lemma DS_valid:"valid DSaxiom"
   hence vec_simp:"(\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I ($f fid1 (\<lambda>i. Const 0)) b else 0) 
       = (\<lambda>a b. \<chi> i. if i = vid1 then Functions I fid1 (\<chi> i. 0) else 0)"
     by (auto simp add: vec_eq_iff cong: if_cong)
-    (* TODO: have a solution that exists everywhere, want to restrict the domain. Fabian says this
-       should be true but has not been formalized just yet. *)
-  (*interpret ll:ll_on_open_it "{0 .. r}" "(\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))" "{x. mk_v I (OSing vid1 (f0 fid1)) (a,b) x \<in> fml_sem I (p1 vid2 vid1)}"*)
   have sub: "{0..r} \<subseteq> UNIV" by auto
   have sub2:"{x. mk_v I (OSing vid1 (f0 fid1)) (a,b) x \<in> fml_sem I (p1 vid2 vid1)} \<subseteq> UNIV" by auto
   have req3:"(?sol solves_ode (\<lambda>_. ODE_sem I (OSing vid1 (f0 fid1)))) {0..r}
@@ -720,8 +715,7 @@ next
            (\<forall>\<omega>. \<omega> = repv (repv (ab, bb) vid2 t) vid1
                       (dterm_sem I (Plus (trm.Var vid1) (Times (f0 fid1) (trm.Var vid2))) (repv (ab, bb) vid2 t)) \<longrightarrow>
                  \<omega> \<in> fml_sem I (p1 vid3 vid1))"
-    using impl allRa by auto
-       
+    using impl allRa by auto       
   have someEq:"(\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
             (\<chi> y. if vid1 = y then (if vid2 = vid1 then t else fst (ab, bb) $ vid1) + Functions I fid1 (\<chi> i. 0) * t
                   else fst (\<chi> y. if vid2 = y then t else fst (ab, bb) $ y, bb) $ y,
@@ -729,27 +723,11 @@ next
              = (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. Const 0))) (ab, bb) (sol t)))"
     apply(rule vec_extensionality)
     using vne12 sol_eq_exp t thing by auto
-  
   show "mk_v I (OSing vid1 (f0 fid1)) (ab, bb) (sol t) \<in> fml_sem I (p1 vid3 vid1)"
     using mk_v_agree[of I "OSing vid1 (f0 fid1)" "(ab, bb)" "sol t"] fml3[of t]
     unfolding f0_def p1_def empty_def Vagree_def 
     using someEq by(auto simp add:  sol_eq_exp_t' t vec_extensionality  vne12)
 qed qed
-
-
-(* have cont':"\<And>s'. s' \<in> {0..s} \<Longrightarrow> isCont f s'"
-        subgoal for s  
-          using has_derivative_continuous[OF f'[of s]]
-          unfolding isCont_def using sub[of s] sorry
-        done
-      then have cont:"\<forall>x. 0 \<le> x \<and> x \<le> s \<longrightarrow> isCont f x" by auto
-      have "\<And>s'. 0 < s' \<and> s' < s \<Longrightarrow> f differentiable at s'  within {0..t}"
-        subgoal for s' using f'[of s'] 
-          using Derivative.differentiableI sub[of s'] by auto
-        done
-      then have diff:"\<forall>x. 0 < x \<and> x < s \<longrightarrow> f differentiable at x"
-        sorry
-        *)
 
 lemma MVT0_within:
 fixes f ::"real \<Rightarrow> real"
@@ -772,71 +750,6 @@ proof -
   then show "?thesis" by auto 
 qed
 
-(*
-lemma MVT_ivl_restricted:
-  fixes f::"'a::ordered_euclidean_space\<Rightarrow>'b::ordered_euclidean_space"
-  assumes fderiv: "\<And>x. x \<in> D \<Longrightarrow> (f has_derivative J x) (at x within D)"
-  assumes J_ivl: "\<And>x. x \<in> D \<Longrightarrow> J x x \<ge> J0"
-  assumes line_in: "\<And>x. x \<in> {0..1} \<Longrightarrow> a + x *\<^sub>R u \<in> D"
-  shows "f a - f 0 \<ge> J0"
-proof -
-  from MVT_corrected[OF fderiv line_in] obtain t where
-    t: "t\<in>Basis \<rightarrow> {0<..<1}" and
-    mvt: "f a - f a = (\<Sum>i\<in>Basis. (J (a + t i *\<^sub>R u) u \<bullet> i) *\<^sub>R i)"
-    sorry
-  note mvt
-  also have "\<dots> \<ge> J0"
-  proof -
-    have J: "\<And>i. i \<in> Basis \<Longrightarrow> J0 \<le> J (a + t i *\<^sub>R u) u"
-      using J_ivl t line_in sorry (*by (auto simp: Pi_iff)*)
-    show ?thesis
-      using J
-      unfolding atLeastAtMost_iff eucl_le[where 'a='b]
-      by auto
-  qed
-  finally show ?thesis sorry
-qed
-
-
-lemma MVT_ivl'_restricted:
-  fixes f::"'a::ordered_euclidean_space\<Rightarrow>'b::ordered_euclidean_space"
-  assumes fderiv: "(\<And>x. x \<in> D \<Longrightarrow> (f has_derivative J x) (at x within D))"
-  assumes J_ivl: "\<And>x. x \<in> D \<Longrightarrow> J x x \<ge> J0"
-  assumes line_in: "\<And>x. x \<in> {0..1} \<Longrightarrow> b + x *\<^sub>R a \<in> D"
-  shows "f a \<ge> f 0 + J0"
-proof -
-  have "f a - f 0 \<ge> J0"
-    apply (rule MVT_ivl_restricted)
-    apply (rule fderiv)
-    apply assumption
-    apply (rule J_ivl) apply assumption
-    using line_in
-    apply (auto simp: diff_le_eq le_diff_eq ac_simps)
-    sorry
-  thus ?thesis
-    by (auto simp: diff_le_eq le_diff_eq ac_simps)
-qed
-lemma MVT0_within_restricted:
-fixes f ::"real \<Rightarrow> real"
-  and f'::"real \<Rightarrow> real \<Rightarrow> real"
-  and s t :: real
-assumes f':"\<And>x. x \<in> {0..t} \<Longrightarrow> (f has_derivative (f' x)) (at x  within {0..t})"
-assumes geq':"\<And>x. x \<in> {0..t} \<Longrightarrow> f' x x \<ge> 0"
-assumes int_s:"s > 0 \<and> s \<le> t"
-assumes t: "0 < t"
-shows "f t \<ge> f 0"
-proof -
-  have "f 0 + 0 \<le> f t"   
-    apply (rule Lib.MVT_ivl'[OF f', of 0 s 0])
-    subgoal for x by assumption
-    subgoal for x using geq' by auto 
-    using t int_s t apply auto
-    subgoal for x
-      by (metis int_s mult.commute mult.right_neutral order.trans real_mult_le_cancel_iff2)
-    done
-  then show "?thesis" by auto 
-qed
-*)
 lemma MVT':
 fixes f g ::"real \<Rightarrow> real"
 fixes f' g'::"real \<Rightarrow> real \<Rightarrow> real"
@@ -860,33 +773,6 @@ proof -
     done
   then show "?thesis" using geq0 by auto
 qed
-
-(*
-lemma MVT':
-fixes f g ::"real \<Rightarrow> real"
-fixes f' g'::"real \<Rightarrow> real \<Rightarrow> real"
-fixes s t ::real
-assumes f':"\<And>s. s \<in> {0..t} \<Longrightarrow> (f has_derivative (f' s)) (at s within {0..t})"
-assumes g':"\<And>s. s \<in> {0..t} \<Longrightarrow> (g has_derivative (g' s)) (at s within {0..t})"
-assumes geq':"\<And>x. x \<in> {0..t} \<Longrightarrow> f' x s \<ge> g' x s"
-assumes geq0:"f 0 \<ge> g 0"
-assumes int_s:"s > 0 \<and> s \<le> t"
-assumes t:"t > 0"
-shows "f s \<ge> g s"
-  sorry
-    (*
-lemma MVT':
-fixes f g ::"real \<Rightarrow> real"
-fixes f' g'::"real \<Rightarrow> real"
-fixes s t ::real
-assumes f':"\<And>s. s \<in> {0..t} \<Longrightarrow> (f has_real_derivative f' s) (at s within {0..t})"
-assumes g':"\<And>s. s \<in> {0..t} \<Longrightarrow> (g has_real_derivative g' s) (at s within {0..t})"
-assumes geq':"\<And>s. s \<in> {0..t} \<Longrightarrow> f' s \<ge> g' s"
-assumes geq0:"f 0 \<ge> g 0"
-assumes int_s:"s > 0 \<and> s \<le> t"
-assumes t:"t > 0"
-shows "f s \<ge> g s"
-sorry*) *)
 
 lemma frech_linear:
   fixes x \<theta> \<nu> \<nu>' I
