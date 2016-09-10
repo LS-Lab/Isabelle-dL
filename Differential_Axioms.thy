@@ -897,14 +897,46 @@ assumes f:"(f has_vector_derivative f') (at s within {0..t})"
 assumes g:"(g has_vector_derivative g') (at (f s) within f ` {0..t})"
 shows "((g \<circ> f) has_vector_derivative g' *\<^sub>R f') (at s within {0..t})"
   apply(rule vector_diff_chain_within)
-  using f g sledgehammer
-  sledgehammer
+  using f g 
   oops
 
+lemma frech_linear:
+  fixes x \<theta> \<nu> \<nu>' I
+  assumes good_interp:"is_interp I"
+  shows "dfree \<theta> \<Longrightarrow> x * frechet I \<theta> \<nu> \<nu>' = frechet I \<theta> \<nu> (x *\<^sub>R \<nu>')"
+  proof(induction rule: dfree.induct)
+    case (dfree_Var i)
+    then show ?case by auto
+  next
+    case (dfree_Const r)
+    then show ?case by auto
+  next
+    case (dfree_Fun args i)
+      assume frees:"\<And>i. dfree (args i)"
+      assume IH:"\<And>i. x * frechet I (args i) \<nu> \<nu>' = frechet I (args i) \<nu> (x *\<^sub>R \<nu>')"
+      have IH':"(\<chi> i. x * frechet I (args i) \<nu> \<nu>') = (\<chi> i. frechet I (args i) \<nu> (x *\<^sub>R \<nu>'))"
+        by(rule vec_extensionality, auto simp add: IH)
+      have frech:"(Functions I i has_derivative FunctionFrechet I i (\<chi> i. sterm_sem I (args i) \<nu>)) (at (\<chi> i. sterm_sem I (args i) \<nu>))"
+        using good_interp unfolding is_interp_def by blast
+      then have blin:"bounded_linear (FunctionFrechet I i (\<chi> i. sterm_sem I (args i) \<nu>))"
+        using has_derivative_bounded_linear by auto
+      show ?case using blin IH' unfolding frechet.simps
+        by (metis (mono_tags) dfree_Fun_simps frechet.simps(2) frechet_correctness frees good_interp has_derivative_bounded_linear linear_simps(5) real_scaleR_def)
+  next
+    case (dfree_Plus \<theta>\<^sub>1 \<theta>\<^sub>2)
+    then show ?case 
+      by (simp add: semiring_normalization_rules(34))
+  next
+    case (dfree_Times \<theta>\<^sub>1 \<theta>\<^sub>2)
+    then show ?case 
+      by (simp add: semiring_normalization_rules)
+  qed
+    
 lemma rift_in_space_time:
   fixes sol I ODE \<psi> \<theta> t s b
   assumes good_interp:"is_interp I"
   assumes free:"dfree \<theta>"
+  assumes osafe:"osafe ODE"
   assumes sol:"(sol solves_ode (\<lambda>_ \<nu>'. ODE_sem I ODE \<nu>')) {0..t} 
           {x. mk_v I ODE (sol 0, b) x \<in> fml_sem I \<psi>}"
   assumes FVT:"FVT \<theta> \<subseteq> semBV I ODE"  
@@ -992,17 +1024,26 @@ lemma rift_in_space_time:
        by blast
     have chain:"((?g \<circ> ?f) has_derivative (?g' \<circ> ?f')) (at s within {0..t})"
       using fderiv gderiv diff_chain_within by blast
-    (* (\<chi>i. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol sa) $ i else 0)
-     (ODE_sem I ODE (\<chi>i. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol sa) $ i else 0))*)
-      (* (fst (mk_v I ODE (sol 0, b) (sol sa))) (snd (mk_v I ODE (sol 0, b) (sol sa)))*)
-      
     let ?co\<nu>1 = "(fst (mk_v I ODE (sol 0, b) (sol s)), ODE_sem I ODE (fst (mk_v I ODE (sol 0, b) (sol s))))"
     let ?co\<nu>2 = "(fst (mk_v I ODE (sol 0, b) (sol s)), snd (mk_v I ODE (sol 0, b) (sol s)))"
     have sub_cont:"\<And>a .a \<notin> ODE_vars I ODE \<Longrightarrow> Inl a \<in> FVT \<theta> \<Longrightarrow> False"
       using FVT by auto
     have sub_cont2:"\<And>a .a \<notin> ODE_vars I ODE \<Longrightarrow> Inr a \<in> FVT \<theta> \<Longrightarrow> False"
       using FVT by auto
-    have co_agree:"Vagree (?co\<nu>1) (?co\<nu>2) (FVDiff \<theta>)"
+    have "Vagree (mk_v I ODE (sol 0, b) (sol s)) (sol s, b) (Inl ` ODE_vars I ODE)"
+      using mk_v_agree[of I ODE "(sol 0, b)" "sol s"]
+      unfolding Vagree_def by auto
+    let ?co'\<nu>1 = "(\<lambda>x. (fst (mk_v I ODE (sol 0, b) (sol s)), x *\<^sub>R (\<chi> i. if i \<in> ODE_vars I ODE then ODE_sem I ODE (sol s) $ i else 0)))"
+    let ?co'\<nu>2 = "(\<lambda>x. (fst (mk_v I ODE (sol 0, b) (sol s)), x *\<^sub>R snd (mk_v I ODE (sol 0, b) (sol s))))"
+    have co_agree_sem:"\<And>s. Vagree (?co'\<nu>1 s) (?co'\<nu>2 s) (semBV I ODE)"
+      subgoal for sa
+      using mk_v_agree[of I ODE "(sol 0, b)" "sol s"]
+      unfolding Vagree_def by auto
+      done
+    have co_agree_help:"\<And>s. Vagree (?co'\<nu>1 s) (?co'\<nu>2 s) (FVT \<theta>)"
+      using agree_sub[OF FVT co_agree_sem] by auto
+    have co_agree':"\<And>s. Vagree (?co'\<nu>1 s) (?co'\<nu>2 s) (FVDiff \<theta>)"
+      subgoal for s
       using mk_v_agree[of I ODE "(sol 0, b)" "sol s"]
       unfolding Vagree_def apply auto
       subgoal for i x
@@ -1012,34 +1053,59 @@ lemma rift_in_space_time:
           subgoal
             apply(erule allE[where x=i])+
             apply(simp)
-            (* TODO: use coincidence *)
-            using sub_cont[of a] coincidence_ode sorry
-        subgoal for ba
-          apply(erule allE[where x=i])+
-          apply(simp)
-          using sub_cont2[of ba] sorry
+            by (metis (no_types, lifting) FVT ODE_vars_lr Vagree_def mk_v_agree mk_xode.elims set_mp snd_conv)
+          subgoal
+            apply(erule allE[where x=i])+
+            by(simp)
         done
-        sorry
+        subgoal for a
+             apply(cases "a \<in> ODE_vars I ODE")
+          subgoal
+            apply(erule allE[where x=i])+
+            apply(simp)
+            by (metis (no_types, lifting) FVT ODE_vars_lr Vagree_def mk_v_agree mk_xode.elims set_mp snd_conv)
+          subgoal
+            apply(erule allE[where x=i])+
+            by(simp)
+          done
+        done
+      subgoal for i x
+        apply(cases x)
+        subgoal for a
+          apply(cases "a \<in> ODE_vars I ODE")
+          subgoal
+            apply(erule allE[where x=i])+
+            by(simp)
+            
+          subgoal
+            apply(erule allE[where x=i])+
+            using FVT ODE_vars_lr Vagree_def mk_v_agree mk_xode.elims set_mp snd_conv
+            by auto
+        done
+        subgoal for a
+          apply(cases "a \<in> ODE_vars I ODE")
+          subgoal
+            apply(erule allE[where x=i])+
+            by(simp)
+          subgoal
+            apply(erule allE[where x=i])+
+            using FVT ODE_vars_lr Vagree_def mk_v_agree mk_xode.elims set_mp snd_conv
+            by auto
+          done
+        done
       done
-        
-    have frech_linear:"\<And>x \<theta> \<nu> \<nu>' I. x * frechet I \<theta> \<nu> \<nu>' = frechet I \<theta> \<nu> (x *\<^sub>R \<nu>')" sorry
-    have heq'':"(?g' \<circ> ?f') = 
-      (\<lambda>t'. t' *\<^sub>R frechet I \<theta> (?\<phi>s s) (snd (?\<phi> s)))
-      (*(\<lambda>t. frechet I \<theta> (?\<phi>s t) (snd (?\<phi> t)))*)
-      "
+    done 
+    have heq'':"(?g' \<circ> ?f') = (\<lambda>t'. t' *\<^sub>R frechet I \<theta> (?\<phi>s s) (snd (?\<phi> s)))"
         using mk_v_agree[of I ODE "(sol 0, b)" "sol s"]
         unfolding comp_def
-        using coincidence_frechet[OF free, of "(?co\<nu>1)" "(?co\<nu>2)", OF co_agree, of I]
         apply auto
         apply(rule ext | rule vec_extensionality)+
         subgoal for x
-          using frech_linear[of x I \<theta> "(fst (mk_v I ODE (sol 0, b) (sol s)))" "(snd (mk_v I ODE (sol 0, b) (sol s)))"]
+          using frech_linear[of I \<theta> x "(fst (mk_v I ODE (sol 0, b) (sol s)))" "(snd (mk_v I ODE (sol 0, b) (sol s)))", OF good_interp free]
           apply auto
-          using coincidence_frechet (* ... *)
-          sorry
-        sorry
-    (*have "(\<lambda>s. (?g' (?f s) \<circ> ?f') s) = (\<lambda>s. ?g' (?f s) (?f' s))"
-      by (rule ext, auto)*)
+          using coincidence_frechet[OF free, of "(?co'\<nu>1 x)" "(?co'\<nu>2 x)", OF co_agree'[of x], of I]
+          by auto
+        done
     have "((?g \<circ> ?f) has_derivative (?g' \<circ> ?f')) (at s within {0..t})"
       using chain by auto
     then have "((?g \<circ> ?f) has_derivative (\<lambda>t'. t' * frechet I \<theta> (?\<phi>s s) (snd (?\<phi> s)))) (at s within {0..t})"
