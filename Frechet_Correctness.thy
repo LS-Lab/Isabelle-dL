@@ -133,6 +133,27 @@ next
   case (dfree_Fun args i) with good_interp show ?case
     by (intro func_lemma) auto
 qed auto
-end
-end
+
+lemma sterm_determines_frechet:
+fixes I ::"('a1::finite, 'b1::finite, 'c::finite) interp"
+  and J ::"('a2::finite, 'b2::finite, 'c::finite) interp"
+  and \<theta>1 :: "('a1::finite, 'c::finite) trm"
+  and \<theta>2 :: "('a2::finite, 'c::finite) trm"
+  and \<nu> 
+assumes good_interp1:"is_interp I"
+assumes good_interp2:"is_interp J"
+assumes free1:"dfree \<theta>1"
+assumes free2:"dfree \<theta>2"
+assumes sem:"sterm_sem I \<theta>1 = sterm_sem J \<theta>2"
+shows "frechet I \<theta>1 (fst \<nu>) (snd \<nu>) = frechet J \<theta>2 (fst \<nu>) (snd \<nu>)"
+proof -
+  have d1:"(sterm_sem I \<theta>1 has_derivative (frechet I \<theta>1 (fst \<nu>))) (at (fst \<nu>))"
+    using frechet_correctness[OF good_interp1 free1] by auto
+  have d2:"(sterm_sem J \<theta>2 has_derivative (frechet J \<theta>2 (fst \<nu>))) (at (fst \<nu>))"
+    using frechet_correctness[OF good_interp2 free2] by auto
+  then have d1':"(sterm_sem I \<theta>1 has_derivative (frechet J \<theta>2 (fst \<nu>))) (at (fst \<nu>))"
+    using sem by auto
+  thus "?thesis" using has_derivative_unique d1 d1' by metis 
+qed
+end end
 
