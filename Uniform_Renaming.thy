@@ -436,31 +436,35 @@ next
       done
   then show ?case by auto
 next
-  case (PRadmit_Test \<phi>)
-  then show ?case unfolding Radj_def 
-    apply simp
-    apply(rule allI)+
-    subgoal for a b aa ba
-      apply auto
-      apply(rule vec_extensionality)
-      subgoal for i
-         apply(cases "i = x")
-         apply(cases "i = y")
-         apply(smt Cart_lambda_cong vec_lambda_eta)
-        sorry
-      sorry
-    done
-next
-  case (PRadmit_Sequence a b)
-  then show ?case sorry
-next
-  case (PRadmit_Loop a)
-  then show ?case sorry
+  case (PRadmit_Test \<phi>) then
+    have FRA:"FRadmit \<phi>"
+    and IH:"fsafe \<phi> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (FUrename x y \<phi>)) = (Radj x y \<nu> \<in> fml_sem I \<phi>))"
+      by auto
+    have "hpsafe (? \<phi>) \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (? \<phi>))) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I (? \<phi>)))"
+      proof -
+        assume hpsafe:"hpsafe (? \<phi>)"
+        fix \<nu> \<omega>
+        from hpsafe have fsafe:"fsafe \<phi>" by auto
+        have IH':"\<And>\<nu>. (\<nu> \<in> fml_sem I (FUrename x y \<phi>)) = (Radj x y \<nu> \<in> fml_sem I \<phi>)" 
+          by (rule IH[OF fsafe])
+        have "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (? \<phi>))) = (\<nu> = \<omega> \<and> (\<omega> \<in> fml_sem I (FUrename x y \<phi>)))" by (cases \<omega>, auto)
+        moreover have "... = (\<nu> = \<omega> \<and> (Radj x y \<omega>) \<in> fml_sem I \<phi>)" using IH' by auto
+        moreover have "... = (Radj x y \<nu> = Radj x y \<omega> \<and> (Radj x y \<omega>) \<in> fml_sem I \<phi>)" using Radj_eq_iff by auto
+        moreover have "... = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I (? \<phi>))" by (cases "Radj x y \<omega>", auto)
+        ultimately show "?thesis \<nu> \<omega>" by auto
+      qed
+    then show ?case by auto
 next
   case (FRadmit_Prop p args)
   then show ?case sorry
 next
+  case (PRadmit_Sequence a b)
+  then show ?case sorry
+next
   case (FRadmit_Diamond \<alpha> \<phi>)
+  then show ?case sorry
+next
+  case (PRadmit_Loop a)
   then show ?case sorry
 next
   case (PRadmit_EvolveODE ODE \<phi>)
