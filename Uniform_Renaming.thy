@@ -248,7 +248,14 @@ lemma Radj_eq_iff:"(a = b) = ((Radj x y a) = (Radj x y b))"
   subgoal for i by(cases "i = x", cases "i = y", auto, (smt vec_lambda_beta)+)
   subgoal for i by(cases "i = x", cases "i = y", auto, (smt vec_lambda_beta)+)
   done
-    
+
+lemma Radj_cancel:"Radj x y (Radj x y \<nu>) = \<nu>"
+  unfolding Radj_def RSadj_def apply auto
+  apply(rule state_eq)
+  subgoal for i by(cases "i = x", cases "i = y", auto)
+  subgoal for i by(cases "i = x", cases "i = y", auto)
+  done
+
 lemma PUren_FUren:
 assumes good_interp:"is_interp I"
 shows
@@ -472,8 +479,37 @@ next
      qed 
    then show ?case by auto
 next
-  case (PRadmit_Sequence a b)
-  then show ?case sorry
+  case (PRadmit_Sequence a b) then 
+    have IH1:"hpsafe a \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y a)) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I a))"
+    and  IH2:"hpsafe b \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y b)) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I b))"
+      by auto
+    have "hpsafe (a ;; b) \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (a ;;b))) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I (a ;; b)))"
+      proof -
+        assume hpsafe:"hpsafe (a ;; b)"
+        fix \<nu> \<omega>
+        from hpsafe have safe1:"hpsafe a" and safe2:"hpsafe b" by auto
+        have IH1:"(\<And>\<mu>. ((\<nu>, \<mu>) \<in> prog_sem I (PUrename x y a)) = ((Radj x y \<nu>, Radj x y \<mu>) \<in> prog_sem I a))"
+          using IH1[OF safe1] by auto
+        have IH2:"(\<And>\<mu>. ((\<mu>, \<omega>) \<in> prog_sem I (PUrename x y b)) = ((Radj x y \<mu>, Radj x y \<omega>) \<in> prog_sem I b))"
+          using IH2[OF safe2] by auto
+        have "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (a ;;b))) = ((\<nu>, \<omega>) \<in> prog_sem I ((PUrename x y a) ;;(PUrename x y b)))" by auto
+        moreover have "... = (\<exists>\<mu>. (\<nu>, \<mu>) \<in> prog_sem I (PUrename x y a) \<and> (\<mu>, \<omega>) \<in> prog_sem I (PUrename x y b))" by auto
+        moreover have "... = (\<exists>\<mu>. (Radj x y \<nu>, Radj x y \<mu>) \<in> prog_sem I a \<and> (Radj x y \<mu>, Radj x y \<omega>) \<in> prog_sem I b)" using IH1 IH2 by auto
+        moreover have "... = (\<exists>\<mu>. (Radj x y \<nu>, \<mu>) \<in> prog_sem I a \<and> (\<mu>, Radj x y \<omega>) \<in> prog_sem I b)" 
+          apply auto
+          subgoal for aa ba
+            apply(rule exI[where x="fst(Radj x y (aa,ba))"])
+            apply(rule exI[where x="snd(Radj x y (aa,ba))"])
+            by auto
+          subgoal for aa ba
+            apply(rule exI[where x="fst(Radj x y (aa,ba))"])
+            apply(rule exI[where x="snd(Radj x y (aa,ba))"])
+            using Radj_cancel by auto
+          done
+        moreover have "... = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I (a ;;b))" by (auto,blast)
+        ultimately show "?thesis \<nu> \<omega>" by auto
+      qed
+  then show ?case by auto
 next
   case (FRadmit_Diamond \<alpha> \<phi>)
   then show ?case sorry
