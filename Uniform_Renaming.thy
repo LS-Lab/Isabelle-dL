@@ -161,12 +161,63 @@ next
     by (rule vec_extensionality | auto simp add: SUren RSadj_def)+   
 qed
 
-lemma PUren_FUren:"(PRadmit \<alpha> \<longrightarrow> (\<forall> \<nu> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I (PUrename x y \<alpha>) \<longleftrightarrow> (Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I \<alpha>))
-  \<and> (FRadmit \<phi> \<longrightarrow> (\<forall> \<nu>. \<nu> \<in> fml_sem I (FUrename x y \<phi>) \<longleftrightarrow> (Radj x y \<nu>) \<in> fml_sem I \<phi>))"
+lemma state_eq: 
+  fixes \<nu> \<nu>' :: "'sz state"
+  shows "(\<And>i. (fst \<nu>) $ i = (fst \<nu>') $ i) \<Longrightarrow> (\<And>i. (snd \<nu>) $ i = (snd \<nu>') $ i) \<Longrightarrow> \<nu>  = \<nu>'"
+  apply (cases "\<nu>", cases "\<nu>'", auto)
+  by(rule vec_extensionality, auto)+
+  
+lemma Radj_repv:
+ fixes x y z ::"'sz" 
+ shows "(Radj x y (repv \<nu> y r)) = repv (Radj x y \<nu>) x r"
+  apply(rule state_eq)
+  subgoal for i
+    apply(cases "i = x") apply (cases "i = y") 
+    unfolding Radj_def RSadj_def by auto
+  subgoal for i
+    apply(cases "i = x") apply (cases "i = y") 
+    unfolding Radj_def RSadj_def by auto
+  done
+
+lemma PUren_FUren:
+assumes good_interp:"is_interp I"
+shows
+  "(PRadmit \<alpha> \<longrightarrow> hpsafe \<alpha> \<longrightarrow> (\<forall> \<nu> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I (PUrename x y \<alpha>) \<longleftrightarrow> (Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I \<alpha>))
+  \<and> (FRadmit \<phi> \<longrightarrow> fsafe \<phi> \<longrightarrow> (\<forall> \<nu>. \<nu> \<in> fml_sem I (FUrename x y \<phi>) \<longleftrightarrow> (Radj x y \<nu>) \<in> fml_sem I \<phi>))"
 proof(induction rule: PRadmit_FRadmit.induct)
+  case (FRadmit_Geq \<theta>1 \<theta>2)
+  then show ?case using TUren[OF good_interp] by auto
+next
+  case (FRadmit_Exists \<phi> z) then have
+    FRA:"FRadmit \<phi>"
+    and IH:"fsafe \<phi> \<Longrightarrow>  (\<And>\<nu>. (\<nu> \<in> fml_sem I (FUrename x y \<phi>)) = (Radj x y \<nu> \<in> fml_sem I \<phi>))"
+    by auto
+  have "fsafe (Exists z \<phi>) \<Longrightarrow>  (\<And>\<nu>. (\<nu> \<in> fml_sem I (FUrename x y (Exists z \<phi>))) = (Radj x y \<nu> \<in> fml_sem I (Exists z \<phi>)))"
+    apply (cases "z = x")
+    subgoal for \<nu>
+      proof -
+        assume fsafe:"fsafe (Exists z \<phi>)"
+        assume zx:"z = x"
+        from fsafe have fsafe':"fsafe \<phi>" by auto
+        have IH':"(\<And>\<nu>. (\<nu> \<in> fml_sem I (FUrename x y \<phi>)) = (Radj x y \<nu> \<in> fml_sem I \<phi>))"
+          by (rule IH[OF fsafe'])
+        have "(\<nu> \<in> fml_sem I (FUrename x y (Exists z \<phi>))) = (\<nu> \<in> fml_sem I (Exists y (FUrename x y \<phi>)))" using zx by auto
+        moreover have "... = (\<exists>r. (repv \<nu> y r) \<in> fml_sem I (FUrename x y \<phi>))" by auto
+        moreover have "... = (\<exists>r. (Radj x y (repv \<nu> y r)) \<in> fml_sem I \<phi>)" using IH' by auto
+        moreover have "... = (\<exists>r. (repv (Radj x y \<nu>) x r) \<in> fml_sem I \<phi>)" using Radj_repv[of x y \<nu>] by auto
+        moreover have "... = (Radj x y \<nu> \<in> fml_sem I (Exists z \<phi>))" using zx by auto
+        ultimately 
+        show "(\<nu> \<in> fml_sem I (FUrename x y (Exists z \<phi>))) = (Radj x y \<nu> \<in> fml_sem I (Exists z \<phi>))"
+          by auto
+      qed
+    apply (cases "z = y")
+    sorry
+      
+  then show ?case by auto 
+next
   case (PRadmit_Assign z \<theta>)
   then show ?case unfolding Radj_def 
-    using TUren[of I x y \<theta>]
+    using TUren[OF good_interp, of \<theta> x y]
     sorry
 next
   case (PRadmit_DiffAssign x \<theta>)
@@ -196,13 +247,7 @@ next
   case (PRadmit_Loop a)
   then show ?case sorry
 next
-  case (FRadmit_Geq \<theta>1 \<theta>2)
-  then show ?case sorry
-next
   case (FRadmit_Prop p args)
-  then show ?case sorry
-next
-  case (FRadmit_Exists \<phi> x)
   then show ?case sorry
 next
   case (FRadmit_Diamond \<alpha> \<phi>)
