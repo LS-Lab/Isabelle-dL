@@ -204,7 +204,13 @@ lemma Radj_repv3:
     using zx zy unfolding Radj_def RSadj_def by auto
   done
 
-
+lemma Radj_eq_iff:"(a = b) = ((Radj x y a) = (Radj x y b))"
+  unfolding Radj_def RSadj_def apply auto
+  apply (rule state_eq)
+  subgoal for i by(cases "i = x", cases "i = y", auto, (smt vec_lambda_beta)+)
+  subgoal for i by(cases "i = x", cases "i = y", auto, (smt vec_lambda_beta)+)
+  done
+    
 lemma PUren_FUren:
 assumes good_interp:"is_interp I"
 shows
@@ -273,8 +279,30 @@ next
   then show ?case by auto 
 next
   case (PRadmit_Assign z \<theta>)
-  then show ?case unfolding Radj_def 
-    using TUren[OF good_interp, of \<theta> x y]
+  have "hpsafe (Assign z \<theta>) \<Longrightarrow>  (\<And>\<nu> \<omega>. ((\<nu>, \<omega>)  \<in> prog_sem I (PUrename x y (Assign z \<theta>))) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I (Assign z \<theta>)))"
+    apply (cases "z = x")
+    subgoal for \<nu> \<omega>
+      proof -
+        assume fsafe:"hpsafe (Assign z \<theta>)"
+        assume zx:"z = x"
+        from fsafe have dsafe:"dsafe \<theta>" by auto
+        have IH':"(\<And>\<nu>. dterm_sem I (TUrename x y \<theta>) \<nu> = dterm_sem I \<theta> (Radj x y \<nu>))"
+          subgoal for \<nu> using TUren[OF good_interp dsafe , of x y \<nu>] by auto done
+        have "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (Assign z \<theta>))) = ((\<nu>, \<omega>) \<in> prog_sem I (Assign y (TUrename x y \<theta>)))"  using zx by auto
+        moreover have "... = (\<omega> = repv \<nu> y (dterm_sem I (TUrename x y \<theta>) \<nu>))" by auto
+        moreover have "... = (\<omega> = repv \<nu> y (dterm_sem I \<theta> (Radj x y \<nu>)))" using IH' by auto
+        moreover have "... = (Radj x y \<omega> = Radj x y (repv \<nu> y (dterm_sem I \<theta> (Radj x y \<nu>))))" using Radj_eq_iff by auto
+        moreover have "... = (Radj x y \<omega> = repv (Radj x y \<nu>) x (dterm_sem I \<theta> (Radj x y \<nu>)))" using Radj_repv1 by auto
+        moreover have "... = (Radj x y \<omega> = repv (Radj x y \<nu>) z (dterm_sem I \<theta> (Radj x y \<nu>)))" using zx by auto
+        moreover have "... = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem  I (Assign z \<theta>))" by auto        
+        ultimately 
+        show "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (Assign z \<theta>))) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem  I (Assign z \<theta>))"
+          by auto
+      qed
+  then show ?case 
+    (* \<omega> = repd \<nu> x (dterm_sem I t \<nu>) *) 
+    unfolding Radj_def 
+    
     sorry
 next
   case (PRadmit_DiffAssign x \<theta>)
