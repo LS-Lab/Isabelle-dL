@@ -544,8 +544,69 @@ next
       qed
   then show ?case by auto
 next
-  case (PRadmit_Loop a)
-  then show ?case sorry
+  case (PRadmit_Loop a) then
+  have IH:" hpsafe a \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y a)) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I a))"
+    by auto
+  have "hpsafe (a** ) \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (a** ))) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I (a** )))"
+    proof -
+      assume safe:"hpsafe (a** )"
+      fix \<nu> \<omega>
+      from safe have safe:"hpsafe a" by auto
+      have IH1:"(\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y a)) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I a))"
+        by (rule IH[OF safe])
+      have relpow_iff:"\<And>\<nu> \<omega> R n. ((\<nu>, \<omega>) \<in> R ^^ Suc n) = (\<exists>\<mu>. (\<nu>, \<mu>) \<in> R \<and> (\<mu>, \<omega>) \<in> R ^^ n)"
+        apply auto
+        subgoal for R n x y z by (auto simp add: relpow_Suc_D2')
+        subgoal for \<nu> \<omega> R n \<mu> using relpow_Suc_I2 by fastforce
+        done
+      have rtrancl_iff_relpow:"\<And>\<nu> \<omega> R. ((\<nu>, \<omega>) \<in> R\<^sup>*) = (\<exists>n. (\<nu>, \<omega>) \<in> R ^^ n)"
+        using rtrancl_imp_relpow relpow_imp_rtrancl by blast
+      have lem:"\<And>n. (\<forall> \<nu> \<omega>.  ((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y a)^^n) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I a^^n))"
+        subgoal for n
+        proof(induction n)
+          case 0
+          then show ?case using Radj_eq_iff by auto
+        next
+          case (Suc n) then
+          have IH2:"\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y a) ^^ n) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I a ^^ n)"
+            by auto
+          have "\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y a) ^^ Suc n) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I a ^^ Suc n)"
+            proof -
+              fix \<nu> \<omega>
+              have "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y a) ^^ Suc n) 
+                = (\<exists> \<mu>. (\<nu>, \<mu>) \<in> prog_sem I (PUrename x y a) \<and> (\<mu>, \<omega>) \<in> prog_sem I (PUrename x y a) ^^ n)"
+                using relpow_iff[of \<nu> \<omega> n "prog_sem I (PUrename x y a)"] by auto
+              moreover have "... = (\<exists> \<mu>. (Radj x y \<nu>, Radj x y \<mu>) \<in> prog_sem I a \<and> (Radj x y \<mu>, Radj x y \<omega>) \<in> prog_sem I a ^^ n)"
+                using IH1 IH2 by blast
+              moreover have "... = (\<exists> \<mu>. (Radj x y \<nu>, \<mu>) \<in> prog_sem I a \<and> (\<mu>, Radj x y \<omega>) \<in> prog_sem I a ^^ n)"
+                apply auto
+                subgoal for aa ba
+                  apply(rule exI[where x="fst(Radj x y (aa,ba))"])
+                  apply(rule exI[where x="snd(Radj x y (aa,ba))"])
+                  by auto
+                subgoal for aa ba
+                  apply(rule exI[where x="fst(Radj x y (aa,ba))"])
+                  apply(rule exI[where x="snd(Radj x y (aa,ba))"])
+                  using Radj_cancel by auto
+                done
+              moreover have "... = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I a ^^ Suc n)"
+                using relpow_iff[of "Radj x y \<nu>" "Radj x y \<omega>"  n "prog_sem I a"] by auto
+              ultimately show "?thesis \<nu> \<omega>" by auto 
+            qed
+          then show ?case by auto
+        qed
+        done
+      have "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (a** ))) = ((\<nu>, \<omega>) \<in> (prog_sem I (PUrename x y a))\<^sup>*)" by auto
+      moreover have "... = (\<exists>n. (\<nu>, \<omega>) \<in> (prog_sem I (PUrename x y a)) ^^ n)"
+        using rtrancl_iff_relpow[of \<nu> \<omega> "prog_sem I (PUrename x y a)"] by auto
+      moreover have "... = (\<exists>n. (Radj x y \<nu>, Radj x y \<omega>) \<in> (prog_sem I a) ^^ n)"
+        using lem by blast
+      moreover have "... = ((Radj x y \<nu>, Radj x y \<omega>) \<in> (prog_sem I a)\<^sup>*)"
+        using rtrancl_iff_relpow[of "Radj x y \<nu>" "Radj x y \<omega>" "prog_sem I a"] by auto
+      moreover have "... = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I (a** ))" by auto
+      ultimately show "?thesis \<nu> \<omega>" by blast
+    qed
+  then show ?case by auto
 next
   case (PRadmit_EvolveODE ODE \<phi>)
   then show ?case sorry
