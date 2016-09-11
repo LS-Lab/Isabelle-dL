@@ -455,8 +455,22 @@ next
       qed
     then show ?case by auto
 next
-  case (FRadmit_Prop p args)
-  then show ?case sorry
+  case (FRadmit_Prop p args) then
+    have "fsafe (Prop p args) \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (FUrename x y (Prop p args))) = ((Radj x y \<nu>) \<in> fml_sem I (Prop p args)))"
+      proof -
+        assume fsafe:"fsafe (Prop p args)"
+        fix \<nu>
+        from fsafe have dfrees:"\<And>i. dfree (args i)" by auto
+        from dfrees have dsafes:"\<And>i. dsafe (args i)" using dfree_is_dsafe by auto
+        have IH:"\<And>i \<nu>. dterm_sem I (TUrename x y (args i)) \<nu> = dterm_sem I (args i) (Radj x y \<nu>)"
+          using TUren[OF good_interp dsafes] by auto
+        have "(\<nu> \<in> fml_sem I (FUrename x y (Prop p args))) = (\<nu> \<in> fml_sem I (Prop p (\<lambda>i . TUrename x y (args i))))" by auto
+        moreover have "... = (Predicates I p (\<chi> i. dterm_sem I (TUrename x y (args i)) \<nu>))" by auto
+        moreover have "... = (Predicates I p (\<chi> i. dterm_sem I (args i) (Radj x y \<nu>)))" using IH by auto
+        moreover have "... = ((Radj x y \<nu>) \<in> fml_sem I (Prop p args))" by auto
+        ultimately show "?thesis \<nu>" by blast
+     qed 
+   then show ?case by auto
 next
   case (PRadmit_Sequence a b)
   then show ?case sorry
