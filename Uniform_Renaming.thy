@@ -624,10 +624,68 @@ next
           unfolding RSadj_def Radj_def by auto
         have Radj_swap:"\<And>a b. Radj x y a = b \<Longrightarrow> a = Radj x y b"
           using Radj_cancel Radj_eq_iff by metis
+        have mkv_Radj:"\<And>ODE a b c. Radj x y (mk_v I ODE (a,b) c) = mk_v I ODE (RSadj x y a, RSadj x y b) (RSadj x y c)"
+          subgoal for ODE a b c
+            apply(rule agree_UNIV_eq)
+            using mk_v_agree[of I ODE "(a,b)" "c"]
+            mk_v_agree[of I ODE "(RSadj x y a, RSadj x y b)" "RSadj x y c"]
+            unfolding Vagree_def Radj_def RSadj_def apply auto
+            apply metis
+            sorry
+          done
+               
+        have OUrename_preserves_ODE_vars:"ORadmit ODE \<Longrightarrow> {z. (swap x y z) \<in> ODE_vars I ODE} = ODE_vars I (OUrename x y ODE)"
+          apply(induction rule: ORadmit.induct)
+          subgoal for xa \<theta> by auto
+          subgoal for ODE1 ODE2
+            proof -
+              assume IH1:"{z. swap x y z \<in> ODE_vars I ODE1} = ODE_vars I (OUrename x y ODE1)"
+              assume IH2:"{z. swap x y z \<in> ODE_vars I ODE2} = ODE_vars I (OUrename x y ODE2)"
+              have "{z. swap x y z \<in> ODE_vars I (OProd ODE1 ODE2)} =
+                    {z. swap x y z \<in> (ODE_vars I ODE1 \<union> ODE_vars I ODE2)}" by auto
+              moreover have "... = {z. swap x y z \<in> (ODE_vars I ODE1)} \<union> {z. swap x y z \<in> (ODE_vars I ODE2)}" by auto
+              moreover have "... = ODE_vars I (OUrename x y ODE1) \<union> ODE_vars I (OUrename x y ODE2)" using IH1 IH2 by auto
+              moreover have "... = ODE_vars I (OUrename x y (OProd ODE1 ODE2))" by auto
+              ultimately show "{z. swap x y z \<in> ODE_vars I (OProd ODE1 ODE2)} = ODE_vars I (OUrename x y (OProd ODE1 ODE2))"
+                by blast
+            qed
+          done
         have mkv:"\<And>t sol b. 0 \<le> t \<Longrightarrow>
           (sol solves_ode (\<lambda>a. ODE_sem I (OUrename x y ODE))) {0..t} {xa. mk_v I (OUrename x y ODE) (sol 0, b) xa \<in> fml_sem I (FUrename x y \<phi>)} \<Longrightarrow>
           Radj x y (mk_v I (OUrename x y ODE) (sol 0, b) (sol t)) = mk_v I ODE (RSadj x y (sol 0), RSadj x y b) (RSadj x y (sol t))"
-          sorry
+          subgoal for t sol b
+            apply (rule agree_UNIV_eq)
+            using mk_v_agree[of I "OUrename x y ODE" "(sol 0, b)" "sol t"]
+            using mk_v_agree[of I "ODE" "(RSadj x y (sol 0), RSadj x y b)" "RSadj x y (sol t)"]
+            unfolding Vagree_def
+            apply auto
+            subgoal for i
+            apply(cases "i \<in> ODE_vars I ODE")
+            apply(cases "i \<in> ODE_vars I (OUrename x y ODE)")
+            subgoal
+              apply (erule allE[where x=i])+
+              apply simp
+              proof -
+                assume (*"0 \<le> t"
+    "(sol solves_ode (\<lambda>a. ODE_sem I (OUrename x y ODE))) {0..t} {xa. mk_v I (OUrename x y ODE) (sol 0, b) xa \<in> fml_sem I (FUrename x y \<phi>)}"*)
+    in1:"i \<in> ODE_vars I ODE"
+    and in2:"i \<in> ODE_vars I (OUrename x y ODE)"
+    and fst1:"fst (mk_v I (OUrename x y ODE) (sol 0, b) (sol t)) $ i = sol t $ i \<and>
+    (Inl i \<in> Inr ` ODE_vars I (OUrename x y ODE) \<longrightarrow> fst (mk_v I (OUrename x y ODE) (sol 0, b) (sol t)) $ i = sol t $ i)"
+    (*"(Inr i \<in> Inl ` ODE_vars I (OUrename x y ODE) \<longrightarrow>
+     snd (mk_v I (OUrename x y ODE) (sol 0, b) (sol t)) $ i = ODE_sem I (OUrename x y ODE) (sol t) $ i) \<and>
+    snd (mk_v I (OUrename x y ODE) (sol 0, b) (sol t)) $ i = ODE_sem I (OUrename x y ODE) (sol t) $ i"*)
+    and fst2:"fst (mk_v I ODE (RSadj x y (sol 0), RSadj x y b) (RSadj x y (sol t))) $ i = RSadj x y (sol t) $ i \<and>
+    (Inl i \<in> Inr ` ODE_vars I ODE \<longrightarrow> fst (mk_v I ODE (RSadj x y (sol 0), RSadj x y b) (RSadj x y (sol t))) $ i = RSadj x y (sol t) $ i)"
+    from fst1 have fst1:"fst (mk_v I (OUrename x y ODE) (sol 0, b) (sol t)) $ i = sol t $ i" by auto
+    from fst2 have fst2:"fst (mk_v I ODE (RSadj x y (sol 0), RSadj x y b) (RSadj x y (sol t))) $ i = RSadj x y (sol t) $ i" by auto
+    show "fst (Radj x y (mk_v I (OUrename x y ODE) (sol 0, b) (sol t))) $ i = RSadj x y (sol t) $ i"
+      using in1 in2 fst1 fst2 IH1 IH2 OUrename_preserves_ODE_vars sorry
+    qed
+    sorry
+            (*apply (smt Inl_Inr_False Inl_inject ORA RSadj_def RSadj_fst image_iff mem_Collect_eq swap.elims vec_lambda_beta)*)
+    sorry
+  done
         have mkv2:"\<And>t sol b. 0 \<le> t \<Longrightarrow>
          (sol solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {x. mk_v I ODE (sol 0, b) x \<in> fml_sem I \<phi>} \<Longrightarrow>
           \<omega> = mk_v I (OUrename x y ODE) (RSadj x y (sol 0), RSadj x y b) (RSadj x y (sol t))"
@@ -635,7 +693,21 @@ next
         have sol:"\<And>t sol b. 0 \<le> t \<Longrightarrow>
           (sol solves_ode (\<lambda>a. ODE_sem I (OUrename x y ODE))) {0..t} {xa. mk_v I (OUrename x y ODE) (sol 0, b) xa \<in> fml_sem I (FUrename x y \<phi>)} \<Longrightarrow>
           ((\<lambda>t. RSadj x y (sol t)) solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {xa. mk_v I ODE (RSadj x y (sol 0), RSadj x y b) xa \<in> fml_sem I \<phi>}"
-          sorry
+          subgoal for t sol b
+            apply(rule solves_odeI)
+            subgoal
+              apply(drule solves_odeD)
+              unfolding has_vderiv_on_def has_vector_derivative_def apply auto
+              using mkv_Radj sorry
+            subgoal for s
+              apply(drule solves_odeD(2))
+              apply auto
+              using mkv_Radj[of "OUrename x y ODE" "(sol 0)" "b" "sol s"] IH1[of "mk_v I (OUrename x y ODE) (sol 0, b) (sol s)"] 
+              apply auto
+              using mkv[of t sol b] sorry
+            done
+          done
+         
         have sol2:"\<And>t sol b. 0 \<le> t \<Longrightarrow>
     (sol solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {x. mk_v I ODE (sol 0, b) x \<in> fml_sem I \<phi>} \<Longrightarrow>
     ((\<lambda>t. RSadj x y (sol t)) solves_ode (\<lambda>a. ODE_sem I (OUrename x y ODE))) {0..t}
