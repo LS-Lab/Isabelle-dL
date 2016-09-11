@@ -608,8 +608,67 @@ next
     qed
   then show ?case by auto
 next
-  case (PRadmit_EvolveODE ODE \<phi>)
-  then show ?case sorry
+  case (PRadmit_EvolveODE ODE \<phi>) then
+  have ORA:"ORadmit ODE"
+    and IH:"fsafe \<phi> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (FUrename x y \<phi>)) = (Radj x y \<nu> \<in> fml_sem I \<phi>))"
+    by auto
+    have "hpsafe (EvolveODE ODE \<phi>) \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (EvolveODE ODE \<phi>))) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I (EvolveODE ODE \<phi>)))"
+      proof -
+        assume safe:"hpsafe (EvolveODE ODE \<phi>)"
+        fix \<nu> \<omega>
+        from safe have osafe:"osafe ODE" and fsafe:"fsafe \<phi>" by auto
+        have IH1:"\<And>\<nu>. (\<nu> \<in> fml_sem I (FUrename x y \<phi>) = (Radj x y \<nu> \<in> fml_sem I \<phi>))" by (rule IH[OF fsafe])
+        have IH2:"\<And>\<nu>. ODE_sem I (OUrename x y ODE) \<nu> = RSadj x y (ODE_sem I ODE (RSadj x y \<nu>))"
+          using OUren[OF ORA] by auto
+        have RSadj_Radj:"\<And>a b. (RSadj x y a, RSadj x y b) = Radj x y (a,b)"
+          unfolding RSadj_def Radj_def by auto
+        have Radj_swap:"\<And>a b. Radj x y a = b \<Longrightarrow> a = Radj x y b"
+          using Radj_cancel Radj_eq_iff by metis
+        have mkv:"\<And>t sol b. 0 \<le> t \<Longrightarrow>
+          (sol solves_ode (\<lambda>a. ODE_sem I (OUrename x y ODE))) {0..t} {xa. mk_v I (OUrename x y ODE) (sol 0, b) xa \<in> fml_sem I (FUrename x y \<phi>)} \<Longrightarrow>
+          Radj x y (mk_v I (OUrename x y ODE) (sol 0, b) (sol t)) = mk_v I ODE (RSadj x y (sol 0), RSadj x y b) (RSadj x y (sol t))"
+          sorry
+        have mkv2:"\<And>t sol b. 0 \<le> t \<Longrightarrow>
+         (sol solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {x. mk_v I ODE (sol 0, b) x \<in> fml_sem I \<phi>} \<Longrightarrow>
+          \<omega> = mk_v I (OUrename x y ODE) (RSadj x y (sol 0), RSadj x y b) (RSadj x y (sol t))"
+          sorry
+        have sol:"\<And>t sol b. 0 \<le> t \<Longrightarrow>
+          (sol solves_ode (\<lambda>a. ODE_sem I (OUrename x y ODE))) {0..t} {xa. mk_v I (OUrename x y ODE) (sol 0, b) xa \<in> fml_sem I (FUrename x y \<phi>)} \<Longrightarrow>
+          ((\<lambda>t. RSadj x y (sol t)) solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {xa. mk_v I ODE (RSadj x y (sol 0), RSadj x y b) xa \<in> fml_sem I \<phi>}"
+          sorry
+        have sol2:"\<And>t sol b. 0 \<le> t \<Longrightarrow>
+    (sol solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {x. mk_v I ODE (sol 0, b) x \<in> fml_sem I \<phi>} \<Longrightarrow>
+    ((\<lambda>t. RSadj x y (sol t)) solves_ode (\<lambda>a. ODE_sem I (OUrename x y ODE))) {0..t}
+     {xa. mk_v I (OUrename x y ODE) (RSadj x y (sol 0), RSadj x y b) xa \<in> fml_sem I (FUrename x y \<phi>)}"
+          sorry
+        
+        show "?thesis \<nu> \<omega>"
+          apply auto
+          subgoal for b sol t
+            apply(rule exI[where x= "RSadj x y b"])
+            apply(rule exI[where x= "(\<lambda>t. RSadj x y (sol t))"])
+            apply(rule conjI)
+            subgoal using RSadj_Radj[of "sol 0" "b"] by auto
+            apply(rule exI[where x =t])
+            apply(rule conjI)
+            subgoal by (rule mkv)
+            apply(rule conjI)
+            subgoal by assumption
+            by (rule sol)
+          subgoal for b sol t
+            apply(rule exI[where x= "RSadj x y b"])
+            apply(rule exI[where x= "(\<lambda>t. RSadj x y (sol t))"])
+            apply(rule conjI)
+            subgoal using RSadj_Radj[of "sol 0" "b"] Radj_swap[of \<nu> "(sol 0,b)"] by auto
+            apply(rule exI[where x =t])
+            apply(rule conjI)
+            subgoal by (rule mkv2)
+            apply(rule conjI)
+            subgoal by assumption
+            by (rule sol2)
+          done
+        qed
+  then show ?case by auto
 qed (auto simp add: Radj_def)
   
 end end
