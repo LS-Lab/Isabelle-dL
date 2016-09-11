@@ -167,7 +167,7 @@ lemma state_eq:
   apply (cases "\<nu>", cases "\<nu>'", auto)
   by(rule vec_extensionality, auto)+
   
-lemma Radj_repv:
+lemma Radj_repv1:
  fixes x y z ::"'sz" 
  shows "(Radj x y (repv \<nu> y r)) = repv (Radj x y \<nu>) x r"
   apply(rule state_eq)
@@ -178,6 +178,32 @@ lemma Radj_repv:
     apply(cases "i = x") apply (cases "i = y") 
     unfolding Radj_def RSadj_def by auto
   done
+
+lemma Radj_repv2:
+ fixes x y z ::"'sz" 
+ shows "(Radj x y (repv \<nu> x r)) = repv (Radj x y \<nu>) y r"
+  apply(rule state_eq)
+  subgoal for i
+    apply(cases "i = x") apply (cases "i = y") 
+    unfolding Radj_def RSadj_def by auto
+  subgoal for i
+    apply(cases "i = x") apply (cases "i = y") 
+    unfolding Radj_def RSadj_def by auto
+  done
+
+lemma Radj_repv3:
+ fixes x y z ::"'sz" 
+ assumes zx:"z \<noteq> x" and zy:"z \<noteq> y"
+ shows "(Radj x y (repv \<nu> z r)) = repv (Radj x y \<nu>) z r"
+  apply(rule state_eq)
+  subgoal for i
+    apply(cases "i = x") apply (cases "i = y") 
+    using zx zy unfolding Radj_def RSadj_def by auto
+  subgoal for i
+    apply(cases "i = x") apply (cases "i = y") 
+    using zx zy unfolding Radj_def RSadj_def by auto
+  done
+
 
 lemma PUren_FUren:
 assumes good_interp:"is_interp I"
@@ -204,15 +230,46 @@ next
         have "(\<nu> \<in> fml_sem I (FUrename x y (Exists z \<phi>))) = (\<nu> \<in> fml_sem I (Exists y (FUrename x y \<phi>)))" using zx by auto
         moreover have "... = (\<exists>r. (repv \<nu> y r) \<in> fml_sem I (FUrename x y \<phi>))" by auto
         moreover have "... = (\<exists>r. (Radj x y (repv \<nu> y r)) \<in> fml_sem I \<phi>)" using IH' by auto
-        moreover have "... = (\<exists>r. (repv (Radj x y \<nu>) x r) \<in> fml_sem I \<phi>)" using Radj_repv[of x y \<nu>] by auto
+        moreover have "... = (\<exists>r. (repv (Radj x y \<nu>) x r) \<in> fml_sem I \<phi>)" using Radj_repv1[of x y \<nu>] by auto
         moreover have "... = (Radj x y \<nu> \<in> fml_sem I (Exists z \<phi>))" using zx by auto
         ultimately 
         show "(\<nu> \<in> fml_sem I (FUrename x y (Exists z \<phi>))) = (Radj x y \<nu> \<in> fml_sem I (Exists z \<phi>))"
           by auto
       qed
     apply (cases "z = y")
-    sorry
-      
+    subgoal for \<nu>
+    proof -
+      assume fsafe:"fsafe (Exists z \<phi>)"
+      assume zx:"z = y"
+      from fsafe have fsafe':"fsafe \<phi>" by auto
+      have IH':"(\<And>\<nu>. (\<nu> \<in> fml_sem I (FUrename x y \<phi>)) = (Radj x y \<nu> \<in> fml_sem I \<phi>))"
+        by (rule IH[OF fsafe'])
+      have "(\<nu> \<in> fml_sem I (FUrename x y (Exists z \<phi>))) = (\<nu> \<in> fml_sem I (Exists x (FUrename x y \<phi>)))" using zx by auto
+      moreover have "... = (\<exists>r. (repv \<nu> x r) \<in> fml_sem I (FUrename x y \<phi>))" by auto
+      moreover have "... = (\<exists>r. (Radj x y (repv \<nu> x r)) \<in> fml_sem I \<phi>)" using IH' by auto
+      moreover have "... = (\<exists>r. (repv (Radj x y \<nu>) y r) \<in> fml_sem I \<phi>)" using Radj_repv2[of x y \<nu>] by auto
+      moreover have "... = (Radj x y \<nu> \<in> fml_sem I (Exists z \<phi>))" using zx by auto
+      ultimately 
+      show "(\<nu> \<in> fml_sem I (FUrename x y (Exists z \<phi>))) = (Radj x y \<nu> \<in> fml_sem I (Exists z \<phi>))"
+        by auto
+    qed
+    subgoal for \<nu>
+    proof -
+      assume fsafe:"fsafe (Exists z \<phi>)"
+      assume zx:"z \<noteq> x" and zy:"z \<noteq> y"
+      from fsafe have fsafe':"fsafe \<phi>" by auto
+      have IH':"(\<And>\<nu>. (\<nu> \<in> fml_sem I (FUrename x y \<phi>)) = (Radj x y \<nu> \<in> fml_sem I \<phi>))"
+        by (rule IH[OF fsafe'])
+      have "(\<nu> \<in> fml_sem I (FUrename x y (Exists z \<phi>))) = (\<nu> \<in> fml_sem I (Exists z (FUrename x y \<phi>)))" using zx zy by auto
+      moreover have "... = (\<exists>r. (repv \<nu> z r) \<in> fml_sem I (FUrename x y \<phi>))" by auto
+      moreover have "... = (\<exists>r. (Radj x y (repv \<nu> z r)) \<in> fml_sem I \<phi>)" using IH' by auto
+      moreover have "... = (\<exists>r. (repv (Radj x y \<nu>) z r) \<in> fml_sem I \<phi>)" using Radj_repv3[of z x y \<nu>, OF zx zy] by auto
+      moreover have "... = (Radj x y \<nu> \<in> fml_sem I (Exists z \<phi>))" using zx by auto
+      ultimately 
+      show "(\<nu> \<in> fml_sem I (FUrename x y (Exists z \<phi>))) = (Radj x y \<nu> \<in> fml_sem I (Exists z \<phi>))"
+        by auto
+    qed
+    done
   then show ?case by auto 
 next
   case (PRadmit_Assign z \<theta>)
@@ -238,9 +295,6 @@ next
       sorry
     done
 next
-  case (PRadmit_EvolveODE ODE \<phi>)
-  then show ?case sorry
-next
   case (PRadmit_Sequence a b)
   then show ?case sorry
 next
@@ -251,6 +305,9 @@ next
   then show ?case sorry
 next
   case (FRadmit_Diamond \<alpha> \<phi>)
+  then show ?case sorry
+next
+  case (PRadmit_EvolveODE ODE \<phi>)
   then show ?case sorry
 qed (auto simp add: Radj_def)
   
