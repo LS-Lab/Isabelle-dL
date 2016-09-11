@@ -511,8 +511,38 @@ next
       qed
   then show ?case by auto
 next
-  case (FRadmit_Diamond \<alpha> \<phi>)
-  then show ?case sorry
+  case (FRadmit_Diamond \<alpha> \<phi>) then
+    have IH1:"hpsafe \<alpha> \<Longrightarrow> (\<And>\<nu> \<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y \<alpha>)) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I \<alpha>))"
+    and IH2:"fsafe \<phi> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (FUrename x y \<phi>)) = (Radj x y \<nu> \<in> fml_sem I \<phi>))"
+      by auto
+    have "fsafe (\<langle>\<alpha>\<rangle>\<phi>) \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (FUrename x y (\<langle>\<alpha>\<rangle>\<phi>))) = (Radj x y \<nu> \<in> fml_sem I (\<langle>\<alpha>\<rangle>\<phi>)))"
+      proof -
+        assume safe:"fsafe (\<langle>\<alpha>\<rangle>\<phi>)"
+        fix \<nu>
+        from safe have safe1:"hpsafe \<alpha>" and safe2:"fsafe \<phi>" by auto
+        have IH1:"\<And>\<omega>. ((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y \<alpha>)) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I \<alpha>)"
+          using IH1[OF safe1] by auto
+        have IH2:"\<And>\<nu>. (\<nu> \<in> fml_sem I (FUrename x y \<phi>)) = (Radj x y \<nu> \<in> fml_sem I \<phi>)"
+          by (rule IH2[OF safe2])
+        have "(\<nu> \<in> fml_sem I (FUrename x y (\<langle>\<alpha>\<rangle>\<phi>))) = (\<nu> \<in> fml_sem I (\<langle>PUrename x y \<alpha>\<rangle>FUrename x y \<phi>))" by auto
+        moreover have "... = (\<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I (PUrename x y \<alpha>) \<and> \<omega> \<in> fml_sem I (FUrename x y \<phi>))" by auto
+        moreover have "... = (\<exists> \<omega>. (Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I \<alpha> \<and> (Radj x y \<omega>) \<in> fml_sem I \<phi>)" 
+          using IH1 IH2 by auto
+        moreover have "... = (\<exists> \<omega>. (Radj x y \<nu>, \<omega>) \<in> prog_sem I \<alpha> \<and> \<omega> \<in> fml_sem I \<phi>)"
+          apply auto
+          subgoal for aa ba
+            apply(rule exI[where x="fst(Radj x y (aa,ba))"])
+            apply(rule exI[where x="snd(Radj x y (aa,ba))"])
+            by auto
+          subgoal for aa ba
+            apply(rule exI[where x="fst(Radj x y (aa,ba))"])
+            apply(rule exI[where x="snd(Radj x y (aa,ba))"])
+            using Radj_cancel by auto
+          done
+        moreover have "... = (Radj x y \<nu> \<in> fml_sem I (\<langle>\<alpha>\<rangle>\<phi>))" by auto
+        ultimately show "?thesis \<nu>" by auto
+      qed
+  then show ?case by auto
 next
   case (PRadmit_Loop a)
   then show ?case sorry
