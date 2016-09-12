@@ -247,6 +247,11 @@ lemma Radj_eq_iff:"(a = b) = ((Radj x y a) = (Radj x y b))"
   subgoal for i by(cases "i = x", cases "i = y", auto, (smt vec_lambda_beta)+)
   done
 
+lemma RSadj_cancel:"RSadj x y (RSadj x y \<nu>) = \<nu>"
+  unfolding RSadj_def apply auto
+  apply(rule vec_extensionality)
+  by(auto)
+
 lemma Radj_cancel:"Radj x y (Radj x y \<nu>) = \<nu>"
   unfolding Radj_def RSadj_def apply auto
   apply(rule state_eq)
@@ -254,6 +259,112 @@ lemma Radj_cancel:"Radj x y (Radj x y \<nu>) = \<nu>"
   subgoal for i by(cases "i = x", cases "i = y", auto)
   done
 
+lemma OUrename_preserves_ODE_vars:"ORadmit ODE \<Longrightarrow> {z. (swap x y z) \<in> ODE_vars I ODE} = ODE_vars I (OUrename x y ODE)"
+  apply(induction rule: ORadmit.induct)
+  subgoal for xa \<theta> by auto
+  subgoal for ODE1 ODE2
+    proof -
+      assume IH1:"{z. swap x y z \<in> ODE_vars I ODE1} = ODE_vars I (OUrename x y ODE1)"
+      assume IH2:"{z. swap x y z \<in> ODE_vars I ODE2} = ODE_vars I (OUrename x y ODE2)"
+      have "{z. swap x y z \<in> ODE_vars I (OProd ODE1 ODE2)} =
+            {z. swap x y z \<in> (ODE_vars I ODE1 \<union> ODE_vars I ODE2)}" by auto
+      moreover have "... = {z. swap x y z \<in> (ODE_vars I ODE1)} \<union> {z. swap x y z \<in> (ODE_vars I ODE2)}" by auto
+      moreover have "... = ODE_vars I (OUrename x y ODE1) \<union> ODE_vars I (OUrename x y ODE2)" using IH1 IH2 by auto
+      moreover have "... = ODE_vars I (OUrename x y (OProd ODE1 ODE2))" by auto
+      ultimately show "{z. swap x y z \<in> ODE_vars I (OProd ODE1 ODE2)} = ODE_vars I (OUrename x y (OProd ODE1 ODE2))"
+        by blast
+    qed
+  done
+
+lemma ren_proj:"(RSadj x y a) $ z = a $ (swap x y z)"
+  unfolding RSadj_def by simp
+
+lemma swap_cancel:"swap x y (swap x y z) = z"
+  by auto
+
+lemma mkv_lemma:
+assumes ORA:"ORadmit ODE"
+shows "Radj x y (mk_v I (OUrename x y ODE) (a, b) c) = mk_v I ODE (RSadj x y a, RSadj x y b) (RSadj x y c)"
+proof -
+  have inner1:"(mk_v I (OUrename x y ODE) (a, b) c) = ((\<chi> i. (if i \<in> ODE_vars I (OUrename x y ODE) then c else a) $ i), (\<chi> i. (if i \<in> ODE_vars I (OUrename x y ODE) then ODE_sem I (OUrename x y ODE) c else b) $ i))"
+    using mk_v_concrete[of I "OUrename x y ODE" "(a,b)" c]
+    apply auto
+    by (rule vec_extensionality | auto)+
+  have inner2:"(((\<chi> i. (if i \<in> ODE_vars I (OUrename x y ODE) then c else a) $ i), (\<chi> i. (if i \<in> ODE_vars I (OUrename x y ODE) then ODE_sem I (OUrename x y ODE) c else b) $ i))) 
+            = (((\<chi> i. (if (swap x y i) \<in> ODE_vars I ODE then c else a) $ i), (\<chi> i. (if (swap x y i) \<in> ODE_vars I ODE then ODE_sem I (OUrename x y ODE) c else b) $ i)))"
+    apply auto
+    apply (rule vec_extensionality)
+    using OUrename_preserves_ODE_vars[OF ORA]
+    subgoal for i
+      proof -
+        have f1: "\<forall>s sa i sb. (sb \<in> {sb. swap s sa sb \<in> ODE_vars (i::('sf, 'a, 'sz) interp) ODE}) = (if sb = s then sa \<in> ODE_vars i ODE else if sb = sa then s \<in> ODE_vars i ODE else sb \<in> ODE_vars i ODE)"
+          by simp
+            then have f2: "i \<in> ODE_vars I (OUrename x y ODE) \<longrightarrow> (if i = x then y \<in> ODE_vars I ODE else if i = y then x \<in> ODE_vars I ODE else i \<in> ODE_vars I ODE)"
+        using \<open>\<And>y x I. {z. swap x y z \<in> ODE_vars I ODE} = ODE_vars I (OUrename x y ODE)\<close> by blast
+      have "(if (if i = x then y else if i = y then x else i) \<in> ODE_vars I ODE then c else a) $ i = a $ i \<or> (if i = x then y \<in> ODE_vars I ODE else if i = y then x \<in> ODE_vars I ODE else i \<in> ODE_vars I ODE)"
+        by presburger
+      moreover
+      { assume "(if (if i = x then y else if i = y then x else i) \<in> ODE_vars I ODE then c else a) $ i = a $ i"
+          then have "(\<chi> s. (if s \<in> ODE_vars I (OUrename x y ODE) then c else a) $ s) $ i = (\<chi> s. (if (if s = x then y else if s = y then x else s) \<in> ODE_vars I ODE then c else a) $ s) $ i \<or> i \<in> ODE_vars I (OUrename x y ODE)"
+          by force }
+          ultimately have "(\<chi> s. (if s \<in> ODE_vars I (OUrename x y ODE) then c else a) $ s) $ i = (\<chi> s. (if (if s = x then y else if s = y then x else s) \<in> ODE_vars I ODE then c else a) $ s) $ i \<or> i \<in> ODE_vars I (OUrename x y ODE)"
+          using f1 \<open>\<And>y x I. {z. swap x y z \<in> ODE_vars I ODE} = ODE_vars I (OUrename x y ODE)\<close> by blast
+          then show "(\<chi> s. (if s \<in> ODE_vars I (OUrename x y ODE) then c else a) $ s) $ i = (\<chi> s. (if (if s = x then y else if s = y then x else s) \<in> ODE_vars I ODE then c else a) $ s) $ i"
+          using f2 by fastforce
+      qed
+    apply(rule vec_extensionality)
+    subgoal for i
+      using OUrename_preserves_ODE_vars[OF ORA]
+      proof -
+        have f1: "\<forall>s sa i sb. (sb \<in> {sb. swap s sa sb \<in> ODE_vars (i::('sf, 'a, 'sz) interp) ODE}) = (if sb = s then sa \<in> ODE_vars i ODE else if sb = sa then s \<in> ODE_vars i ODE else sb \<in> ODE_vars i ODE)"
+          by simp
+          then have f2: "i \<in> ODE_vars I (OUrename x y ODE) \<longrightarrow> (if i = x then y \<in> ODE_vars I ODE else if i = y then x \<in> ODE_vars I ODE else i \<in> ODE_vars I ODE)"
+            using \<open>\<And>y x I. {z. swap x y z \<in> ODE_vars I ODE} = ODE_vars I (OUrename x y ODE)\<close> by blast
+              have "(if (if i = x then y else if i = y then x else i) \<in> ODE_vars I ODE then ODE_sem I (OUrename x y ODE) c else b) $ i = b $ i \<or> (if i = x then y \<in> ODE_vars I ODE else if i = y then x \<in> ODE_vars I ODE else i \<in> ODE_vars I ODE)"
+          by presburger
+        moreover
+        { assume "(if (if i = x then y else if i = y then x else i) \<in> ODE_vars I ODE then ODE_sem I (OUrename x y ODE) c else b) $ i = b $ i"
+          then have "(\<chi> s. (if s \<in> ODE_vars I (OUrename x y ODE) then ODE_sem I (OUrename x y ODE) c else b) $ s) $ i = (\<chi> s. (if (if s = x then y else if s = y then x else s) \<in> ODE_vars I ODE then ODE_sem I (OUrename x y ODE) c else b) $ s) $ i \<or> i \<in> ODE_vars I (OUrename x y ODE)"
+            by fastforce }
+          ultimately have "(\<chi> s. (if s \<in> ODE_vars I (OUrename x y ODE) then ODE_sem I (OUrename x y ODE) c else b) $ s) $ i = (\<chi> s. (if (if s = x then y else if s = y then x else s) \<in> ODE_vars I ODE then ODE_sem I (OUrename x y ODE) c else b) $ s) $ i \<or> i \<in> ODE_vars I (OUrename x y ODE)"
+          using f1 \<open>\<And>y x I. {z. swap x y z \<in> ODE_vars I ODE} = ODE_vars I (OUrename x y ODE)\<close> by blast
+          then show ?thesis
+          using f2 by force
+        qed
+      done
+      
+  have "Radj x y (mk_v I (OUrename x y ODE) (a, b) c) = 
+        Radj x y (((\<chi> i. (if i \<in> ODE_vars I (OUrename x y ODE) then c else a) $ i), (\<chi> i. (if i \<in> ODE_vars I (OUrename x y ODE) then ODE_sem I (OUrename x y ODE) c else b) $ i)))"
+    using inner1 by auto
+  moreover have "... = Radj x y (((\<chi> i. (if (swap x y i) \<in> ODE_vars I ODE then c else a) $ i), 
+                              (\<chi> i. (if (swap x y i) \<in> ODE_vars I ODE then ODE_sem I (OUrename x y ODE) c else b) $ i)))"
+    using inner2 by auto
+  moreover have "... = (((\<chi> i. (if (swap x y (swap x y i)) \<in> ODE_vars I ODE then c else a) $ (swap x y i))),
+                         (\<chi> i. (if (swap x y (swap x y i)) \<in> ODE_vars I ODE then ODE_sem I (OUrename x y ODE) c else b) $ (swap x y i)))"
+    unfolding Radj_def RSadj_def by auto
+  moreover have "... = (((\<chi> i. (if i \<in> ODE_vars I ODE then c else a) $ (swap x y i))),
+                         (\<chi> i. (if i \<in> ODE_vars I ODE then ODE_sem I (OUrename x y ODE) c else b) $ (swap x y i)))"
+    using swap_cancel by auto
+  moreover have "... = (((\<chi> i. (if i \<in> ODE_vars I ODE then RSadj x y c else RSadj x y a) $ i)),
+                         (\<chi> i. (if i \<in> ODE_vars I ODE then RSadj x y (ODE_sem I (OUrename x y ODE) c) else RSadj x y b) $ i))"
+    apply(auto)
+    by(rule vec_extensionality, auto simp add: ren_proj)+
+  moreover have "... = (((\<chi> i. (if i \<in> ODE_vars I ODE then RSadj x y c else RSadj x y a) $ i)),
+                         (\<chi> i. (if i \<in> ODE_vars I ODE then RSadj x y (RSadj x y (ODE_sem I ODE (RSadj x y c))) else RSadj x y b) $ i))"
+    apply(auto)
+    apply(rule vec_extensionality, auto)
+    using OUren[OF ORA, of I x y c] by auto
+  moreover have "... = (((\<chi> i. (if i \<in> ODE_vars I ODE then RSadj x y c else RSadj x y a) $ i)),
+                         (\<chi> i. (if i \<in> ODE_vars I ODE then (ODE_sem I ODE (RSadj x y c)) else RSadj x y b) $ i))"
+    apply(auto)
+    by(rule vec_extensionality, auto simp add: RSadj_cancel)
+  moreover have "... = mk_v I ODE (RSadj x y a, RSadj x y b) (RSadj x y c)"
+    using mk_v_concrete[of I "ODE" "(RSadj x y a, RSadj x y b)" "RSadj x y c"]
+    apply auto
+    by (rule vec_extensionality | auto)+
+  ultimately show ?thesis by auto
+qed
+  
 lemma PUren_FUren:
 assumes good_interp:"is_interp I"
 shows
@@ -631,63 +742,11 @@ next
             apply metis
             sorry
           done
-               
-        have OUrename_preserves_ODE_vars:"ORadmit ODE \<Longrightarrow> {z. (swap x y z) \<in> ODE_vars I ODE} = ODE_vars I (OUrename x y ODE)"
-          apply(induction rule: ORadmit.induct)
-          subgoal for xa \<theta> by auto
-          subgoal for ODE1 ODE2
-            proof -
-              assume IH1:"{z. swap x y z \<in> ODE_vars I ODE1} = ODE_vars I (OUrename x y ODE1)"
-              assume IH2:"{z. swap x y z \<in> ODE_vars I ODE2} = ODE_vars I (OUrename x y ODE2)"
-              have "{z. swap x y z \<in> ODE_vars I (OProd ODE1 ODE2)} =
-                    {z. swap x y z \<in> (ODE_vars I ODE1 \<union> ODE_vars I ODE2)}" by auto
-              moreover have "... = {z. swap x y z \<in> (ODE_vars I ODE1)} \<union> {z. swap x y z \<in> (ODE_vars I ODE2)}" by auto
-              moreover have "... = ODE_vars I (OUrename x y ODE1) \<union> ODE_vars I (OUrename x y ODE2)" using IH1 IH2 by auto
-              moreover have "... = ODE_vars I (OUrename x y (OProd ODE1 ODE2))" by auto
-              ultimately show "{z. swap x y z \<in> ODE_vars I (OProd ODE1 ODE2)} = ODE_vars I (OUrename x y (OProd ODE1 ODE2))"
-                by blast
-            qed
-          done
-        have mkv:"\<And>t sol b. 0 \<le> t \<Longrightarrow>
-          (sol solves_ode (\<lambda>a. ODE_sem I (OUrename x y ODE))) {0..t} {xa. mk_v I (OUrename x y ODE) (sol 0, b) xa \<in> fml_sem I (FUrename x y \<phi>)} \<Longrightarrow>
-          Radj x y (mk_v I (OUrename x y ODE) (sol 0, b) (sol t)) = mk_v I ODE (RSadj x y (sol 0), RSadj x y b) (RSadj x y (sol t))"
-          subgoal for t sol b
-            apply (rule agree_UNIV_eq)
-            using mk_v_agree[of I "OUrename x y ODE" "(sol 0, b)" "sol t"]
-            using mk_v_agree[of I "ODE" "(RSadj x y (sol 0), RSadj x y b)" "RSadj x y (sol t)"]
-            unfolding Vagree_def
-            apply auto
-            subgoal for i
-            apply(cases "i \<in> ODE_vars I ODE")
-            apply(cases "i \<in> ODE_vars I (OUrename x y ODE)")
-            subgoal
-              apply (erule allE[where x=i])+
-              apply simp
-              proof -
-                assume (*"0 \<le> t"
-    "(sol solves_ode (\<lambda>a. ODE_sem I (OUrename x y ODE))) {0..t} {xa. mk_v I (OUrename x y ODE) (sol 0, b) xa \<in> fml_sem I (FUrename x y \<phi>)}"*)
-    in1:"i \<in> ODE_vars I ODE"
-    and in2:"i \<in> ODE_vars I (OUrename x y ODE)"
-    and fst1:"fst (mk_v I (OUrename x y ODE) (sol 0, b) (sol t)) $ i = sol t $ i \<and>
-    (Inl i \<in> Inr ` ODE_vars I (OUrename x y ODE) \<longrightarrow> fst (mk_v I (OUrename x y ODE) (sol 0, b) (sol t)) $ i = sol t $ i)"
-    (*"(Inr i \<in> Inl ` ODE_vars I (OUrename x y ODE) \<longrightarrow>
-     snd (mk_v I (OUrename x y ODE) (sol 0, b) (sol t)) $ i = ODE_sem I (OUrename x y ODE) (sol t) $ i) \<and>
-    snd (mk_v I (OUrename x y ODE) (sol 0, b) (sol t)) $ i = ODE_sem I (OUrename x y ODE) (sol t) $ i"*)
-    and fst2:"fst (mk_v I ODE (RSadj x y (sol 0), RSadj x y b) (RSadj x y (sol t))) $ i = RSadj x y (sol t) $ i \<and>
-    (Inl i \<in> Inr ` ODE_vars I ODE \<longrightarrow> fst (mk_v I ODE (RSadj x y (sol 0), RSadj x y b) (RSadj x y (sol t))) $ i = RSadj x y (sol t) $ i)"
-    from fst1 have fst1:"fst (mk_v I (OUrename x y ODE) (sol 0, b) (sol t)) $ i = sol t $ i" by auto
-    from fst2 have fst2:"fst (mk_v I ODE (RSadj x y (sol 0), RSadj x y b) (RSadj x y (sol t))) $ i = RSadj x y (sol t) $ i" by auto
-    show "fst (Radj x y (mk_v I (OUrename x y ODE) (sol 0, b) (sol t))) $ i = RSadj x y (sol t) $ i"
-      using in1 in2 fst1 fst2 IH1 IH2 OUrename_preserves_ODE_vars sorry
-    qed
-    sorry
-            (*apply (smt Inl_Inr_False Inl_inject ORA RSadj_def RSadj_fst image_iff mem_Collect_eq swap.elims vec_lambda_beta)*)
-    sorry
-  done
-        have mkv2:"\<And>t sol b. 0 \<le> t \<Longrightarrow>
-         (sol solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {x. mk_v I ODE (sol 0, b) x \<in> fml_sem I \<phi>} \<Longrightarrow>
+         have mkv:"\<And>t sol b. Radj x y (mk_v I (OUrename x y ODE) (sol 0, b) (sol t)) = mk_v I ODE (RSadj x y (sol 0), RSadj x y b) (RSadj x y (sol t))"
+           using mkv_lemma[OF ORA] by blast
+        have mkv2:"\<And>t sol b.  Radj x y \<omega> = mk_v I ODE (sol 0, b) (sol t) \<Longrightarrow>
           \<omega> = mk_v I (OUrename x y ODE) (RSadj x y (sol 0), RSadj x y b) (RSadj x y (sol t))"
-          sorry
+          using mkv_lemma[OF ORA] by (smt RSadj_cancel Radj_cancel)
         have sol:"\<And>t sol b. 0 \<le> t \<Longrightarrow>
           (sol solves_ode (\<lambda>a. ODE_sem I (OUrename x y ODE))) {0..t} {xa. mk_v I (OUrename x y ODE) (sol 0, b) xa \<in> fml_sem I (FUrename x y \<phi>)} \<Longrightarrow>
           ((\<lambda>t. RSadj x y (sol t)) solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {xa. mk_v I ODE (RSadj x y (sol 0), RSadj x y b) xa \<in> fml_sem I \<phi>}"

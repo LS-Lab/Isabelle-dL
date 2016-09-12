@@ -305,6 +305,13 @@ lemma mk_v_agree:"Vagree (mk_v I ODE \<nu> sol) \<nu> (- semBV I ODE)
 \<and> Vagree (mk_v I ODE \<nu> sol) (mk_xode I ODE sol) (semBV I ODE)"
   unfolding mk_v_def by (rule someI_ex, rule mk_v_exists)
 
+(* TODO: Could use this to replace SOME operator with THE operator. *)
+lemma mk_v_concrete:"mk_v I ODE \<nu> sol = ((\<chi> i. (if Inl i \<in> semBV I ODE then sol else (fst \<nu>)) $ i),
+  (\<chi> i. (if Inr i \<in> semBV I ODE then ODE_sem I ODE sol else (snd \<nu>)) $ i))"
+  apply(rule agree_UNIV_eq)
+  using mk_v_agree[of I ODE \<nu> sol]
+  unfolding Vagree_def by auto
+
 subsection \<open>Trivial Simplification Lemmas\<close>
 text \<open>
  We often want to pretend the definitions in the semantics are written slightly
