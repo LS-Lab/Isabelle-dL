@@ -364,6 +364,96 @@ proof -
     by (rule vec_extensionality | auto)+
   ultimately show ?thesis by auto
 qed
+
+lemma sol_lemma:
+assumes ORA:"ORadmit ODE"
+assumes t:"0 \<le> t"
+assumes fml:"\<And>\<nu>. (\<nu> \<in> fml_sem I (FUrename x y \<phi>)) = (Radj x y \<nu> \<in> fml_sem I \<phi>)"
+assumes sol:"(sol solves_ode (\<lambda>a. ODE_sem I (OUrename x y ODE))) {0..t} {xa. mk_v I (OUrename x y ODE) (sol 0, b) xa \<in> fml_sem I (FUrename x y \<phi>)}"
+shows "((\<lambda>t. RSadj x y (sol t)) solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {xa. mk_v I ODE (RSadj x y (sol 0), RSadj x y b) xa \<in> fml_sem I \<phi>}"
+  apply(unfold solves_ode_def)
+  apply(rule conjI)
+  defer
+  subgoal 
+    apply auto
+    proof -
+      fix s
+      assume t:"0 \<le> s" "s \<le> t"
+      have ivl:"s \<in> {0..t}" using t by auto
+      have "mk_v I (OUrename x y ODE) (sol 0,b) (sol s) \<in> fml_sem I (FUrename x y \<phi>)"
+        using solves_odeD(2)[OF sol ivl] by auto
+      then have "Radj x y (mk_v I (OUrename x y ODE) (sol 0, b) (sol s)) \<in> fml_sem I \<phi>"
+        using fml[of "mk_v I (OUrename x y ODE) (sol 0, b) (sol s)"] by auto
+      then show "mk_v I ODE (RSadj x y (sol 0), RSadj x y b) (RSadj x y (sol s)) \<in> fml_sem I \<phi>"
+          using mkv_lemma[OF ORA, of x y I "sol 0" b "sol s"] by auto
+    qed
+    apply (unfold has_vderiv_on_def has_vector_derivative_def)
+    proof -
+      have "\<And>s. s\<in>{0..t} \<Longrightarrow>  ((\<lambda>t. RSadj x y (sol t)) has_derivative (\<lambda>xb. xb *\<^sub>R ODE_sem I ODE (RSadj x y (sol s)))) (at s within {0..t})"
+        proof -
+          fix s
+          assume s:"s \<in>{0..t}"
+          let ?g = "RSadj x y"
+          let ?g' = "RSadj x y"
+          let ?f = "sol"
+          let ?f' = "(\<lambda>t'. t' *\<^sub>R ODE_sem I (OUrename x y ODE) (sol s))"
+          let ?h = "?g \<circ> ?f"
+          
+          have fun_eq:"(\<lambda>t'. t' *\<^sub>R ODE_sem I (OUrename x y ODE) (sol s)) = (\<lambda>t'. t' *\<^sub>R (RSadj x y (ODE_sem I ODE (RSadj x y (sol s)))))"
+              apply(rule ext)
+              using OUren[OF ORA, of I x y] by simp
+          have fun_eq1:"(\<lambda>\<nu>. (\<chi> i. RSadj x y \<nu> $ i)) = RSadj x y"
+            by(rule ext, rule vec_extensionality, simp)
+          have "s \<in> {0..t} \<Longrightarrow> (sol has_derivative (\<lambda>t'. t' *\<^sub>R ODE_sem I (OUrename x y ODE) (sol s))) (at s within {0..t})"
+            using solves_odeD(1)[OF sol] unfolding has_vderiv_on_def has_vector_derivative_def by auto
+          then have fderiv:"s \<in> {0..t} \<Longrightarrow> (?f has_derivative ?f') (at s within {0..t})"
+            using fun_eq by auto
+          have "((\<lambda>\<nu>. (\<chi> i. RSadj x y \<nu> $ i)) has_derivative (\<lambda>\<nu>'. (\<chi> i . RSadj x y \<nu>' $ i))) (at (?f s) within ?f ` {0..t})"
+            apply(rule has_derivative_vec)
+            apply(auto simp add: RSadj_def intro:derivative_eq_intros)
+            by (simp add: Derivative.has_derivative_at_within has_derivative_proj')+
+          then have gderiv:"(RSadj x y has_derivative (RSadj x y)) (at (?f s) within ?f ` {0..t})"
+            using fun_eq1 by auto
+          have hderiv:"(?h has_derivative (?g' \<circ> ?f')) (at s within {0..t})"
+            by (rule diff_chain_within[OF fderiv gderiv], rule s)
+          have heq:"(\<lambda>t. RSadj x y (sol t)) = ?h"
+            unfolding comp_def by simp
+          have RSadj_scale:"\<And>c a. RSadj x y (c *\<^sub>R RSadj x y a) = c *\<^sub>R a"
+            subgoal for c a
+              unfolding RSadj_def
+              apply auto
+              apply(rule vec_extensionality)
+              by(auto)
+            done
+          have heq':"(\<lambda>xb. xb *\<^sub>R ODE_sem I ODE (RSadj x y (sol s))) = (?g' \<circ> ?f')"
+            unfolding comp_def apply(rule ext) using OUren[OF ORA, of I x y "sol s"]
+            apply auto
+            subgoal for c
+              using RSadj_scale[of c "ODE_sem I ODE (RSadj x y (sol s))"] by auto            
+            done
+          show "((\<lambda>t. RSadj x y (sol t)) has_derivative (\<lambda>xb. xb *\<^sub>R ODE_sem I ODE (RSadj x y (sol s)))) (at s within {0..t})"
+            using heq heq' hderiv by auto 
+          qed
+          
+      then show "\<forall>xa\<in>{0..t}. ((\<lambda>t. RSadj x y (sol t)) has_derivative (\<lambda>xb. xb *\<^sub>R ODE_sem I ODE (RSadj x y (sol xa)))) (at xa within {0..t})"
+        by auto
+      qed
+      
+(*subgoal for t sol b
+            apply(rule solves_odeI)
+            subgoal
+              apply(drule solves_odeD)
+              unfolding has_vderiv_on_def has_vector_derivative_def apply auto
+              using mkv_Radj sorry
+            subgoal for s
+              apply(drule solves_odeD(2))
+              apply auto
+              using mkv_Radj[of "OUrename x y ODE" "(sol 0)" "b" "sol s"] IH1[of "mk_v I (OUrename x y ODE) (sol 0, b) (sol s)"] 
+              apply auto
+              using mkv[of t sol b] sorry
+            done
+          done*)
+
   
 lemma PUren_FUren:
 assumes good_interp:"is_interp I"
@@ -750,20 +840,7 @@ next
         have sol:"\<And>t sol b. 0 \<le> t \<Longrightarrow>
           (sol solves_ode (\<lambda>a. ODE_sem I (OUrename x y ODE))) {0..t} {xa. mk_v I (OUrename x y ODE) (sol 0, b) xa \<in> fml_sem I (FUrename x y \<phi>)} \<Longrightarrow>
           ((\<lambda>t. RSadj x y (sol t)) solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {xa. mk_v I ODE (RSadj x y (sol 0), RSadj x y b) xa \<in> fml_sem I \<phi>}"
-          subgoal for t sol b
-            apply(rule solves_odeI)
-            subgoal
-              apply(drule solves_odeD)
-              unfolding has_vderiv_on_def has_vector_derivative_def apply auto
-              using mkv_Radj sorry
-            subgoal for s
-              apply(drule solves_odeD(2))
-              apply auto
-              using mkv_Radj[of "OUrename x y ODE" "(sol 0)" "b" "sol s"] IH1[of "mk_v I (OUrename x y ODE) (sol 0, b) (sol s)"] 
-              apply auto
-              using mkv[of t sol b] sorry
-            done
-          done
+          using sol_lemma IH1 IH2 ORA by blast
          
         have sol2:"\<And>t sol b. 0 \<le> t \<Longrightarrow>
     (sol solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {x. mk_v I ODE (sol 0, b) x \<in> fml_sem I \<phi>} \<Longrightarrow>
