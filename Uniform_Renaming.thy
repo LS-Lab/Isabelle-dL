@@ -924,5 +924,11 @@ next
         qed
   then show ?case by auto
 qed (auto simp add: Radj_def)
-  
+
+lemma FUren:"is_interp I \<Longrightarrow> FRadmit \<phi> \<Longrightarrow> fsafe \<phi> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (FUrename x y \<phi>)) = (Radj x y \<nu> \<in> fml_sem I \<phi>))"
+  using PUren_FUren by blast
+
+lemma URename_sound:"FRadmit \<phi> \<Longrightarrow> fsafe \<phi> \<Longrightarrow> valid \<phi> \<Longrightarrow> valid (FUrename x y \<phi>)"
+  unfolding valid_def using FUren by blast
+
 end end
