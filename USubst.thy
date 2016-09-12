@@ -1,7 +1,5 @@
 theory "USubst"
 imports
-  Complex_Main HOL
-  "~~/src/HOL/Multivariate_Analysis/Multivariate_Analysis"
   "../afp/thys/Ordinary_Differential_Equations/ODE_Analysis"
   "./Ids"
   "./Lib"

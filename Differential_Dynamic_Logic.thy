@@ -31,5 +31,6 @@ imports
   "./Differential_Axioms"
   "./USubst"
   "./USubst_Lemma"
+  "./Uniform_Renaming"
 begin
 end

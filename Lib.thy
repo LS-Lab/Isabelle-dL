@@ -1,6 +1,5 @@
 theory Lib
 imports
-  Complex_Main
   "../afp/thys/Ordinary_Differential_Equations/ODE_Analysis"
 begin
 subsection \<open>Library of assorted things\<close>

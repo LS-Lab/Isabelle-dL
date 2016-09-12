@@ -1,6 +1,5 @@
 theory "Uniform_Renaming" 
 imports
-  Complex_Main
   "../afp/thys/Ordinary_Differential_Equations/ODE_Analysis"
   "./Ids"
   "./Lib"
@@ -112,7 +111,6 @@ proof (induction rule: dfree.induct)
         by simp
     qed
     subgoal
-      sledgehammer
     proof -
       assume a1: "i \<noteq> y"
       assume a2: "i \<noteq> x"

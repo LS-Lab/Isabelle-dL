@@ -1,7 +1,5 @@
 theory "Coincidence" 
 imports
-  Complex_Main HOL
-  "~~/src/HOL/Multivariate_Analysis/Multivariate_Analysis"
   "../afp/thys/Ordinary_Differential_Equations/ODE_Analysis"
   "./Ids"
   "./Lib"
@@ -400,7 +398,7 @@ next
       using IH1[OF VA1 IA1] IH2[OF VA2 IA2] by auto
     qed
   qed
-
+  
 lemma coincidence_ode':
   fixes I J :: "('a::finite, 'b::finite, 'c::finite) interp" and \<nu> :: "'c simple_state" and \<nu>'::"'c simple_state"
 shows "osafe ODE \<Longrightarrow> 

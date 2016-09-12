@@ -126,6 +126,9 @@ definition empty::" 'sz \<Rightarrow> ('sf, 'sz) trm"
 fun singleton :: "('sf, 'sz) trm \<Rightarrow> ('sz \<Rightarrow> ('sf, 'sz) trm)"
   where "singleton t i = (if i = vid1 then t else (Const 0))"
 
+lemma expand_singleton:"singleton t = (\<lambda>i. (if i = vid1 then t else (Const 0)))"
+  by auto
+
 (* Function applied to one argument *)
 definition f1::"'sf \<Rightarrow> 'sz \<Rightarrow> ('sf,'sz) trm"
   where "f1 f x = Function f (singleton (Var x))"
