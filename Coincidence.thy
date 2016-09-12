@@ -1449,7 +1449,7 @@ lemma ode_sem_eq:
       (sol 0) = (fst \<nu>)})"
   proof - 
     have hpsafe:"hpsafe (EvolveODE ODE \<phi>)" using osafe fsafe by (auto intro: hpsafe_fsafe.intros)
-    have "coincide_hp'(EvolveODE ODE \<phi>)" using coincidence_hp_fml hpsafe by auto
+    have "coincide_hp'(EvolveODE ODE \<phi>)" using coincidence_hp_fml hpsafe by blast
     hence "ode_sem_equiv (EvolveODE ODE \<phi>) I" unfolding coincide_hp'_def by auto
     then show "?thesis" 
       unfolding ode_sem_equiv_def using osafe fsafe by auto
