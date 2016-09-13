@@ -73,6 +73,10 @@ where
 | FRadmit_Exists:"FRadmit \<phi> \<Longrightarrow> FRadmit (Exists x \<phi>)"
 | FRadmit_Diamond:"PRadmit \<alpha> \<Longrightarrow> FRadmit \<phi> \<Longrightarrow> FRadmit (Diamond \<alpha> \<phi>)"
 
+inductive_simps
+    FRadmit_box_simps[simp]: "FRadmit (Box a f)"
+and PRadmit_box_simps[simp]: "PRadmit (Assign x e)"
+
 definition RSadj :: "'sz \<Rightarrow> 'sz \<Rightarrow> 'sz simple_state \<Rightarrow> 'sz simple_state"
 where "RSadj x y \<nu> = (\<chi> z. \<nu> $ (swap x y z))" 
 
@@ -931,4 +935,43 @@ lemma FUren:"is_interp I \<Longrightarrow> FRadmit \<phi> \<Longrightarrow> fsaf
 lemma URename_sound:"FRadmit \<phi> \<Longrightarrow> fsafe \<phi> \<Longrightarrow> valid \<phi> \<Longrightarrow> valid (FUrename x y \<phi>)"
   unfolding valid_def using FUren by blast
 
+lemma BRename_sound:
+  assumes FRA:"FRadmit([[Assign x \<theta>]]\<phi>)"
+  assumes fsafe:"fsafe ([[Assign x \<theta>]]\<phi>)"
+  assumes valid:"valid ([[Assign x \<theta>]]\<phi>)"
+  assumes FVF:"{Inl y, Inr y, Inr x} \<inter> FVF \<phi> = {}"
+  shows "valid([[Assign y \<theta>]]FUrename x y \<phi>)"
+  proof -
+    have FRA':"FRadmit \<phi>" using FRA 
+      by (metis (no_types, lifting) Box_def FRadmit.cases formula.distinct(15) formula.distinct(21) formula.distinct(27) formula.distinct(29) formula.distinct(3) formula.distinct(31) formula.distinct(39) formula.distinct(45) formula.distinct(9) formula.inject(3) formula.inject(6))
+    have fsafe':"fsafe \<phi>" using fsafe by (simp add: Box_def)
+    have dsafe:"dsafe \<theta>" using fsafe by (simp add: Box_def)
+    have "\<And>I \<nu>. is_interp I \<Longrightarrow> \<nu> \<in> fml_sem I ([[y := \<theta>]]FUrename x y \<phi>)"
+      proof -
+        fix I::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+        assume good_interp:"is_interp I"
+        from FVF have sub:"FVF \<phi> \<subseteq> -{Inl y, Inr y, Inr x}" by auto
+        have "Vagree (repv (Radj x y \<nu>) x (dterm_sem I \<theta> \<nu>)) (repv \<nu> x (dterm_sem I \<theta> \<nu>)) (-{Inl y, Inr y, Inr x})"
+          unfolding Vagree_def using FVF unfolding Radj_def RSadj_def by auto
+        then have agree:"Vagree (repv (Radj x y \<nu>) x (dterm_sem I \<theta> \<nu>)) (repv \<nu> x (dterm_sem I \<theta> \<nu>)) (FVF \<phi>)"
+          using agree_sub[OF sub] by auto
+        have fml_sem_eq:"(repv (Radj x y \<nu>) x (dterm_sem I \<theta> \<nu>) \<in> fml_sem I \<phi>) = (repv \<nu> x (dterm_sem I \<theta> \<nu>) \<in> fml_sem I \<phi>)"
+          using coincidence_formula[OF fsafe' Iagree_refl agree] by auto
+        have "(\<nu> \<in> fml_sem I ([[y := \<theta>]]FUrename x y \<phi>)) = (repv \<nu> y (dterm_sem I \<theta> \<nu>) \<in> fml_sem I (FUrename x y \<phi>))"
+          by auto
+        moreover have "... = (Radj x y (repv \<nu> y (dterm_sem I \<theta> \<nu>)) \<in> fml_sem I \<phi>)"
+          using FUren[OF good_interp FRA' fsafe'] by auto
+        moreover have "... = (repv (Radj x y \<nu>) x (dterm_sem I \<theta> \<nu>) \<in> fml_sem I \<phi>)"
+          using Radj_repv1 by auto
+        moreover have "... = (\<nu> \<in> fml_sem I ([[x := \<theta>]]\<phi>))"
+          using fml_sem_eq by auto
+        moreover have "... = True"
+          using valid unfolding valid_def using good_interp by blast
+        ultimately
+        show "\<nu> \<in> fml_sem I ([[y := \<theta>]]FUrename x y \<phi>)"
+          by blast
+      qed
+    then
+    show ?thesis unfolding valid_def by auto
+  qed
 end end
