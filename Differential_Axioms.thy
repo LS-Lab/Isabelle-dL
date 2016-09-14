@@ -1183,7 +1183,7 @@ lemma DG_valid:"valid DGaxiom"
     subgoal for I a b aa ba sol t
       proof -
         assume good_interp:"is_interp I"
-        assume bigAll:"
+        assume "
  \<forall>aa ba. (\<exists>sol t. (aa, ba) = mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol t) \<and>
                         0 \<le> t \<and>
                         (sol solves_ode (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)) {0..t}
@@ -1192,6 +1192,17 @@ lemma DG_valid:"valid DGaxiom"
                                      (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) x))} \<and>
                         VSagree (sol 0) a {uu. uu = vid1 \<or> (\<exists>x. Inl uu \<in> FVT (if x = vid1 then trm.Var vid1 else Const 0))}) \<longrightarrow>
                Predicates I vid2 (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (aa, ba))"
+        then have 
+          bigAll:"
+\<And>aa ba. (\<exists>sol t. (aa, ba) = mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol t) \<and>
+                        0 \<le> t \<and>
+                        (sol solves_ode (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)) {0..t}
+                         {x. Predicates I vid1
+                              (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
+                                     (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) x))} \<and>
+                        VSagree (sol 0) a {uu. uu = vid1 \<or> (\<exists>x. Inl uu \<in> FVT (if x = vid1 then trm.Var vid1 else Const 0))}) \<longrightarrow>
+               Predicates I vid2 (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (aa, ba))"
+          by (auto)
 (*       assume sol0:"(\<chi> y. if vid2 = y then 0 else fst (a, b) $ y) = sol 0"*)
        assume aaba:"(aa, ba) =
     mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
@@ -1212,33 +1223,27 @@ lemma DG_valid:"valid DGaxiom"
                                       ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
                           (\<chi> y. if vid2 = y then 0 else fst (a, b) $ y, b) x))}"
      assume VSag:"VSagree (sol 0) (\<chi> y. if vid2 = y then 0 else fst (a, b) $ y) {x. x = vid2 \<or> x = vid1 \<or> x = vid2 \<or> x = vid1}"
-      from bigAll have bigEx:"(\<exists>sol t. (aa, ba) = mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then Var vid1 else Const 0))) (a, b) (sol t) \<and>
+     let ?aaba' = "mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol t)"
+     from bigAll[of "fst ?aaba'" "snd ?aaba'"] 
+     have bigEx:"(\<exists>sol t. ?aaba' = mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol t) \<and>
                         0 \<le> t \<and>
                         (sol solves_ode (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)) {0..t}
                          {x. Predicates I vid1
                               (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-                                     (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then Var vid1 else Const 0))) (a, b) x))} \<and>
-                        VSagree (sol 0) a {u. u = vid1 \<or> (\<exists>x. Inl u \<in> FVT (if x = vid1 then Var vid1 else Const 0))}) \<longrightarrow>
-               Predicates I vid2 (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (aa, ba))" 
-          by auto
-        have pre1:" (aa, ba) = mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol t)" 
-          using aaba sorry  
+                                     (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) x))} \<and>
+                        VSagree (sol 0) a {uu. uu = vid1 \<or> (\<exists>x. Inl uu \<in> FVT (if x = vid1 then trm.Var vid1 else Const 0))}) \<longrightarrow>
+               Predicates I vid2 (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (?aaba'))" 
+          by simp
+        have pre1:"?aaba' = mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol t)" 
+          by (rule refl)
         have pre2:"(sol solves_ode (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)) {0..t}
        {x. Predicates I vid1
             (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
                    (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) x))}"
           sorry
         have pre3:"VSagree (sol 0) a {u. u = vid1 \<or> (\<exists>x. Inl u \<in> FVT (if x = vid1 then trm.Var vid1 else Const 0))}"
-          unfolding VSagree_def apply auto
-          proof -
-            have "(\<chi> s. if vid2 = s then 0 else fst (a, b) $ s) = sol 0"
-              using sol0 by force
-            then have "\<And>s. (if vid2 = s then 0 else fst (a, b) $ s) = sol 0 $ s"
-              by (metis (full_types, lifting) vec_lambda_beta)
-            then show "sol 0 $ vid1 = a $ vid1"
-              by (metis (no_types) fst_eqD vne12)
-          qed 
-        have bigPre:"(\<exists>sol t. (aa, ba) = mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then Var vid1 else Const 0))) (a, b) (sol t) \<and>
+          using vne12 VSag unfolding VSagree_def by simp 
+        have bigPre:"(\<exists>sol t. ?aaba' = mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then Var vid1 else Const 0))) (a, b) (sol t) \<and>
                         0 \<le> t \<and>
                         (sol solves_ode (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)) {0..t}
                          {x. Predicates I vid1
@@ -1254,14 +1259,15 @@ lemma DG_valid:"valid DGaxiom"
           apply(rule conjI)
           apply(rule pre2)
           by(rule pre3)
-        have pred2:"Predicates I vid2 (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (aa, ba))"
+        have pred2:"Predicates I vid2 (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) ?aaba')"
           using bigEx bigPre by auto
+        then have pred2':"?aaba' \<in> fml_sem I (p1 vid2 vid1)" unfolding p1_def expand_singleton by auto
         let ?res_state = "(mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                       (OSing vid2
                         (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                           ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
-              (sol 0, b) (sol t))"
-        have aabaX:"aa $ vid1 = sol t $ vid1" 
+              (\<chi> y. if vid2 = y then 0 else fst (a, b) $ y, b) (sol t))"
+        have aabaX:"(fst ?aaba') $ vid1 = sol t $ vid1" 
           using aaba mk_v_agree[of "I" "(OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
            (OSing vid2
              (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
@@ -1413,20 +1419,18 @@ lemma DG_valid:"valid DGaxiom"
         moreover have "... = sol t $ vid1" by auto
         ultimately show "?thesis" by linarith
         qed
-          
-        have agree:"Vagree (aa, ba) (?res_state) (FVF (p1 vid2 vid1))"
-           unfolding p1_def Vagree_def using aabaX res_stateX by auto
-        have fml_sem_eq:"(?res_state \<in> fml_sem I (p1 vid2 vid1)) = ((aa, ba) \<in> fml_sem I (p1 vid2 vid1))"
-          using coincidence_formula[OF p2safe Iagree_refl agree, of I] by auto
-
-       show "Predicates I vid2
+       have agree:"Vagree ?aaba' (?res_state) (FVF (p1 vid2 vid1))"
+         unfolding p1_def Vagree_def using aabaX res_stateX by auto
+       have fml_sem_eq:"(?res_state \<in> fml_sem I (p1 vid2 vid1)) = (?aaba' \<in> fml_sem I (p1 vid2 vid1))"
+           using coincidence_formula[OF p2safe Iagree_refl agree, of I] by auto
+       then show "Predicates I vid2
      (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
             (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                       (OSing vid2
                         (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                           ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
               (\<chi> y. if vid2 = y then 0 else fst (a, b) $ y, b) (sol t)))"
-          using pred2 fml_sem_eq sorry (*by (auto simp add: p1_def)         *)
+        using pred2 unfolding p1_def expand_singleton by auto
     qed
 
   subgoal for I b r aa ba sol t
