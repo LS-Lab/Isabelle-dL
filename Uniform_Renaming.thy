@@ -944,7 +944,7 @@ lemma BRename_sound:
   proof -
     have FRA':"FRadmit \<phi>" using FRA 
       by (metis (no_types, lifting) Box_def FRadmit.cases formula.distinct(15) formula.distinct(21) formula.distinct(27) formula.distinct(29) formula.distinct(3) formula.distinct(31) formula.distinct(39) formula.distinct(45) formula.distinct(9) formula.inject(3) formula.inject(6))
-    have fsafe':"fsafe \<phi>" using fsafe by (simp add: Box_def)
+    have fsafe':"fsafe \<phi>" using fsafe  by (simp add: Box_def)
     have dsafe:"dsafe \<theta>" using fsafe by (simp add: Box_def)
     have "\<And>I \<nu>. is_interp I \<Longrightarrow> \<nu> \<in> fml_sem I ([[y := \<theta>]]FUrename x y \<phi>)"
       proof -
