@@ -1203,7 +1203,6 @@ lemma DG_valid:"valid DGaxiom"
                         VSagree (sol 0) a {uu. uu = vid1 \<or> (\<exists>x. Inl uu \<in> FVT (if x = vid1 then trm.Var vid1 else Const 0))}) \<longrightarrow>
                Predicates I vid2 (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (aa, ba))"
           by (auto)
-(*       assume sol0:"(\<chi> y. if vid2 = y then 0 else fst (a, b) $ y) = sol 0"*)
        assume aaba:"(aa, ba) =
     mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
              (OSing vid2
@@ -1242,9 +1241,17 @@ lemma DG_valid:"valid DGaxiom"
                         (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                           ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
               (\<chi> y. if vid2 = y then 0 else fst (a, b) $ y, b) (sol s)) $ vid1 = sol s $ vid1"
-          sorry
+          subgoal for s
+            using mk_v_agree[of I "(OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+                      (OSing vid2
+                        (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
+                          ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))" "(\<chi> y. if vid2 = y then 0 else fst (a, b) $ y, b)" "(sol s)"]
+          unfolding Vagree_def by auto done
         have agreeR:"\<And>s. fst (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (\<chi> i. if i = vid1 then sol s $ vid1 else 0)) $ vid1 = sol s $ vid1" 
-          sorry
+          subgoal for s
+            using mk_v_agree[of "I" "(OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))" "(a, b)" "(\<chi> i. if i = vid1 then sol s $ vid1 else 0)"]
+            unfolding Vagree_def by auto
+          done
         have FV:"(FVF (p1 vid1 vid1)) = {Inl vid1}" unfolding p1_def expand_singleton
             apply auto subgoal for x xa apply(cases "xa = vid1") by auto done
         have agree:"\<And>s. Vagree (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
@@ -1292,18 +1299,12 @@ lemma DG_valid:"valid DGaxiom"
            apply(rule has_derivative_proj[of "(\<lambda> i t. sol t $ i)" "(\<lambda>j xa. (xa *\<^sub>R ((\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0) +
                            (\<chi> i. if i = vid2 then sterm_sem I (Plus (Times (f1 fid2 vid1) (trm.Var vid2)) (f1 fid3 vid1)) (sol s) else 0)) $ j))" "at s within {0..t}""vid1"])
            using sol_deriv[of s] by auto done
-
-       (* have some_eq:"\<And>s. (\<lambda>xa. \<chi> i. xa * sterm_sem I (ids.f1 i fid1 i) (\<chi> ia. if ia = i then sol s $ i else 0))
-      = (\<lambda>xa. xa *\<^sub>R (\<chi> i. sterm_sem I (ids.f1 i fid1 i) (\<chi> ia. if ia = i then sol s $ i else 0)))"
-          by (rule ext, rule vec_extensionality, auto)*)
        have hmm:"\<And>s. (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol s)) = (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (\<chi> i. if i = vid1 then sol s $ vid1 else 0))"
          by(rule vec_extensionality, auto)
        have aha:"\<And>s. (\<lambda>xa. xa * sterm_sem I (f1 fid1 vid1) (sol s)) = (\<lambda>xa. xa * sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol s $ vid1 else 0))"
          subgoal for s
          apply(rule ext)
          subgoal for  xa using hmm by (auto simp add: f1_def) done done 
-     (*  have one_more_eq_for_the_road:"\<And>s. sterm_sem I (f1 fid1 vid1) (sol s) = sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol s $ vid1 else 0)"
-         subgoal for s apply (auto simp add: f1_def expand_singleton)*)
         let ?sol' = "(\<lambda>s. (\<lambda>xa. \<chi> i. if i = vid1 then xa * sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol s $ vid1 else 0) else 0))"
         let ?project_me_plz = "(\<lambda>t. (\<chi> i. if i = vid1 then ?sol t $ vid1 else 0))"
         have sol_deriv_eq:"\<And>s. s \<in>{0..t} \<Longrightarrow>
@@ -1319,14 +1320,6 @@ lemma DG_valid:"valid DGaxiom"
             by(rule ext, auto)
           have maybe:"\<And>s. (\<lambda>xa. xa * sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol s $ vid1 else 0)) = (\<lambda>xa. (\<chi> i. if i = vid1 then xa * sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol s $ vid1 else 0) else 0) $ vid1) "
             by(rule ext, auto)
-(*        have when_does_it_end:"\<And>s.  (\<lambda>xa. \<chi> i. if i = vid1 then xa * sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol s $ vid1 else 0) else 0)
-=
-     (\<lambda>t'. \<chi> i. t' * sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol s $ vid1 else 0))"
-          apply(rule ext, rule vec_extensionality) *)
-(*        have "\<And>s. s \<in> {0..t} \<Longrightarrow>((\<lambda>t. (\<chi> i. if i = vid1 then ?sol t $ vid1 else 0) $ vid1) has_derivative (\<lambda>t'. ?sol' s t' $ vid1)) (at s within {0..t})"
-          subgoal for s
-            apply (rule has_derivative_proj[of "(\<lambda> i t.  (\<chi> i. if i = vid1 then (\<chi> i. if i = vid1 then sol t $ vid1 else 0) $ vid1 else 0) $ i)" "(\<lambda> i t'. ?sol' s t' $ vid1)" "at s within {0..t}" "vid1"])
-            using sol_deriv_eq[of s] apply auto*)
           have almost:"(\<lambda>x. if vid1 = vid1 then (\<chi> i. if i = vid1 then sol x $ vid1 else 0) $ vid1 else 0) =
 (\<lambda>x.  (\<chi> i. if i = vid1 then sol x $ vid1 else 0) $ vid1)" by(rule ext, auto)
 
