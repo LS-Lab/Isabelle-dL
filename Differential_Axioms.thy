@@ -1263,10 +1263,101 @@ lemma DG_valid:"valid DGaxiom"
           apply auto[1]
           subgoal for s using con_sem_eq by (auto simp add: p1_def expand_singleton)
           done
-        have deriv:"((\<lambda>t. \<chi> i. if i = vid1 then sol t $ vid1 else 0) has_vderiv_on
+        have eta:"sol = (\<lambda>t. \<chi> i. sol t $ i)" by (rule ext, rule vec_extensionality, simp)
+        have yet_another_eq:"\<And>x. (\<lambda>xa. xa *\<^sub>R ((\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol x) else 0) +
+                           (\<chi> i. if i = vid2 then sterm_sem I (Plus (Times (f1 fid2 vid1) (trm.Var vid2)) (f1 fid3 vid1)) (sol x) else 0)))
+= (\<lambda>xa. (\<chi> i. (xa *\<^sub>R ((\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol x) else 0) +
+                           (\<chi> i. if i = vid2 then sterm_sem I (Plus (Times (f1 fid2 vid1) (trm.Var vid2)) (f1 fid3 vid1)) (sol x) else 0))) $ i))"
+          subgoal for x by (rule ext, rule vec_extensionality, simp) done
+        have sol_deriv:"\<And>x. x \<in>{0..t} \<Longrightarrow>
+            (sol has_derivative
+             (\<lambda>xa. xa *\<^sub>R ((\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol x) else 0) +
+                           (\<chi> i. if i = vid2 then sterm_sem I (Plus (Times (f1 fid2 vid1) (trm.Var vid2)) (f1 fid3 vid1)) (sol x) else 0))))
+             (at x within {0..t})"
+          using sol apply simp
+          apply(drule solves_odeD(1))
+          unfolding has_vderiv_on_def has_vector_derivative_def by auto
+        then have sol_deriv:"\<And>x. x \<in> {0..t} \<Longrightarrow>
+            ((\<lambda>t. \<chi> i. sol t $ i) has_derivative
+             (\<lambda>xa. (\<chi> i. (xa *\<^sub>R ((\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol x) else 0) +
+                           (\<chi> i. if i = vid2 then sterm_sem I (Plus (Times (f1 fid2 vid1) (trm.Var vid2)) (f1 fid3 vid1)) (sol x) else 0))) $ i)))
+             (at x within {0..t})" using yet_another_eq eta by auto
+         have sol_deriv1: "\<And>x. x \<in> {0..t} \<Longrightarrow>
+            ((\<lambda>t. sol t $ vid1) has_derivative
+             (\<lambda>xa. (xa *\<^sub>R ((\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol x) else 0) +
+                           (\<chi> i. if i = vid2 then sterm_sem I (Plus (Times (f1 fid2 vid1) (trm.Var vid2)) (f1 fid3 vid1)) (sol x) else 0)) $ vid1)))
+             (at x within {0..t})"
+           subgoal for s
+             (* I heard higher-order unification is hard.*)
+           apply(rule has_derivative_proj[of "(\<lambda> i t. sol t $ i)" "(\<lambda>j xa. (xa *\<^sub>R ((\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0) +
+                           (\<chi> i. if i = vid2 then sterm_sem I (Plus (Times (f1 fid2 vid1) (trm.Var vid2)) (f1 fid3 vid1)) (sol s) else 0)) $ j))" "at s within {0..t}""vid1"])
+           using sol_deriv[of s] by auto done
+
+       (* have some_eq:"\<And>s. (\<lambda>xa. \<chi> i. xa * sterm_sem I (ids.f1 i fid1 i) (\<chi> ia. if ia = i then sol s $ i else 0))
+      = (\<lambda>xa. xa *\<^sub>R (\<chi> i. sterm_sem I (ids.f1 i fid1 i) (\<chi> ia. if ia = i then sol s $ i else 0)))"
+          by (rule ext, rule vec_extensionality, auto)*)
+       have hmm:"\<And>s. (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol s)) = (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (\<chi> i. if i = vid1 then sol s $ vid1 else 0))"
+         by(rule vec_extensionality, auto)
+       have aha:"\<And>s. (\<lambda>xa. xa * sterm_sem I (f1 fid1 vid1) (sol s)) = (\<lambda>xa. xa * sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol s $ vid1 else 0))"
+         subgoal for s
+         apply(rule ext)
+         subgoal for  xa using hmm by (auto simp add: f1_def) done done 
+     (*  have one_more_eq_for_the_road:"\<And>s. sterm_sem I (f1 fid1 vid1) (sol s) = sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol s $ vid1 else 0)"
+         subgoal for s apply (auto simp add: f1_def expand_singleton)*)
+        let ?sol' = "(\<lambda>s. (\<lambda>xa. \<chi> i. if i = vid1 then xa * sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol s $ vid1 else 0) else 0))"
+        let ?project_me_plz = "(\<lambda>t. (\<chi> i. if i = vid1 then ?sol t $ vid1 else 0))"
+        have sol_deriv_eq:"\<And>s. s \<in>{0..t} \<Longrightarrow>
+       ((\<lambda>t. (\<chi> i. if i = vid1 then ?sol t $ vid1 else 0)) has_derivative ?sol' s) (at s within {0..t})"
+          subgoal for s
+            apply(rule has_derivative_vec)
+            subgoal for i
+              apply (cases "i = vid1", cases "i = vid2", auto)
+              using vne12 apply simp
+              using sol_deriv1[of s] using aha by auto
+            done done
+          have yup:"(\<lambda>t. (\<chi> i. if i = vid1 then ?sol t $ vid1 else 0) $ vid1) = (\<lambda>t. sol t $ vid1)"
+            by(rule ext, auto)
+          have maybe:"\<And>s. (\<lambda>xa. xa * sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol s $ vid1 else 0)) = (\<lambda>xa. (\<chi> i. if i = vid1 then xa * sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol s $ vid1 else 0) else 0) $ vid1) "
+            by(rule ext, auto)
+(*        have when_does_it_end:"\<And>s.  (\<lambda>xa. \<chi> i. if i = vid1 then xa * sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol s $ vid1 else 0) else 0)
+=
+     (\<lambda>t'. \<chi> i. t' * sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol s $ vid1 else 0))"
+          apply(rule ext, rule vec_extensionality) *)
+(*        have "\<And>s. s \<in> {0..t} \<Longrightarrow>((\<lambda>t. (\<chi> i. if i = vid1 then ?sol t $ vid1 else 0) $ vid1) has_derivative (\<lambda>t'. ?sol' s t' $ vid1)) (at s within {0..t})"
+          subgoal for s
+            apply (rule has_derivative_proj[of "(\<lambda> i t.  (\<chi> i. if i = vid1 then (\<chi> i. if i = vid1 then sol t $ vid1 else 0) $ vid1 else 0) $ i)" "(\<lambda> i t'. ?sol' s t' $ vid1)" "at s within {0..t}" "vid1"])
+            using sol_deriv_eq[of s] apply auto*)
+          have almost:"(\<lambda>x. if vid1 = vid1 then (\<chi> i. if i = vid1 then sol x $ vid1 else 0) $ vid1 else 0) =
+(\<lambda>x.  (\<chi> i. if i = vid1 then sol x $ vid1 else 0) $ vid1)" by(rule ext, auto)
+
+          have almost':"\<And>s. (\<lambda>h. if vid1 = vid1 then h * sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol s $ vid1 else 0) else 0) = (\<lambda>h. h * sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol s $ vid1 else 0))"
+            by(rule ext, auto)
+        have deriv':" \<And>x. x \<in> {0..t} \<Longrightarrow>
+       ((\<lambda>t. \<chi> i. if i = vid1 then sol t $ vid1 else 0) has_derivative
+        (\<lambda>xa. (\<chi> i. xa *\<^sub>R (if i = vid1 then sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol x $ vid1 else 0) else 0))))
+        (at x within {0..t})"
+          subgoal for s
+            apply(rule has_derivative_vec)
+            subgoal for i
+              apply(cases "i = vid1")
+              prefer 2 subgoal by auto
+              apply auto              
+              using has_derivative_proj[OF sol_deriv_eq[of s], of vid1] using  yup maybe[of s] almost almost'[of s] 
+              by fastforce
+            done 
+          done
+        have derEq:"\<And>s. (\<lambda>xa. (\<chi> i. xa *\<^sub>R (if i = vid1 then sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol s $ vid1 else 0) else 0)))
+   = (\<lambda>xa. xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol s $ vid1 else 0) else 0))"
+          subgoal for s apply (rule ext, rule vec_extensionality) by auto done
+        have "\<And>x. x \<in> {0..t} \<Longrightarrow>
+       ((\<lambda>t. \<chi> i. if i = vid1 then sol t $ vid1 else 0) has_derivative
+        (\<lambda>xa. xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol x $ vid1 else 0) else 0)))
+        (at x within {0..t})" subgoal for s using deriv'[of s] derEq[of s] by auto done
+        then have deriv:"((\<lambda>t. \<chi> i. if i = vid1 then sol t $ vid1 else 0) has_vderiv_on
           (\<lambda>t. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol t $ vid1 else 0) else 0))
           {0..t}"
-          sorry
+          unfolding has_vderiv_on_def has_vector_derivative_def
+          by auto 
         have pre2:"(?sol solves_ode (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)) {0..t}
        {x. Predicates I vid1
             (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
