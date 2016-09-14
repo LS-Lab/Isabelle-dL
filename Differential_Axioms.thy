@@ -1153,7 +1153,6 @@ lemma DIGeq_valid:"valid DIGeqaxiom"
   qed
 
 lemma DG_valid:"valid DGaxiom"
-  
   proof -
     have osafe:"osafe (OSing vid1 (f1 fid1 vid1))" 
       by(auto simp add: osafe_Sing dfree_Fun dfree_Const f1_def expand_singleton)
@@ -1304,7 +1303,79 @@ lemma DG_valid:"valid DGaxiom"
           ultimately show ?thesis using aaba
             by (metis fst_conv)
         qed
-        have res_stateX:"(fst ?res_state) $ vid1 = sol t $ vid1" sorry
+        have res_stateX:"(fst ?res_state) $ vid1 = sol t $ vid1" 
+          using mk_v_agree[of I "(OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+                      (OSing vid2
+                        (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
+                          ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))"
+              "(sol 0, b)" "(sol t)"]
+          proof -
+            assume "Vagree (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+                     (OSing vid2
+                       (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
+                         ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
+             (sol 0, b) (sol t))
+     (sol 0, b)
+     (- semBV I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+                  (OSing vid2
+                    (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
+                      ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))) \<and>
+    Vagree (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+                     (OSing vid2
+                       (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
+                         ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
+             (sol 0, b) (sol t))
+     (mk_xode I
+       (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+         (OSing vid2
+           (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
+             ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
+       (sol t))
+     (semBV I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+                (OSing vid2
+                  (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
+                    ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))))))"
+            then have ag:"Vagree (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+                     (OSing vid2
+                       (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
+                         ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
+             (sol 0, b) (sol t))
+     (mk_xode I
+       (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+         (OSing vid2
+           (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
+             ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
+       (sol t))
+     (semBV I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+                (OSing vid2
+                  (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
+                    ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))))))" by auto
+            have sembv:"(semBV I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+                (OSing vid2
+                  (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
+                    ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))) = {Inl vid1, Inr vid1, Inl vid2, Inr vid2}" by auto
+            have sub:"{Inl vid1} \<subseteq> {Inl vid1, Inr vid1, Inl vid2, Inr vid2}" by auto
+            have ag':"Vagree (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+                     (OSing vid2
+                       (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
+                         ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
+             (sol 0, b) (sol t))
+     (mk_xode I
+       (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+         (OSing vid2
+           (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
+             ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
+       (sol t)) {Inl vid1}" using ag sembv agree_sub[OF sub] by auto
+            then have "fst ?res_state $ vid1 = fst ((mk_xode I
+       (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+         (OSing vid2
+           (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
+             ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
+       (sol t))) $ vid1" unfolding Vagree_def by blast
+        moreover have "... = sol t $ vid1" by auto
+        ultimately show "?thesis" by linarith
+        qed
+          
         have agree:"Vagree (aa, ba) (?res_state) (FVF (p1 vid2 vid1))"
            unfolding p1_def Vagree_def using aabaX res_stateX by auto
         have fml_sem_eq:"(?res_state \<in> fml_sem I (p1 vid2 vid1)) = ((aa, ba) \<in> fml_sem I (p1 vid2 vid1))"
