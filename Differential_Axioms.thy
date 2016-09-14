@@ -1237,11 +1237,44 @@ lemma DG_valid:"valid DGaxiom"
           by simp
         have pre1:"?aaba' = mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (?sol t)" 
           by (rule refl)
+        have agreeL:"\<And>s. fst (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+                      (OSing vid2
+                        (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
+                          ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
+              (\<chi> y. if vid2 = y then 0 else fst (a, b) $ y, b) (sol s)) $ vid1 = sol s $ vid1"
+          sorry
+        have agreeR:"\<And>s. fst (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (\<chi> i. if i = vid1 then sol s $ vid1 else 0)) $ vid1 = sol s $ vid1" 
+          sorry
+        have FV:"(FVF (p1 vid1 vid1)) = {Inl vid1}" unfolding p1_def expand_singleton
+            apply auto subgoal for x xa apply(cases "xa = vid1") by auto done
+        have agree:"\<And>s. Vagree (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+                      (OSing vid2
+                        (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
+                          ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
+              (\<chi> y. if vid2 = y then 0 else fst (a, b) $ y, b) (sol s)) (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (\<chi> i. if i = vid1 then sol s $ vid1 else 0)) (FVF (p1 vid1 vid1))"
+          using agreeR agreeL unfolding Vagree_def FV by auto
+        note con_sem_eq = coincidence_formula[OF fsafe Iagree_refl agree]
+        have constraint:"\<And>s. 0 \<le> s \<and> s \<le> t \<Longrightarrow>
+          Predicates I vid1
+          (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
+                (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (\<chi> i. if i = vid1 then sol s $ vid1 else 0)))"
+          using sol apply simp
+          apply(drule solves_odeD(2))
+          apply auto[1]
+          subgoal for s using con_sem_eq by (auto simp add: p1_def expand_singleton)
+          done
+        have deriv:"((\<lambda>t. \<chi> i. if i = vid1 then sol t $ vid1 else 0) has_vderiv_on
+          (\<lambda>t. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid1 then sol t $ vid1 else 0) else 0))
+          {0..t}"
+          sorry
         have pre2:"(?sol solves_ode (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)) {0..t}
        {x. Predicates I vid1
             (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
                    (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) x))}"
-          sorry
+          apply(rule solves_odeI)
+          subgoal by (rule deriv)
+          subgoal for s using constraint by auto
+          done
         have pre3:"VSagree (?sol 0) a {u. u = vid1 \<or> (\<exists>x. Inl u \<in> FVT (if x = vid1 then trm.Var vid1 else Const 0))}"
           using vne12 VSag unfolding VSagree_def by simp 
         have bigPre:"(\<exists>sol t. ?aaba' = mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then Var vid1 else Const 0))) (a, b) (sol t) \<and>
