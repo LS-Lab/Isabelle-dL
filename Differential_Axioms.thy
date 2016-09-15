@@ -1518,13 +1518,13 @@ lemma DG_valid:"valid DGaxiom"
                          {y. y = vid2 \<or>
                                y = vid1 \<or> y = vid2 \<or> y = vid1 \<or> (\<exists>x. Inl y \<in> FVT (if x = vid1 then trm.Var vid1 else Const 0))}) \<longrightarrow>
                Predicates I vid2 (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (aa, ba))"
-        assume "(aa, ba) = mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol t)"
-        assume "0 \<le> t"
-        assume "(sol solves_ode (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)) {0..t}
+        assume aaba:"(aa, ba) = mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol t)"
+        assume t:"0 \<le> t"
+        assume sol:"(sol solves_ode (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)) {0..t}
          {x. Predicates I vid1
               (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
                      (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) x))}"
-        assume "VSagree (sol 0) a {y. y = vid1 \<or> (\<exists>x. Inl y \<in> FVT (if x = vid1 then trm.Var vid1 else Const 0))}"
+        assume VSA:"VSagree (sol 0) a {y. y = vid1 \<or> (\<exists>x. Inl y \<in> FVT (if x = vid1 then trm.Var vid1 else Const 0))}"
         (* TODO: ?sol' needs to be sol except with the solution for y added. *)
         let ?sol' = sol 
         let ?aaba' = "mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
@@ -1558,7 +1558,28 @@ lemma DG_valid:"valid DGaxiom"
             apply(erule allE[where x = "fst (?aaba')"])
             apply(erule allE[where x = "snd (?aaba')"])
             by auto
-         have bigPre:"(\<exists>sol t. (fst ?aaba', snd ?aaba') =
+         have sol':"(?sol' solves_ode
+     (\<lambda>a b. (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0) +
+            (\<chi> i. if i = vid2 then sterm_sem I (Plus (Times (f1 fid2 vid1) (trm.Var vid2)) (f1 fid3 vid1)) b else 0)))
+     {0..t} {x. Predicates I vid1
+                 (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
+                        (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+                                  (OSing vid2
+                                    (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
+                                      ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
+                          (\<chi> y. if vid2 = y then r else fst (a, b) $ y, b) x))}"
+           sorry
+         have set_eq:"{y. y = vid2 \<or> y = vid1 \<or> y = vid2 \<or> y = vid1 \<or> (\<exists>x. Inl y \<in> FVT (if x = vid1 then trm.Var vid1 else Const 0))} = {vid1, vid2}"
+           by auto
+         (* Needs correct definition of ?sol' *)
+         have "VSagree (?sol' 0) (\<chi> y. if vid2 = y then r else fst (a, b) $ y) {vid1, vid2}"
+           using VSA unfolding VSagree_def apply simp 
+           sorry
+         then have VSA':" VSagree (?sol' 0) (\<chi> y. if vid2 = y then r else fst (a, b) $ y)
+           
+     {y. y = vid2 \<or> y = vid1 \<or> y = vid2 \<or> y = vid1 \<or> (\<exists>x. Inl y \<in> FVT (if x = vid1 then trm.Var vid1 else Const 0))} "
+           by (auto simp add: set_eq)
+           have bigPre:"(\<exists>sol t. (fst ?aaba', snd ?aaba') =
                         mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                                  (OSing vid2
                                    (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
@@ -1578,7 +1599,15 @@ lemma DG_valid:"valid DGaxiom"
                         VSagree (sol 0) (\<chi> y. if vid2 = y then r else fst (a,b) $ y)
                          {y. y = vid2 \<or>
                                y = vid1 \<or> y = vid2 \<or> y = vid1 \<or> (\<exists>x. Inl y \<in> FVT (if x = vid1 then trm.Var vid1 else Const 0))})"
-           sorry
+           apply(rule exI[where x="?sol'"])
+           apply(rule exI[where x=t])
+           apply(rule conjI)
+           subgoal by simp
+           apply(rule conjI)
+           subgoal by (rule t)
+           apply(rule conjI)
+           apply(rule sol')
+           by(rule VSA')
          have pred_sem:"Predicates I vid2 (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) ?aaba')"
            using bigPre bigEx by auto
          let ?other_state = "(mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol t))"
