@@ -1583,15 +1583,28 @@ lemma DG_valid:"valid DGaxiom"
            using bigPre bigEx by auto
          let ?other_state = "(mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol t))"
          have agree:"Vagree (?aaba') (?other_state) {Inl vid1} "
-           sorry
+           using mk_v_agree [of "I" "(OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+                     (OSing vid2
+                       (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
+                         ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))"
+             "(\<chi> y. if vid2 = y then r else fst (a, b) $ y, b)" "(sol t)"]
+           using mk_v_agree [of "I" "(OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))" "(a, b)" "(sol t)"]
+           unfolding Vagree_def by auto
          have sub:"\<And>i. FVT (if i = vid1 then trm.Var vid1 else Const 0) \<subseteq> {Inl vid1}"
-           sorry
+           by auto
          have agree':"\<And>i. Vagree (?aaba') (?other_state) (FVT (if i = vid1 then trm.Var vid1 else Const 0)) "
-           sorry
+           subgoal for i using agree_sub[OF sub[of i] agree] by auto done
+         have silly_safe:"\<And>i. dsafe (if i = vid1 then trm.Var vid1 else Const 0)"
+           subgoal for i
+             apply(cases "i = vid1")
+             by (auto simp add: dsafe_Var dsafe_Const)
+           done
          have dsem_eq:"(\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) ?aaba')  = 
             (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) ?other_state)"
-           sorry
-         
+           apply(rule vec_extensionality)
+           subgoal for i
+             using coincidence_dterm[OF silly_safe[of i] agree'[of i], of I] by auto
+           done         
        show"
        Predicates I vid2
         (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
