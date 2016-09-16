@@ -1525,6 +1525,75 @@ lemma DG_valid:"valid DGaxiom"
               (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
                      (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) x))}"
         assume VSA:"VSagree (sol 0) a {y. y = vid1 \<or> (\<exists>x. Inl y \<in> FVT (if x = vid1 then trm.Var vid1 else Const 0))}"
+        (* Construct solution to ODE for y' here: *)
+        let ?yode = "(\<lambda>t y. y * sterm_sem I (f1 fid2 vid1) (sol t) + sterm_sem I (f1 fid3 vid1) (sol t))"
+        let ?ysol0 = r
+        (* Time constraint: {0..t} because we need to know that the original solution is nice everywhere,
+         * no evolution domain constraint because the constraint we eventually want doesn't mention y in the first place. *)
+        (* Picard_Lindeloef_Qualitative.ll_on_open_it.flow_solves_ode:
+          ll_on_open_it ?T ?f ?X \<Longrightarrow>
+            ?t0.0 \<in> ?T \<Longrightarrow> ?x0.0 \<in> ?X \<Longrightarrow> 
+            (ll_on_open.flow ?T ?f ?X ?t0.0 ?x0.0 solves_ode ?f) (ll_on_open.existence_ivl ?T ?f ?X ?t0.0 ?x0.0) ?X *)
+(*        have ll:"local_lipschitz (ll_old.existence_ivl 0 (sol 0)) UNIV (\<lambda>t y. y * sterm_sem I (f1 fid2 vid1) (sol t) + sterm_sem I (f1 fid3 vid1) (sol t))"
+          sorry*)
+        let ?f2arg = "(\<lambda> x. (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) x))"
+        have f2_deriv:"\<And>s. ((\<lambda>s. Functions I fid2 (?f2arg  s)) has_derivative (FunctionFrechet I fid2 (?f2arg (sol s)))) (at (sol s) within (sol ` {0..t}))"
+          using good_interp unfolding is_interp_def
+          sorry
+        let ?xode = "(\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)"
+        let ?xconstraint = UNIV
+        let ?ivl = "ll_on_open.existence_ivl {0 .. t} ?xode ?xconstraint 0 (sol 0)"
+        (* (\<And>t x. t \<in> ?T \<Longrightarrow> x \<in> ?X \<Longrightarrow> (?f t has_derivative blinfun_apply (?f' (t, x))) (at x)) \<Longrightarrow>
+    continuous_on (?T \<times> ?X) ?f' \<Longrightarrow> open ?T \<Longrightarrow> open ?X \<Longrightarrow> local_lipschitz ?T ?X ?f*)
+        have old_lipschitz:"local_lipschitz UNIV UNIV (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)"
+          sorry
+        have old_continuous:" \<And>x. x \<in> UNIV \<Longrightarrow> continuous_on UNIV (\<lambda>t. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) x else 0)"
+            by(rule continuous_on_const)
+        interpret ll_old: ll_on_open_it "UNIV" ?xode ?xconstraint 0 
+          apply(standard)
+          subgoal by auto
+          prefer 3 subgoal by auto
+          prefer 3 subgoal by auto
+          apply(rule old_lipschitz)
+          by (rule old_continuous)
+        have sol_old:"(ll_old.flow 0 (sol 0) solves_ode ?xode) (ll_old.existence_ivl 0 (sol 0)) UNIV"
+          by(rule ll_old.flow_solves_ode, auto)
+        have con1:"\<And>x. continuous_on {0..t} (\<lambda>x. Functions I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol x)))"
+          sorry
+        have con2:"\<And>x. continuous_on {0..t} (\<lambda>x. Functions I fid3 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol x)))"
+          sorry
+        have con:"\<And>x. continuous_on (ll_old.existence_ivl 0 (sol 0)) (\<lambda>t. x * sterm_sem I (f1 fid2 vid1) (sol t) + sterm_sem I (f1 fid3 vid1) (sol t))"
+          sorry
+        have ll:"local_lipschitz (ll_old.existence_ivl 0 (sol 0)) UNIV (\<lambda>t y. y * sterm_sem I (f1 fid2 vid1) (sol t) + sterm_sem I (f1 fid3 vid1) (sol t))"
+          sorry
+          (*subgoal for x
+          unfolding f1_def expand_singleton apply auto
+          apply(rule continuous_on_add)
+          apply(rule continuous_on_mult_left)
+          apply(rule con1)
+          by(rule con2)*)
+          (* continuous_on_mult_left continuous_on_add*)
+        let ?ivl = "ll_old.existence_ivl 0 (sol 0)"
+        interpret ll_new: ll_on_open_it "?ivl" "?yode" "UNIV" 0
+          apply(standard)
+          apply(auto)
+          apply(rule ll)
+          by(rule con)
+          (*unfolding local_lipschitz_def f0_def empty_def sterm_sem.simps apply(safe)
+          using gt_ex lipschitz_constI apply blast*)
+        (*by (simp add: continuous_on_const)*)
+        have sol_new:"(ll_new.flow 0 r solves_ode ?yode) (ll_new.existence_ivl 0 r) UNIV"
+          by(rule ll_new.flow_solves_ode, auto)
+        have more_lipschitz:"\<And>tm tM. tm \<in> ll_old.existence_ivl 0 (sol 0) \<Longrightarrow>
+             tM \<in> ll_old.existence_ivl 0 (sol 0) \<Longrightarrow>
+             \<exists>M L. \<forall>t\<in>{tm..tM}. \<forall>x. \<bar>x * sterm_sem I (f1 fid2 vid1) (sol t) + sterm_sem I (f1 fid3 vid1) (sol t)\<bar> \<le> M + L * \<bar>x\<bar>"
+          sorry
+        have ivls_eq:"(ll_new.existence_ivl 0 r) = (ll_old.existence_ivl 0 (sol 0))"
+          apply(rule ll_new.existence_ivl_eq_domain)
+          apply auto
+          apply (rule more_lipschitz)
+          by auto
+        
         (* TODO: ?sol' needs to be sol except with the solution for y added. *)
         let ?sol' = sol 
         let ?aaba' = "mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
