@@ -1647,6 +1647,19 @@ lemma DG_valid:"valid DGaxiom"
          have sol_deriv:"\<And>s. s \<in> {0..t} \<Longrightarrow> (sol has_derivative (\<lambda>xa. xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0))) (at s within {0..t})"
            using sol apply simp
            by(drule solves_odeD(1), auto simp add: has_vderiv_on_def has_vector_derivative_def)
+         have silly_eq1:"(\<lambda>t. \<chi> i. sol t $ i) = sol"
+           by(rule ext, rule vec_extensionality, auto)
+         have silly_eq2:"\<And>s. (\<lambda>xa. \<chi> i. (xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0)) $ i) = (\<lambda>xa. xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0))"
+           by(rule ext, rule vec_extensionality, auto)
+         have sol_proj_deriv:"\<And>s i. s \<in> {0..t} \<Longrightarrow> ((\<lambda> t. sol t $ i) has_derivative (\<lambda>xa. (xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0)) $ i)) (at s within {0..t})"
+           subgoal for s i
+             apply(rule has_derivative_proj)
+             using sol_deriv[of s] silly_eq1 silly_eq2[of s] by auto
+           done
+         have sol_proj_deriv_vid1:"\<And>s. s \<in> {0..t} \<Longrightarrow> ((\<lambda> t. sol t $ vid1) has_derivative (\<lambda>xa. xa * sterm_sem I (f1 fid1 vid1) (sol s))) (at s within {0..t})"
+           subgoal for s using sol_proj_deriv[of s vid1] by auto done
+         have sol_proj_deriv_other:"\<And>s i. s \<in> {0..t} \<Longrightarrow> i \<noteq> vid1 \<Longrightarrow> ((\<lambda> t. sol t $ i) has_derivative (\<lambda>xa. 0)) (at s within {0..t})"
+             subgoal for s i using sol_proj_deriv[of s i] by auto done
          have new_sol_deriv:"\<And>s. s \<in> {0..t} \<Longrightarrow> (ll_new.flow 0 r has_derivative
         (\<lambda>xa. xa *\<^sub>R (ll_new.flow 0 r s * sterm_sem I (f1 fid2 vid1) (sol s) + sterm_sem I (f1 fid3 vid1) (sol s))))
         (at s within {0.. t})"
@@ -1654,6 +1667,81 @@ lemma DG_valid:"valid DGaxiom"
              using sol_new' apply simp
              apply(drule solves_odeD(1))
              using tclosed by(unfold has_vderiv_on_def has_vector_derivative_def, auto)
+           done
+         have sterm_agree:"\<And>s. Vagree (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i, undefined) (sol s, undefined) {Inl vid1}"
+           subgoal for s unfolding Vagree_def using vne12 by auto done
+         have FVF:"(FVT (f1 fid2 vid1)) = {Inl vid1}" unfolding f1_def expand_singleton apply auto subgoal for x xa by (cases "xa = vid1", auto) done
+         have FVF2:"(FVT (f1 fid3 vid1)) = {Inl vid1}" unfolding f1_def expand_singleton apply auto subgoal for x xa by (cases "xa = vid1", auto) done
+         have sterm_agree_FVF:"\<And>s. Vagree (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i, undefined) (sol s, undefined) (FVT (f1 fid2 vid1))"
+           using sterm_agree FVF by auto
+         have sterm_agree_FVF2:"\<And>s. Vagree (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i, undefined) (sol s, undefined) (FVT (f1 fid3 vid1))"
+           using sterm_agree FVF2 by auto
+         have y_component_sem_eq2:"\<And>s. sterm_sem I (f1 fid2 vid1) (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i)
+            = sterm_sem I (f1 fid2 vid1) (sol s)"
+           using coincidence_sterm[OF sterm_agree_FVF, of I] by auto
+         have y_component_sem_eq3:"\<And>s. sterm_sem I (f1 fid3 vid1) (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i)
+            = sterm_sem I (f1 fid3 vid1) (sol s)"
+           using coincidence_sterm[OF sterm_agree_FVF2, of I] by auto
+         have y_component_ode_eq:"\<And>s. s \<in> {0..t} \<Longrightarrow> 
+           (\<lambda>xa. xa * (ll_new.flow 0 r s * sterm_sem I (f1 fid2 vid1) (sol s) + sterm_sem I (f1 fid3 vid1) (sol s)))
+         = (\<lambda>xa. xa * (sterm_sem I (f1 fid2 vid1) (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i) * ll_new.flow 0 r s +
+                 sterm_sem I (f1 fid3 vid1) (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i)))"
+           subgoal for s
+             apply(rule ext)
+             subgoal for xa
+               using y_component_sem_eq2 y_component_sem_eq3 by auto
+             done
+           done
+         have agree_vid1:"\<And>s. Vagree (sol s, undefined) (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i, undefined) {Inl vid1}"
+           unfolding Vagree_def using vne12 by auto
+         have FVT_vid1:"FVT(f1 fid1 vid1) = {Inl vid1}" apply(auto simp add: f1_def) subgoal for x xa apply(cases "xa = vid1") by auto done
+         have agree_vid1_FVT:"\<And>s. Vagree (sol s, undefined) (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i, undefined) (FVT (f1 fid1 vid1))"
+           using FVT_vid1 agree_vid1 by auto
+         have sterm_eq_vid1:"\<And>s. sterm_sem I (f1 fid1 vid1) (sol s) = sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i)"
+           subgoal for  s
+             using coincidence_sterm[OF agree_vid1_FVT[of s], of I] by auto
+           done
+         have vid1_deriv_eq:"\<And>s. (\<lambda>xa. xa * sterm_sem I (f1 fid1 vid1) (sol s)) =
+           (\<lambda>xa. xa * sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i))"
+           subgoal for s
+             apply(rule ext)
+             subgoal for x'
+               using sterm_eq_vid1[of s] by auto
+             done done
+         have inner_deriv:"\<And>s. s \<in> {0..t} \<Longrightarrow>
+       ((\<lambda>t. \<chi> i. if i = vid2 then ll_new.flow 0 r t else sol t $ i) has_derivative (\<lambda>xa. (\<chi> i. xa * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i) else
+                                             if i = vid2 then sterm_sem I (Plus (Times (f1 fid2 vid1) (trm.Var vid2)) (f1 fid3 vid1)) (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i) else 0))))
+                                             (at s within {0..t})"
+           subgoal for s
+             apply(rule has_derivative_vec)
+             subgoal for i
+               apply(cases "i = vid2")
+               subgoal
+                  using vne12 apply (auto)
+                  using new_sol_deriv[of s] apply auto
+                  using y_component_ode_eq by auto
+               subgoal 
+                 apply(cases "i = vid1")
+                 subgoal
+                   apply auto using sol_proj_deriv_vid1[of s] vid1_deriv_eq[of s] by auto
+                 subgoal
+                   apply auto
+                   using sol_proj_deriv_other[of s i] by auto
+                 done
+               done
+             done
+           done
+         have deriv_eta:"\<And>s. (\<lambda>xa. xa *\<^sub>R ((\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i) else 0) +
+                   (\<chi> i. if i = vid2
+                         then sterm_sem I (Plus (Times (f1 fid2 vid1) (trm.Var vid2)) (f1 fid3 vid1))
+                               (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i)
+                         else 0)))
+                         = (\<lambda>xa. (\<chi> i. xa * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i) else
+                                             if i = vid2 then sterm_sem I (Plus (Times (f1 fid2 vid1) (trm.Var vid2)) (f1 fid3 vid1)) (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i) else 0))) "
+           subgoal for s
+             apply(rule ext)
+             apply(rule vec_extensionality)
+             using vne12 by auto
            done
          have sol'_deriv:"\<And>s. s \<in> {0..t} \<Longrightarrow>
        ((\<lambda>t. \<chi> i. if i = vid2 then ll_new.flow 0 r t else sol t $ i) has_derivative
@@ -1664,9 +1752,7 @@ lemma DG_valid:"valid DGaxiom"
                             else 0))))
         (at s within {0..t})"
            subgoal for s
-             using sol_deriv[of s] new_sol_deriv[of s]
-             
-           sorry
+             using inner_deriv[of s] deriv_eta[of s] by auto done
          have FVT:"\<And>i. FVT (if i = vid1 then trm.Var vid1 else Const 0) \<subseteq> {Inl vid1}" by auto
          have agree:"\<And>s. Vagree (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol s)) (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                       (OSing vid2
