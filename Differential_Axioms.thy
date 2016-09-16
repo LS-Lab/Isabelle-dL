@@ -1558,8 +1558,42 @@ lemma DG_valid:"valid DGaxiom"
           by (rule old_continuous)
         have sol_old:"(ll_old.flow 0 (sol 0) solves_ode ?xode) (ll_old.existence_ivl 0 (sol 0)) UNIV"
           by(rule ll_old.flow_solves_ode, auto)
-        have con1:"\<And>x. continuous_on {0..t} (\<lambda>x. Functions I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol x)))"
-          sorry
+        have sol_deriv_orig:"\<And>s. s\<in>{0..t} \<Longrightarrow>  (sol has_derivative (\<lambda>xa. xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0))) (at s within {0..t})"
+          using sol apply simp
+          apply(drule solves_odeD(1))
+          by (auto simp add: has_vderiv_on_def has_vector_derivative_def) (* (\<lambda>xa. (xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0)) $ i) *)
+        have sol_eta:"(\<lambda>t. \<chi> i. sol t $ i) = sol" by(rule ext, rule vec_extensionality, auto)
+        have sol_deriv_eq1:"\<And>s i. (\<lambda>xa. xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0)) = (\<lambda>xa. \<chi> i. xa * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0))"
+          by(rule ext, rule vec_extensionality, auto)
+        have sol_deriv_proj:"\<And>s i. s\<in>{0..t} \<Longrightarrow>  ((\<lambda>t. sol t $ i) has_derivative (\<lambda>xa. (xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0)) $ i)) (at s within {0..t})"
+          subgoal for s i
+            apply(rule has_derivative_proj[of "(\<lambda> i t. sol t $ i)" "(\<lambda> i t'. (t' *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0)) $ i)" "(at s within {0..t})" "i"])
+            apply auto
+            using sol_deriv_orig[of s] sol_eta sol_deriv_eq1 by auto
+          done
+        have sol_deriv_eq2:"\<And>s i. (\<lambda>xa. xa * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0)) = (\<lambda>xa. (xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0)) $ i)"
+          by(rule ext, auto)
+        have sol_deriv_proj':"\<And>s i. s\<in>{0..t} \<Longrightarrow>  ((\<lambda>t. sol t $ i) has_derivative (\<lambda>xa. xa * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0))) (at s within {0..t})"
+          subgoal for s i using sol_deriv_proj[of s i] sol_deriv_eq2[of i s] by metis done  
+        have sol_deriv_proj_vid1:"\<And>s. s\<in>{0..t} \<Longrightarrow>  ((\<lambda>t. sol t $ vid1) has_derivative (\<lambda>xa. xa * (sterm_sem I (f1 fid1 vid1) (sol s)))) (at s within {0..t})"
+          subgoal for s
+            using sol_deriv_proj'[of s vid1] by auto done
+        have deriv1_args:"\<And>s. s \<in> {0..t} \<Longrightarrow> ((\<lambda> t. (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol t))) has_derivative ((\<lambda> t'. \<chi> i . t' * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0)))) (at s within {0..t})"
+          subgoal for s
+            apply(rule has_derivative_vec)
+            subgoal for i
+              by (auto simp add: sol_deriv_proj_vid1[of s])
+            done
+          done
+        (* :TODO: FunctionFrechet, then chain rule *)
+        have con1:" continuous_on {0..t} (\<lambda>x. Functions I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol x)))"
+            apply(rule has_derivative_continuous_on[of "{0..t}" "(\<lambda>x. Functions I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol x)))"
+                "(\<lambda>t t'.  FunctionFrechet I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol t)) (sol t))"])
+            using good_interp unfolding is_interp_def
+            sledgehammer
+           
+           
+          
         have con2:"\<And>x. continuous_on {0..t} (\<lambda>x. Functions I fid3 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol x)))"
           sorry
         have con:"\<And>x. continuous_on (ll_old.existence_ivl 0 (sol 0)) (\<lambda>t. x * sterm_sem I (f1 fid2 vid1) (sol t) + sterm_sem I (f1 fid3 vid1) (sol t))"
