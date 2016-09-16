@@ -1585,15 +1585,35 @@ lemma DG_valid:"valid DGaxiom"
               by (auto simp add: sol_deriv_proj_vid1[of s])
             done
           done
-        (* :TODO: FunctionFrechet, then chain rule *)
         have con1:" continuous_on {0..t} (\<lambda>x. Functions I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol x)))"
-            apply(rule has_derivative_continuous_on[of "{0..t}" "(\<lambda>x. Functions I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol x)))"
-                "(\<lambda>t t'.  FunctionFrechet I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol t)) (sol t))"])
-            using good_interp unfolding is_interp_def
-            sledgehammer
-           
-           
-          
+          apply(rule has_derivative_continuous_on[of "{0..t}" "(\<lambda>x. Functions I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol x)))"
+              "(\<lambda>t t'.  FunctionFrechet I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol t)) (\<chi> i . t' * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol t) else 0)))"])
+          proof -
+            fix s
+            assume ivl:"s \<in> {0..t}"
+            let ?h = "(\<lambda>x. Functions I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol x)))"
+            let ?g = "Functions I fid2"
+            let ?f = "(\<lambda>x. (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol x)))"
+            let ?h' = "(\<lambda>t'. FunctionFrechet I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol s))
+                    (\<chi> i. t' * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0)))"
+            let ?g' = "FunctionFrechet I fid2 (?f s)"
+            let ?f' = "(\<lambda> t'. \<chi> i . t' * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0))"
+            have heq:"?h = ?g \<circ> ?f" unfolding comp_def by auto
+            have heq':"?h' = ?g' \<circ> ?f'" unfolding comp_def by auto
+            have fderiv:"(?f has_derivative ?f') (at s within {0..t})"
+              using deriv1_args[OF ivl] by auto
+            have gderiv:"(?g has_derivative ?g') (at (?f s) within (?f ` {0..t}))"
+              using good_interp unfolding is_interp_def 
+              using  has_derivative_within_subset by blast
+            have gfderiv:"((?g \<circ> ?f) has_derivative (?g' \<circ> ?f')) (at s within {0..t})"
+              using fderiv gderiv diff_chain_within by blast
+            show "((\<lambda>x. Functions I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol x))) has_derivative
+             (\<lambda>t'. FunctionFrechet I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol s))
+                    (\<chi> i. t' * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0))))
+             (at s within {0..t})"
+              using heq heq' gfderiv by auto
+            qed
+
         have con2:"\<And>x. continuous_on {0..t} (\<lambda>x. Functions I fid3 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol x)))"
           sorry
         have con:"\<And>x. continuous_on (ll_old.existence_ivl 0 (sol 0)) (\<lambda>t. x * sterm_sem I (f1 fid2 vid1) (sol t) + sterm_sem I (f1 fid3 vid1) (sol t))"
