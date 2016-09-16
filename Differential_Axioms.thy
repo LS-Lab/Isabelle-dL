@@ -1644,14 +1644,28 @@ lemma DG_valid:"valid DGaxiom"
             apply(erule allE[where x = "fst (?aaba')"])
             apply(erule allE[where x = "snd (?aaba')"])
             by auto
-         have sol'_deriv:"\<And>x. x\<in>{0..t} \<Longrightarrow>
+         have sol_deriv:"\<And>s. s \<in> {0..t} \<Longrightarrow> (sol has_derivative (\<lambda>xa. xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0))) (at s within {0..t})"
+           using sol apply simp
+           by(drule solves_odeD(1), auto simp add: has_vderiv_on_def has_vector_derivative_def)
+         have new_sol_deriv:"\<And>s. s \<in> {0..t} \<Longrightarrow> (ll_new.flow 0 r has_derivative
+        (\<lambda>xa. xa *\<^sub>R (ll_new.flow 0 r s * sterm_sem I (f1 fid2 vid1) (sol s) + sterm_sem I (f1 fid3 vid1) (sol s))))
+        (at s within {0.. t})"
+           subgoal for s
+             using sol_new' apply simp
+             apply(drule solves_odeD(1))
+             using tclosed by(unfold has_vderiv_on_def has_vector_derivative_def, auto)
+           done
+         have sol'_deriv:"\<And>s. s \<in> {0..t} \<Longrightarrow>
        ((\<lambda>t. \<chi> i. if i = vid2 then ll_new.flow 0 r t else sol t $ i) has_derivative
-        (\<lambda>xa. xa *\<^sub>R ((\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid2 then ll_new.flow 0 r x else sol x $ i) else 0) +
+        (\<lambda>xa. xa *\<^sub>R ((\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i) else 0) +
                       (\<chi> i. if i = vid2
                             then sterm_sem I (Plus (Times (f1 fid2 vid1) (trm.Var vid2)) (f1 fid3 vid1))
-                                  (\<chi> i. if i = vid2 then ll_new.flow 0 r x else sol x $ i)
+                                  (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i)
                             else 0))))
-        (at x within {0..t})"
+        (at s within {0..t})"
+           subgoal for s
+             using sol_deriv[of s] new_sol_deriv[of s]
+             
            sorry
          have FVT:"\<And>i. FVT (if i = vid1 then trm.Var vid1 else Const 0) \<subseteq> {Inl vid1}" by auto
          have agree:"\<And>s. Vagree (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol s)) (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
