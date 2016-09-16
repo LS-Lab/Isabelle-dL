@@ -1556,71 +1556,77 @@ lemma DG_valid:"valid DGaxiom"
           prefer 3 subgoal by auto
           apply(rule old_lipschitz)
           by (rule old_continuous)
-        have sol_old:"(ll_old.flow 0 (sol 0) solves_ode ?xode) (ll_old.existence_ivl 0 (sol 0)) UNIV"
+        let ?ivl = "(ll_old.existence_ivl 0 (sol 0))"
+        have sol_old:"(ll_old.flow 0 (sol 0) solves_ode ?xode) ?ivl UNIV"
           by(rule ll_old.flow_solves_ode, auto)
-        have sol_deriv_orig:"\<And>s. s\<in>{0..t} \<Longrightarrow>  (sol has_derivative (\<lambda>xa. xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0))) (at s within {0..t})"
-          using sol apply simp
+        let ?flow = "ll_old.flow 0 (sol 0)"
+        (*have sol_eq_flow:"\<And>s. s \<in> ll_old.existence_ivl 0 (sol 0) \<Longrightarrow> sol s  = ll_old.flow 0 (sol 0) s"
+          apply(rule ll_old.equals_flowI)
+          apply auto*)
+        have sol_deriv_orig:"\<And>s. s\<in>?ivl \<Longrightarrow>  (?flow has_derivative (\<lambda>xa. xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0))) (at s within ?ivl)"
+          using sol_old apply simp
           apply(drule solves_odeD(1))
           by (auto simp add: has_vderiv_on_def has_vector_derivative_def) (* (\<lambda>xa. (xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0)) $ i) *)
-        have sol_eta:"(\<lambda>t. \<chi> i. sol t $ i) = sol" by(rule ext, rule vec_extensionality, auto)
-        have sol_deriv_eq1:"\<And>s i. (\<lambda>xa. xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0)) = (\<lambda>xa. \<chi> i. xa * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0))"
+        have sol_eta:"(\<lambda>t. \<chi> i. ?flow t $ i) = ?flow" by(rule ext, rule vec_extensionality, auto)
+        have sol_deriv_eq1:"\<And>s i. (\<lambda>xa. xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0)) = (\<lambda>xa. \<chi> i. xa * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0))"
           by(rule ext, rule vec_extensionality, auto)
-        have sol_deriv_proj:"\<And>s i. s\<in>{0..t} \<Longrightarrow>  ((\<lambda>t. sol t $ i) has_derivative (\<lambda>xa. (xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0)) $ i)) (at s within {0..t})"
+        have sol_deriv_proj:"\<And>s i. s\<in>?ivl \<Longrightarrow>  ((\<lambda>t. ?flow t $ i) has_derivative (\<lambda>xa. (xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0)) $ i)) (at s within ?ivl)"         
           subgoal for s i
-            apply(rule has_derivative_proj[of "(\<lambda> i t. sol t $ i)" "(\<lambda> i t'. (t' *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0)) $ i)" "(at s within {0..t})" "i"])
+            apply(rule has_derivative_proj[of "(\<lambda> i t. ?flow t $ i)" "(\<lambda> i t'. (t' *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0)) $ i)" "(at s within ?ivl)" "i"])
             apply auto
             using sol_deriv_orig[of s] sol_eta sol_deriv_eq1 by auto
           done
-        have sol_deriv_eq2:"\<And>s i. (\<lambda>xa. xa * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0)) = (\<lambda>xa. (xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0)) $ i)"
+        have sol_deriv_eq2:"\<And>s i. (\<lambda>xa. xa * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0)) = (\<lambda>xa. (xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0)) $ i)"
           by(rule ext, auto)
-        have sol_deriv_proj':"\<And>s i. s\<in>{0..t} \<Longrightarrow>  ((\<lambda>t. sol t $ i) has_derivative (\<lambda>xa. xa * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0))) (at s within {0..t})"
+        have sol_deriv_proj':"\<And>s i. s\<in>?ivl \<Longrightarrow>  ((\<lambda>t. ?flow t $ i) has_derivative (\<lambda>xa. xa * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0))) (at s within ?ivl)"
           subgoal for s i using sol_deriv_proj[of s i] sol_deriv_eq2[of i s] by metis done  
-        have sol_deriv_proj_vid1:"\<And>s. s\<in>{0..t} \<Longrightarrow>  ((\<lambda>t. sol t $ vid1) has_derivative (\<lambda>xa. xa * (sterm_sem I (f1 fid1 vid1) (sol s)))) (at s within {0..t})"
+        have sol_deriv_proj_vid1:"\<And>s. s\<in>?ivl \<Longrightarrow>  ((\<lambda>t. ?flow t $ vid1) has_derivative (\<lambda>xa. xa * (sterm_sem I (f1 fid1 vid1) (?flow s)))) (at s within ?ivl)"
           subgoal for s
             using sol_deriv_proj'[of s vid1] by auto done
-        have deriv1_args:"\<And>s. s \<in> {0..t} \<Longrightarrow> ((\<lambda> t. (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol t))) has_derivative ((\<lambda> t'. \<chi> i . t' * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0)))) (at s within {0..t})"
+        have deriv1_args:"\<And>s. s \<in> ?ivl \<Longrightarrow> ((\<lambda> t. (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (?flow t))) has_derivative ((\<lambda> t'. \<chi> i . t' * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0)))) (at s within ?ivl)"
           subgoal for s
             apply(rule has_derivative_vec)
             subgoal for i
               by (auto simp add: sol_deriv_proj_vid1[of s])
             done
           done
-        have con1:" continuous_on {0..t} (\<lambda>x. Functions I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol x)))"
-          apply(rule has_derivative_continuous_on[of "{0..t}" "(\<lambda>x. Functions I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol x)))"
-              "(\<lambda>t t'.  FunctionFrechet I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol t)) (\<chi> i . t' * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol t) else 0)))"])
+        have con_fid:"\<And>fid. continuous_on ?ivl (\<lambda>x. sterm_sem I (f1 fid vid1) (?flow x))"
+          subgoal for fid
+          apply(rule has_derivative_continuous_on[of "?ivl" "(\<lambda>x. sterm_sem I (f1 fid vid1) (?flow x))"
+              "(\<lambda>t t'.  FunctionFrechet I fid (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (?flow t)) (\<chi> i . t' * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow t) else 0)))"])
           proof -
             fix s
-            assume ivl:"s \<in> {0..t}"
-            let ?h = "(\<lambda>x. Functions I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol x)))"
-            let ?g = "Functions I fid2"
-            let ?f = "(\<lambda>x. (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol x)))"
-            let ?h' = "(\<lambda>t'. FunctionFrechet I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol s))
-                    (\<chi> i. t' * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0)))"
-            let ?g' = "FunctionFrechet I fid2 (?f s)"
-            let ?f' = "(\<lambda> t'. \<chi> i . t' * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0))"
-            have heq:"?h = ?g \<circ> ?f" unfolding comp_def by auto
+            assume ivl:"s \<in> ?ivl"
+            let ?h = "(\<lambda>x. sterm_sem I (f1 fid vid1) (?flow x))"
+            let ?g = "Functions I fid"
+            let ?f = "(\<lambda>x. (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (?flow x)))"
+            let ?h' = "(\<lambda>t'. FunctionFrechet I fid (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (?flow s))
+                    (\<chi> i. t' * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0)))"
+            let ?g' = "FunctionFrechet I fid (?f s)"
+            let ?f' = "(\<lambda> t'. \<chi> i . t' * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0))"
+            have heq:"?h = ?g \<circ> ?f" unfolding comp_def f1_def expand_singleton by auto
             have heq':"?h' = ?g' \<circ> ?f'" unfolding comp_def by auto
-            have fderiv:"(?f has_derivative ?f') (at s within {0..t})"
+            have fderiv:"(?f has_derivative ?f') (at s within ?ivl)"
               using deriv1_args[OF ivl] by auto
-            have gderiv:"(?g has_derivative ?g') (at (?f s) within (?f ` {0..t}))"
+            have gderiv:"(?g has_derivative ?g') (at (?f s) within (?f ` ?ivl))"
               using good_interp unfolding is_interp_def 
               using  has_derivative_within_subset by blast
-            have gfderiv:"((?g \<circ> ?f) has_derivative (?g' \<circ> ?f')) (at s within {0..t})"
+            have gfderiv:"((?g \<circ> ?f) has_derivative (?g' \<circ> ?f')) (at s within ?ivl)"
               using fderiv gderiv diff_chain_within by blast
-            show "((\<lambda>x. Functions I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol x))) has_derivative
-             (\<lambda>t'. FunctionFrechet I fid2 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol s))
-                    (\<chi> i. t' * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0))))
-             (at s within {0..t})"
+            show "((\<lambda>x. sterm_sem I (f1 fid vid1) (?flow x)) has_derivative
+             (\<lambda>t'. FunctionFrechet I fid (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (?flow s))
+                    (\<chi> i. t' * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0))))
+             (at s within ?ivl)"
               using heq heq' gfderiv by auto
             qed
-
-        have con2:"\<And>x. continuous_on {0..t} (\<lambda>x. Functions I fid3 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol x)))"
-          sorry
-        have con:"\<And>x. continuous_on (ll_old.existence_ivl 0 (sol 0)) (\<lambda>t. x * sterm_sem I (f1 fid2 vid1) (sol t) + sterm_sem I (f1 fid3 vid1) (sol t))"
-          sorry
-        have ll:"local_lipschitz (ll_old.existence_ivl 0 (sol 0)) UNIV (\<lambda>t y. y * sterm_sem I (f1 fid2 vid1) (sol t) + sterm_sem I (f1 fid3 vid1) (sol t))"
-          sorry
-          (*subgoal for x
+          done
+        have con:"\<And>x. continuous_on (?ivl) (\<lambda>t. x * sterm_sem I (f1 fid2 vid1) (?flow t) + sterm_sem I (f1 fid3 vid1) (?flow t))"
+          apply(rule continuous_on_add)
+          apply(rule continuous_on_mult_left)
+          apply(rule con_fid[of fid2])
+          by(rule con_fid[of fid3])
+        have ll:"local_lipschitz (ll_old.existence_ivl 0 (sol 0)) UNIV (\<lambda>t y. y * sterm_sem I (f1 fid2 vid1) (?flow t) + sterm_sem I (f1 fid3 vid1) (?flow t))"
+        (*  subgoal for x
           unfolding f1_def expand_singleton apply auto
           apply(rule continuous_on_add)
           apply(rule continuous_on_mult_left)
