@@ -1574,6 +1574,20 @@ lemma DG_valid:"valid DGaxiom"
           by(rule con2)*)
           (* continuous_on_mult_left continuous_on_add*)
         let ?ivl = "ll_old.existence_ivl 0 (sol 0)"
+        have tclosed:"{0..t} = {0--t}" using t sorry
+        have "(sol  solves_ode (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)) {0..t} UNIV"
+          apply(rule solves_ode_supset_range)
+          apply(rule sol)
+          by auto
+        then have sol':"(sol  solves_ode (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)) {0--t} UNIV"
+          using tclosed by auto
+        (* solves_ode_supset_range *)
+        have sub:"{0--t} \<subseteq> ll_old.existence_ivl 0 (sol 0)"
+          apply(rule ll_old.closed_segment_subset_existence_ivl)
+          apply(rule ll_old.existence_ivl_maximal_segment)
+          apply(rule sol')
+          apply(rule refl)
+          by auto
         interpret ll_new: ll_on_open_it "?ivl" "?yode" "UNIV" 0
           apply(standard)
           apply(auto)
@@ -1593,7 +1607,10 @@ lemma DG_valid:"valid DGaxiom"
           apply auto
           apply (rule more_lipschitz)
           by auto
-        
+        have sub':"{0--t} \<subseteq> ll_new.existence_ivl 0 r"
+          using sub ivls_eq by auto
+        have sol_new':"(ll_new.flow 0 r solves_ode ?yode) {0--t} UNIV"
+          by(rule solves_ode_subset, rule sol_new, rule sub')
         (* TODO: ?sol' needs to be sol except with the solution for y added. *)
         let ?sol' = sol 
         let ?aaba' = "mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
