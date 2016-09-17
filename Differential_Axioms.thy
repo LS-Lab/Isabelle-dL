@@ -993,6 +993,63 @@ lemma dterm_sterm_dfree:
    "dfree \<theta> \<Longrightarrow> (\<And>\<nu> \<nu>'. sterm_sem I \<theta> \<nu> = dterm_sem I \<theta> (\<nu>, \<nu>'))"
   by(induction rule: dfree.induct, auto)
     
+definition "f = (\<lambda>t x. t\<^sup>2 + x\<^sup>2::real)"
+
+lemma ll: "local_lipschitz UNIV UNIV f"
+  by (rule c1_implies_local_lipschitz[where f'="\<lambda>(t, x). blinfun_scaleR_left (blinfun_scaleR_left id_blinfun 2) x"])
+    (auto intro!: continuous_intros derivative_eq_intros ext simp: f_def split_beta' blinfun.bilinear_simps)
+
+(* TODO: Existing proof, want to adjust it so it applies for my case*)
+(*
+lemma c1_implies_local_lipschitz:
+  fixes T::"real set" and X::"'a::{banach,heine_borel} set"
+    and f::"real \<Rightarrow> 'a \<Rightarrow> 'a"
+  assumes f': "\<And>t x. t \<in> T \<Longrightarrow> x \<in> X \<Longrightarrow> (f t has_derivative blinfun_apply (f' (t, x))) (at x)"
+  assumes cont_f': "continuous_on (T \<times> X) f'"
+  assumes "open T"
+  assumes "open X"
+  shows "local_lipschitz T X f"
+proof (rule local_lipschitzI)
+  fix t x
+  assume "t \<in> T" "x \<in> X"
+  from open_contains_cball[THEN iffD1, OF \<open>open X\<close>, rule_format, OF \<open>x \<in> X\<close>]
+  obtain u where u: "u > 0" "cball x u \<subseteq> X" by auto
+  moreover
+  from open_contains_cball[THEN iffD1, OF \<open>open T\<close>, rule_format, OF \<open>t \<in> T\<close>]
+  obtain v where v: "v > 0" "cball t v \<subseteq> T" by auto
+  ultimately
+  have "compact (cball t v \<times> cball x u)" "cball t v \<times> cball x u \<subseteq> T \<times> X"
+    by (auto intro!: compact_Times)
+  then have "compact (f' ` (cball t v \<times> cball x u))"
+    by (auto intro!: compact_continuous_image continuous_on_subset[OF cont_f'])
+  then obtain B where B: "B > 0" "\<And>s y. s \<in> cball t v \<Longrightarrow> y \<in> cball x u \<Longrightarrow> norm (f' (s, y)) \<le> B"
+    by (auto dest!: compact_imp_bounded simp: bounded_pos simp: mem_ball)
+
+  have lipschitz: "lipschitz (cball x (min u v) \<inter> X) (f s) B" if s: "s \<in> cball t v" for s
+  proof -
+    note s
+    also note \<open>cball t v \<subseteq> T\<close>
+    finally
+    have deriv: "\<forall>y\<in>cball x u. (f s has_derivative blinfun_apply (f' (s, y))) (at y within cball x u)"
+      using \<open>_ \<subseteq> X\<close>
+      by (auto intro!: has_derivative_at_within[OF f'])
+    have "norm (f s y - f s z) \<le> B * norm (y - z)"
+      if "y \<in> cball x u" "z \<in> cball x u"
+      for y z
+      using s that
+      by (intro differentiable_bound[OF convex_cball deriv])
+        (auto intro!: B  simp: norm_blinfun.rep_eq[symmetric] mem_cball)
+    then show ?thesis
+      using \<open>0 < B\<close>
+      by (auto intro!: lipschitzI simp: dist_norm mem_cball)
+  qed
+  show "\<exists>u>0. \<exists>L. \<forall>t\<in>cball t u \<inter> T. lipschitz (cball x u \<inter> X) (f t) L"
+    by (force intro: exI[where x="min u v"] exI[where x=B] intro!: lipschitz simp: u v mem_cball)
+qed
+
+lemma example: "local_lipschitz (UNIV :: real set) UNIV (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)"
+  apply(rule c1_implies_local_lipschitz)
+*)   
 (*  
 g(x)\<ge> h(x) \<rightarrow> p(x) \<and> [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c]g(x) \<ge> h(x)
 *)
@@ -1538,8 +1595,66 @@ lemma DG_valid:"valid DGaxiom"
         let ?ivl = "ll_on_open.existence_ivl {0 .. t} ?xode ?xconstraint 0 (sol 0)"
         (* (\<And>t x. t \<in> ?T \<Longrightarrow> x \<in> ?X \<Longrightarrow> (?f t has_derivative blinfun_apply (?f' (t, x))) (at x)) \<Longrightarrow>
     continuous_on (?T \<times> ?X) ?f' \<Longrightarrow> open ?T \<Longrightarrow> open ?X \<Longrightarrow> local_lipschitz ?T ?X ?f*)
-        have old_lipschitz:"local_lipschitz UNIV UNIV (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)"
+        (*interpret old_c1: c1_on_open  "(\<lambda> b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)"
+          "(\<lambda> b. Blinfun(\<lambda>b'. \<chi> i. if i = vid1 then FunctionFrechet I fid1 b b' else 0))" UNIV
+          apply(unfold_locales)
+          subgoal by auto
+          subgoal for x
+            apply (auto simp add: bounded_linear_Blinfun_apply[OF blins[of x]])
+            apply (rule has_derivative_vec)
+            subgoal for i
+              apply(cases "i = vid1")
+              using good_interp apply (auto simp add: f1_def expand_singleton is_interp_def)
+              sorry
+            done
+          using blins sorry*)
+            
+        (*  apply(rule )
+          using c1_implies_local_lipschitz[of UNIV UNIV "(\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)"]
+        
+          apply(rule c1_implies_local_lipschitz[of UNIV UNIV "(\<lambda>(t,b). \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)" undefined])
+          apply(rule c1_implies_local_lipschitz)*)
+        have blins:"\<And>b. bounded_linear (\<lambda>b'. \<chi> i. if i = vid1 then FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b) (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) b b') else 0)"
           sorry
+        have old_lipschitz:"local_lipschitz (UNIV::real set) UNIV (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)"
+          apply(rule c1_implies_local_lipschitz[where f'="(\<lambda> (t,b). Blinfun(\<lambda> b'. (\<chi> i. if i = vid1 then FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b) (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) b b') else 0)))"])
+          apply auto
+          subgoal for x
+            apply(auto simp add: blins[of x] bounded_linear_Blinfun_apply)
+            apply(rule has_derivative_vec)
+            subgoal for i
+              apply(cases "i = vid1")
+              apply(auto simp add: f1_def expand_singleton)
+              proof -
+                let ?h = "(\<lambda>b. Functions I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b))"
+                let ?h' = "(\<lambda>b'. FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) x) (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) x b'))" 
+                let ?f = "(\<lambda> b. (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b))"
+                let ?f' = "(\<lambda> b'. (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) x b'))"
+                let ?g = "Functions I fid1"
+                let ?g'= "FunctionFrechet I fid1 (?f x)"
+                have heq:"?h = ?g \<circ> ?f" by(rule ext, auto)
+                have heq':"?h' = ?g' \<circ> ?f'" by(rule ext, auto)
+                have fderiv:"(?f has_derivative ?f') (at x)"
+                  apply(rule has_derivative_vec)
+                  subgoal for i
+                    apply(cases "i = vid1")
+                    apply(auto)
+                    by (simp add: svar_deriv)
+                  done
+                have gderiv:"(?g has_derivative ?g') (at (?f x))"
+                  using good_interp unfolding is_interp_def by blast
+                have gfderiv: "((?g \<circ> ?f) has_derivative(?g' \<circ> ?f')) (at x)"
+                  using fderiv gderiv diff_chain_at by blast
+                have "(?h has_derivative ?h') (at x)" using gfderiv heq heq' by auto
+                then show "((\<lambda>b. Functions I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b)) has_derivative
+     (\<lambda>b'. (THE f'. \<forall>x. (Functions I fid1 has_derivative f' x) (at x)) (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) x)
+            (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) x b')))
+     (at x)"
+          by auto
+        qed
+        done
+      sorry
+    
         have old_continuous:" \<And>x. x \<in> UNIV \<Longrightarrow> continuous_on UNIV (\<lambda>t. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) x else 0)"
             by(rule continuous_on_const)
         interpret ll_old: ll_on_open_it "UNIV" ?xode ?xconstraint 0 
