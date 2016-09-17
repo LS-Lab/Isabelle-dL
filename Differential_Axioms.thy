@@ -1533,10 +1533,6 @@ lemma DG_valid:"valid DGaxiom"
             (ll_on_open.flow ?T ?f ?X ?t0.0 ?x0.0 solves_ode ?f) (ll_on_open.existence_ivl ?T ?f ?X ?t0.0 ?x0.0) ?X *)
 (*        have ll:"local_lipschitz (ll_old.existence_ivl 0 (sol 0)) UNIV (\<lambda>t y. y * sterm_sem I (f1 fid2 vid1) (sol t) + sterm_sem I (f1 fid3 vid1) (sol t))"
           sorry*)
-        let ?f2arg = "(\<lambda> x. (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) x))"
-        have f2_deriv:"\<And>s. ((\<lambda>s. Functions I fid2 (?f2arg  s)) has_derivative (FunctionFrechet I fid2 (?f2arg (sol s)))) (at (sol s) within (sol ` {0..t}))"
-          using good_interp unfolding is_interp_def
-          sorry
         let ?xode = "(\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)"
         let ?xconstraint = UNIV
         let ?ivl = "ll_on_open.existence_ivl {0 .. t} ?xode ?xconstraint 0 (sol 0)"
