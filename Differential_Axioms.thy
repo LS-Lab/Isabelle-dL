@@ -1525,9 +1525,6 @@ lemma DG_valid:"valid DGaxiom"
               (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
                      (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) x))}"
         assume VSA:"VSagree (sol 0) a {y. y = vid1 \<or> (\<exists>x. Inl y \<in> FVT (if x = vid1 then trm.Var vid1 else Const 0))}"
-        (* Construct solution to ODE for y' here: *)
-        let ?yode = "(\<lambda>t y. y * sterm_sem I (f1 fid2 vid1) (sol t) + sterm_sem I (f1 fid3 vid1) (sol t))"
-        let ?ysol0 = r
         (* Time constraint: {0..t} because we need to know that the original solution is nice everywhere,
          * no evolution domain constraint because the constraint we eventually want doesn't mention y in the first place. *)
         (* Picard_Lindeloef_Qualitative.ll_on_open_it.flow_solves_ode:
@@ -1557,12 +1554,52 @@ lemma DG_valid:"valid DGaxiom"
           apply(rule old_lipschitz)
           by (rule old_continuous)
         let ?ivl = "(ll_old.existence_ivl 0 (sol 0))"
+        let ?flow = "ll_old.flow 0 (sol 0)"
+        have tclosed:"{0..t} = {0--t}" using t real_Icc_closed_segment by auto
+        have "(sol  solves_ode (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)) {0..t} UNIV"
+          apply(rule solves_ode_supset_range)
+          apply(rule sol)
+          by auto
+        then have sol':"(sol  solves_ode (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)) {0--t} UNIV"
+          using tclosed by auto
+        have sub:"{0--t} \<subseteq> ll_old.existence_ivl 0 (sol 0)"
+          apply(rule ll_old.closed_segment_subset_existence_ivl)
+          apply(rule ll_old.existence_ivl_maximal_segment)
+          apply(rule sol')
+          apply(rule refl)
+          by auto
+        have usol_old:"(?flow  usolves_ode ?xode from 0) ?ivl UNIV"
+          by(rule ll_old.flow_usolves_ode, auto)
         have sol_old:"(ll_old.flow 0 (sol 0) solves_ode ?xode) ?ivl UNIV"
           by(rule ll_old.flow_solves_ode, auto)
-        let ?flow = "ll_old.flow 0 (sol 0)"
-        (*have sol_eq_flow:"\<And>s. s \<in> ll_old.existence_ivl 0 (sol 0) \<Longrightarrow> sol s  = ll_old.flow 0 (sol 0) s"
-          apply(rule ll_old.equals_flowI)
-          apply auto*)
+        have another_sub:"\<And>s. s \<in> {0..t} \<Longrightarrow> {s--0} \<subseteq> {0..t}"
+          unfolding closed_segment_def
+          apply auto
+          by (metis diff_0_right diff_left_mono mult.commute mult_left_le order.trans)
+        have sol_eq_flow:"\<And>s. s \<in> {0..t} \<Longrightarrow> sol s = ?flow s"
+          using usol_old apply simp
+          apply(drule usolves_odeD(4))
+          apply auto
+          subgoal for s x
+            proof -
+              assume xs0:"x \<in> {s--0}"
+              assume s0:"0 \<le> s" and st: "s \<le> t"
+              have "{s--0} \<subseteq> {0..t}" using another_sub[of s] s0 st by auto
+              then have "x \<in> {0..t}" using xs0 by auto
+              then have "x \<in> {0--t}" using tclosed by auto
+              then show "x \<in> ll_old.existence_ivl 0 (sol 0)"
+                using sub by auto
+            qed
+          apply(rule solves_ode_subset)
+          using sol' apply auto[1]
+          subgoal for s
+            proof - 
+              assume s0:"0 \<le> s" and st:"s \<le> t"
+              show "{s--0} \<subseteq> {0--t}"
+                using tclosed unfolding closed_segment using s0 st
+                using another_sub intervalE by blast
+            qed
+          done
         have sol_deriv_orig:"\<And>s. s\<in>?ivl \<Longrightarrow>  (?flow has_derivative (\<lambda>xa. xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0))) (at s within ?ivl)"
           using sol_old apply simp
           apply(drule solves_odeD(1))
@@ -1626,6 +1663,7 @@ lemma DG_valid:"valid DGaxiom"
           apply(rule con_fid[of fid2])
           by(rule con_fid[of fid3])
         have ll:"local_lipschitz (ll_old.existence_ivl 0 (sol 0)) UNIV (\<lambda>t y. y * sterm_sem I (f1 fid2 vid1) (?flow t) + sterm_sem I (f1 fid3 vid1) (?flow t))"
+          sorry
         (*  subgoal for x
           unfolding f1_def expand_singleton apply auto
           apply(rule continuous_on_add)
@@ -1634,33 +1672,20 @@ lemma DG_valid:"valid DGaxiom"
           by(rule con2)*)
           (* continuous_on_mult_left continuous_on_add*)
         let ?ivl = "ll_old.existence_ivl 0 (sol 0)"
-        have tclosed:"{0..t} = {0--t}" using t real_Icc_closed_segment by auto
-        have "(sol  solves_ode (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)) {0..t} UNIV"
-          apply(rule solves_ode_supset_range)
-          apply(rule sol)
-          by auto
-        then have sol':"(sol  solves_ode (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)) {0--t} UNIV"
-          using tclosed by auto
-        (* solves_ode_supset_range *)
-        have sub:"{0--t} \<subseteq> ll_old.existence_ivl 0 (sol 0)"
-          apply(rule ll_old.closed_segment_subset_existence_ivl)
-          apply(rule ll_old.existence_ivl_maximal_segment)
-          apply(rule sol')
-          apply(rule refl)
-          by auto
+        
+        (* Construct solution to ODE for y' here: *)
+        let ?yode = "(\<lambda>t y. y * sterm_sem I (f1 fid2 vid1) (?flow t) + sterm_sem I (f1 fid3 vid1) (?flow t))"
+        let ?ysol0 = r
         interpret ll_new: ll_on_open_it "?ivl" "?yode" "UNIV" 0
           apply(standard)
           apply(auto)
           apply(rule ll)
           by(rule con)
-          (*unfolding local_lipschitz_def f0_def empty_def sterm_sem.simps apply(safe)
-          using gt_ex lipschitz_constI apply blast*)
-        (*by (simp add: continuous_on_const)*)
         have sol_new:"(ll_new.flow 0 r solves_ode ?yode) (ll_new.existence_ivl 0 r) UNIV"
           by(rule ll_new.flow_solves_ode, auto)
         have more_lipschitz:"\<And>tm tM. tm \<in> ll_old.existence_ivl 0 (sol 0) \<Longrightarrow>
              tM \<in> ll_old.existence_ivl 0 (sol 0) \<Longrightarrow>
-             \<exists>M L. \<forall>t\<in>{tm..tM}. \<forall>x. \<bar>x * sterm_sem I (f1 fid2 vid1) (sol t) + sterm_sem I (f1 fid3 vid1) (sol t)\<bar> \<le> M + L * \<bar>x\<bar>"
+             \<exists>M L. \<forall>t\<in>{tm..tM}. \<forall>x. \<bar>x * sterm_sem I (f1 fid2 vid1) (?flow t) + sterm_sem I (f1 fid3 vid1) (?flow t)\<bar> \<le> M + L * \<bar>x\<bar>"
           sorry
         have ivls_eq:"(ll_new.existence_ivl 0 r) = (ll_old.existence_ivl 0 (sol 0))"
           apply(rule ll_new.existence_ivl_eq_domain)
@@ -1720,13 +1745,19 @@ lemma DG_valid:"valid DGaxiom"
            subgoal for s using sol_proj_deriv[of s vid1] by auto done
          have sol_proj_deriv_other:"\<And>s i. s \<in> {0..t} \<Longrightarrow> i \<noteq> vid1 \<Longrightarrow> ((\<lambda> t. sol t $ i) has_derivative (\<lambda>xa. 0)) (at s within {0..t})"
              subgoal for s i using sol_proj_deriv[of s i] by auto done
-         have new_sol_deriv:"\<And>s. s \<in> {0..t} \<Longrightarrow> (ll_new.flow 0 r has_derivative
-        (\<lambda>xa. xa *\<^sub>R (ll_new.flow 0 r s * sterm_sem I (f1 fid2 vid1) (sol s) + sterm_sem I (f1 fid3 vid1) (sol s))))
-        (at s within {0.. t})"
-           subgoal for s
+         have fact:"\<And>x. x \<in>{0..t} \<Longrightarrow>
+       (ll_new.flow 0 r has_derivative
+        (\<lambda>xa. xa *\<^sub>R (ll_new.flow 0 r x * sterm_sem I (f1 fid2 vid1) (ll_old.flow 0 (sol 0) x) +
+                      sterm_sem I (f1 fid3 vid1) (ll_old.flow 0 (sol 0) x))))
+        (at x within {0 .. t})"
              using sol_new' apply simp
              apply(drule solves_odeD(1))
-             using tclosed by(unfold has_vderiv_on_def has_vector_derivative_def, auto)
+             using tclosed unfolding has_vderiv_on_def has_vector_derivative_def by auto
+         have new_sol_deriv:"\<And>s. s \<in> {0..t} \<Longrightarrow> (ll_new.flow 0 r has_derivative
+          (\<lambda>xa. xa *\<^sub>R (ll_new.flow 0 r s * sterm_sem I (f1 fid2 vid1) (sol s) + sterm_sem I (f1 fid3 vid1) (sol s))))
+          (at s within {0.. t})"
+           subgoal for s
+             using fact[of s] tclosed sol_eq_flow[of s] by auto
            done
          have sterm_agree:"\<And>s. Vagree (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i, undefined) (sol s, undefined) {Inl vid1}"
            subgoal for s unfolding Vagree_def using vne12 by auto done
