@@ -153,5 +153,80 @@ proof -
     using sem by auto
   thus "?thesis" using has_derivative_unique d1 d1' by metis 
 qed
+
+lift_definition blin_frechet::"('sf, 'sc, 'sz) interp \<Rightarrow> ('sf,'sz) trm \<Rightarrow> (real, 'sz) vec  \<Rightarrow> (real, 'sz) vec \<Rightarrow>\<^sub>L real" is "frechet"
+  sorry
+lemmas [simp] = blin_frechet.rep_eq
+
+lemma frechet_blin:"(\<lambda>v. Blinfun (\<lambda>v'. frechet I \<theta> v v')) = blin_frechet I \<theta>"
+  sorry
+
+
+lemma frechet_continuous:
+fixes I :: "('sf, 'sc, 'sz) interp"
+assumes good_interp:"is_interp I"
+(* TODO: Needs GREAT interp as well, i.e. continuous derivatives *)
+shows "dfree \<theta> \<Longrightarrow> continuous_on UNIV (blin_frechet I \<theta>)"    
+proof (induction rule: dfree.induct)
+  case (dfree_Var i)
+  have bounded_linear:"bounded_linear (\<lambda> \<nu>'. \<nu>' \<bullet> basis_vector i )"
+    by (simp add: bounded_linear_component)
+  have cont:"continuous_on UNIV (\<lambda>\<nu>. Blinfun(\<lambda> \<nu>'. \<nu>' \<bullet> basis_vector i ))"
+    using continuous_on_const by blast
+  have eq:"\<And>\<nu> \<nu>'. (\<lambda>\<nu>. Blinfun(\<lambda> \<nu>'. \<nu>' \<bullet> basis_vector i)) \<nu> \<nu>' = (blin_frechet I (Var i)) \<nu> \<nu>'"
+    apply(simp)
+    using bounded_linear 
+    by (metis blinfun_inner_left.abs_eq blinfun_inner_left.rep_eq)
+  have eq':"(\<lambda>\<nu>. Blinfun(\<lambda> \<nu>'. \<nu>' \<bullet> basis_vector i)) = (blin_frechet I (Var i))"
+    apply(rule ext)
+    apply(rule blinfun_eqI)
+    using eq by auto
+  then show ?case by (metis cont)
+next
+  case (dfree_Const r)
+  have bounded_linear:"bounded_linear (\<lambda> \<nu>'. 0)" by (simp)
+  have cont:"continuous_on UNIV (\<lambda>\<nu>. Blinfun(\<lambda> \<nu>'. 0))"
+    using continuous_on_const by blast
+  have eq':"(\<lambda>\<nu>. Blinfun(\<lambda> \<nu>'. 0)) = (blin_frechet I (Const r))"
+    apply(rule ext)
+    apply(rule blinfun_eqI)
+    apply auto
+    using bounded_linear
+    by (metis zero_blinfun.abs_eq zero_blinfun.rep_eq)
+  then show ?case by (metis cont)
+next
+  case (dfree_Fun args f)
+  assume IH:"\<And>i. continuous_on UNIV (blin_frechet I (args i))"
+  (* TODO: Use greatness of interpretation here. *)
+  have cont:"continuous_on UNIV (\<lambda>v. Blinfun(\<lambda>v'. FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v) (\<chi> i. frechet I (args i) v v')))"
+    sorry
+  have eq:"(\<lambda>v. Blinfun(\<lambda>v'. FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v) (\<chi> i. frechet I (args i) v v'))) 
+    = (blin_frechet I (Function f args))"
+    using frechet_blin[of I "(Function f args)"] by auto
+  then show ?case by (metis cont)
+next
+  case (dfree_Plus \<theta>\<^sub>1 \<theta>\<^sub>2)
+  assume IH1:"continuous_on UNIV (blin_frechet I \<theta>\<^sub>1)"
+  assume IH2:"continuous_on UNIV (blin_frechet I \<theta>\<^sub>2)"
+  have bounded_linear:"\<And>v. bounded_linear (\<lambda>v'. frechet I \<theta>\<^sub>1 v v' + frechet I \<theta>\<^sub>2 v v')" sorry
+  have eq2:"(\<lambda>v. blin_frechet I \<theta>\<^sub>1 v + blin_frechet I \<theta>\<^sub>2 v) = blin_frechet I (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
+    using frechet_blin[of I "(Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"] frechet_blin[of I "\<theta>\<^sub>1"] frechet_blin[of I "\<theta>\<^sub>2"] 
+    using bounded_linear sorry
+  have cont:"continuous_on UNIV (\<lambda>v. blin_frechet I \<theta>\<^sub>1 v + blin_frechet I \<theta>\<^sub>2 v)"
+    using continuous_on_add dfree_Plus.IH(1) dfree_Plus.IH(2) by blast 
+  then show ?case using cont eq2 by metis 
+next
+  case (dfree_Times \<theta>\<^sub>1 \<theta>\<^sub>2)
+  assume IH1:"continuous_on UNIV (blin_frechet I \<theta>\<^sub>1)"
+  assume IH2:"continuous_on UNIV (blin_frechet I \<theta>\<^sub>2)"
+  have bounded_linear:"\<And>v. bounded_linear (\<lambda>v'. sterm_sem I \<theta>\<^sub>1 v * frechet I \<theta>\<^sub>2 v v' + frechet I \<theta>\<^sub>1 v v' * sterm_sem I \<theta>\<^sub>2 v)" sorry
+  have cont:"continuous_on UNIV (\<lambda>v. Blinfun (\<lambda>v'. sterm_sem I \<theta>\<^sub>1 v * frechet I \<theta>\<^sub>2 v v' + frechet I \<theta>\<^sub>1 v v' * sterm_sem I \<theta>\<^sub>2 v))"
+    using bounded_linear frechet_blin[of I \<theta>\<^sub>1] bounded_linear frechet_blin[of I \<theta>\<^sub>2]
+    sorry
+  have eq:"(\<lambda>v. Blinfun (\<lambda>v'. sterm_sem I \<theta>\<^sub>1 v * frechet I \<theta>\<^sub>2 v v' + frechet I \<theta>\<^sub>1 v v' * sterm_sem I \<theta>\<^sub>2 v)) = blin_frechet I (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
+    using frechet_blin[of I "(Times \<theta>\<^sub>1 \<theta>\<^sub>2)"]
+    by auto
+  then show ?case by (metis cont)
+qed
 end end
 
