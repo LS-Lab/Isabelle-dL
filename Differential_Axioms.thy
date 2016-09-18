@@ -1057,6 +1057,7 @@ lemma continuous_blinfun_vec:"(\<And>i. continuous_on UNIV (\<lambda>x. g x i)) 
 
 lemma continuous:
   fixes I ::"('sf, 'sc, 'sz) interp"
+  assumes good_interp:"is_interp I"
   shows "continuous_on UNIV (\<lambda>(t,b). blinfun_vec (\<lambda>i. if i = vid1 then Blinfun(\<lambda>b'. FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b)
                                      (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) b b')) else 0))"
     apply(simp add: split_beta' )
@@ -1066,73 +1067,41 @@ lemma continuous:
       apply auto
       defer apply (rule continuous_on_const)
       proof -
-        let ?h = "(\<lambda>(t,b). frechet (Function f (\<lambda>i. if i = vid1 then (Var vid1) else 0)) b)"
-        let ?h = "(\<lambda>x. Blinfun (\<lambda>b'. (THE f'. \<forall>x. (Functions I fid1 has_derivative f' x) (at x))
+        have free:"dfree (Function fid1 (\<lambda>i. if i = vid1 then (Var vid1) else Const 0))" by (auto simp add: dfree_Const)
+        have eq:"\<And>x b'. (blin_frechet (good_interp I) (simple_term ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) x b' = 
+          (THE f'. \<forall>x. (Functions I fid1 has_derivative f' x) (at x))
+                         (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) x)
+                         (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) x b')"
+          apply(auto)
+          using frechet_continuous[OF good_interp free] good_interp free bounded_linear_Blinfun_apply good_interp_inverse simple_term_inverse
+          by (simp add: good_interp_inverse simple_term_inverse)
+        have bounded_linear:"\<And>b. bounded_linear (\<lambda>b'. (THE f'. \<forall>x. (Functions I fid1 has_derivative f' x) (at x))
+                         (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b)
+                         (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) b b'))"
+          using frechet_linear[OF free] by auto
+        have eq':"(\<lambda>x. Blinfun (\<lambda>b'. (THE f'. \<forall>x. (Functions I fid1 has_derivative f' x) (at x))
+                         (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (snd x))
+                         (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) (snd x) b'))) 
+                      = (\<lambda>(t,b). (blin_frechet (good_interp I) (simple_term ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) b)"
+          apply(simp add: split_beta')
+          apply(rule ext)
+          apply(rule blinfun_eqI)
+          using eq bounded_linear
+          by (simp add: Blinfun_inverse)
+        have "continuous_on UNIV (\<lambda>(t,b). (blin_frechet (good_interp I) (simple_term ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) b)"
+          apply(simp add: split_beta')
+          using frechet_continuous[OF good_interp free]
+          continuous_on_snd Topological_Spaces.continuous_on_compose2
+          by blast
+        then show "continuous_on UNIV
+     (\<lambda>x. Blinfun (\<lambda>b'. (THE f'. \<forall>x. (Functions I fid1 has_derivative f' x) (at x))
                          (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (snd x))
                          (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) (snd x) b')))"
-        let ?f = "(\<lambda>x. Blinfun(\<lambda>b'. (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) (snd x) b')))"
-        let ?g = "(\<lambda>x. Blinfun(\<lambda>b'. FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (snd x)) b'))"
-        have "\<And>x b'. ?h x b' = ?g x (?f x b')"
-(*lift_definition my_blinfun::"('sf, 'sc, 'sz) interp \<Rightarrow> (real * (real, 'sz) vec) \<Rightarrow> (real, 'sz) vec  \<Rightarrow>\<^sub>L (real, 'sz) vec" is "(\<lambda> I (t, b). (\<lambda>b'. (\<chi> i. if i = vid1
-                               then FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b)
-                                     (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) b b')
-                               else 0)))"
-  sorry
-lemmas [simp] = my_blinfun.rep_eq
-*)
-  
-  
-    
-(*
-lemma c1_implies_local_lipschitz:
-  fixes T::"real set" and X::"'a::{banach,heine_borel} set"
-    and f::"real \<Rightarrow> 'a \<Rightarrow> 'a"
-  assumes f': "\<And>t x. t \<in> T \<Longrightarrow> x \<in> X \<Longrightarrow> (f t has_derivative blinfun_apply (f' (t, x))) (at x)"
-  assumes cont_f': "continuous_on (T \<times> X) f'"
-  assumes "open T"
-  assumes "open X"
-  shows "local_lipschitz T X f"
-proof (rule local_lipschitzI)
-  fix t x
-  assume "t \<in> T" "x \<in> X"
-  from open_contains_cball[THEN iffD1, OF \<open>open X\<close>, rule_format, OF \<open>x \<in> X\<close>]
-  obtain u where u: "u > 0" "cball x u \<subseteq> X" by auto
-  moreover
-  from open_contains_cball[THEN iffD1, OF \<open>open T\<close>, rule_format, OF \<open>t \<in> T\<close>]
-  obtain v where v: "v > 0" "cball t v \<subseteq> T" by auto
-  ultimately
-  have "compact (cball t v \<times> cball x u)" "cball t v \<times> cball x u \<subseteq> T \<times> X"
-    by (auto intro!: compact_Times)
-  then have "compact (f' ` (cball t v \<times> cball x u))"
-    by (auto intro!: compact_continuous_image continuous_on_subset[OF cont_f'])
-  then obtain B where B: "B > 0" "\<And>s y. s \<in> cball t v \<Longrightarrow> y \<in> cball x u \<Longrightarrow> norm (f' (s, y)) \<le> B"
-    by (auto dest!: compact_imp_bounded simp: bounded_pos simp: mem_ball)
+          apply (auto simp add: split_beta')
+          by (smt \<open>continuous_on UNIV (\<lambda>(t, b). blin_frechet (good_interp I) (simple_term ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) b)\<close> eq')
+        qed
+        done
 
-  have lipschitz: "lipschitz (cball x (min u v) \<inter> X) (f s) B" if s: "s \<in> cball t v" for s
-  proof -
-    note s
-    also note \<open>cball t v \<subseteq> T\<close>
-    finally
-    have deriv: "\<forall>y\<in>cball x u. (f s has_derivative blinfun_apply (f' (s, y))) (at y within cball x u)"
-      using \<open>_ \<subseteq> X\<close>
-      by (auto intro!: has_derivative_at_within[OF f'])
-    have "norm (f s y - f s z) \<le> B * norm (y - z)"
-      if "y \<in> cball x u" "z \<in> cball x u"
-      for y z
-      using s that
-      by (intro differentiable_bound[OF convex_cball deriv])
-        (auto intro!: B  simp: norm_blinfun.rep_eq[symmetric] mem_cball)
-    then show ?thesis
-      using \<open>0 < B\<close>
-      by (auto intro!: lipschitzI simp: dist_norm mem_cball)
-  qed
-  show "\<exists>u>0. \<exists>L. \<forall>t\<in>cball t u \<inter> T. lipschitz (cball x u \<inter> X) (f t) L"
-    by (force intro: exI[where x="min u v"] exI[where x=B] intro!: lipschitz simp: u v mem_cball)
-qed
-
-lemma example: "local_lipschitz (UNIV :: real set) UNIV (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)"
-  apply(rule c1_implies_local_lipschitz)
-*)   
 (*  
 g(x)\<ge> h(x) \<rightarrow> p(x) \<and> [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c]g(x) \<ge> h(x)
 *)
