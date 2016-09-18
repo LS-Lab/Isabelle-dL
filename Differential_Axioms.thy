@@ -993,13 +993,96 @@ lemma dterm_sterm_dfree:
    "dfree \<theta> \<Longrightarrow> (\<And>\<nu> \<nu>'. sterm_sem I \<theta> \<nu> = dterm_sem I \<theta> (\<nu>, \<nu>'))"
   by(induction rule: dfree.induct, auto)
     
+(* Examples of proving lipschitz continuity and/or continuity *)
 definition "f = (\<lambda>t x. t\<^sup>2 + x\<^sup>2::real)"
+term blinfun_scaleR_left
+(* continuous_on UNIV (\<lambda>(t, x). blinfun_apply (blinfun_scaleR_left (blinfun_apply (blinfun_scaleR_left id_blinfun) 2)) x) *)
+lemma example1:"continuous_on UNIV (\<lambda>(t, x). blinfun_scaleR_left (blinfun_scaleR_left id_blinfun 2) x)"
+  apply(simp add: split_beta')
+(*  using bounded_bilinear.continuous_on [OF bounded_bilinear_scaleR]*)
+  
+  apply(rule continuous_on_scaleR)
+  apply(rule continuous_on_mult_right)
+  apply(rule continuous_on_snd)
+  apply(rule continuous_on_const)
+  done
+
+lemma example2:"continuous_on UNIV (\<lambda>x. \<chi> i.  if i = vid1 then x else 0)"
+  apply(rule continuous_on_vec_lambda)
+  subgoal for i
+    by (cases "i = vid1", auto intro!: continuous_intros)
+  done
+
+lemma bounded:"\<And>x. bounded_linear (\<lambda>y. x *\<^sub>R (2 *\<^sub>R y))"
+  subgoal for x
+    apply(rule bounded_linear_const_scaleR)
+    apply(rule bounded_linear_const_scaleR)
+    apply(rule bounded_linear_ident)
+    done
+  done
+    
+lift_definition some_blinfun::"(real * real) \<Rightarrow> real \<Rightarrow>\<^sub>L real" is "(\<lambda>(t, x). x *\<^sub>R (2 *\<^sub>R  id_blinfun))"
+  sorry
+lemmas [simp] = some_blinfun.rep_eq
+
+(* continuous_on UNIV (\<lambda>(t, x). blinfun_apply (blinfun_scaleR_left (blinfun_apply (blinfun_scaleR_left id_blinfun) 2)) x) *)
+lemma example1:"continuous_on UNIV (\<lambda>(t, x). blinfun_scaleR_left (blinfun_scaleR_left id_blinfun 2) x)"
+  apply(simp add: split_beta')
+oops
+
+lemma example3:"continuous_on UNIV (\<lambda>(t,x). some_blinfun (t,x))"
+  apply(simp add: split_beta')
+  (*using bounded_bilinear.continuous_on[of "(\<lambda>x y. x *\<^sub>R y)" UNIV "\<lambda>x. x"]
+  apply(rule )*)
+  apply(rule continuous_on_scaleR)
+  apply(rule continuous_on_mult_right)
+  apply(rule continuous_on_snd)
+  apply(rule continuous_on_const)
+  done
+
+lemma example4:"continuous_on UNIV (\<lambda>x. Blinfun(\<lambda>y. y * x))"
+  apply(rule linear_continuous_on)
+  sorry
 
 lemma ll: "local_lipschitz UNIV UNIV f"
   by (rule c1_implies_local_lipschitz[where f'="\<lambda>(t, x). blinfun_scaleR_left (blinfun_scaleR_left id_blinfun 2) x"])
     (auto intro!: continuous_intros derivative_eq_intros ext simp: f_def split_beta' blinfun.bilinear_simps)
 
-(* TODO: Existing proof, want to adjust it so it applies for my case*)
+lift_definition blinfun_vec::"('a::finite \<Rightarrow> 'b::real_normed_vector \<Rightarrow>\<^sub>L real) \<Rightarrow> 'b \<Rightarrow>\<^sub>L 'a Rvec" is "(\<lambda>(f::('a \<Rightarrow> 'b \<Rightarrow> real)) (x::'b). \<chi> (i::'a). f i x)"
+  sorry
+lemmas [simp] = blinfun_vec.rep_eq
+
+lemma continuous_blinfun_vec:"(\<And>i. continuous_on UNIV (\<lambda>x. g x i)) \<Longrightarrow> continuous_on UNIV (\<lambda>x. blinfun_vec (g x))"
+  sorry
+
+lemma continuous:
+  fixes I ::"('sf, 'sc, 'sz) interp"
+  shows "continuous_on UNIV (\<lambda>(t,b). blinfun_vec (\<lambda>i. if i = vid1 then Blinfun(\<lambda>b'. FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b)
+                                     (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) b b')) else 0))"
+    apply(simp add: split_beta' )
+    apply(rule continuous_blinfun_vec)
+    subgoal for i
+      apply(cases "i = vid1")
+      apply auto
+      defer apply (rule continuous_on_const)
+      proof -
+        let ?h = "(\<lambda>(t,b). frechet (Function f (\<lambda>i. if i = vid1 then (Var vid1) else 0)) b)"
+        let ?h = "(\<lambda>x. Blinfun (\<lambda>b'. (THE f'. \<forall>x. (Functions I fid1 has_derivative f' x) (at x))
+                         (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (snd x))
+                         (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) (snd x) b')))"
+        let ?f = "(\<lambda>x. Blinfun(\<lambda>b'. (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) (snd x) b')))"
+        let ?g = "(\<lambda>x. Blinfun(\<lambda>b'. FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (snd x)) b'))"
+        have "\<And>x b'. ?h x b' = ?g x (?f x b')"
+(*lift_definition my_blinfun::"('sf, 'sc, 'sz) interp \<Rightarrow> (real * (real, 'sz) vec) \<Rightarrow> (real, 'sz) vec  \<Rightarrow>\<^sub>L (real, 'sz) vec" is "(\<lambda> I (t, b). (\<lambda>b'. (\<chi> i. if i = vid1
+                               then FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b)
+                                     (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) b b')
+                               else 0)))"
+  sorry
+lemmas [simp] = my_blinfun.rep_eq
+*)
+  
+  
+    
 (*
 lemma c1_implies_local_lipschitz:
   fixes T::"real set" and X::"'a::{banach,heine_borel} set"
@@ -1653,8 +1736,31 @@ lemma DG_valid:"valid DGaxiom"
           by auto
         qed
         done
-      sorry
-    
+      proof -
+        have con:"\<And>x. continuous_on UNIV (FunctionFrechet I fid1 x)" sorry
+        have blin: "bounded_linear(\<lambda>b'. \<chi> i. if i = vid1
+                               then FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b)
+                                     (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) b b')
+                               else 0)" sorry
+        have "continuous_on UNIV (\<lambda> b. Blinfun (\<lambda>b'. \<chi> i. if i = vid1
+                               then FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b)
+                                     (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) b b')
+                               else 0))"
+          
+          using con blin linear_continuous_on bounded_linear.continuous_on sorry
+        then show "continuous_on UNIV 
+     (\<lambda>x. case x of
+          (t, b) \<Rightarrow>
+            Blinfun (\<lambda>b'. \<chi> i. if i = vid1
+                               then FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b)
+                                     (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) b b')
+                               else 0))"
+          apply(auto intro: continuous_intros
+              derivative_eq_intros
+              simp: split_beta' blinfun.bilinear_simps)
+          sorry 
+      qed
+   
         have old_continuous:" \<And>x. x \<in> UNIV \<Longrightarrow> continuous_on UNIV (\<lambda>t. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) x else 0)"
             by(rule continuous_on_const)
         interpret ll_old: ll_on_open_it "UNIV" ?xode ?xconstraint 0 
