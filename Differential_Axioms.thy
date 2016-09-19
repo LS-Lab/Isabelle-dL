@@ -1666,15 +1666,18 @@ lemma DG_valid:"valid DGaxiom"
         
           apply(rule c1_implies_local_lipschitz[of UNIV UNIV "(\<lambda>(t,b). \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)" undefined])
           apply(rule c1_implies_local_lipschitz)*)
-        have blins:"\<And>b. bounded_linear (\<lambda>b'. \<chi> i. if i = vid1 then FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b) (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) b b') else 0)"
-          sorry
+        have freef1:"dfree ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))"
+          by(auto simp add: dfree_Fun dfree_Const)
+        have simple_term_inverse':"\<And>\<theta>. dfree \<theta> \<Longrightarrow> raw_term (simple_term \<theta>) = \<theta>"
+          using simple_term_inverse by auto
         have old_lipschitz:"local_lipschitz (UNIV::real set) UNIV (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)"
-          apply(rule c1_implies_local_lipschitz[where f'="(\<lambda> (t,b). Blinfun(\<lambda> b'. (\<chi> i. if i = vid1 then FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b) (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) b b') else 0)))"])
+          apply(rule c1_implies_local_lipschitz[where f'="(\<lambda> (t,b). blinfun_vec(\<lambda> i. if i = vid1 then blin_frechet (good_interp I) (simple_term (Function fid1 (\<lambda> i. if i = vid1 then Var vid1 else Const 0))) b else Blinfun(\<lambda> _. 0)))"])
           apply auto
           subgoal for x
-            apply(auto simp add: blins[of x] bounded_linear_Blinfun_apply)
             apply(rule has_derivative_vec)
             subgoal for i
+            apply(auto simp add:  bounded_linear_Blinfun_apply good_interp_inverse good_interp)
+            apply(auto simp add: simple_term_inverse'[OF freef1])
               apply(cases "i = vid1")
               apply(auto simp add: f1_def expand_singleton)
               proof -
@@ -1697,39 +1700,48 @@ lemma DG_valid:"valid DGaxiom"
                   using good_interp unfolding is_interp_def by blast
                 have gfderiv: "((?g \<circ> ?f) has_derivative(?g' \<circ> ?f')) (at x)"
                   using fderiv gderiv diff_chain_at by blast
+                have boring_eq:"(\<lambda>b. Functions I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b)) =
+                  sterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))"
+                  by(rule ext, auto)
                 have "(?h has_derivative ?h') (at x)" using gfderiv heq heq' by auto
-                then show "((\<lambda>b. Functions I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b)) has_derivative
-     (\<lambda>b'. (THE f'. \<forall>x. (Functions I fid1 has_derivative f' x) (at x)) (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) x)
-            (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) x b')))
+                then show "(sterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) has_derivative
+     (\<lambda>v'. (THE f'. \<forall>x. (Functions I fid1 has_derivative f' x) (at x)) (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) x)
+            (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) x v')))
      (at x)"
-          by auto
+          using boring_eq by auto
         qed
         done
       proof -
-        have con:"\<And>x. continuous_on UNIV (FunctionFrechet I fid1 x)" sorry
-        have blin: "bounded_linear(\<lambda>b'. \<chi> i. if i = vid1
-                               then FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b)
-                                     (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) b b')
-                               else 0)" sorry
-        have "continuous_on UNIV (\<lambda> b. Blinfun (\<lambda>b'. \<chi> i. if i = vid1
-                               then FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b)
-                                     (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) b b')
-                               else 0))"
-          
-          using con blin linear_continuous_on bounded_linear.continuous_on sorry
-        then show "continuous_on UNIV 
-     (\<lambda>x. case x of
+         show "continuous_on UNIV 
+          (\<lambda>x. case x of
           (t, b) \<Rightarrow>
-            Blinfun (\<lambda>b'. \<chi> i. if i = vid1
-                               then FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b)
-                                     (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) b b')
-                               else 0))"
-          apply(auto intro: continuous_intros
-              derivative_eq_intros
-              simp: split_beta' blinfun.bilinear_simps)
-          sorry 
+            blinfun_vec
+             (\<lambda>i. if i = vid1 then blin_frechet (good_interp I) (simple_term ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) b
+                  else Blinfun (\<lambda>_. 0)))"
+           apply(simp add: split_beta')
+           apply(rule continuous_blinfun_vec)
+           subgoal for i
+             apply(cases "i = vid1")
+             apply(auto)
+             proof -
+               let ?h = "(\<lambda>x. blin_frechet (good_interp I) (simple_term ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (snd x))"
+               let ?f = "blin_frechet (good_interp I) (simple_term ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))"
+               let ?g = "snd"
+               have heq:"?h = ?f \<circ> ?g" by(rule ext, auto simp add: comp_def)
+               have cf:"continuous_on UNIV ?f" using frechet_continuous[OF good_interp freef1] by auto
+               have cg:"continuous_on UNIV ?g" by (rule continuous_on_snd)
+               have cfg:"continuous_on UNIV (?f \<circ> ?g)" 
+                 apply(rule continuous_on_compose)
+                 apply(rule cg)
+                 by(auto simp add: cf)
+               show "continuous_on UNIV (\<lambda>x. blin_frechet (good_interp I) (simple_term ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (snd x))"
+                 using cfg heq by auto
+             next
+               show "continuous_on UNIV (\<lambda>x. Blinfun (\<lambda>_. 0))" 
+                 by (simp add: continuous_on_const)
+             qed
+             done
       qed
-   
         have old_continuous:" \<And>x. x \<in> UNIV \<Longrightarrow> continuous_on UNIV (\<lambda>t. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) x else 0)"
             by(rule continuous_on_const)
         interpret ll_old: ll_on_open_it "UNIV" ?xode ?xconstraint 0 
