@@ -154,19 +154,52 @@ proof -
   thus "?thesis" using has_derivative_unique d1 d1' by metis 
 qed
 
-
+lemma the_deriv:
+  assumes deriv:"(f has_derivative F) (at x)"
+  shows "(THE G. (f has_derivative G) (at x)) = F"
+    apply(rule the_equality)
+    subgoal by (rule deriv)
+    subgoal for G by (auto simp add: deriv has_derivative_unique)
+    done
+   
+lemma the_all_deriv:
+  assumes deriv:"\<forall>x. (f has_derivative F x) (at x)"
+  shows "(THE G. \<forall> x. (f has_derivative G x) (at x)) = F"
+    apply(rule the_equality)
+    subgoal by (rule deriv)
+    subgoal for G 
+      apply(rule ext)
+      subgoal for x
+        apply(erule allE[where x=x])
+        by (auto simp add: deriv has_derivative_unique)
+      done
+    done
+  
 typedef ('a, 'c) strm = "{\<theta>:: ('a,'c) trm. dfree \<theta>}"
   morphisms raw_term simple_term
   by(rule exI[where x= "Const 0"], auto simp add: dfree_Const)
 
+  
 typedef ('a, 'b, 'c) good_interp = "{I::('a::finite,'b::finite,'c::finite) interp. is_interp I}"
   morphisms raw_interp good_interp
   apply(rule exI[where x="\<lparr> Functions = (\<lambda>f x. 0), Predicates = (\<lambda>p x. True), Contexts = (\<lambda>C S. S), Programs = (\<lambda>a. {}), ODEs = (\<lambda>c v. (\<chi> i. 0)), ODEBV = \<lambda>c. {}\<rparr>"])
   apply(auto simp add: is_interp_def)
-  sorry
-    
-lemma frechet_linear: "\<And>I v \<theta> . dfree \<theta> \<Longrightarrow> bounded_linear (frechet I \<theta> v)"
-  subgoal for I v \<theta>
+  proof -
+    fix x ::real
+    have eq:"(THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) = (\<lambda>_ _. 0)"
+      by(rule the_all_deriv, auto)
+    have eq':"(THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x = (\<lambda>_. 0)"
+      by (simp add: eq)
+    have deriv:"((\<lambda>x.0) has_derivative (\<lambda>x. 0)) (at x)"
+      by auto
+    then show "\<And>x. ((\<lambda>x. 0) has_derivative (THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x) (at x)" 
+      by (auto simp add: eq eq' deriv)
+  qed  
+  
+lemma frechet_linear: 
+  assumes good_interp:"is_interp I"
+  shows "\<And>v \<theta> . dfree \<theta> \<Longrightarrow> bounded_linear (frechet I \<theta> v)"
+  subgoal for v \<theta>
   proof(induction rule: dfree.induct)
     case (dfree_Var i)
     then show ?case by(auto)
@@ -175,9 +208,14 @@ lemma frechet_linear: "\<And>I v \<theta> . dfree \<theta> \<Longrightarrow> bou
     then show ?case by auto
   next
     case (dfree_Fun args i)
-    then show ?case 
-      apply auto
-      sorry
+    have blin1:"\<And>x. bounded_linear(FunctionFrechet I i x)"
+      using good_interp unfolding is_interp_def using has_derivative_bounded_linear
+      by blast
+    have blin2:"bounded_linear (\<lambda> a. (\<chi> i. frechet I (args i) v a))"
+      using dfree_Fun.IH sorry 
+    then show ?case
+      using bounded_linear_compose[of "FunctionFrechet I i (\<chi> i. sterm_sem I (args i) v)" "(\<lambda>a. (\<chi> i. frechet I (args i) v a))", OF blin1 blin2]
+      by auto
   next
     case (dfree_Plus \<theta>\<^sub>1 \<theta>\<^sub>2)
     then show ?case 
@@ -203,6 +241,27 @@ lemma frechet_blin:"is_interp I \<Longrightarrow> dfree \<theta> \<Longrightarro
   apply(rule ext)
   apply(rule blinfun_eqI)
   by (simp add: bounded_linear_Blinfun_apply frechet_linear good_interp_inverse simple_term_inverse)
+
+lemma sterm_continuous:
+  assumes good_interp:"is_interp I"
+  shows "dfree \<theta> \<Longrightarrow> continuous_on UNIV (sterm_sem I \<theta>)"
+proof(induction rule: dfree.induct)
+next
+  case (dfree_Fun args i)
+  assume IH:"\<And>i. continuous_on UNIV (sterm_sem I (args i))"
+  have con1:"continuous_on UNIV (Functions I i)"
+    using good_interp unfolding is_interp_def
+    using continuous_on_eq_continuous_within has_derivative_continuous by blast
+  have con2:"continuous_on UNIV (\<lambda> x. (\<chi> i. sterm_sem I (args i) x))"
+    apply(rule continuous_on_vec_lambda)
+    using IH by auto
+  have con:"continuous_on UNIV ((Functions I i) \<circ> (\<lambda>x.  (\<chi> i. sterm_sem I (args i) x)))"
+    apply(rule continuous_on_compose)
+    using con1 con2 apply auto
+    using continuous_on_subset by blast
+  show ?case 
+    using con comp_def by(simp)
+qed (auto intro: continuous_intros)
 
 lemma frechet_continuous:
 fixes I :: "('sf, 'sc, 'sz) interp"
@@ -258,10 +317,14 @@ next
   assume free1:"dfree \<theta>\<^sub>1"
   assume free2:"dfree \<theta>\<^sub>2"
   have free:"dfree (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)" using free1 free2 by auto 
-  have bounded_linear:"\<And>v. bounded_linear (\<lambda>v'. frechet I \<theta>\<^sub>1 v v' + frechet I \<theta>\<^sub>2 v v')" sorry
+  have bounded_linear:"\<And>v. bounded_linear (\<lambda>v'. frechet I \<theta>\<^sub>1 v v' + frechet I \<theta>\<^sub>2 v v')" 
+    subgoal for v
+      using frechet_linear[OF good_interp free] by auto
+    done
   have eq2:"(\<lambda>v. blin_frechet (good_interp I) (simple_term \<theta>\<^sub>1) v + blin_frechet (good_interp I) (simple_term \<theta>\<^sub>2) v) = blin_frechet (good_interp I) (simple_term (Plus \<theta>\<^sub>1 \<theta>\<^sub>2))"
-    using frechet_blin[OF good_interp free] frechet_blin[OF good_interp free1] frechet_blin[OF good_interp free2] 
-    using bounded_linear sorry
+    apply(rule ext)
+    apply(rule blinfun_eqI)
+    by (simp add: blinfun.add_left free1 free2 simple_term_inverse) 
   have cont:"continuous_on UNIV (\<lambda>v. blin_frechet (good_interp I) (simple_term \<theta>\<^sub>1) v + blin_frechet (good_interp I) (simple_term \<theta>\<^sub>2) v)"
     using continuous_on_add dfree_Plus.IH(1) dfree_Plus.IH(2) by blast 
   then show ?case using cont eq2 by metis 
@@ -272,10 +335,32 @@ next
   assume free1:"dfree \<theta>\<^sub>1"
   assume free2:"dfree \<theta>\<^sub>2"
   have free:"dfree (Times \<theta>\<^sub>1 \<theta>\<^sub>2)" using free1 free2 by auto 
-  have bounded_linear:"\<And>v. bounded_linear (\<lambda>v'. sterm_sem I \<theta>\<^sub>1 v * frechet I \<theta>\<^sub>2 v v' + frechet I \<theta>\<^sub>1 v v' * sterm_sem I \<theta>\<^sub>2 v)" sorry
+  have bounded_linear:"\<And>v. bounded_linear (\<lambda>v'. sterm_sem I \<theta>\<^sub>1 v * frechet I \<theta>\<^sub>2 v v' + frechet I \<theta>\<^sub>1 v v' * sterm_sem I \<theta>\<^sub>2 v)"
+    apply(rule bounded_linear_add)
+    apply(rule bounded_linear_const_mult)
+    using frechet_linear[OF good_interp free2] apply auto
+    apply(rule bounded_linear_mult_const)
+    using frechet_linear[OF good_interp free1] by auto
+  then have blin':"\<And>v. (\<lambda>v'. sterm_sem I \<theta>\<^sub>1 v * frechet I \<theta>\<^sub>2 v v' + frechet I \<theta>\<^sub>1 v v' * sterm_sem I \<theta>\<^sub>2 v) \<in> {f. bounded_linear f}" by auto
+  have blinfun_eq:"\<And>v. Blinfun (\<lambda>v'. sterm_sem I \<theta>\<^sub>1 v * frechet I \<theta>\<^sub>2 v v' + frechet I \<theta>\<^sub>1 v v' * sterm_sem I \<theta>\<^sub>2 v) 
+    =  scaleR (sterm_sem I \<theta>\<^sub>1 v) (blin_frechet (good_interp I) (simple_term \<theta>\<^sub>2) v) + scaleR (sterm_sem I \<theta>\<^sub>2 v) (blin_frechet (good_interp I) (simple_term \<theta>\<^sub>1) v)"
+    apply(rule blinfun_eqI)
+    subgoal for v i
+      using Blinfun_inverse[OF blin', of v] apply auto
+      by (smt blinfun.add_left blinfun.scaleR_left bounded_linear_Blinfun_apply frechet_blin frechet_linear free1 free2 good_interp mult.commute real_scaleR_def)
+    done
+  have cont':"continuous_on UNIV 
+    (\<lambda>v. scaleR (sterm_sem I \<theta>\<^sub>1 v) (blin_frechet (good_interp I) (simple_term \<theta>\<^sub>2) v) 
+       + scaleR (sterm_sem I \<theta>\<^sub>2 v) (blin_frechet (good_interp I) (simple_term \<theta>\<^sub>1) v))"
+    apply(rule continuous_on_add)
+    apply(rule continuous_on_scaleR)
+    apply(rule sterm_continuous[OF good_interp free1])
+    apply(rule IH2)
+    apply(rule continuous_on_scaleR)
+    apply(rule sterm_continuous[OF good_interp free2])
+    by(rule IH1)
   have cont:"continuous_on UNIV (\<lambda>v. Blinfun (\<lambda>v'. sterm_sem I \<theta>\<^sub>1 v * frechet I \<theta>\<^sub>2 v v' + frechet I \<theta>\<^sub>1 v v' * sterm_sem I \<theta>\<^sub>2 v))"
-    using bounded_linear frechet_blin[of I \<theta>\<^sub>1] bounded_linear frechet_blin[of I \<theta>\<^sub>2]
-    sorry
+    using cont' blinfun_eq by auto
   have eq:"(\<lambda>v. Blinfun (\<lambda>v'. sterm_sem I \<theta>\<^sub>1 v * frechet I \<theta>\<^sub>2 v v' + frechet I \<theta>\<^sub>1 v v' * sterm_sem I \<theta>\<^sub>2 v)) = blin_frechet (good_interp I) (simple_term (Times \<theta>\<^sub>1 \<theta>\<^sub>2))"
     using frechet_blin[OF good_interp free]
     by auto

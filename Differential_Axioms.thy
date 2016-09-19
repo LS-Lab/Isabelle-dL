@@ -1052,7 +1052,12 @@ lift_definition blinfun_vec::"('a::finite \<Rightarrow> 'b::real_normed_vector \
   sorry
 lemmas [simp] = blinfun_vec.rep_eq
 
-lemma continuous_blinfun_vec:"(\<And>i. continuous_on UNIV (\<lambda>x. g x i)) \<Longrightarrow> continuous_on UNIV (\<lambda>x. blinfun_vec (g x))"
+lemma continuous_blinfun_vec:"(\<And>i. continuous_on UNIV (blinfun_apply (g i))) \<Longrightarrow> continuous_on UNIV (blinfun_vec g)"
+  by (simp add: continuous_on_vec_lambda)  
+
+lemma continuous_blinfun_vec':"(\<And>i. continuous_on UNIV (\<lambda>x. g x i)) 
+  \<Longrightarrow> continuous_on UNIV (\<lambda>x. blinfun_vec (g x))"
+  using blinfun_vec.rep_eq continuous_on_vec_lambda 
   sorry
 
 lemma continuous:
@@ -1061,7 +1066,7 @@ lemma continuous:
   shows "continuous_on UNIV (\<lambda>(t,b). blinfun_vec (\<lambda>i. if i = vid1 then Blinfun(\<lambda>b'. FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b)
                                      (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) b b')) else 0))"
     apply(simp add: split_beta' )
-    apply(rule continuous_blinfun_vec)
+    apply(rule continuous_blinfun_vec')
     subgoal for i
       apply(cases "i = vid1")
       apply auto
