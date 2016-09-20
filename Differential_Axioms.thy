@@ -993,18 +993,6 @@ lemma dterm_sterm_dfree:
    "dfree \<theta> \<Longrightarrow> (\<And>\<nu> \<nu>'. sterm_sem I \<theta> \<nu> = dterm_sem I \<theta> (\<nu>, \<nu>'))"
   by(induction rule: dfree.induct, auto)
 
-lift_definition blinfun_vec::"('a::finite \<Rightarrow> 'b::real_normed_vector \<Rightarrow>\<^sub>L real) \<Rightarrow> 'b \<Rightarrow>\<^sub>L 'a Rvec" is "(\<lambda>(f::('a \<Rightarrow> 'b \<Rightarrow> real)) (x::'b). \<chi> (i::'a). f i x)"
-  by(rule bounded_linear_vec, simp)  
-lemmas [simp] = blinfun_vec.rep_eq
-
-lemma continuous_blinfun_vec:"(\<And>i. continuous_on UNIV (blinfun_apply (g i))) \<Longrightarrow> continuous_on UNIV (blinfun_vec g)"
-  by (simp add: continuous_on_vec_lambda)  
-
-lemma continuous_blinfun_vec':"continuous blinfun_vec"
-
-lemma blinfun_elim:"\<And>g. (blinfun_apply (blinfun_vec g)) = (\<lambda>x. \<chi> i. g i x)"
-  using blinfun_vec.rep_eq by auto
-
 (*lemma confused:"(\<lambda>x. blinfun_vec
            (\<lambda>i. if i = vid1
                 then Blinfun (FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) x)
@@ -1024,25 +1012,22 @@ lemma blinfun_elim':
   sorry*)
 
 lemma continuous_blinfun_vec':
-  fixes g :: "'a::real_normed_vector \<Rightarrow> 'b::finite \<Rightarrow> 'a::real_normed_vector \<Rightarrow>\<^sub>L real"
+  fixes g :: "'a::real_normed_vector \<Rightarrow> 'b::finite \<Rightarrow> real \<Rightarrow>\<^sub>L real"
   assumes con:"(\<And>i. continuous_on UNIV (\<lambda> x.(g x i)))"
-  assumes blin:"\<And>x i. bounded_linear (g x i)"
   shows "continuous_on UNIV (\<lambda>x. blinfun_vec (\<lambda> i. (g x i)))"
-  apply(simp add: blinfun_vec_def blinfun_elim)
-  using con unfolding continuous_on_def tendsto_def
-  apply auto
-  using con blin 
-  sorry
-  (*sledgehammer
-  apply(rule continuous_on_vec_lambda)
-  by auto*)    
+    apply(rule Lib.continuous_blinfun_vec') 
+    using con by auto    
 
 lemma continuous_blinfun_vec'':
   fixes g :: "'a::real_normed_vector \<Rightarrow> 'b::finite \<Rightarrow> 'a::real_normed_vector \<Rightarrow>\<^sub>L real"
   assumes con:"(\<And>i. continuous_on UNIV (\<lambda> x.(g x i)))"
-  assumes blin:"\<And>x i. bounded_linear (g x i)"
   shows "continuous_on UNIV (\<lambda>x. blinfun_vec (\<lambda> i. (g (snd x) i)))"
-sorry
+    sorry
+    (*using continuous_blinfun_vec' sledgehammer
+    by (auto simp add: Lib.continuous_blinfun_vec')
+    using Lib.continuous_blinfun_vec'[of "(\<lambda>i x. (g (snd x i))"]
+  apply(rule Lib.continuous_blinfun_vec')*)
+
 lemma continuous:
   fixes I ::"('sf, 'sc, 'sz) interp"
   assumes good_interp:"is_interp I"
@@ -1086,9 +1071,9 @@ lemma continuous:
                          (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) x)
                          (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) x b')))"
           apply (auto simp add: split_beta')
-          sledgehammer
+          sorry
         qed
-        done
+        sorry
 
 (*  
 g(x)\<ge> h(x) \<rightarrow> p(x) \<and> [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c]g(x) \<ge> h(x)
@@ -1707,28 +1692,12 @@ lemma DG_valid:"valid DGaxiom"
              (\<lambda>i. if i = vid1 then blin_frechet (good_interp I) (simple_term ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) b
                   else Blinfun (\<lambda>_. 0)))"
            apply(simp add: split_beta')
-           apply(rule continuous_blinfun_vec)
+           apply(rule continuous_blinfun_vec'')
            subgoal for i
              apply(cases "i = vid1")
              apply(auto)
-             proof -
-               let ?h = "(\<lambda>x. blin_frechet (good_interp I) (simple_term ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (snd x))"
-               let ?f = "blin_frechet (good_interp I) (simple_term ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))"
-               let ?g = "snd"
-               have heq:"?h = ?f \<circ> ?g" by(rule ext, auto simp add: comp_def)
-               have cf:"continuous_on UNIV ?f" using frechet_continuous[OF good_interp freef1] by auto
-               have cg:"continuous_on UNIV ?g" by (rule continuous_on_snd)
-               have cfg:"continuous_on UNIV (?f \<circ> ?g)" 
-                 apply(rule continuous_on_compose)
-                 apply(rule cg)
-                 by(auto simp add: cf)
-               show "continuous_on UNIV (\<lambda>x. blin_frechet (good_interp I) (simple_term ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (snd x))"
-                 using cfg heq by auto
-             next
-               show "continuous_on UNIV (\<lambda>x. Blinfun (\<lambda>_. 0))" 
-                 by (simp add: continuous_on_const)
-             qed
-             done
+             using frechet_continuous[OF good_interp freef1] by (auto simp add: continuous_on_const)           
+           done
       qed
         have old_continuous:" \<And>x. x \<in> UNIV \<Longrightarrow> continuous_on UNIV (\<lambda>t. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) x else 0)"
             by(rule continuous_on_const)

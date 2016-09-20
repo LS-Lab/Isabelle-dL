@@ -87,7 +87,37 @@ lemma continuous_blinfun_vec:"(\<And>i. continuous_on UNIV (blinfun_apply (g i))
 lemma blinfun_elim:"\<And>g. (blinfun_apply (blinfun_vec g)) = (\<lambda>x. \<chi> i. g i x)"
   using blinfun_vec.rep_eq by auto
 
-lemma continuous_vec:
+lemma sup_plus:
+  fixes f g::"real \<Rightarrow> real"
+  assumes nonempty:"R \<noteq> {}"
+  assumes bddf:"bdd_above (f ` R)"
+  assumes bddg:"bdd_above (g ` R)"
+  shows "(SUP x:R. f x  + g x) \<le> (SUP x:R. f x) + (SUP x:R. g x)"
+proof -
+  have bddfg:"bdd_above((\<lambda>x. f x + g x ) ` R)" 
+    using bddf bddg apply (auto simp add: bdd_above_def)
+    using add_mono_thms_linordered_semiring(1) by blast
+  have eq:"(SUPREMUM R (\<lambda>x. f x + g x) \<le> (SUP x:R. f x) + (SUP x:R. g x)) = (\<forall>x\<in>R. (f x + g x) \<le> (SUP x:R. f x) + (SUP x:R. g x))"
+    apply(rule cSUP_le_iff)
+    subgoal by (rule nonempty)
+    subgoal by (rule bddfg)
+    done
+  have fs:"\<And>x. x \<in> R \<Longrightarrow> f x \<le> (SUP x:R. f x)"
+    using bddf 
+    by (simp add: cSUP_upper)
+  have gs:"\<And>x. x \<in> R \<Longrightarrow> g x \<le> (SUP x:R. g x)"
+    using bddg
+    by (simp add: cSUP_upper)
+  have "(\<forall>x\<in>R. (f x + g x) \<le> (SUP x:R. f x) + (SUP x:R. g x))"
+    apply auto
+      subgoal for x using fs[of x] gs[of x] by auto
+    done
+  then show ?thesis by (auto simp add: eq)
+qed
+     
+    (*apply(rule cSUP_upper2)
+    using nonempty bddf bddg sledgehammer
+lemma continuous_blinfun_vec':
   fixes f::"'a::finite \<Rightarrow> 'b::metric_space \<Rightarrow> real \<Rightarrow>\<^sub>L real"
   fixes S::"'b set"
   assumes conts:"\<And>i. continuous_on UNIV (f i)"
