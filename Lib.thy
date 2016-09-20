@@ -118,12 +118,76 @@ proof (auto simp add:  LIM_def continuous_on_def)
         by (simp add: norm_vec_def)
       have finite:"finite (UNIV::'a set)" by auto
       have nonempty: "(UNIV::'a set) \<noteq> {}" by auto
-      have SUP_leq:"\<And>f g S. (\<And>x. x \<in> S \<Longrightarrow> f x \<le> g x) \<Longrightarrow> (SUP x:S. f x) \<le> (SUP x:S. g x)" 
-        sorry
-      have SUP_sum_comm:"\<And>f R S. finite S \<Longrightarrow> (SUP x:R . (\<Sum>y \<in> S. f x y)) \<le> (\<Sum>y \<in> S. (SUP x:R. f x y))"
-        sorry
-      have SUM_leq:"\<And>S f g . S \<noteq> {} \<Longrightarrow> (\<And>x. x \<in> S \<Longrightarrow> f x < g x) \<Longrightarrow> (\<Sum>x\<in>S. f x) < (\<Sum>x\<in>S. g x)"
-        sorry
+      have nonemptyB: "(UNIV::'b set) \<noteq> {}" by auto
+      have nonemptyR: "(UNIV::real set) \<noteq> {}" by auto
+      have SUP_leq:"\<And>f::(real \<Rightarrow> real). \<And> g::(real \<Rightarrow> real). \<And> S::real set. S \<noteq> {} \<Longrightarrow> bdd_above (g ` S) \<Longrightarrow> (\<And>x. x \<in> (S::real set) \<Longrightarrow> ((f x)::real) \<le> ((g x)::real)) \<Longrightarrow> (SUP x:S. f x) \<le> (SUP x:S. g x)"
+        subgoal for f g S
+          apply(rule cSup_mono)
+          apply auto
+          done
+        done
+      (* TODO spin off simpler lemma *)
+      have "\<And>R S f . finite (S::'a::finite set) \<Longrightarrow> (R::'b set) \<noteq> {} \<Longrightarrow> (\<And>i x. ((f i x)::real) \<ge> 0) \<Longrightarrow> (SUP x:R . (\<Sum>i \<in> S. f i x)) \<le> (\<Sum>i \<in> S. (SUP x:R. f i x))"
+        proof -
+          (* {ord,order,euclidean_space,Sup,complete_lattice}*)
+          fix  R::"'b set" and S ::"('a::finite)set"  and f  ::"'a \<Rightarrow> 'b \<Rightarrow> real"
+          assume non:"R \<noteq> {} "
+          assume fin:"finite S"
+          assume every:"(\<And>i x. 0 \<le> f i x)"
+          show "?thesis R S f" using fin assms
+          proof (induct)
+            case empty
+            have "((SUP x:R. \<Sum>i\<in>{}. f i x)::real) \<le> (\<Sum>i\<in>{}. SUP a:R. f i a)"   by (simp add: non)
+            then show ?case by auto
+          next
+            case (insert x F)
+              have "((SUP xa:R. \<Sum>i\<in>insert x F. f i xa)::real) \<le> (SUP xa:R. f x xa +  (\<Sum>i\<in>F. f i xa))"
+                using insert.hyps(2) by auto
+              moreover have "(... ::real) \<le> (SUP xa: R. f x xa) + (SUP xa:R. (\<Sum>i\<in>F. f i xa))"
+(*                apply(rule cSUP_least)
+                
+                subgoal using non by auto
+                subgoal for xa
+                  using cSup_upper*)
+                sorry
+                
+              moreover have "(... ::real) \<le> (SUP xa: R. f x xa) + (\<Sum>i\<in>F. SUP a:R. f i a)"
+                using add_le_cancel_left conts insert.hyps(3) by blast
+              moreover have "(... ::real) \<le>  (\<Sum>i\<in>(insert x F). SUP a:R. f i a)"
+                by (simp add: insert.hyps(2))
+              ultimately have "((SUP xa:R. \<Sum>i\<in>insert x F. f i xa)::real) \<le> (\<Sum>i\<in>(insert x F). SUP a:R. f i a)"
+                by linarith
+            then show ?case by auto
+          qed
+        qed
+      have SUP_sum_comm:"\<And>R S y1 y2 . finite S \<Longrightarrow> R \<noteq> {} \<Longrightarrow> (SUP x:R . (\<Sum>i \<in> S. norm(f i y1 x - f i y2 x)/norm(x))) \<le> (\<Sum>i \<in> S. (SUP x:R. norm(f i y1 x - f i y2 x)/norm(x)))"
+        proof -
+          fix R::"real set" and S::"'a set" and y1 y2::"'b"
+          assume nonempty:"R \<noteq> {}"
+          assume finite:"finite S"
+          (*assume pos: "\<And>n i. n \<in> S \<Longrightarrow> 0 \<le> f i n"*)
+          show "(SUP x:R. \<Sum>i\<in>S. norm(f i y1 x - f i y2 x)/norm(x)) \<le> (\<Sum>i\<in>S. (SUP x:R. norm(f i y1 x - f i y2 x)/norm(x)))"
+            proof (cases "finite S")
+              case True
+              then show ?thesis using assms
+                apply (induct)
+                subgoal by (auto simp add: nonempty)
+                subgoal for x F 
+                  apply (auto simp add: incseq_setsumI2 setsum_nonneg SUP_ereal_add_pos nonempty finite )
+                  using incseq_setsumI2 setsum_nonneg SUP_ereal_add_pos
+                  nonempty finite norm_ge_zero
+                  sorry
+                done
+                (*  (auto simp: incseq_setsumI2 setsum_nonneg SUP_ereal_add_pos)*)
+            next
+              case False
+              then show ?thesis using finite by simp
+              qed
+            qed
+
+      have SUM_leq:"\<And>S::('a::finite) set. \<And> f g ::('a \<Rightarrow> real). S \<noteq> {} \<Longrightarrow> finite S \<Longrightarrow> (\<And>x. x \<in> S \<Longrightarrow> f x < g x) \<Longrightarrow> (\<Sum>x\<in>S. f x) < (\<Sum>x\<in>S. g x)"
+        by(rule setsum_strict_mono, auto)
+            
       have L2:"\<And>f S. setL2 (\<lambda>x. norm(f x)) S \<le> (\<Sum>x \<in> S. norm(f x))"
         using setL2_le_setsum norm_ge_zero by metis
       have L2':"\<And>y. (setL2 (\<lambda>i. norm(f i x1 y - f i x2 y)) UNIV)/norm(y) \<le> (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y))/norm(y)"
@@ -134,7 +198,9 @@ proof (auto simp add:  LIM_def continuous_on_def)
       have "\<And>i. (SUP y:UNIV.  norm((f i x1 - f i x2) y)/norm(y)) = norm(f i x1 - f i x2)"
         by (simp add: onorm_def norm_blinfun.rep_eq)
       then have each_norm:"\<And>i. (SUP y:UNIV.  norm(f i x1 y - f i x2 y)/norm(y)) = norm(f i x1 - f i x2)"
-        by (metis (no_types, lifting) SUP_cong blinfun.diff_left) 
+        by (metis (no_types, lifting) SUP_cong blinfun.diff_left)
+      have bdd_above:"(bdd_above ((\<lambda>y. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y))/norm(y)) ` UNIV))"
+        sorry
       have "dist (?f x2) (?f x1) = norm((?f x2) - (?f x1))"
         by (simp add: dist_blinfun_def)
       (* TODO: some mess up over whether y is a real or a vector *)
@@ -143,13 +209,11 @@ proof (auto simp add:  LIM_def continuous_on_def)
       moreover have "... = (SUP y:UNIV. (setL2 (\<lambda>i. norm(f i x1 y - f i x2 y)) UNIV)/norm(y))"
         using  euclid by auto
       moreover have "... \<le> (SUP y:UNIV. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y))/norm(y))"
-        using L2' SUP_cong SUP_leq[of UNIV "(\<lambda>y. (setL2 (\<lambda>i. norm(f i x1 y - f i x2 y)) UNIV)/norm(y))" "(\<lambda>y. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y))/norm(y))"]
-        by auto
+        using L2' SUP_cong SUP_leq bdd_above by auto
       moreover have "... = (SUP y:UNIV. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y)/norm(y)))"
         by (simp add: setsum_divide_distrib)
-      moreover have "... \<le> (\<Sum>i\<in>UNIV. (SUP y:UNIV.  norm(f i x1 y - f i x2 y)/norm(y)))"
-        using SUP_sum_comm[of UNIV "(\<lambda> y i. norm(f i x1 y - f i x2 y)/norm(y))" UNIV, OF finite] 
-        by auto
+      moreover have "... \<le> (\<Sum>i\<in>UNIV. (SUP y:(UNIV::real set).  norm(f i x1 y - f i x2 y)/norm(y)))"
+        by (rule  SUP_sum_comm[OF finite  nonemptyR, of x1 x2]) 
       moreover have "... = (\<Sum>i\<in>UNIV. norm(f i x1 - f i x2))"
         using each_norm by simp
       moreover have "... = (\<Sum>i\<in>UNIV. dist(f i x1) (f i x2))"
