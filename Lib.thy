@@ -88,7 +88,7 @@ lemma blinfun_elim:"\<And>g. (blinfun_apply (blinfun_vec g)) = (\<lambda>x. \<ch
   using blinfun_vec.rep_eq by auto
 
 lemma sup_plus:
-  fixes f g::"real \<Rightarrow> real"
+  fixes f g::"('b::metric_space) \<Rightarrow> real"
   assumes nonempty:"R \<noteq> {}"
   assumes bddf:"bdd_above (f ` R)"
   assumes bddg:"bdd_above (g ` R)"
@@ -115,8 +115,6 @@ proof -
   then show ?thesis by (auto simp add: eq)
 qed
      
-    (*apply(rule cSUP_upper2)
-    using nonempty bddf bddg sledgehammer
 lemma continuous_blinfun_vec':
   fixes f::"'a::finite \<Rightarrow> 'b::metric_space \<Rightarrow> real \<Rightarrow>\<^sub>L real"
   fixes S::"'b set"
@@ -156,14 +154,15 @@ proof (auto simp add:  LIM_def continuous_on_def)
           apply auto
           done
         done
-      (* TODO spin off simpler lemma *)
-      have "\<And>R S f . finite (S::'a::finite set) \<Longrightarrow> (R::'b set) \<noteq> {} \<Longrightarrow> (\<And>i x. ((f i x)::real) \<ge> 0) \<Longrightarrow> (SUP x:R . (\<Sum>i \<in> S. f i x)) \<le> (\<Sum>i \<in> S. (SUP x:R. f i x))"
+      have SUP_sum_comm':"\<And>R S f . finite (S::'a::finite set) \<Longrightarrow> (R::'d::metric_space set) \<noteq> {} \<Longrightarrow> (\<And>i x. ((f i x)::real) \<ge> 0) \<Longrightarrow> (SUP x:R . (\<Sum>i \<in> S. f i x)) \<le> (\<Sum>i \<in> S. (SUP x:R. f i x))"
         proof -
           (* {ord,order,euclidean_space,Sup,complete_lattice}*)
-          fix  R::"'b set" and S ::"('a::finite)set"  and f  ::"'a \<Rightarrow> 'b \<Rightarrow> real"
+          fix  R::"'d set" and S ::"('a::finite)set"  and f  ::"'a \<Rightarrow> 'd \<Rightarrow> real"
           assume non:"R \<noteq> {} "
           assume fin:"finite S"
           assume every:"(\<And>i x. 0 \<le> f i x)"
+          have bddF:"\<And>x. bdd_above (f x ` R)" sorry
+          have bddG:"\<And>i F. bdd_above ((\<lambda>x. \<Sum>i\<in>F. f i x) ` R)" sorry
           show "?thesis R S f" using fin assms
           proof (induct)
             case empty
@@ -174,13 +173,11 @@ proof (auto simp add:  LIM_def continuous_on_def)
               have "((SUP xa:R. \<Sum>i\<in>insert x F. f i xa)::real) \<le> (SUP xa:R. f x xa +  (\<Sum>i\<in>F. f i xa))"
                 using insert.hyps(2) by auto
               moreover have "(... ::real) \<le> (SUP xa: R. f x xa) + (SUP xa:R. (\<Sum>i\<in>F. f i xa))"
-(*                apply(rule cSUP_least)
-                
-                subgoal using non by auto
-                subgoal for xa
-                  using cSup_upper*)
-                sorry
-                
+                apply(rule sup_plus)
+                subgoal by (rule non)
+                subgoal by (rule bddF)
+                subgoal by (rule bddG)
+                done
               moreover have "(... ::real) \<le> (SUP xa: R. f x xa) + (\<Sum>i\<in>F. SUP a:R. f i a)"
                 using add_le_cancel_left conts insert.hyps(3) by blast
               moreover have "(... ::real) \<le>  (\<Sum>i\<in>(insert x F). SUP a:R. f i a)"
@@ -190,34 +187,10 @@ proof (auto simp add:  LIM_def continuous_on_def)
             then show ?case by auto
           qed
         qed
-      have SUP_sum_comm:"\<And>R S y1 y2 . finite S \<Longrightarrow> R \<noteq> {} \<Longrightarrow> (SUP x:R . (\<Sum>i \<in> S. norm(f i y1 x - f i y2 x)/norm(x))) \<le> (\<Sum>i \<in> S. (SUP x:R. norm(f i y1 x - f i y2 x)/norm(x)))"
-        proof -
-          fix R::"real set" and S::"'a set" and y1 y2::"'b"
-          assume nonempty:"R \<noteq> {}"
-          assume finite:"finite S"
-          (*assume pos: "\<And>n i. n \<in> S \<Longrightarrow> 0 \<le> f i n"*)
-          show "(SUP x:R. \<Sum>i\<in>S. norm(f i y1 x - f i y2 x)/norm(x)) \<le> (\<Sum>i\<in>S. (SUP x:R. norm(f i y1 x - f i y2 x)/norm(x)))"
-            proof (cases "finite S")
-              case True
-              then show ?thesis using assms
-                apply (induct)
-                subgoal by (auto simp add: nonempty)
-                subgoal for x F 
-                  apply (auto simp add: incseq_setsumI2 setsum_nonneg SUP_ereal_add_pos nonempty finite )
-                  using incseq_setsumI2 setsum_nonneg SUP_ereal_add_pos
-                  nonempty finite norm_ge_zero
-                  sorry
-                done
-                (*  (auto simp: incseq_setsumI2 setsum_nonneg SUP_ereal_add_pos)*)
-            next
-              case False
-              then show ?thesis using finite by simp
-              qed
-            qed
-
+      have SUP_sum_comm:"\<And>R S y1 y2 . finite (S::'a::finite set) \<Longrightarrow> (R::real set) \<noteq> {} \<Longrightarrow> (SUP x:R . (\<Sum>i \<in> S. norm(f i y1 x - f i y2 x)/norm(x))) \<le> (\<Sum>i \<in> S. (SUP x:R. norm(f i y1 x - f i y2 x)/norm(x)))"
+        by(rule SUP_sum_comm', auto)
       have SUM_leq:"\<And>S::('a::finite) set. \<And> f g ::('a \<Rightarrow> real). S \<noteq> {} \<Longrightarrow> finite S \<Longrightarrow> (\<And>x. x \<in> S \<Longrightarrow> f x < g x) \<Longrightarrow> (\<Sum>x\<in>S. f x) < (\<Sum>x\<in>S. g x)"
         by(rule setsum_strict_mono, auto)
-            
       have L2:"\<And>f S. setL2 (\<lambda>x. norm(f x)) S \<le> (\<Sum>x \<in> S. norm(f x))"
         using setL2_le_setsum norm_ge_zero by metis
       have L2':"\<And>y. (setL2 (\<lambda>i. norm(f i x1 y - f i x2 y)) UNIV)/norm(y) \<le> (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y))/norm(y)"
@@ -259,7 +232,6 @@ proof (auto simp add:  LIM_def continuous_on_def)
   then show "\<exists>s>0. \<forall>x2. x2 \<noteq> x1 \<and> dist x2 x1 < s \<longrightarrow> dist (blinfun_vec (\<lambda>i. f i x2)) (blinfun_vec (\<lambda>i. f i x1)) < \<epsilon>"
     using \<delta> by auto
   qed
-
 
 lemma has_derivative_vec[derivative_intros]:
   assumes "\<And>i. ((\<lambda>x. f i x) has_derivative (\<lambda>h. f' i h)) F"
