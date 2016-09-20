@@ -103,6 +103,8 @@ proof (auto simp add:  LIM_def continuous_on_def)
   let ?f = "(\<lambda>x. blinfun_vec (\<lambda> i. f i x))"
   let ?\<delta>i = "(\<lambda>i. SOME \<delta>. (\<delta>>0 \<and> (\<forall>x2. x2 \<noteq> x1 \<and> dist x2 x1 < \<delta> \<longrightarrow> dist (f i  x2) (f i x1) < (\<epsilon>/?n))))"
   let ?\<delta> = "INF i:UNIV. ?\<delta>i i"
+  have conts''':"\<And>i x2. x2 \<noteq> x1 \<Longrightarrow> dist x2 x1 < ?\<delta>i i \<Longrightarrow> dist (f i  x2) (f i x1) < (\<epsilon>/?n)"
+    using conts'' sorry
   have \<delta>:"?\<delta> > 0 " sorry
   have \<delta>s:"\<And>i. ?\<delta> \<le> ?\<delta>i i" sorry
   have "\<And>x2. x2 \<noteq> x1 \<and> dist x2 x1 < ?\<delta> \<Longrightarrow> dist (blinfun_vec (\<lambda>i. f i x2)) (blinfun_vec (\<lambda>i. f i x1)) < \<epsilon>"
@@ -110,26 +112,55 @@ proof (auto simp add:  LIM_def continuous_on_def)
       fix x2
       assume ne:"x2 \<noteq> x1"
       assume dist:"dist x2 x1 < ?\<delta>"
-      have "dist (?f x2) (?f x1) =
-        norm((?f x2) - (?f x1))"
+      have dists:"\<And>i. dist x2 x1 < ?\<delta>i i"
+        subgoal for i using dist \<delta>s[of i] by linarith done
+      have euclid:"\<And>y. norm(?f x1 y - ?f x2 y) = (setL2 (\<lambda>i. norm(f i x1 y - f i x2 y)) UNIV)"
+        by (simp add: norm_vec_def)
+      have finite:"finite (UNIV::'a set)" by auto
+      have nonempty: "(UNIV::'a set) \<noteq> {}" by auto
+      have SUP_leq:"\<And>f g S. (\<And>x. x \<in> S \<Longrightarrow> f x \<le> g x) \<Longrightarrow> (SUP x:S. f x) \<le> (SUP x:S. g x)" 
         sorry
+      have SUP_sum_comm:"\<And>f R S. finite S \<Longrightarrow> (SUP x:R . (\<Sum>y \<in> S. f x y)) \<le> (\<Sum>y \<in> S. (SUP x:R. f x y))"
+        sorry
+      have SUM_leq:"\<And>S f g . S \<noteq> {} \<Longrightarrow> (\<And>x. x \<in> S \<Longrightarrow> f x < g x) \<Longrightarrow> (\<Sum>x\<in>S. f x) < (\<Sum>x\<in>S. g x)"
+        sorry
+      have L2:"\<And>f S. setL2 (\<lambda>x. norm(f x)) S \<le> (\<Sum>x \<in> S. norm(f x))"
+        using setL2_le_setsum norm_ge_zero by metis
+      have L2':"\<And>y. (setL2 (\<lambda>i. norm(f i x1 y - f i x2 y)) UNIV)/norm(y) \<le> (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y))/norm(y)"
+        subgoal for y
+          using L2[of "(\<lambda> x. f x x1 y - f x x2 y)" UNIV]
+          by (auto simp add: divide_right_mono)
+        done
+      have "\<And>i. (SUP y:UNIV.  norm((f i x1 - f i x2) y)/norm(y)) = norm(f i x1 - f i x2)"
+        by (simp add: onorm_def norm_blinfun.rep_eq)
+      then have each_norm:"\<And>i. (SUP y:UNIV.  norm(f i x1 y - f i x2 y)/norm(y)) = norm(f i x1 - f i x2)"
+        by (metis (no_types, lifting) SUP_cong blinfun.diff_left) 
+      have "dist (?f x2) (?f x1) = norm((?f x2) - (?f x1))"
+        by (simp add: dist_blinfun_def)
       (* TODO: some mess up over whether y is a real or a vector *)
       moreover have "... = (SUP y:UNIV. norm(?f x1 y - ?f x2 y)/norm(y))"
-        sorry
-      moreover have "... = (SUP y:UNIV. (setL2 (\<lambda>i. f i x1 y - f i x2 y) UNIV)/norm(y))"
-        sorry
-      moreover have "... = (SUP y:UNIV. (\<Sum>i\<in>(UNIV::'a set). f i x1 y - f i x2 y)/norm(y))"
-        sorry
-      moreover have "... \<le> (\<Sum>i\<in>(UNIV::'a set). (SUP y:UNIV.  (f i x1 y - f i x2 y)/norm(y)))"
-        sorry
-      moreover have "... = (\<Sum>i\<in>(UNIV::'a set). norm(f i x1 - f i x2))"
-        sorry
-      moreover have "... = (\<Sum>i\<in>(UNIV::'a set). \<epsilon> / ?n)"
-        using conts' \<delta>s sorry
+        by (metis (no_types, lifting) SUP_cong blinfun.diff_left norm_blinfun.rep_eq norm_minus_commute onorm_def)
+      moreover have "... = (SUP y:UNIV. (setL2 (\<lambda>i. norm(f i x1 y - f i x2 y)) UNIV)/norm(y))"
+        using  euclid by auto
+      moreover have "... \<le> (SUP y:UNIV. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y))/norm(y))"
+        using L2' SUP_cong SUP_leq[of UNIV "(\<lambda>y. (setL2 (\<lambda>i. norm(f i x1 y - f i x2 y)) UNIV)/norm(y))" "(\<lambda>y. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y))/norm(y))"]
+        by auto
+      moreover have "... = (SUP y:UNIV. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y)/norm(y)))"
+        by (simp add: setsum_divide_distrib)
+      moreover have "... \<le> (\<Sum>i\<in>UNIV. (SUP y:UNIV.  norm(f i x1 y - f i x2 y)/norm(y)))"
+        using SUP_sum_comm[of UNIV "(\<lambda> y i. norm(f i x1 y - f i x2 y)/norm(y))" UNIV, OF finite] 
+        by auto
+      moreover have "... = (\<Sum>i\<in>UNIV. norm(f i x1 - f i x2))"
+        using each_norm by simp
+      moreover have "... = (\<Sum>i\<in>UNIV. dist(f i x1) (f i x2))"
+          by (simp add: dist_blinfun_def)
+      moreover have "... < (\<Sum>i\<in>(UNIV::'a set). \<epsilon> / ?n)"
+        using conts'''[OF ne dists] using SUM_leq[OF nonempty, of "(\<lambda>i.  dist (f i x1) (f i x2))" "(\<lambda>i.  \<epsilon> / ?n)"]
+        by (simp add: dist_commute)
       moreover have "... = \<epsilon>"
-        sorry
+        by(auto)
       ultimately show "dist (?f x2) (?f x1) < \<epsilon>"
-        sorry
+        by linarith
     qed
   then show "\<exists>s>0. \<forall>x2. x2 \<noteq> x1 \<and> dist x2 x1 < s \<longrightarrow> dist (blinfun_vec (\<lambda>i. f i x2)) (blinfun_vec (\<lambda>i. f i x1)) < \<epsilon>"
     using \<delta> by auto
