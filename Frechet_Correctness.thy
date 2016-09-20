@@ -212,7 +212,7 @@ lemma frechet_linear:
       using good_interp unfolding is_interp_def using has_derivative_bounded_linear
       by blast
     have blin2:"bounded_linear (\<lambda> a. (\<chi> i. frechet I (args i) v a))"
-      using dfree_Fun.IH sorry 
+      using dfree_Fun.IH by(rule bounded_linear_vec)
     then show ?case
       using bounded_linear_compose[of "FunctionFrechet I i (\<chi> i. sterm_sem I (args i) v)" "(\<lambda>a. (\<chi> i. frechet I (args i) v a))", OF blin1 blin2]
       by auto
@@ -303,12 +303,17 @@ next
   assume IH:"\<And>i. continuous_on UNIV (blin_frechet (good_interp I) (simple_term (args i)))"
   assume frees:"(\<And>i. dfree (args i))"
   then have free:"dfree ($f f args)" by (auto)
-  (* TODO: Use greatness of interpretation here. *)
-  have cont:"continuous_on UNIV (\<lambda>v. Blinfun(\<lambda>v'. FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v) (\<chi> i. frechet I (args i) v v')))"
+  (*have another_eq:"(\<lambda>v. Blinfun(\<lambda>v'. FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v) (\<chi> i. frechet I (args i) v v')))
+                = (\<lambda>v.(Blinfun(FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v)) \<circ> (\<lambda> v'. \<chi> i. frechet I (args i) v v')))"*)
+  have cont1:"\<And>v. continuous_on UNIV (\<lambda>v'. (\<chi> i. frechet I (args i) v v'))"
     sorry
+  have cont2:"FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v) = undefined" sorry
   have eq:"(\<lambda>v. Blinfun(\<lambda>v'. FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v) (\<chi> i. frechet I (args i) v v'))) 
     = (blin_frechet (good_interp I) (simple_term (Function f args)))"
     using frechet_blin[OF good_interp free] by auto
+  (* TODO: Use greatness of interpretation here. *)
+  have cont:"continuous_on UNIV (\<lambda>v. Blinfun(\<lambda>v'. FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v) (\<chi> i. frechet I (args i) v v')))"
+    sorry
   then show ?case by (metis cont)
 next
   case (dfree_Plus \<theta>\<^sub>1 \<theta>\<^sub>2)

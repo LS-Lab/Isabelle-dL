@@ -75,6 +75,67 @@ proof -
     using linear norm by auto
 qed
 
+lift_definition blinfun_vec::"('a::finite \<Rightarrow> 'b::real_normed_vector \<Rightarrow>\<^sub>L real) \<Rightarrow> 'b \<Rightarrow>\<^sub>L (real ^ 'a)" is "(\<lambda>(f::('a \<Rightarrow> 'b \<Rightarrow> real)) (x::'b). \<chi> (i::'a). f i x)"
+  by(rule bounded_linear_vec, simp)  
+lemmas [simp] = blinfun_vec.rep_eq
+
+lemma continuous_blinfun_vec:"(\<And>i. continuous_on UNIV (blinfun_apply (g i))) \<Longrightarrow> continuous_on UNIV (blinfun_vec g)"
+  by (simp add: continuous_on_vec_lambda)  
+
+(*lemma continuous_blinfun_vec':"continuous blinfun_vec"*)
+
+lemma blinfun_elim:"\<And>g. (blinfun_apply (blinfun_vec g)) = (\<lambda>x. \<chi> i. g i x)"
+  using blinfun_vec.rep_eq by auto
+
+lemma continuous_vec:
+  fixes f::"'a::finite \<Rightarrow> 'b::metric_space \<Rightarrow> real \<Rightarrow>\<^sub>L real"
+  fixes S::"'b set"
+  assumes conts:"\<And>i. continuous_on UNIV (f i)"
+  shows "continuous_on UNIV (\<lambda>x. blinfun_vec (\<lambda> i. f i x))"
+proof (auto simp add:  LIM_def continuous_on_def)
+  fix x1 and \<epsilon>::real
+  assume \<epsilon>:"0 < \<epsilon>"
+  let ?n = "card (UNIV::'a set)"
+  have conts':" \<And>i x1 \<epsilon>. 0 < \<epsilon> \<Longrightarrow> \<exists>\<delta>>0. \<forall>x2. x2 \<noteq> x1 \<and> dist x2 x1 < \<delta> \<longrightarrow> dist (f i  x2) (f i x1) < \<epsilon>"  
+    using conts by(auto  simp add:  LIM_def continuous_on_def)
+  have conts'':"\<And>i. \<exists>\<delta>>0. \<forall>x2. x2 \<noteq> x1 \<and> dist x2 x1 < \<delta> \<longrightarrow> dist (f i  x2) (f i x1) < (\<epsilon>/?n)"
+    subgoal for i using conts'[of "\<epsilon> / ?n"  x1 i] \<epsilon> by auto done
+  let ?f = "(\<lambda>x. blinfun_vec (\<lambda> i. f i x))"
+  let ?\<delta>i = "(\<lambda>i. SOME \<delta>. (\<delta>>0 \<and> (\<forall>x2. x2 \<noteq> x1 \<and> dist x2 x1 < \<delta> \<longrightarrow> dist (f i  x2) (f i x1) < (\<epsilon>/?n))))"
+  let ?\<delta> = "INF i:UNIV. ?\<delta>i i"
+  have \<delta>:"?\<delta> > 0 " sorry
+  have \<delta>s:"\<And>i. ?\<delta> \<le> ?\<delta>i i" sorry
+  have "\<And>x2. x2 \<noteq> x1 \<and> dist x2 x1 < ?\<delta> \<Longrightarrow> dist (blinfun_vec (\<lambda>i. f i x2)) (blinfun_vec (\<lambda>i. f i x1)) < \<epsilon>"
+    proof (auto)
+      fix x2
+      assume ne:"x2 \<noteq> x1"
+      assume dist:"dist x2 x1 < ?\<delta>"
+      have "dist (?f x2) (?f x1) =
+        norm((?f x2) - (?f x1))"
+        sorry
+      (* TODO: some mess up over whether y is a real or a vector *)
+      moreover have "... = (SUP y:UNIV. norm(?f x1 y - ?f x2 y)/norm(y))"
+        sorry
+      moreover have "... = (SUP y:UNIV. (setL2 (\<lambda>i. f i x1 y - f i x2 y) UNIV)/norm(y))"
+        sorry
+      moreover have "... = (SUP y:UNIV. (\<Sum>i\<in>(UNIV::'a set). f i x1 y - f i x2 y)/norm(y))"
+        sorry
+      moreover have "... \<le> (\<Sum>i\<in>(UNIV::'a set). (SUP y:UNIV.  (f i x1 y - f i x2 y)/norm(y)))"
+        sorry
+      moreover have "... = (\<Sum>i\<in>(UNIV::'a set). norm(f i x1 - f i x2))"
+        sorry
+      moreover have "... = (\<Sum>i\<in>(UNIV::'a set). \<epsilon> / ?n)"
+        using conts' \<delta>s sorry
+      moreover have "... = \<epsilon>"
+        sorry
+      ultimately show "dist (?f x2) (?f x1) < \<epsilon>"
+        sorry
+    qed
+  then show "\<exists>s>0. \<forall>x2. x2 \<noteq> x1 \<and> dist x2 x1 < s \<longrightarrow> dist (blinfun_vec (\<lambda>i. f i x2)) (blinfun_vec (\<lambda>i. f i x1)) < \<epsilon>"
+    using \<delta> by auto
+  qed
+
+
 lemma has_derivative_vec[derivative_intros]:
   assumes "\<And>i. ((\<lambda>x. f i x) has_derivative (\<lambda>h. f' i h)) F"
   shows "((\<lambda>x. \<chi> i. f i x) has_derivative (\<lambda>h. \<chi> i. f' i h)) F"
