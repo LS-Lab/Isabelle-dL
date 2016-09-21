@@ -1012,22 +1012,27 @@ lemma blinfun_elim':
   sorry*)
 
 lemma continuous_blinfun_vec':
-  fixes g :: "'a::real_normed_vector \<Rightarrow> 'b::finite \<Rightarrow> real \<Rightarrow>\<^sub>L real"
+  fixes g :: "'a::real_normed_vector \<Rightarrow> 'b::{finite,linorder} \<Rightarrow> real \<Rightarrow>\<^sub>L real"
   assumes con:"(\<And>i. continuous_on UNIV (\<lambda> x.(g x i)))"
   shows "continuous_on UNIV (\<lambda>x. blinfun_vec (\<lambda> i. (g x i)))"
     apply(rule Lib.continuous_blinfun_vec') 
     using con by auto    
 
 lemma continuous_blinfun_vec'':
-  fixes g :: "'a::real_normed_vector \<Rightarrow> 'b::finite \<Rightarrow> 'a::real_normed_vector \<Rightarrow>\<^sub>L real"
-  assumes con:"(\<And>i. continuous_on UNIV (\<lambda> x.(g x i)))"
-  shows "continuous_on UNIV (\<lambda>x. blinfun_vec (\<lambda> i. (g (snd x) i)))"
-    sorry
-    (*using continuous_blinfun_vec' sledgehammer
-    by (auto simp add: Lib.continuous_blinfun_vec')
-    using Lib.continuous_blinfun_vec'[of "(\<lambda>i x. (g (snd x i))"]
-  apply(rule Lib.continuous_blinfun_vec')*)
-
+  fixes g :: "'a::real_normed_vector \<Rightarrow> 'b::{finite,linorder} \<Rightarrow> real \<Rightarrow>\<^sub>L real"
+  assumes con:"(\<And>i. continuous_on UNIV (\<lambda> x::'a.(g x i)))"
+  shows "continuous_on (UNIV::(real * 'a)set) (\<lambda>x. blinfun_vec (\<lambda> i. (g (snd x) i)))"
+proof -
+  have cons:"\<And>i. continuous_on UNIV (\<lambda> x::(real * 'a). (g (snd x) i))" 
+    subgoal for i 
+      using continuous_on_compose2[of UNIV "(\<lambda>x. g x i)" UNIV snd]
+      using con[of i] continuous_on_snd by auto
+    done
+  show "continuous_on (UNIV::(real * 'a)set) (\<lambda>x. blinfun_vec (g (snd x)))"
+    using continuous_blinfun_vec'[of "(\<lambda> x::(real * 'a).\<lambda> i::'b. g (snd x) i)", OF cons]
+    by auto
+qed
+ 
 lemma continuous:
   fixes I ::"('sf, 'sc, 'sz) interp"
   assumes good_interp:"is_interp I"
