@@ -270,9 +270,49 @@ proof (auto simp add:  LIM_def continuous_on_def)
         by (simp add: onorm_def norm_blinfun.rep_eq)
       then have each_norm:"\<And>i. (SUP y:UNIV.  norm(f i x1 y - f i x2 y)/norm(y)) = norm(f i x1 - f i x2)"
         by (metis (no_types, lifting) SUP_cong blinfun.diff_left)
+      have bounded_linear:"\<And>i. bounded_linear (\<lambda>y. f i x1 y - f i x2 y)" 
+        by (simp add: blinfun.bounded_linear_right bounded_linear_sub)
+      have each_bound:"\<And>i. bdd_above ((\<lambda>y. norm(f i x1 y - f i x2 y)/norm(y)) ` UNIV)"
+        using bounded_linear unfolding bdd_above_def
+        proof -
+          fix i :: 'a
+          { fix rr :: "real \<Rightarrow> real"
+            have "\<And>a r. norm (blinfun_apply (f a x1) r - blinfun_apply (f a x2) r) / norm r \<le> norm (f a x1 - f a x2)"
+              by (metis le_norm_blinfun minus_blinfun.rep_eq)
+            then have "\<And>r R. r \<notin> (\<lambda>r. norm (blinfun_apply (f i x1) r - blinfun_apply (f i x2) r) / norm r) ` R \<or> r \<le> norm (f i x1 - f i x2)"
+              by blast
+            then have "\<exists>r. rr r \<le> r \<or> rr r \<notin> range (\<lambda>r. norm (blinfun_apply (f i x1) r - blinfun_apply (f i x2) r) / norm r)"
+              by blast }
+          then show "\<exists>r. \<forall>ra\<in>range (\<lambda>r. norm (blinfun_apply (f i x1) r - blinfun_apply (f i x2) r) / norm r). ra \<le> r"
+            by meson
+        qed
+      have bdd_above:"(bdd_above ((\<lambda>y. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y)/norm(y))) ` UNIV))"
+        using each_bound unfolding bdd_above_def apply auto
+        proof -
+          assume each:"(\<And>i. \<exists>M. \<forall>x. \<bar>blinfun_apply (f i x1) x - blinfun_apply (f i x2) x\<bar> / \<bar>x\<bar> \<le> M)"
+          let ?boundP = "(\<lambda>i M. \<forall>x. \<bar>blinfun_apply (f i x1) x - blinfun_apply (f i x2) x\<bar> / \<bar>x\<bar> \<le> M)"
+          let ?bound = "(\<lambda>i. SOME x. ?boundP i x)"
+          have bounds:"\<And>i. ?boundP i (?bound i)"
+            subgoal for i using each someI[of "?boundP i"] by blast done
+          let ?bigBound = "\<Sum>i\<in>(UNIV::'a set). ?bound i"
+          show "\<exists>M. \<forall>x. (\<Sum>i\<in>UNIV. \<bar>blinfun_apply (f i x1) x - blinfun_apply (f i x2) x\<bar> / \<bar>x\<bar>) \<le> M"
+            apply(rule exI[where x= ?bigBound])
+            apply auto
+            subgoal for x using bounds by (simp add: setsum_mono) done 
+        qed
       have bdd_above:"(bdd_above ((\<lambda>y. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y))/norm(y)) ` UNIV))"
-        unfolding bdd_above_def apply auto
-        sorry
+        using bdd_above unfolding bdd_above_def apply auto 
+        proof -
+          fix M :: real
+          assume a1: "\<forall>x. (\<Sum>i\<in>UNIV. \<bar>blinfun_apply (f i x1) x - blinfun_apply (f i x2) x\<bar> / \<bar>x\<bar>) \<le> M"
+          { fix rr :: "real \<Rightarrow> real"
+            have "\<exists>r. (\<Sum>a\<in>UNIV. \<bar>blinfun_apply (f a x1) (rr r) - blinfun_apply (f a x2) (rr r)\<bar> / \<bar>rr r\<bar>) \<le> r"
+              using a1 by blast
+            then have "\<exists>r. (\<Sum>a\<in>UNIV. \<bar>blinfun_apply (f a x1) (rr r) - blinfun_apply (f a x2) (rr r)\<bar>) / \<bar>rr r\<bar> \<le> r"
+              by (simp add: setsum_divide_distrib) }
+          then show "\<exists>r. \<forall>ra. (\<Sum>a\<in>UNIV. \<bar>blinfun_apply (f a x1) ra - blinfun_apply (f a x2) ra\<bar>) / \<bar>ra\<bar> \<le> r"
+            by meson
+        qed 
       have "dist (?f x2) (?f x1) = norm((?f x2) - (?f x1))"
         by (simp add: dist_blinfun_def)
       (* TODO: some mess up over whether y is a real or a vector *)
