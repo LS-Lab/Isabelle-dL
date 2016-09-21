@@ -1929,40 +1929,46 @@ lemma DG_valid:"valid DGaxiom"
             let ?f3 = "(\<lambda>t. sterm_sem I (f1 fid3 vid1) (ll_old.flow 0 (sol 0) t))"
             let ?boundLP = "(\<lambda>L t . (tm \<le> t \<and> t \<le> tM \<longrightarrow> \<bar>?f2 t\<bar> \<le> L))"
             let ?boundL = "(SOME L. (\<forall>t. ?boundLP L t))"
-            have "\<exists>L. (\<forall>t. ?boundLP L t)" sorry
-            then have boundLP:"\<And>t. ?boundLP (?boundL) t" sorry
-            let ?boundMP = "(\<lambda>M t. (tm \<le> t \<and> t \<le> tM \<longrightarrow> \<bar>?f2 t\<bar> \<le> M))"
+            have theBound:"\<exists>L. (\<forall>t. ?boundLP L t)" 
+              sorry
+            then have boundLP:"\<forall>t. ?boundLP (?boundL) t" using someI[of "(\<lambda> L. \<forall>t. ?boundLP L t)"] using theBound by blast
+            let ?boundMP = "(\<lambda>M t. (tm \<le> t \<and> t \<le> tM \<longrightarrow> \<bar>?f3 t\<bar> \<le> M))"
             let ?boundM = "(SOME M. (\<forall>t. ?boundMP M t))"
             have "\<exists>M. (\<forall>t. ?boundMP M t)" sorry
-            then have boundMP:"\<And>t. ?boundMP (?boundM) t" sorry
+            then have boundMP:"\<forall>t. ?boundMP (?boundM) t" using someI[of "(\<lambda> M. \<forall>t. ?boundMP M t)"] using theBound by blast
             show "\<exists>M L. \<forall>t\<in>{tm..tM}. \<forall>x. \<bar>x * ?f2 t + ?f3 t\<bar> \<le> M + L * \<bar>x\<bar>"
               apply(rule exI[where x="?boundM"])
               apply(rule exI[where x="?boundL"])
               apply auto
               proof -
-                fix t x
+                fix t and x :: real
                 assume ttm:"tm \<le> t"
                 assume ttM:"t \<le> tM"
-                have "\<bar>x * ?f2 t + ?f3 t\<bar> \<le> \<bar>x\<bar> * \<bar>?f2 t\<bar> + \<bar>?f3 t\<bar>"
-                  (* "Inform Tobias Nipkow"*)
-                  sledgehammer
-                proof -
-                  have f1: "\<And>r ra. \<bar>r::real\<bar> * \<bar>ra\<bar> = \<bar>r * ra\<bar>"
-                    by (metis norm_scaleR real_norm_def real_scaleR_def)
-                  have "\<And>r ra. \<bar>(r::real) + ra\<bar> \<le> \<bar>r\<bar> + \<bar>ra\<bar>"
-                    by (metis norm_triangle_ineq real_norm_def)
-                    then show ?thesis
-                    using f1 by presburger
-                qed
-                show "\<bar>x * ?f2 t + ?f3 t\<bar> \<le> ?boundM + ?boundL * \<bar>x\<bar>"
-                  sorry
+                from ttm ttM have ttmM:"tm \<le> t \<and> t \<le> tM" by auto 
+                have leqf3:"\<bar>?f3 t\<bar> \<le> ?boundM" using boundMP ttmM by auto
+                have leqf2:"\<bar>?f2 t\<bar> \<le> ?boundL" using boundLP ttmM by auto
+                have gr0:" \<bar>x\<bar> \<ge> 0" by auto
+                have leqf2x:"\<bar>?f2 t\<bar> * \<bar>x\<bar> \<le> ?boundL * \<bar>x\<bar>" using gr0 leqf2
+                  by (metis (no_types, lifting) real_scaleR_def scaleR_right_mono)
+                have "\<bar>x * ?f2 t + ?f3 t\<bar> \<le> \<bar>x\<bar> * \<bar>?f2 t\<bar> + \<bar>?f3 t\<bar>"                    
+                  proof -
+                    have f1: "\<And>r ra. \<bar>r::real\<bar> * \<bar>ra\<bar> = \<bar>r * ra\<bar>"
+                      by (metis norm_scaleR real_norm_def real_scaleR_def)
+                    have "\<And>r ra. \<bar>(r::real) + ra\<bar> \<le> \<bar>r\<bar> + \<bar>ra\<bar>"
+                      by (metis norm_triangle_ineq real_norm_def)
+                      then show ?thesis
+                      using f1 by presburger
+                  qed
+                moreover have "... = \<bar>?f3 t\<bar> + \<bar>?f2 t\<bar> * \<bar>x\<bar>"
+                  by auto
+                moreover have "... \<le> ?boundM + \<bar>?f2 t\<bar> * \<bar>x\<bar>"
+                  using leqf3 by linarith
+                moreover have "... \<le> ?boundM + ?boundL * \<bar>x\<bar>"
+                  using leqf2x  by linarith
+                ultimately show "\<bar>x * ?f2 t + ?f3 t\<bar> \<le> ?boundM + ?boundL * \<bar>x\<bar>"
+                  by linarith
               qed
-              (*subgoal for t x
-                using boundLP[of t] boundMP[of t] apply auto 
-                sledgehammer*)
             qed
-            
-          (*subgoal for tm tM*)
         have ivls_eq:"(ll_new.existence_ivl 0 r) = (ll_old.existence_ivl 0 (sol 0))"
           apply(rule ll_new.existence_ivl_eq_domain)
           apply auto
