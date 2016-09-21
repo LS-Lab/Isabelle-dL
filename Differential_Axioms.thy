@@ -1921,7 +1921,48 @@ lemma DG_valid:"valid DGaxiom"
         have more_lipschitz:"\<And>tm tM. tm \<in> ll_old.existence_ivl 0 (sol 0) \<Longrightarrow>
              tM \<in> ll_old.existence_ivl 0 (sol 0) \<Longrightarrow>
              \<exists>M L. \<forall>t\<in>{tm..tM}. \<forall>x. \<bar>x * sterm_sem I (f1 fid2 vid1) (?flow t) + sterm_sem I (f1 fid3 vid1) (?flow t)\<bar> \<le> M + L * \<bar>x\<bar>"
-          sorry
+          proof -
+            fix tm tM
+            assume tm:"tm \<in> ll_old.existence_ivl 0 (sol 0)"
+            assume tM:"tM \<in> ll_old.existence_ivl 0 (sol 0)"
+            let ?f2 = "(\<lambda>t. sterm_sem I (f1 fid2 vid1) (ll_old.flow 0 (sol 0) t))"
+            let ?f3 = "(\<lambda>t. sterm_sem I (f1 fid3 vid1) (ll_old.flow 0 (sol 0) t))"
+            let ?boundLP = "(\<lambda>L t . (tm \<le> t \<and> t \<le> tM \<longrightarrow> \<bar>?f2 t\<bar> \<le> L))"
+            let ?boundL = "(SOME L. (\<forall>t. ?boundLP L t))"
+            have "\<exists>L. (\<forall>t. ?boundLP L t)" sorry
+            then have boundLP:"\<And>t. ?boundLP (?boundL) t" sorry
+            let ?boundMP = "(\<lambda>M t. (tm \<le> t \<and> t \<le> tM \<longrightarrow> \<bar>?f2 t\<bar> \<le> M))"
+            let ?boundM = "(SOME M. (\<forall>t. ?boundMP M t))"
+            have "\<exists>M. (\<forall>t. ?boundMP M t)" sorry
+            then have boundMP:"\<And>t. ?boundMP (?boundM) t" sorry
+            show "\<exists>M L. \<forall>t\<in>{tm..tM}. \<forall>x. \<bar>x * ?f2 t + ?f3 t\<bar> \<le> M + L * \<bar>x\<bar>"
+              apply(rule exI[where x="?boundM"])
+              apply(rule exI[where x="?boundL"])
+              apply auto
+              proof -
+                fix t x
+                assume ttm:"tm \<le> t"
+                assume ttM:"t \<le> tM"
+                have "\<bar>x * ?f2 t + ?f3 t\<bar> \<le> \<bar>x\<bar> * \<bar>?f2 t\<bar> + \<bar>?f3 t\<bar>"
+                  (* "Inform Tobias Nipkow"*)
+                  sledgehammer
+                proof -
+                  have f1: "\<And>r ra. \<bar>r::real\<bar> * \<bar>ra\<bar> = \<bar>r * ra\<bar>"
+                    by (metis norm_scaleR real_norm_def real_scaleR_def)
+                  have "\<And>r ra. \<bar>(r::real) + ra\<bar> \<le> \<bar>r\<bar> + \<bar>ra\<bar>"
+                    by (metis norm_triangle_ineq real_norm_def)
+                    then show ?thesis
+                    using f1 by presburger
+                qed
+                show "\<bar>x * ?f2 t + ?f3 t\<bar> \<le> ?boundM + ?boundL * \<bar>x\<bar>"
+                  sorry
+              qed
+              (*subgoal for t x
+                using boundLP[of t] boundMP[of t] apply auto 
+                sledgehammer*)
+            qed
+            
+          (*subgoal for tm tM*)
         have ivls_eq:"(ll_new.existence_ivl 0 r) = (ll_old.existence_ivl 0 (sol 0))"
           apply(rule ll_new.existence_ivl_eq_domain)
           apply auto
