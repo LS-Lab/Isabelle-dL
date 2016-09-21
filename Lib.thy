@@ -116,7 +116,7 @@ proof -
 qed
      
 lemma continuous_blinfun_vec':
-  fixes f::"'a::finite \<Rightarrow> 'b::metric_space \<Rightarrow> real \<Rightarrow>\<^sub>L real"
+  fixes f::"'a::{finite,linorder} \<Rightarrow> 'b::{metric_space} \<Rightarrow> real \<Rightarrow>\<^sub>L real"
   fixes S::"'b set"
   assumes conts:"\<And>i. continuous_on UNIV (f i)"
   shows "continuous_on UNIV (\<lambda>x. blinfun_vec (\<lambda> i. f i x))"
@@ -126,7 +126,7 @@ proof (auto simp add:  LIM_def continuous_on_def)
   let ?n = "card (UNIV::'a set)"
   (*obtain x xs where xxs:"x \<notin> xs \<and> insert x xs = (UNIV::'a set)" by (metis Set.set_insert UNIV_I)*)
   have conts':" \<And>i x1 \<epsilon>. 0 < \<epsilon> \<Longrightarrow> \<exists>\<delta>>0. \<forall>x2. x2 \<noteq> x1 \<and> dist x2 x1 < \<delta> \<longrightarrow> dist (f i  x2) (f i x1) < \<epsilon>"  
-    using conts by(auto  simp add:  LIM_def continuous_on_def)
+    using conts by(auto simp add: LIM_def continuous_on_def)
   have conts'':"\<And>i. \<exists>\<delta>>0. \<forall>x2. x2 \<noteq> x1 \<and> dist x2 x1 < \<delta> \<longrightarrow> dist (f i  x2) (f i x1) < (\<epsilon>/?n)"
     subgoal for i using conts'[of "\<epsilon> / ?n"  x1 i] \<epsilon> by auto done
   let ?f = "(\<lambda>x. blinfun_vec (\<lambda> i. f i x))"
@@ -136,18 +136,22 @@ proof (auto simp add:  LIM_def continuous_on_def)
   have P\<delta>i:"\<And>i. ?P\<delta> i (?\<delta>i i)"
     subgoal for i using someI[of "?P\<delta> i" ] Ps[of i] by auto done
   have finU:"finite (UNIV::'a set)" by auto
-  let ?\<delta> = "INF i:UNIV. ?\<delta>i i"
+  let ?\<delta> = "linorder_class.Min  (?\<delta>i ` UNIV)"
   (*let ?\<delta>f = "Finite_Set.fold (inf \<circ> ?\<delta>i) (top) UNIV"
   have \<delta>feq:"?\<delta> = ?\<delta>f"
     
     using INF_fold_inf[OF finU, of ?\<delta>i]*)
   have \<delta>0s:"\<And>i. ?\<delta>i i > 0" using P\<delta>i by blast
+  then have \<delta>0s':"\<And>i. 0 < ?\<delta>i i" by auto
   have bounds:"bdd_below (?\<delta>i ` UNIV)" 
     unfolding bdd_below_def 
     using \<delta>0s less_eq_real_def by blast
   have \<delta>s:"\<And>i. ?\<delta> \<le> ?\<delta>i i"
     using bounds cINF_lower[of ?\<delta>i] by auto
-  have \<delta>:"?\<delta> > 0 " using \<delta>0s bounds le_ccINF_iff sorry
+  have finite:"finite ((?\<delta>i ` UNIV))" by auto
+  have nonempty:"((?\<delta>i ` UNIV)) \<noteq> {}" by auto
+  have \<delta>:"?\<delta> > 0 " using Min_gr_iff[OF finite nonempty] \<delta>0s' 
+    by blast
   have conts''':"\<And>i x2. x2 \<noteq> x1 \<Longrightarrow> dist x2 x1 < ?\<delta>i i \<Longrightarrow> dist (f i  x2) (f i x1) < (\<epsilon>/?n)"
     subgoal for i x2 
       using conts''[of i] apply auto
@@ -161,9 +165,9 @@ proof (auto simp add:  LIM_def continuous_on_def)
     proof (auto)
       fix x2
       assume ne:"x2 \<noteq> x1"
-      assume dist:"dist x2 x1 < ?\<delta>"
+      assume dist:"\<forall>i. dist x2 x1 < ?\<delta>i i"
       have dists:"\<And>i. dist x2 x1 < ?\<delta>i i"
-        subgoal for i using dist \<delta>s[of i] by linarith done
+        subgoal for i using dist \<delta>s[of i] by auto done
       have euclid:"\<And>y. norm(?f x1 y - ?f x2 y) = (setL2 (\<lambda>i. norm(f i x1 y - f i x2 y)) UNIV)"
         by (simp add: norm_vec_def)
       have finite:"finite (UNIV::'a set)" by auto
@@ -176,10 +180,10 @@ proof (auto simp add:  LIM_def continuous_on_def)
           apply auto
           done
         done
-      have SUP_sum_comm':"\<And>R S f . finite (S::'a::finite set) \<Longrightarrow> (R::'d::metric_space set) \<noteq> {} \<Longrightarrow> (\<And>i x. ((f i x)::real) \<ge> 0) \<Longrightarrow> (SUP x:R . (\<Sum>i \<in> S. f i x)) \<le> (\<Sum>i \<in> S. (SUP x:R. f i x))"
+      have SUP_sum_comm':"\<And>R S f . finite (S::'a set) \<Longrightarrow> (R::'d::metric_space set) \<noteq> {} \<Longrightarrow> (\<And>i x. ((f i x)::real) \<ge> 0) \<Longrightarrow> (SUP x:R . (\<Sum>i \<in> S. f i x)) \<le> (\<Sum>i \<in> S. (SUP x:R. f i x))"
         proof -
           (* {ord,order,euclidean_space,Sup,complete_lattice}*)
-          fix  R::"'d set" and S ::"('a::finite)set"  and f  ::"'a \<Rightarrow> 'd \<Rightarrow> real"
+          fix  R::"'d set" and S ::"('a)set"  and f  ::"'a \<Rightarrow> 'd \<Rightarrow> real"
           assume non:"R \<noteq> {} "
           assume fin:"finite S"
           assume every:"(\<And>i x. 0 \<le> f i x)"
@@ -212,9 +216,9 @@ proof (auto simp add:  LIM_def continuous_on_def)
             then show ?case by auto
           qed
         qed
-      have SUP_sum_comm:"\<And>R S y1 y2 . finite (S::'a::finite set) \<Longrightarrow> (R::real set) \<noteq> {} \<Longrightarrow> (SUP x:R . (\<Sum>i \<in> S. norm(f i y1 x - f i y2 x)/norm(x))) \<le> (\<Sum>i \<in> S. (SUP x:R. norm(f i y1 x - f i y2 x)/norm(x)))"
+      have SUP_sum_comm:"\<And>R S y1 y2 . finite (S::'a set) \<Longrightarrow> (R::real set) \<noteq> {} \<Longrightarrow> (SUP x:R . (\<Sum>i \<in> S. norm(f i y1 x - f i y2 x)/norm(x))) \<le> (\<Sum>i \<in> S. (SUP x:R. norm(f i y1 x - f i y2 x)/norm(x)))"
         by(rule SUP_sum_comm', auto)
-      have SUM_leq:"\<And>S::('a::finite) set. \<And> f g ::('a \<Rightarrow> real). S \<noteq> {} \<Longrightarrow> finite S \<Longrightarrow> (\<And>x. x \<in> S \<Longrightarrow> f x < g x) \<Longrightarrow> (\<Sum>x\<in>S. f x) < (\<Sum>x\<in>S. g x)"
+      have SUM_leq:"\<And>S::('a) set. \<And> f g ::('a \<Rightarrow> real). S \<noteq> {} \<Longrightarrow> finite S \<Longrightarrow> (\<And>x. x \<in> S \<Longrightarrow> f x < g x) \<Longrightarrow> (\<Sum>x\<in>S. f x) < (\<Sum>x\<in>S. g x)"
         by(rule setsum_strict_mono, auto)
       have L2:"\<And>f S. setL2 (\<lambda>x. norm(f x)) S \<le> (\<Sum>x \<in> S. norm(f x))"
         using setL2_le_setsum norm_ge_zero by metis
@@ -255,7 +259,7 @@ proof (auto simp add:  LIM_def continuous_on_def)
         by linarith
     qed
   then show "\<exists>s>0. \<forall>x2. x2 \<noteq> x1 \<and> dist x2 x1 < s \<longrightarrow> dist (blinfun_vec (\<lambda>i. f i x2)) (blinfun_vec (\<lambda>i. f i x1)) < \<epsilon>"
-     using \<delta> by auto
+    using \<delta> by blast
   qed
 
 lemma has_derivative_vec[derivative_intros]:
