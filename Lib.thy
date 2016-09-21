@@ -124,17 +124,39 @@ proof (auto simp add:  LIM_def continuous_on_def)
   fix x1 and \<epsilon>::real
   assume \<epsilon>:"0 < \<epsilon>"
   let ?n = "card (UNIV::'a set)"
+  (*obtain x xs where xxs:"x \<notin> xs \<and> insert x xs = (UNIV::'a set)" by (metis Set.set_insert UNIV_I)*)
   have conts':" \<And>i x1 \<epsilon>. 0 < \<epsilon> \<Longrightarrow> \<exists>\<delta>>0. \<forall>x2. x2 \<noteq> x1 \<and> dist x2 x1 < \<delta> \<longrightarrow> dist (f i  x2) (f i x1) < \<epsilon>"  
     using conts by(auto  simp add:  LIM_def continuous_on_def)
   have conts'':"\<And>i. \<exists>\<delta>>0. \<forall>x2. x2 \<noteq> x1 \<and> dist x2 x1 < \<delta> \<longrightarrow> dist (f i  x2) (f i x1) < (\<epsilon>/?n)"
     subgoal for i using conts'[of "\<epsilon> / ?n"  x1 i] \<epsilon> by auto done
   let ?f = "(\<lambda>x. blinfun_vec (\<lambda> i. f i x))"
-  let ?\<delta>i = "(\<lambda>i. SOME \<delta>. (\<delta>>0 \<and> (\<forall>x2. x2 \<noteq> x1 \<and> dist x2 x1 < \<delta> \<longrightarrow> dist (f i  x2) (f i x1) < (\<epsilon>/?n))))"
+  let ?P\<delta> = "(\<lambda> i \<delta>. (\<delta>>0 \<and> (\<forall>x2. x2 \<noteq> x1 \<and> dist x2 x1 < \<delta> \<longrightarrow> dist (f i  x2) (f i x1) < (\<epsilon>/?n))))"
+  let ?\<delta>i = "(\<lambda>i. SOME \<delta>. ?P\<delta> i \<delta>)"
+  have Ps:"\<And>i. \<exists>\<delta>. ?P\<delta> i \<delta>" using conts'' by auto
+  have P\<delta>i:"\<And>i. ?P\<delta> i (?\<delta>i i)"
+    subgoal for i using someI[of "?P\<delta> i" ] Ps[of i] by auto done
+  have finU:"finite (UNIV::'a set)" by auto
   let ?\<delta> = "INF i:UNIV. ?\<delta>i i"
+  (*let ?\<delta>f = "Finite_Set.fold (inf \<circ> ?\<delta>i) (top) UNIV"
+  have \<delta>feq:"?\<delta> = ?\<delta>f"
+    
+    using INF_fold_inf[OF finU, of ?\<delta>i]*)
+  have \<delta>0s:"\<And>i. ?\<delta>i i > 0" using P\<delta>i by blast
+  have bounds:"bdd_below (?\<delta>i ` UNIV)" 
+    unfolding bdd_below_def 
+    using \<delta>0s less_eq_real_def by blast
+  have \<delta>s:"\<And>i. ?\<delta> \<le> ?\<delta>i i"
+    using bounds cINF_lower[of ?\<delta>i] by auto
+  have \<delta>:"?\<delta> > 0 " using \<delta>0s bounds le_ccINF_iff sorry
   have conts''':"\<And>i x2. x2 \<noteq> x1 \<Longrightarrow> dist x2 x1 < ?\<delta>i i \<Longrightarrow> dist (f i  x2) (f i x1) < (\<epsilon>/?n)"
-    using conts'' sorry
-  have \<delta>:"?\<delta> > 0 " sorry
-  have \<delta>s:"\<And>i. ?\<delta> \<le> ?\<delta>i i" sorry
+    subgoal for i x2 
+      using conts''[of i] apply auto
+      subgoal for \<delta>
+        apply(erule allE[where x=x2])
+          using P\<delta>i  \<delta>s[of i] apply (auto simp add: \<delta>s[of i])
+          done
+        done
+      done
   have "\<And>x2. x2 \<noteq> x1 \<and> dist x2 x1 < ?\<delta> \<Longrightarrow> dist (blinfun_vec (\<lambda>i. f i x2)) (blinfun_vec (\<lambda>i. f i x1)) < \<epsilon>"
     proof (auto)
       fix x2
@@ -161,8 +183,11 @@ proof (auto simp add:  LIM_def continuous_on_def)
           assume non:"R \<noteq> {} "
           assume fin:"finite S"
           assume every:"(\<And>i x. 0 \<le> f i x)"
-          have bddF:"\<And>x. bdd_above (f x ` R)" sorry
-          have bddG:"\<And>i F. bdd_above ((\<lambda>x. \<Sum>i\<in>F. f i x) ` R)" sorry
+          have bddF:"\<And>i. bdd_above (f i ` R)" sorry
+          (*have bddG':"\<And>i . bdd_above ((f i) ` R)" sorry*)
+          (* Should be derivable from bddF *)
+          have bddG:"\<And>i F. bdd_above ((\<lambda>x. \<Sum>i\<in>F. f i x) ` R)" 
+            sorry
           show "?thesis R S f" using fin assms
           proof (induct)
             case empty
@@ -172,15 +197,15 @@ proof (auto simp add:  LIM_def continuous_on_def)
             case (insert x F)
               have "((SUP xa:R. \<Sum>i\<in>insert x F. f i xa)::real) \<le> (SUP xa:R. f x xa +  (\<Sum>i\<in>F. f i xa))"
                 using insert.hyps(2) by auto
-              moreover have "(... ::real) \<le> (SUP xa: R. f x xa) + (SUP xa:R. (\<Sum>i\<in>F. f i xa))"
+              moreover have "...  \<le> (SUP xa: R. f x xa) + (SUP xa:R. (\<Sum>i\<in>F. f i xa))"
                 apply(rule sup_plus)
                 subgoal by (rule non)
                 subgoal by (rule bddF)
                 subgoal by (rule bddG)
                 done
-              moreover have "(... ::real) \<le> (SUP xa: R. f x xa) + (\<Sum>i\<in>F. SUP a:R. f i a)"
+              moreover have "... \<le> (SUP xa: R. f x xa) + (\<Sum>i\<in>F. SUP a:R. f i a)"
                 using add_le_cancel_left conts insert.hyps(3) by blast
-              moreover have "(... ::real) \<le>  (\<Sum>i\<in>(insert x F). SUP a:R. f i a)"
+              moreover have "... \<le> (\<Sum>i\<in>(insert x F). SUP a:R. f i a)"
                 by (simp add: insert.hyps(2))
               ultimately have "((SUP xa:R. \<Sum>i\<in>insert x F. f i xa)::real) \<le> (\<Sum>i\<in>(insert x F). SUP a:R. f i a)"
                 by linarith
@@ -230,7 +255,7 @@ proof (auto simp add:  LIM_def continuous_on_def)
         by linarith
     qed
   then show "\<exists>s>0. \<forall>x2. x2 \<noteq> x1 \<and> dist x2 x1 < s \<longrightarrow> dist (blinfun_vec (\<lambda>i. f i x2)) (blinfun_vec (\<lambda>i. f i x1)) < \<epsilon>"
-    using \<delta> by auto
+     using \<delta> by auto
   qed
 
 lemma has_derivative_vec[derivative_intros]:
