@@ -180,14 +180,17 @@ proof (auto simp add:  LIM_def continuous_on_def)
           apply auto
           done
         done
-      have SUP_sum_comm':"\<And>R S f . finite (S::'a set) \<Longrightarrow> (R::'d::metric_space set) \<noteq> {} \<Longrightarrow> (\<And>i x. ((f i x)::real) \<ge> 0) \<Longrightarrow> (SUP x:R . (\<Sum>i \<in> S. f i x)) \<le> (\<Sum>i \<in> S. (SUP x:R. f i x))"
+      have SUP_sum_comm':"\<And>R S f . finite (S::'a set) \<Longrightarrow> (R::'d::metric_space set) \<noteq> {} \<Longrightarrow>
+        (\<And>i x. ((f i x)::real) \<ge> 0) \<Longrightarrow>
+        (\<And>i. bdd_above (f i ` R)) \<Longrightarrow>
+        (SUP x:R . (\<Sum>i \<in> S. f i x)) \<le> (\<Sum>i \<in> S. (SUP x:R. f i x))"
         proof -
           (* {ord,order,euclidean_space,Sup,complete_lattice}*)
           fix  R::"'d set" and S ::"('a)set"  and f  ::"'a \<Rightarrow> 'd \<Rightarrow> real"
           assume non:"R \<noteq> {} "
           assume fin:"finite S"
           assume every:"(\<And>i x. 0 \<le> f i x)"
-          have bddF:"\<And>i. bdd_above (f i ` R)" sorry
+          assume bddF:"\<And>i. bdd_above (f i ` R)"
           then have bddF':"\<And>i. \<exists>M. \<forall>x \<in>R. f i x \<le> M "
             unfolding bdd_above_def by auto
           let ?boundP = "(\<lambda>i M. \<forall>x \<in>R. f i x \<le> M)"
@@ -234,7 +237,26 @@ proof (auto simp add:  LIM_def continuous_on_def)
           qed
         qed
       have SUP_sum_comm:"\<And>R S y1 y2 . finite (S::'a set) \<Longrightarrow> (R::real set) \<noteq> {} \<Longrightarrow> (SUP x:R . (\<Sum>i \<in> S. norm(f i y1 x - f i y2 x)/norm(x))) \<le> (\<Sum>i \<in> S. (SUP x:R. norm(f i y1 x - f i y2 x)/norm(x)))"
-        by(rule SUP_sum_comm', auto)
+        apply(rule SUP_sum_comm')
+        prefer 4
+        subgoal for R S y1 y2 i
+          unfolding bdd_above_def
+          proof -
+            { fix rr :: "real \<Rightarrow> real"
+              obtain rra :: "real \<Rightarrow> (real \<Rightarrow> real) \<Rightarrow> real set \<Rightarrow> real" where
+                ff1: "\<And>r f R. r \<notin> f ` R \<or> f (rra r f R) = r"
+                by moura
+              { assume "\<exists>r. \<not> rr r \<le> norm (f i y1 - f i y2)"
+                then have "\<exists>r. norm (blinfun_apply (f i y1) (rra (rr r) (\<lambda>r. norm (blinfun_apply (f i y1) r - blinfun_apply (f i y2) r) / norm r) R) - blinfun_apply (f i y2) (rra (rr r) (\<lambda>r. norm (blinfun_apply (f i y1) r - blinfun_apply (f i y2) r) / norm r) R)) / norm (rra (rr r) (\<lambda>r. norm (blinfun_apply (f i y1) r - blinfun_apply (f i y2) r) / norm r) R) \<noteq> rr r"
+                  by (metis (no_types) le_norm_blinfun minus_blinfun.rep_eq)
+                then have "\<exists>r. rr r \<le> r \<or> rr r \<notin> (\<lambda>r. norm (blinfun_apply (f i y1) r - blinfun_apply (f i y2) r) / norm r) ` R"
+                  using ff1 by meson }
+              then have "\<exists>r. rr r \<le> r \<or> rr r \<notin> (\<lambda>r. norm (blinfun_apply (f i y1) r - blinfun_apply (f i y2) r) / norm r) ` R"
+                by blast }
+            then show "\<exists>r. \<forall>ra\<in>(\<lambda>r. norm (blinfun_apply (f i y1) r - blinfun_apply (f i y2) r) / norm r) ` R. ra \<le> r"
+              by meson
+          qed 
+        by auto
       have SUM_leq:"\<And>S::('a) set. \<And> f g ::('a \<Rightarrow> real). S \<noteq> {} \<Longrightarrow> finite S \<Longrightarrow> (\<And>x. x \<in> S \<Longrightarrow> f x < g x) \<Longrightarrow> (\<Sum>x\<in>S. f x) < (\<Sum>x\<in>S. g x)"
         by(rule setsum_strict_mono, auto)
       have L2:"\<And>f S. setL2 (\<lambda>x. norm(f x)) S \<le> (\<Sum>x \<in> S. norm(f x))"
@@ -249,6 +271,7 @@ proof (auto simp add:  LIM_def continuous_on_def)
       then have each_norm:"\<And>i. (SUP y:UNIV.  norm(f i x1 y - f i x2 y)/norm(y)) = norm(f i x1 - f i x2)"
         by (metis (no_types, lifting) SUP_cong blinfun.diff_left)
       have bdd_above:"(bdd_above ((\<lambda>y. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y))/norm(y)) ` UNIV))"
+        unfolding bdd_above_def apply auto
         sorry
       have "dist (?f x2) (?f x1) = norm((?f x2) - (?f x1))"
         by (simp add: dist_blinfun_def)
