@@ -1846,8 +1846,59 @@ lemma DG_valid:"valid DGaxiom"
           apply(rule continuous_on_mult_left)
           apply(rule con_fid[of fid2])
           by(rule con_fid[of fid3])
+        (*have :"local_lipschitz (UNIV::real set) UNIV (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)"*)
+        let ?axis = "(\<lambda> i. Blinfun(axis i))"
+        have bounded_linear_deriv:"\<And>t. bounded_linear (\<lambda>y' . y' *\<^sub>R  sterm_sem I (f1 fid2 vid1) (ll_old.flow 0 (sol 0) t))" 
+          using bounded_linear_scaleR_left by blast
+        (* +   (blinfun_compose(blin_frechet (good_interp I) (simple_term (Function fid3 (\<lambda> i. if i = vid1 then Var vid1 else Const 0))) (?flow t)) (?axis vid2)) *)
+        (* (((blinfun_compose(blin_frechet (good_interp I) (simple_term (Function fid2 (\<lambda> i. if i = vid1 then Var vid1 else Const 0))) (?flow t)) (?axis vid2)))) *)
         have ll:"local_lipschitz (ll_old.existence_ivl 0 (sol 0)) UNIV (\<lambda>t y. y * sterm_sem I (f1 fid2 vid1) (?flow t) + sterm_sem I (f1 fid3 vid1) (?flow t))"
-          sorry
+          apply(rule c1_implies_local_lipschitz[where f'="(\<lambda> (t,y). Blinfun(\<lambda>y' . y' *\<^sub>R  sterm_sem I (f1 fid2 vid1) (ll_old.flow 0 (sol 0) t)))"])
+          apply auto
+          subgoal for t x
+            apply(rule has_derivative_add_const)
+            proof -
+              have deriv:"((\<lambda>x. x * sterm_sem I (f1 fid2 vid1) (ll_old.flow 0 (sol 0) t)) has_derivative (\<lambda>x. x * sterm_sem I (f1 fid2 vid1) (ll_old.flow 0 (sol 0) t))) (at x)"
+                by(auto intro: derivative_eq_intros)
+              have eq:"(\<lambda>x. x * sterm_sem I (f1 fid2 vid1) (ll_old.flow 0 (sol 0) t)) = blinfun_apply (Blinfun (\<lambda>y'. y' * sterm_sem I (f1 fid2 vid1) (ll_old.flow 0 (sol 0) t)))"
+                apply(rule ext)
+                using bounded_linear_deriv[of t]  by (auto simp add:  bounded_linear_Blinfun_apply)
+              show "((\<lambda>x. x * sterm_sem I (f1 fid2 vid1) (ll_old.flow 0 (sol 0) t)) has_derivative
+                 blinfun_apply (Blinfun (\<lambda>y'. y' * sterm_sem I (f1 fid2 vid1) (ll_old.flow 0 (sol 0) t))))
+                 (at x)" using deriv eq by auto
+            qed
+        apply(auto intro: continuous_intros simp add: split_beta')
+        proof -
+          have bounded_linear:"\<And>x. bounded_linear (\<lambda>y'. y' * sterm_sem I (f1 fid2 vid1) x)" 
+            by (simp add: bounded_linear_mult_left)
+          have eq:"(\<lambda>x. Blinfun (\<lambda>y'. y' * sterm_sem I (f1 fid2 vid1) x)) = (\<lambda>x. (sterm_sem I (f1 fid2 vid1) x) *\<^sub>R id_blinfun)"
+            apply(rule ext, rule blinfun_eqI)
+            subgoal for x i
+              using bounded_linear[of x] apply(auto simp add: bounded_linear_Blinfun_apply)
+              by (simp add: blinfun.scaleR_left)
+            done
+          have conFlow:"continuous_on (ll_old.existence_ivl 0 (sol 0)) (ll_old.flow 0 (sol 0))"
+            using ll_old.general.flow_continuous_on by blast
+          have conF':"continuous_on (ll_old.flow 0 (sol 0) ` ll_old.existence_ivl 0 (sol 0)) 
+                (\<lambda>x. (sterm_sem I (f1 fid2 vid1) x) *\<^sub>R id_blinfun)"
+            apply(rule continuous_on_scaleR)
+            apply(auto intro: continuous_intros)
+            apply(rule sterm_continuous')
+            apply(rule good_interp)
+            by(auto simp add: f1_def intro: dfree.intros) 
+          have conF:"continuous_on (ll_old.flow 0 (sol 0) ` ll_old.existence_ivl 0 (sol 0)) 
+                (\<lambda>x. Blinfun (\<lambda>y'. y' * sterm_sem I (f1 fid2 vid1) x))"
+            apply(rule continuous_on_compose2[of "UNIV" "(\<lambda>x. Blinfun (\<lambda>y'. y' * x))" "(ll_old.flow 0 (sol 0) ` ll_old.existence_ivl 0 (sol 0))" "sterm_sem I (f1 fid2 vid1)"]) 
+            subgoal by (metis blinfun_mult_left.abs_eq bounded_linear_blinfun_mult_left continuous_on_eq linear_continuous_on)
+            apply(rule sterm_continuous')
+            apply(rule good_interp)
+            by(auto simp add: f1_def intro: dfree.intros) 
+          show "continuous_on (ll_old.existence_ivl 0 (sol 0) \<times> UNIV) (\<lambda>x. Blinfun (\<lambda>y'. y' * sterm_sem I (f1 fid2 vid1) (ll_old.flow 0 (sol 0) (fst x))))"
+            apply(rule continuous_on_compose2[of "ll_old.existence_ivl 0 (sol 0)" "(\<lambda>x. Blinfun (\<lambda>y'. y' * sterm_sem I (f1 fid2 vid1) (ll_old.flow 0 (sol 0) x)))" "(ll_old.existence_ivl 0 (sol 0) \<times> UNIV)" "fst"])
+            apply(rule continuous_on_compose2[of "(ll_old.flow 0 (sol 0) ` ll_old.existence_ivl 0 (sol 0))" "(\<lambda>x. Blinfun (\<lambda>y'. y' * sterm_sem I (f1 fid2 vid1) x))" 
+                  "(ll_old.existence_ivl 0 (sol 0))" "(ll_old.flow 0 (sol 0))"])
+            using conF conFlow continuous_on_fst by (auto)
+          qed
         (*  subgoal for x
           unfolding f1_def expand_singleton apply auto
           apply(rule continuous_on_add)

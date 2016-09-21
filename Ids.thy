@@ -5,7 +5,7 @@ begin
   few elements of those types (so that we can generate axioms). *)
 locale ids =
   (* NOTE: 'sf, 'sz don't have to be finite *)
-  fixes vid1 :: "('sz::finite)"
+  fixes vid1 :: "('sz::{finite,linorder})"
   fixes vid2 :: 'sz
   fixes vid3 :: 'sz
   fixes fid1 :: "('sf::finite)"

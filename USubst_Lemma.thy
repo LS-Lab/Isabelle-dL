@@ -113,27 +113,6 @@ lemma extendf_deriv:
     done
   done
 
-lemma the_deriv:
-  assumes deriv:"(f has_derivative F) (at x)"
-  shows "(THE G. (f has_derivative G) (at x)) = F"
-    apply(rule the_equality)
-    subgoal by (rule deriv)
-    subgoal for G by (auto simp add: deriv has_derivative_unique)
-    done
-   
-lemma the_all_deriv:
-  assumes deriv:"\<forall>x. (f has_derivative F x) (at x)"
-  shows "(THE G. \<forall> x. (f has_derivative G x) (at x)) = F"
-    apply(rule the_equality)
-    subgoal by (rule deriv)
-    subgoal for G 
-      apply(rule ext)
-      subgoal for x
-        apply(erule allE[where x=x])
-        by (auto simp add: deriv has_derivative_unique)
-      done
-    done
-
 lemma adjoint_safe:
 assumes good_interp:"is_interp I"
 assumes good_subst:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') "    

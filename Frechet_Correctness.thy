@@ -263,6 +263,11 @@ next
     using con comp_def by(simp)
 qed (auto intro: continuous_intros)
 
+lemma sterm_continuous':
+  assumes good_interp:"is_interp I"
+  shows "dfree \<theta> \<Longrightarrow> continuous_on S (sterm_sem I \<theta>)"
+  using sterm_continuous continuous_on_subset good_interp by blast
+
 lemma frechet_continuous:
 fixes I :: "('sf, 'sc, 'sz) interp"
 assumes good_interp:"is_interp I"
@@ -307,14 +312,14 @@ next
                 = (\<lambda>v.(Blinfun(FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v)) \<circ> (\<lambda> v'. \<chi> i. frechet I (args i) v v')))"*)
   have cont1:"\<And>v. continuous_on UNIV (\<lambda>v'. (\<chi> i. frechet I (args i) v v'))"
     sorry
-  have cont2:"FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v) = undefined" sorry
+  have cont2:"FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v) = undefined " sorry
   have eq:"(\<lambda>v. Blinfun(\<lambda>v'. FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v) (\<chi> i. frechet I (args i) v v'))) 
     = (blin_frechet (good_interp I) (simple_term (Function f args)))"
     using frechet_blin[OF good_interp free] by auto
   (* TODO: Use greatness of interpretation here. *)
   have cont:"continuous_on UNIV (\<lambda>v. Blinfun(\<lambda>v'. FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v) (\<chi> i. frechet I (args i) v v')))"
     sorry
-  then show ?case by (metis cont)
+  then show ?case using cont sorry
 next
   case (dfree_Plus \<theta>\<^sub>1 \<theta>\<^sub>2)
   assume IH1:"continuous_on UNIV (blin_frechet (good_interp I) (simple_term \<theta>\<^sub>1))"
