@@ -188,10 +188,27 @@ proof (auto simp add:  LIM_def continuous_on_def)
           assume fin:"finite S"
           assume every:"(\<And>i x. 0 \<le> f i x)"
           have bddF:"\<And>i. bdd_above (f i ` R)" sorry
+          then have bddF':"\<And>i. \<exists>M. \<forall>x \<in>R. f i x \<le> M "
+            unfolding bdd_above_def by auto
+          let ?boundP = "(\<lambda>i M. \<forall>x \<in>R. f i x \<le> M)"
+          let ?bound = "(\<lambda>i::'a. SOME M. \<forall>x \<in>R. f i x \<le> M)"
+          have "\<And>i. \<exists>M. ?boundP i M" using bddF' by auto
+          then have each_bound:"\<And>i. ?boundP i (?bound i)" 
+            subgoal for i using someI[of "?boundP i"] by blast done
+          let ?bigBound = "(\<lambda>F. \<Sum>i\<in>F. (?bound i))"
           (*have bddG':"\<And>i . bdd_above ((f i) ` R)" sorry*)
           (* Should be derivable from bddF *)
-          have bddG:"\<And>i F. bdd_above ((\<lambda>x. \<Sum>i\<in>F. f i x) ` R)" 
-            sorry
+          have bddG:"\<And>i::'a. \<And>F. bdd_above ((\<lambda>x. \<Sum>i\<in>F. f i x) ` R)" 
+            subgoal for i F
+              using bddF[of i] unfolding bdd_above_def apply auto
+              apply(rule exI[where x="?bigBound F"])
+              subgoal for M
+                apply auto
+                subgoal for x
+                  using each_bound by (simp add: setsum_mono)
+                done
+              done
+            done
           show "?thesis R S f" using fin assms
           proof (induct)
             case empty
