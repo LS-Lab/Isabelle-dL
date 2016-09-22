@@ -37,6 +37,75 @@ where
 | "extendf_deriv I g ($' _) \<nu> = undefined"
 | "extendf_deriv I g (Differential _) \<nu> = undefined"
 
+lemma extendf_dterm_sem_continuous:
+  fixes f'::"('sf + 'sz,'sz) trm" and I::"('sf,'sc,'sz) interp"
+  assumes free:"dfree f'"
+  assumes good_interp:"is_interp I"
+  shows "continuous_on UNIV (\<lambda>x. dterm_sem (extendf I x) f' \<nu>)"
+proof(induction rule: dfree.induct[OF free])
+  case (3 args f)
+  then show ?case 
+    apply(cases f)
+    apply (auto simp add: continuous_intros)
+    subgoal for a
+      apply(rule continuous_on_compose2[of UNIV "Functions I a" UNIV "(\<lambda> x. (\<chi> i. dterm_sem
+                       \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. x $ f'), Predicates = Predicates I, Contexts = Contexts I,
+                          Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
+                       (args i) \<nu>))"])
+      subgoal
+        using is_interpD[OF good_interp]
+        using has_derivative_continuous_on[of UNIV "(Functions I a)" "(THE f'. \<forall>x. (Functions I a has_derivative f' x) (at x))"] by auto
+      apply(rule continuous_on_vec_lambda) by auto
+    done
+qed (auto simp add: continuous_intros)
+  
+lemma extendf_deriv_continuous:
+  fixes f'::"('sf + 'sz,'sz) trm" and I::"('sf,'sc,'sz) interp"
+  assumes free:"dfree f'"
+  assumes good_interp:"is_interp I"
+  shows "continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i f' \<nu> x))"
+proof (induction rule: dfree.induct[OF free])
+  case (3 args f)
+  assume const:"\<And>j. continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i (args j) \<nu> x))"
+  then show ?case 
+  unfolding extendf_deriv.simps
+  apply(cases f)
+  subgoal for a sorry
+  sorry
+next
+  case (4 \<theta>\<^sub>1 \<theta>\<^sub>2)
+  assume IH1:"continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i \<theta>\<^sub>1 \<nu> x))"
+  assume IH2:"continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i \<theta>\<^sub>2 \<nu> x))"
+  have eq:"(\<lambda>x. Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>1 \<nu> x a + extendf_deriv I i \<theta>\<^sub>2 \<nu> x a)) = (\<lambda>x. Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>1 \<nu> x a) + Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>2 \<nu> x a))"
+    sorry
+  have "continuous_on UNIV (\<lambda>x. Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>1 \<nu> x a) + Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>2 \<nu> x a))"
+    apply(rule continuous_intros)
+    using IH1 IH2 by auto
+ then show ?case
+   apply simp
+   using eq by presburger
+next
+  case (5 \<theta>\<^sub>1 \<theta>\<^sub>2)
+  assume IH1:"continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i \<theta>\<^sub>1 \<nu> x))"
+  assume IH2:"continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i \<theta>\<^sub>2 \<nu> x))"
+  have eq:"(\<lambda>x. Blinfun (\<lambda>a. dterm_sem (extendf I x) \<theta>\<^sub>1 \<nu> * extendf_deriv I i \<theta>\<^sub>2 \<nu> x a +
+                       extendf_deriv I i \<theta>\<^sub>1 \<nu> x a * dterm_sem (extendf I x) \<theta>\<^sub>2 \<nu>)) = 
+           (\<lambda>x. dterm_sem (extendf I x) \<theta>\<^sub>1 \<nu> *\<^sub>R Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>2 \<nu> x a) +
+           dterm_sem (extendf I x) \<theta>\<^sub>2 \<nu> *\<^sub>R Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>1 \<nu> x a))"
+    sorry
+  have "continuous_on UNIV (\<lambda>x. dterm_sem (extendf I x) \<theta>\<^sub>1 \<nu> *\<^sub>R Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>2 \<nu> x a) +
+           dterm_sem (extendf I x) \<theta>\<^sub>2 \<nu> *\<^sub>R Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>1 \<nu> x a))"
+    apply(rule continuous_intros)+
+    apply(rule extendf_dterm_sem_continuous)
+    apply(rule IH2)
+    apply(rule continuous_intros)+
+    apply(rule extendf_dterm_sem_continuous)
+    by(rule IH1)
+  then show ?case
+    unfolding extendf_deriv.simps
+    using eq by presburger
+qed (auto intro: continuous_intros)
+  
 lemma extendf_deriv:
   fixes f'::"('sf + 'sz,'sz) trm" and I::"('sf,'sc,'sz) interp"
   assumes free:"dfree f'"
