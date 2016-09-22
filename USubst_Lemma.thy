@@ -107,12 +107,96 @@ lemma extendf_deriv_continuous:
   shows "continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i f' \<nu> x))"
 proof (induction rule: dfree.induct[OF free])
   case (3 args f)
+  assume dfrees:"\<And>i. dfree (args i)"
   assume const:"\<And>j. continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i (args j) \<nu> x))"
   then show ?case 
   unfolding extendf_deriv.simps
   apply(cases f)
-  subgoal for a sorry
-  sorry
+  subgoal for a 
+    apply simp
+    (*
+    using continuous_on_compose2[of UNIV "(\<lambda>y. Blinfun ((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
+                        (\<chi> i. dterm_sem
+                               \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. x $ f'), Predicates = Predicates I, Contexts = Contexts I,
+                                  Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
+                               (args i) \<nu>) ))"]*)
+    proof -
+      have boundedH:"\<And>x. bounded_linear (\<lambda>b. (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
+                        (\<chi> i. dterm_sem
+                        (extendf I x)
+                               
+                               (args i) \<nu>)
+                        (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b))"
+        sorry
+      have boundedF:"\<And>x. bounded_linear (Blinfun((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
+                        (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>) ))" sorry
+      have boundedG:"\<And>x. bounded_linear (\<lambda> b. (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b))" sorry
+      have eq:"(\<lambda>x. Blinfun (\<lambda>b. (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
+                        (\<chi> i. dterm_sem
+                               (extendf I x)
+                               (args i) \<nu>)
+                        (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b)))
+                        = 
+              (\<lambda>x. blinfun_compose(Blinfun((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
+                        (\<chi> i. dterm_sem
+                               (extendf I x)
+                               (args i) \<nu>) )) (Blinfun(\<lambda> b. (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b))))"
+        apply(rule ext)
+        apply(rule blinfun_eqI)
+        subgoal for x ia
+        using boundedF[of x] boundedG[of x]  blinfun_apply_blinfun_compose bounded_linear_Blinfun_apply
+        proof -
+          have f1: "bounded_linear (\<lambda>v. FunctionFrechet I a (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>) (\<chi> s. extendf_deriv I i (args s) \<nu> x v))"
+            using FunctionFrechet.simps \<open>bounded_linear (\<lambda>b. (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y)) (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>) (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b))\<close>
+            by fastforce          
+          have "bounded_linear (FunctionFrechet I a (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>))"
+            using good_interp is_interp_def by blast
+          then have "blinfun_apply (Blinfun (FunctionFrechet I a (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>))) (\<chi> s. extendf_deriv I i (args s) \<nu> x ia) = blinfun_apply (Blinfun (\<lambda>v. FunctionFrechet I a (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>) (\<chi> s. extendf_deriv I i (args s) \<nu> x v))) ia"
+            using f1 by (simp add: bounded_linear_Blinfun_apply)
+          then have "blinfun_apply (Blinfun (FunctionFrechet I a (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>))) (\<chi> s. extendf_deriv I i (args s) \<nu> x ia) = blinfun_apply (Blinfun (\<lambda>v. FunctionFrechet I a (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>) (\<chi> s. extendf_deriv I i (args s) \<nu> x v))) ia \<and> bounded_linear (\<lambda>v. \<chi> s. extendf_deriv I i (args s) \<nu> x v)"
+            by (metis \<open>bounded_linear (\<lambda>b. \<chi> ia. extendf_deriv I i (args ia) \<nu> x b)\<close>) (* failed *)
+          then show ?thesis
+            by (simp add: bounded_linear_Blinfun_apply)
+        qed
+        
+      have bounds:"\<And>ia x. bounded_linear (extendf_deriv I i (args ia) \<nu> x)" sorry
+      have vec_bound:"\<And>x. bounded_linear (\<lambda>b. \<chi> ia. extendf_deriv I i (args ia) \<nu> x b)" sorry
+      have blinfun_vec:"(\<lambda>x. Blinfun (\<lambda>b. \<chi> ia. extendf_deriv I i (args ia) \<nu> x b)) = (\<lambda>x. blinfun_vec (\<lambda> ia.  Blinfun(\<lambda>b. extendf_deriv I i (args ia) \<nu> x b)))"
+        apply(rule ext)
+        apply(rule blinfun_eqI)
+        apply(rule vec_extensionality)
+        subgoal for x y ia
+          using bounds[of ia y]  vec_bound[of x]
+          by (smt blinfun_vec.rep_eq bounded_linear_Blinfun_apply bounds vec_lambda_beta)
+        done
+      have vec_cont:"continuous_on UNIV (\<lambda>x. blinfun_vec (\<lambda> ia.  Blinfun(\<lambda>b. extendf_deriv I i (args ia) \<nu> x b)))"
+        apply(rule continuous_blinfun_vec')
+        using "3.IH" by blast
+      
+      have cont:"continuous_on UNIV (\<lambda>x. blinfun_compose(Blinfun((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
+                        (\<chi> i. dterm_sem
+                               \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. x $ f'), Predicates = Predicates I, Contexts = Contexts I,
+                                  Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
+                               (args i) \<nu>) )) (Blinfun(\<lambda> b. (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b))))"
+        apply(rule Topological_Spaces.continuous_intros(146))
+        defer
+        subgoal using blinfun_vec vec_cont by presburger
+        apply(rule continuous_on_compose2[of UNIV "(\<lambda>x. Blinfun ((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y)) x))"])
+        subgoal using good_interp unfolding is_interp_def by simp
+        apply(rule continuous_on_vec_lambda)
+        subgoal for i using extendf_dterm_sem_continuous[OF dfrees[of i] good_interp] by auto
+        by auto
+      then show " continuous_on UNIV
+     (\<lambda>x. Blinfun (\<lambda>b. (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
+                        (\<chi> i. dterm_sem
+                               \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. x $ f'), Predicates = Predicates I, Contexts = Contexts I,
+                                  Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
+                               (args i) \<nu>)
+                        (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b)))"
+        using eq  by presburger
+      qed
+    apply simp
+    by(rule continuous_intros)
 next
   case (4 \<theta>\<^sub>1 \<theta>\<^sub>2)
   assume free1:"dfree \<theta>\<^sub>1"
