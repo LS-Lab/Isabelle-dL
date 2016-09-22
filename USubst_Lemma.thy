@@ -121,16 +121,19 @@ proof (induction rule: dfree.induct[OF free])
                                   Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
                                (args i) \<nu>) ))"]*)
     proof -
+      have boundedF:"\<And>x. bounded_linear (((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
+                        (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>) ))"
+        using blinfun.bounded_linear_right using good_interp unfolding is_interp_def 
+        by auto
+      have boundedG:"\<And>x. bounded_linear (\<lambda> b. (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b))"
+        by (simp add: bounded_linear_vec dfrees extendf_deriv_bounded good_interp)
       have boundedH:"\<And>x. bounded_linear (\<lambda>b. (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
                         (\<chi> i. dterm_sem
                         (extendf I x)
                                
                                (args i) \<nu>)
                         (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b))"
-        sorry
-      have boundedF:"\<And>x. bounded_linear (Blinfun((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
-                        (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>) ))" sorry
-      have boundedG:"\<And>x. bounded_linear (\<lambda> b. (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b))" sorry
+        using bounded_linear_compose  boundedG boundedF by blast
       have eq:"(\<lambda>x. Blinfun (\<lambda>b. (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
                         (\<chi> i. dterm_sem
                                (extendf I x)
@@ -144,7 +147,7 @@ proof (induction rule: dfree.induct[OF free])
         apply(rule ext)
         apply(rule blinfun_eqI)
         subgoal for x ia
-        using boundedF[of x] boundedG[of x]  blinfun_apply_blinfun_compose bounded_linear_Blinfun_apply
+        using boundedG[of x]  blinfun_apply_blinfun_compose bounded_linear_Blinfun_apply
         proof -
           have f1: "bounded_linear (\<lambda>v. FunctionFrechet I a (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>) (\<chi> s. extendf_deriv I i (args s) \<nu> x v))"
             using FunctionFrechet.simps \<open>bounded_linear (\<lambda>b. (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y)) (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>) (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b))\<close>
@@ -158,9 +161,12 @@ proof (induction rule: dfree.induct[OF free])
           then show ?thesis
             by (simp add: bounded_linear_Blinfun_apply)
         qed
+        done
         
-      have bounds:"\<And>ia x. bounded_linear (extendf_deriv I i (args ia) \<nu> x)" sorry
-      have vec_bound:"\<And>x. bounded_linear (\<lambda>b. \<chi> ia. extendf_deriv I i (args ia) \<nu> x b)" sorry
+      have bounds:"\<And>ia x. bounded_linear (extendf_deriv I i (args ia) \<nu> x)" 
+        by (simp add: dfrees extendf_deriv_bounded good_interp)
+      have vec_bound:"\<And>x. bounded_linear (\<lambda>b. \<chi> ia. extendf_deriv I i (args ia) \<nu> x b)" 
+        by (simp add: boundedG)
       have blinfun_vec:"(\<lambda>x. Blinfun (\<lambda>b. \<chi> ia. extendf_deriv I i (args ia) \<nu> x b)) = (\<lambda>x. blinfun_vec (\<lambda> ia.  Blinfun(\<lambda>b. extendf_deriv I i (args ia) \<nu> x b)))"
         apply(rule ext)
         apply(rule blinfun_eqI)
@@ -193,7 +199,7 @@ proof (induction rule: dfree.induct[OF free])
                                   Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
                                (args i) \<nu>)
                         (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b)))"
-        using eq  by presburger
+        using eq apply simp by presburger
       qed
     apply simp
     by(rule continuous_intros)
@@ -383,9 +389,8 @@ shows "is_interp (adjoint I \<sigma> \<nu>)"
           using Pf by auto
         then have the_eq:"(THE G. \<forall> x. (?f has_derivative G x) (at x)) = ?f''"
           using Pf the_all_deriv by auto
-        (* TODO: continuous derivatives *)
         have "continuous_on UNIV (\<lambda>x. Blinfun (?f'' x))"
-          sorry
+          by(rule extendf_deriv_continuous[OF free good_interp])
         show "continuous_on UNIV (\<lambda>x. Blinfun ((THE f'a. \<forall>x. ((\<lambda>R. dterm_sem (extendf I R) f' \<nu>) has_derivative f'a x) (at x)) x))"
           using the_eq Pf 
           by (simp add: \<open>continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i f' \<nu> x))\<close>)
