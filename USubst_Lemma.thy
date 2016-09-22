@@ -146,7 +146,37 @@ shows "is_interp (adjoint I \<sigma> \<nu>)"
           using the_eq Pf by simp
         qed
     done
-  done
+  subgoal for i
+    apply(cases "SFunctions \<sigma> i = None")
+    subgoal
+      apply(auto  simp del: extendf.simps extendc.simps)
+      using good_interp unfolding is_interp_def by simp
+    apply(auto  simp del: extendf.simps extendc.simps)
+    subgoal for f'
+      using good_subst[of i f'] apply (auto  simp del: extendf.simps extendc.simps)
+      proof -
+        assume some:"SFunctions \<sigma> i = Some f'"
+        assume free:"dfree f'"
+        let ?f = "(\<lambda>R. dterm_sem (extendf I R) f' \<nu>)"
+        let ?Poo = "(\<lambda>fd. (\<forall>x. (?f has_derivative (fd x)) (at x)))"
+        let ?f''="extendf_deriv I i f' \<nu>"
+        have Pf:"?Poo ?f''"
+            using extendf_deriv[OF good_subst[of i f'] good_interp, of \<nu> i, OF some]
+            by auto
+        have "\<And>x. (THE G. (?f has_derivative G) (at x)) = ?f'' x"
+          apply(rule the_deriv)
+          using Pf by auto
+        then have the_eq:"(THE G. \<forall> x. (?f has_derivative G x) (at x)) = ?f''"
+          using Pf the_all_deriv by auto
+        (* TODO: continuous derivatives *)
+        have "continuous_on UNIV (\<lambda>x. Blinfun (?f'' x))"
+          sorry
+        show "continuous_on UNIV (\<lambda>x. Blinfun ((THE f'a. \<forall>x. ((\<lambda>R. dterm_sem (extendf I R) f' \<nu>) has_derivative f'a x) (at x)) x))"
+          using the_eq Pf 
+          by (simp add: \<open>continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i f' \<nu> x))\<close>)
+        qed
+      done
+    done
 
 lemma NTadjoint_safe:
 assumes good_interp:"is_interp I"
@@ -182,7 +212,9 @@ shows "is_interp (NTadjoint I \<sigma> \<nu>)"
           using the_eq Pf by simp
         qed
     done
-  done
+  (* TODO: Continuity *)
+  sorry
+  
 
 (* Properties of adjoints *)
 lemma adjoint_consequence:"(\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dsafe f') \<Longrightarrow> (\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f') \<Longrightarrow> Vagree \<nu> \<omega> (FVS \<sigma>) \<Longrightarrow> adjoint I \<sigma> \<nu> = adjoint I \<sigma> \<omega>"

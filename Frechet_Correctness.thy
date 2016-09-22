@@ -85,27 +85,30 @@ proof -
   from hEqFG hEqFG' composeDeriv show ?thesis by (auto)
 qed
 
-lemma func_lemma2:"\<forall>x i. (Functions I i has_derivative FunctionFrechet I i x) (at x) \<Longrightarrow>
+lemma func_lemma2:"(\<forall>x i. (Functions I i has_derivative (THE f'. \<forall>x. (Functions I i has_derivative f' x) (at x)) x) (at x) \<and>
+          continuous_on UNIV (\<lambda>x. Blinfun ((THE f'. \<forall>x. (Functions I i has_derivative f' x) (at x)) x))) \<Longrightarrow>
     (\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> (sterm_sem I \<theta> has_derivative frechet I \<theta> \<nu>) (at \<nu>)) \<Longrightarrow>
-    ((\<lambda>v. Functions I f (vec_lambda(\<lambda>i. sterm_sem I (args i) v))) has_derivative frechet I ($f f args) \<nu>) (at \<nu>)"
+    ((\<lambda>v. Functions I f (vec_lambda(\<lambda>i. sterm_sem I (args i) v))) has_derivative (\<lambda>v'. (THE f'. \<forall>x. (Functions I f has_derivative f' x) (at x)) (\<chi> i. sterm_sem I (args i) \<nu>) (\<chi> i. frechet I (args i) \<nu> v'))) (at \<nu>)"
 proof -
-  assume a1: "\<forall>x i. (Functions I i has_derivative FunctionFrechet I i x) (at x)"
+  assume a1: "\<forall>x i. (Functions I i has_derivative (THE f'. \<forall>x. (Functions I i has_derivative f' x) (at x)) x) (at x) \<and>
+          continuous_on UNIV (\<lambda>x. Blinfun ((THE f'. \<forall>x. (Functions I i has_derivative f' x) (at x)) x))"
+  then have a1':"\<forall>x i. (Functions I i has_derivative (THE f'. \<forall>x. (Functions I i has_derivative f' x) (at x)) x) (at x)" by auto
   assume a2: "\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> (sterm_sem I \<theta> has_derivative frechet I \<theta> \<nu>) (at \<nu>)"
   have "\<forall>f fa v. (\<exists>fb. \<not> (f (fb::'a) has_derivative fa fb (v::(real, 'a) vec)) (at v)) \<or> ((\<lambda>v. (\<chi> fa. (f fa v::real))) has_derivative (\<lambda>va. (\<chi> f. fa f v va))) (at v)"
     using has_derivative_vec by force
   then have "((\<lambda>v. \<chi> f. sterm_sem I (args f) v) has_derivative (\<lambda>v. \<chi> f. frechet I (args f) \<nu> v)) (at \<nu>)"
     by (auto simp add: a2 has_derivative_vec)
-  then show "((\<lambda>v. Functions I f (vec_lambda(\<lambda>f. sterm_sem I (args f) v))) has_derivative frechet I ($f f args) \<nu>) (at \<nu>)"
-    using a1 function_case_inner by blast
+  then show "((\<lambda>v. Functions I f (vec_lambda(\<lambda>f. sterm_sem I (args f) v))) has_derivative (\<lambda>v'. (THE f'. \<forall>x. (Functions I f has_derivative f' x) (at x)) (\<chi> i. sterm_sem I (args i) \<nu>) (\<chi> i. frechet I (args i) \<nu> v'))) (at \<nu>)"
+    using a1' function_case_inner by auto
 qed
 
 lemma func_lemma:
   "is_interp I \<Longrightarrow>
   (\<And>\<theta> :: ('a::finite, 'c::finite) trm. \<theta> \<in> range args \<Longrightarrow> (sterm_sem I \<theta> has_derivative frechet I \<theta> \<nu>) (at \<nu>)) \<Longrightarrow>
   (sterm_sem I ($f f args) has_derivative frechet I ($f f args) \<nu>) (at \<nu>)"
-apply(simp only: sfunction_case is_interp_def function_case_inner)
+apply(auto simp add: sfunction_case is_interp_def function_case_inner)
 apply(erule func_lemma2)
-apply(auto)
+apply(auto)  
 done
 
 (* TODO: Should be able to remove these lemmas by adding some inductive_simp rules *)
@@ -194,6 +197,17 @@ typedef ('a, 'b, 'c) good_interp = "{I::('a::finite,'b::finite,'c::finite) inter
       by auto
     then show "\<And>x. ((\<lambda>x. 0) has_derivative (THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x) (at x)" 
       by (auto simp add: eq eq' deriv)
+    next
+      have eq:"(THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) = (\<lambda>_ _. 0)"
+        by(rule the_all_deriv, auto)
+      have eq':"\<forall>x. (THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x = (\<lambda>_. 0)"
+        by (simp add: eq)
+      have deriv:"\<And>x. ((\<lambda>x.0) has_derivative (\<lambda>x. 0)) (at x)"
+        by auto
+      have "\<And>x. bounded_linear ((THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x)"
+        by (simp add: eq')
+      then show " continuous_on UNIV (\<lambda>x. Blinfun ((THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x))"
+        by (smt continuous_on_topological eq' open_UNIV)
   qed  
   
 lemma frechet_linear: 
@@ -308,7 +322,7 @@ next
   assume IH:"\<And>i. continuous_on UNIV (blin_frechet (good_interp I) (simple_term (args i)))"
   assume frees:"(\<And>i. dfree (args i))"
   then have free:"dfree ($f f args)" by (auto)
-  have great_interp:"\<And>f. continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I f x))" sorry
+  have great_interp:"\<And>f. continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I f x))" using good_interp unfolding is_interp_def by auto
   have cont1:"\<And>v. continuous_on UNIV (\<lambda>v'. (\<chi> i. frechet I (args i) v v'))"
     apply(rule continuous_on_vec_lambda)
     using IH by (simp add: frechet_linear frees good_interp linear_continuous_on)

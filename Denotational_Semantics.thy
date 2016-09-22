@@ -113,8 +113,11 @@ fun FunctionFrechet :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow
 (* For an interpretation to be valid, all functions must be differentiable everywhere.*)
 definition is_interp :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> bool"
   where "is_interp I \<equiv>
-    \<forall>x. \<forall>i. (FDERIV (Functions I i) x :> (FunctionFrechet I i x))"
-
+    \<forall>x. \<forall>i. ((FDERIV (Functions I i) x :> (FunctionFrechet I i x)) \<and> continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I i x)))"
+  
+lemma is_interpD:"is_interp I \<Longrightarrow> \<forall>x. \<forall>i. (FDERIV (Functions I i) x :> (FunctionFrechet I i x))"
+  unfolding is_interp_def by auto
+  
 (* Agreement between interpretations. TODO: Distinguish idents for Predicate vs. Program vs. ODE*)
 definition Iagree :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a + 'b + 'c) set \<Rightarrow> bool"
 where "Iagree I J V \<equiv>
