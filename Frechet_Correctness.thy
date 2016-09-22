@@ -308,18 +308,66 @@ next
   assume IH:"\<And>i. continuous_on UNIV (blin_frechet (good_interp I) (simple_term (args i)))"
   assume frees:"(\<And>i. dfree (args i))"
   then have free:"dfree ($f f args)" by (auto)
-  (*have another_eq:"(\<lambda>v. Blinfun(\<lambda>v'. FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v) (\<chi> i. frechet I (args i) v v')))
-                = (\<lambda>v.(Blinfun(FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v)) \<circ> (\<lambda> v'. \<chi> i. frechet I (args i) v v')))"*)
+  have great_interp:"\<And>f. continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I f x))" sorry
   have cont1:"\<And>v. continuous_on UNIV (\<lambda>v'. (\<chi> i. frechet I (args i) v v'))"
-    sorry
-  have cont2:"FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v) = undefined " sorry
+    apply(rule continuous_on_vec_lambda)
+    using IH by (simp add: frechet_linear frees good_interp linear_continuous_on)
   have eq:"(\<lambda>v. Blinfun(\<lambda>v'. FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v) (\<chi> i. frechet I (args i) v v'))) 
     = (blin_frechet (good_interp I) (simple_term (Function f args)))"
     using frechet_blin[OF good_interp free] by auto
-  (* TODO: Use greatness of interpretation here. *)
-  have cont:"continuous_on UNIV (\<lambda>v. Blinfun(\<lambda>v'. FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v) (\<chi> i. frechet I (args i) v v')))"
-    sorry
-  then show ?case using cont sorry
+  have bounded_linears:"\<And>x. bounded_linear (FunctionFrechet I f x)" using good_interp unfolding is_interp_def by blast
+  let ?blin_ff ="(\<lambda>x. Blinfun (FunctionFrechet I f x))" 
+  (*have some_eq:"(\<lambda>x. Blinfun (FunctionFrechet I f (\<chi> i. sterm_sem I (args i) x))) = 
+                (\<lambda>x. blinfun_compose (?blin_ff x) (Blinfun(\<lambda>x. (\<chi> i. sterm_sem I (args i) x))))"
+    apply(rule ext)
+    apply(rule blinfun_eqI)
+    subgoal for x i
+      using bounded_comps[of x] bounded_sem_vecs sledgehammer*)
+  have some_eq:"(\<lambda>x. Blinfun (FunctionFrechet I f (\<chi> i. sterm_sem I (args i) x))) = 
+                ((?blin_ff) \<circ> (\<lambda>x. (\<chi> i. sterm_sem I (args i) x)))"
+    apply(rule ext)
+    apply(rule blinfun_eqI)
+    unfolding comp_def by blast
+  have sub_cont:"continuous_on UNIV ((?blin_ff) \<circ> (\<lambda>x. (\<chi> i. sterm_sem I (args i) x)))"
+    apply(rule continuous_intros)+
+    apply (simp add: frees good_interp sterm_continuous')
+    using continuous_on_subset great_interp by blast
+  (*have sub_cont:"continuous_on UNIV (\<lambda>x. blinfun_compose (?blin_ff x) (Blinfun(\<lambda>x. (\<chi> i. sterm_sem I (args i) x))))"
+    apply(rule continuous_intros(146))
+    apply(rule great_interp)
+    using continuous_on_const by blast*)
+  have blin_frech_vec:"\<And>x. bounded_linear (\<lambda>v'. \<chi> i. frechet I (args i) x v')" 
+    by (simp add: bounded_linear_vec frechet_linear frees good_interp)
+  have frech_vec_eq:"(\<lambda>x. Blinfun (\<lambda>v'. \<chi> i. frechet I (args i) x v')) = (\<lambda>x. blinfun_vec (\<lambda> i. blin_frechet (good_interp I) (simple_term (args i)) x))"
+    apply(rule ext)
+    apply(rule blinfun_eqI)
+    apply(rule vec_extensionality)
+    subgoal for x i j
+      using blin_frech_vec[of x]
+      apply auto
+      by (metis (no_types, lifting) blin_frechet.rep_eq bounded_linear_Blinfun_apply frechet_blin frechet_linear frees good_interp vec_lambda_beta)
+    done
+  have cont_frech_vec:"continuous_on UNIV (\<lambda>x. blinfun_vec (\<lambda> i. blin_frechet (good_interp I) (simple_term (args i)) x))"
+    apply(rule continuous_blinfun_vec')
+    using IH by blast
+  have cont:"continuous_on UNIV (\<lambda>v. blinfun_compose (Blinfun (FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v))) (Blinfun(\<lambda>v'.  (\<chi> i. frechet I (args i) v v'))))"
+    apply(rule continuous_intros(146))
+    subgoal using  sub_cont by simp
+    using frech_vec_eq cont_frech_vec by presburger
+  have best_eq:"(blin_frechet (good_interp I) (simple_term ($f f args))) = (\<lambda>v. blinfun_compose (Blinfun (FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v))) (Blinfun(\<lambda>v'.  (\<chi> i. frechet I (args i) v v')))) "
+    apply(rule ext)
+    apply(rule blinfun_eqI)
+    proof -
+      fix v :: "(real, 'sz) vec" and i :: "(real, 'sz) vec"
+      have "frechet I ($f f args) v i = blinfun_apply (blin_frechet (good_interp I) (simple_term ($f f args)) v) i"
+        by (metis (no_types) bounded_linear_Blinfun_apply dfree_Fun_simps frechet_blin frechet_linear frees good_interp)
+      then have "FunctionFrechet I f (\<chi> s. sterm_sem I (args s) v) (blinfun_apply (Blinfun (\<lambda>va. \<chi> s. frechet I (args s) v va)) i) = blinfun_apply (blin_frechet (good_interp I) (simple_term ($f f args)) v) i"
+        by (simp add: blin_frech_vec bounded_linear_Blinfun_apply)
+      then show "blinfun_apply (blin_frechet (good_interp I) (simple_term ($f f args)) v) i = blinfun_apply (Blinfun (FunctionFrechet I f (\<chi> s. sterm_sem I (args s) v)) o\<^sub>L Blinfun (\<lambda>va. \<chi> s. frechet I (args s) v va)) i"
+        by (metis (no_types) blinfun_apply_blinfun_compose bounded_linear_Blinfun_apply bounded_linears)
+    qed
+  then show ?case using cont
+    best_eq by auto
 next
   case (dfree_Plus \<theta>\<^sub>1 \<theta>\<^sub>2)
   assume IH1:"continuous_on UNIV (blin_frechet (good_interp I) (simple_term \<theta>\<^sub>1))"

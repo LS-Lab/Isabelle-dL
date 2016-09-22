@@ -1611,38 +1611,9 @@ lemma DG_valid:"valid DGaxiom"
               (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
                      (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) x))}"
         assume VSA:"VSagree (sol 0) a {y. y = vid1 \<or> (\<exists>x. Inl y \<in> FVT (if x = vid1 then trm.Var vid1 else Const 0))}"
-        (* Time constraint: {0..t} because we need to know that the original solution is nice everywhere,
-         * no evolution domain constraint because the constraint we eventually want doesn't mention y in the first place. *)
-        (* Picard_Lindeloef_Qualitative.ll_on_open_it.flow_solves_ode:
-          ll_on_open_it ?T ?f ?X \<Longrightarrow>
-            ?t0.0 \<in> ?T \<Longrightarrow> ?x0.0 \<in> ?X \<Longrightarrow> 
-            (ll_on_open.flow ?T ?f ?X ?t0.0 ?x0.0 solves_ode ?f) (ll_on_open.existence_ivl ?T ?f ?X ?t0.0 ?x0.0) ?X *)
-(*        have ll:"local_lipschitz (ll_old.existence_ivl 0 (sol 0)) UNIV (\<lambda>t y. y * sterm_sem I (f1 fid2 vid1) (sol t) + sterm_sem I (f1 fid3 vid1) (sol t))"
-          sorry*)
         let ?xode = "(\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)"
         let ?xconstraint = UNIV
         let ?ivl = "ll_on_open.existence_ivl {0 .. t} ?xode ?xconstraint 0 (sol 0)"
-        (* (\<And>t x. t \<in> ?T \<Longrightarrow> x \<in> ?X \<Longrightarrow> (?f t has_derivative blinfun_apply (?f' (t, x))) (at x)) \<Longrightarrow>
-    continuous_on (?T \<times> ?X) ?f' \<Longrightarrow> open ?T \<Longrightarrow> open ?X \<Longrightarrow> local_lipschitz ?T ?X ?f*)
-        (*interpret old_c1: c1_on_open  "(\<lambda> b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)"
-          "(\<lambda> b. Blinfun(\<lambda>b'. \<chi> i. if i = vid1 then FunctionFrechet I fid1 b b' else 0))" UNIV
-          apply(unfold_locales)
-          subgoal by auto
-          subgoal for x
-            apply (auto simp add: bounded_linear_Blinfun_apply[OF blins[of x]])
-            apply (rule has_derivative_vec)
-            subgoal for i
-              apply(cases "i = vid1")
-              using good_interp apply (auto simp add: f1_def expand_singleton is_interp_def)
-              sorry
-            done
-          using blins sorry*)
-            
-        (*  apply(rule )
-          using c1_implies_local_lipschitz[of UNIV UNIV "(\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)"]
-        
-          apply(rule c1_implies_local_lipschitz[of UNIV UNIV "(\<lambda>(t,b). \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)" undefined])
-          apply(rule c1_implies_local_lipschitz)*)
         have freef1:"dfree ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))"
           by(auto simp add: dfree_Fun dfree_Const)
         have simple_term_inverse':"\<And>\<theta>. dfree \<theta> \<Longrightarrow> raw_term (simple_term \<theta>) = \<theta>"
@@ -1846,12 +1817,9 @@ lemma DG_valid:"valid DGaxiom"
           apply(rule continuous_on_mult_left)
           apply(rule con_fid[of fid2])
           by(rule con_fid[of fid3])
-        (*have :"local_lipschitz (UNIV::real set) UNIV (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)"*)
         let ?axis = "(\<lambda> i. Blinfun(axis i))"
         have bounded_linear_deriv:"\<And>t. bounded_linear (\<lambda>y' . y' *\<^sub>R  sterm_sem I (f1 fid2 vid1) (ll_old.flow 0 (sol 0) t))" 
           using bounded_linear_scaleR_left by blast
-        (* +   (blinfun_compose(blin_frechet (good_interp I) (simple_term (Function fid3 (\<lambda> i. if i = vid1 then Var vid1 else Const 0))) (?flow t)) (?axis vid2)) *)
-        (* (((blinfun_compose(blin_frechet (good_interp I) (simple_term (Function fid2 (\<lambda> i. if i = vid1 then Var vid1 else Const 0))) (?flow t)) (?axis vid2)))) *)
         have ll:"local_lipschitz (ll_old.existence_ivl 0 (sol 0)) UNIV (\<lambda>t y. y * sterm_sem I (f1 fid2 vid1) (?flow t) + sterm_sem I (f1 fid3 vid1) (?flow t))"
           apply(rule c1_implies_local_lipschitz[where f'="(\<lambda> (t,y). Blinfun(\<lambda>y' . y' *\<^sub>R  sterm_sem I (f1 fid2 vid1) (ll_old.flow 0 (sol 0) t)))"])
           apply auto
@@ -1899,15 +1867,7 @@ lemma DG_valid:"valid DGaxiom"
                   "(ll_old.existence_ivl 0 (sol 0))" "(ll_old.flow 0 (sol 0))"])
             using conF conFlow continuous_on_fst by (auto)
           qed
-        (*  subgoal for x
-          unfolding f1_def expand_singleton apply auto
-          apply(rule continuous_on_add)
-          apply(rule continuous_on_mult_left)
-          apply(rule con1)
-          by(rule con2)*)
-          (* continuous_on_mult_left continuous_on_add*)
         let ?ivl = "ll_old.existence_ivl 0 (sol 0)"
-        
         (* Construct solution to ODE for y' here: *)
         let ?yode = "(\<lambda>t y. y * sterm_sem I (f1 fid2 vid1) (?flow t) + sterm_sem I (f1 fid3 vid1) (?flow t))"
         let ?ysol0 = r
