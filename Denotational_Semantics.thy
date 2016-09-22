@@ -359,6 +359,9 @@ lemma forall_sem [simp]:"fml_sem I (Forall x \<phi>) = {v. \<forall>r. (repv v x
   unfolding Forall_def fml_sem.simps
   using Collect_cong by (auto)
   
+lemma greater_sem[simp]:"fml_sem I (Greater \<theta> \<theta>') = {v. dterm_sem I \<theta> v > dterm_sem I \<theta>' v}"
+  unfolding Greater_def by auto
+
 lemma loop_sem:"prog_sem I (Loop \<alpha>) = (prog_sem I \<alpha>)\<^sup>*"
   by (auto)
 
