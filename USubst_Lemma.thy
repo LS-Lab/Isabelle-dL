@@ -115,10 +115,20 @@ proof (induction rule: dfree.induct[OF free])
   sorry
 next
   case (4 \<theta>\<^sub>1 \<theta>\<^sub>2)
+  assume free1:"dfree \<theta>\<^sub>1"
+  assume free2:"dfree \<theta>\<^sub>2"
   assume IH1:"continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i \<theta>\<^sub>1 \<nu> x))"
   assume IH2:"continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i \<theta>\<^sub>2 \<nu> x))"
+  have bound:"\<And>x. bounded_linear  (\<lambda>a. extendf_deriv I i \<theta>\<^sub>1 \<nu> x a + extendf_deriv I i \<theta>\<^sub>2 \<nu> x a)"
+    using extendf_deriv_bounded[OF free1 good_interp] extendf_deriv_bounded[OF free2 good_interp]
+    by (simp add: bounded_linear_add)
   have eq:"(\<lambda>x. Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>1 \<nu> x a + extendf_deriv I i \<theta>\<^sub>2 \<nu> x a)) = (\<lambda>x. Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>1 \<nu> x a) + Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>2 \<nu> x a))"
-    sorry
+    apply(rule ext)
+    apply(rule blinfun_eqI)
+    subgoal for x i
+      using bound[of x] extendf_deriv_bounded[OF free1 good_interp] extendf_deriv_bounded[OF free2 good_interp] blinfun.add_left bounded_linear_Blinfun_apply
+      by smt
+    done
   have "continuous_on UNIV (\<lambda>x. Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>1 \<nu> x a) + Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>2 \<nu> x a))"
     apply(rule continuous_intros)
     using IH1 IH2 by auto
@@ -127,20 +137,31 @@ next
    using eq by presburger
 next
   case (5 \<theta>\<^sub>1 \<theta>\<^sub>2)
+  assume free1:"dfree \<theta>\<^sub>1"
+  assume free2:"dfree \<theta>\<^sub>2"
   assume IH1:"continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i \<theta>\<^sub>1 \<nu> x))"
   assume IH2:"continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i \<theta>\<^sub>2 \<nu> x))"
+  have bounded:"\<And>x. bounded_linear (\<lambda>a. dterm_sem (extendf I x) \<theta>\<^sub>1 \<nu> * extendf_deriv I i \<theta>\<^sub>2 \<nu> x a +
+                       extendf_deriv I i \<theta>\<^sub>1 \<nu> x a * dterm_sem (extendf I x) \<theta>\<^sub>2 \<nu>)"
+    using extendf_deriv_bounded[OF free1 good_interp] extendf_deriv_bounded[OF free2 good_interp]
+    by (simp add: bounded_linear_add bounded_linear_const_mult bounded_linear_mult_const)
   have eq:"(\<lambda>x. Blinfun (\<lambda>a. dterm_sem (extendf I x) \<theta>\<^sub>1 \<nu> * extendf_deriv I i \<theta>\<^sub>2 \<nu> x a +
                        extendf_deriv I i \<theta>\<^sub>1 \<nu> x a * dterm_sem (extendf I x) \<theta>\<^sub>2 \<nu>)) = 
            (\<lambda>x. dterm_sem (extendf I x) \<theta>\<^sub>1 \<nu> *\<^sub>R Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>2 \<nu> x a) +
            dterm_sem (extendf I x) \<theta>\<^sub>2 \<nu> *\<^sub>R Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>1 \<nu> x a))"
-    sorry
+    apply(rule ext)
+    apply(rule blinfun_eqI)
+    subgoal for x i
+      using extendf_deriv_bounded[OF free1 good_interp] extendf_deriv_bounded[OF free2 good_interp] bounded[of x]
+      by (smt blinfun.scaleR_left bounded_linear_Blinfun_apply mult.commute plus_blinfun.rep_eq real_scaleR_def)
+    done
   have "continuous_on UNIV (\<lambda>x. dterm_sem (extendf I x) \<theta>\<^sub>1 \<nu> *\<^sub>R Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>2 \<nu> x a) +
            dterm_sem (extendf I x) \<theta>\<^sub>2 \<nu> *\<^sub>R Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>1 \<nu> x a))"
     apply(rule continuous_intros)+
-    apply(rule extendf_dterm_sem_continuous)
+    apply(rule extendf_dterm_sem_continuous[OF free1 good_interp])
     apply(rule IH2)
     apply(rule continuous_intros)+
-    apply(rule extendf_dterm_sem_continuous)
+    apply(rule extendf_dterm_sem_continuous[OF free2 good_interp])
     by(rule IH1)
   then show ?case
     unfolding extendf_deriv.simps
