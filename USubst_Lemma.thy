@@ -353,9 +353,9 @@ shows "is_interp (adjoint I \<sigma> \<nu>)"
         assume some:"SFunctions \<sigma> i = Some f'"
         assume free:"dfree f'"
         let ?f = "(\<lambda>R. dterm_sem (extendf I R) f' \<nu>)"
-        let ?Poo = "(\<lambda>fd. (\<forall>x. (?f has_derivative (fd x)) (at x)))"
+        let ?Pred = "(\<lambda>fd. (\<forall>x. (?f has_derivative (fd x)) (at x)))"
         let ?f''="extendf_deriv I i f' \<nu>"
-        have Pf:"?Poo ?f''"
+        have Pf:"?Pred ?f''"
             using extendf_deriv[OF good_subst[of i f'] good_interp, of \<nu> i, OF some]
             by auto
         have "(THE G. (?f has_derivative G) (at x)) = ?f'' x"
@@ -379,9 +379,9 @@ shows "is_interp (adjoint I \<sigma> \<nu>)"
         assume some:"SFunctions \<sigma> i = Some f'"
         assume free:"dfree f'"
         let ?f = "(\<lambda>R. dterm_sem (extendf I R) f' \<nu>)"
-        let ?Poo = "(\<lambda>fd. (\<forall>x. (?f has_derivative (fd x)) (at x)))"
+        let ?Pred = "(\<lambda>fd. (\<forall>x. (?f has_derivative (fd x)) (at x)))"
         let ?f''="extendf_deriv I i f' \<nu>"
-        have Pf:"?Poo ?f''"
+        have Pf:"?Pred ?f''"
             using extendf_deriv[OF good_subst[of i f'] good_interp, of \<nu> i, OF some]
             by auto
         have "\<And>x. (THE G. (?f has_derivative G) (at x)) = ?f'' x"
@@ -416,9 +416,9 @@ shows "is_interp (NTadjoint I \<sigma> \<nu>)"
         assume some:"i = Inr f'"
         have free:"dfree (\<sigma> f')" using good_subst by auto
         let ?f = "(\<lambda>_. dterm_sem I (\<sigma> f') \<nu>)"
-        let ?Poo = "(\<lambda>fd. (\<forall>x. (?f has_derivative (fd x)) (at x)))"
+        let ?Pred = "(\<lambda>fd. (\<forall>x. (?f has_derivative (fd x)) (at x)))"
         let ?f''="(\<lambda>_ _. 0)"
-        have Pf:"?Poo ?f''"
+        have Pf:"?Pred ?f''"
           proof (induction "\<sigma> f'")
           qed (auto)
         have "(THE G. (?f has_derivative G) (at x)) = ?f'' x"
@@ -432,9 +432,41 @@ shows "is_interp (NTadjoint I \<sigma> \<nu>)"
           using the_eq Pf by simp
         qed
     done
-  (* TODO: Continuity *)
-  sorry
-  
+  subgoal for i
+    apply(cases i)
+    subgoal
+      apply(auto  simp del: extendf.simps extendc.simps)
+      using good_interp unfolding is_interp_def by simp
+    apply(auto  simp del: extendf.simps extendc.simps)
+    subgoal for f'
+      using good_subst[of f'] 
+      (*apply (auto  simp del: extendf.simps extendc.simps)*)
+      proof -
+        assume some:"i = Inr f'"
+        have free:"dfree (\<sigma> f')" using good_subst by auto
+        let ?f = "(\<lambda>R. dterm_sem I (\<sigma> f') \<nu>)"
+        let ?Pred = "(\<lambda>fd. (\<forall>x. (?f has_derivative (fd x)) (at x)))"
+        let ?f''="(\<lambda>_ _. 0)" (* *)
+        have Pf:"?Pred ?f''" by simp
+        have "\<And>x. (THE G. (?f has_derivative G) (at x)) = ?f'' x"
+          apply(rule the_deriv)
+          using Pf by auto
+        then have the_eq:"(THE G. \<forall> x. (?f has_derivative G x) (at x)) = ?f''"
+          using Pf the_all_deriv[of "(\<lambda>R. dterm_sem I (\<sigma> f') \<nu>)" "(\<lambda>_ _. 0)"]
+          by blast
+        then have blin_cont:"continuous_on UNIV (\<lambda>x. Blinfun (?f'' x))"
+          by (simp add: continuous_on_const)
+        have truth:"(\<lambda>x. Blinfun ((THE f'a. \<forall>x. ((\<lambda>_. dterm_sem I (\<sigma> f') \<nu>) has_derivative f'a x) (at x)) x))
+          = (\<lambda>x. Blinfun (\<lambda> _. 0))"
+          apply(rule ext)
+          apply(rule blinfun_eqI)
+          by (simp add: local.the_eq)
+        then show "continuous_on UNIV (\<lambda>x. Blinfun ((THE f'a. \<forall>x. ((\<lambda>_. dterm_sem I (\<sigma> f') \<nu>) has_derivative f'a x) (at x)) x))"
+          using truth 
+          by (metis (mono_tags, lifting) blin_cont continuous_on_eq)
+        qed
+      done
+    done
 
 (* Properties of adjoints *)
 lemma adjoint_consequence:"(\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dsafe f') \<Longrightarrow> (\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f') \<Longrightarrow> Vagree \<nu> \<omega> (FVS \<sigma>) \<Longrightarrow> adjoint I \<sigma> \<nu> = adjoint I \<sigma> \<omega>"
