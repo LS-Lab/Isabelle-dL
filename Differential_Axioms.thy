@@ -1960,11 +1960,35 @@ lemma DG_valid:"valid DGaxiom"
               unfolding bdd_above_def norm_conv_dist 
               apply (auto simp add: norm_conv_dist real_norm_def norm_bcontfun_def dist_0_norm dist_blinfun_def)
               by fastforce
-            then have boundLP:"\<forall>t. ?boundLP (?boundL) t" using someI[of "(\<lambda> L. \<forall>t. ?boundLP L t)"] using theBound by blast
+            then have boundLP:"\<forall>t. ?boundLP (?boundL) t" using someI[of "(\<lambda> L. \<forall>t. ?boundLP L t)"] by blast
             let ?boundMP = "(\<lambda>M t. (tm \<le> t \<and> t \<le> tM \<longrightarrow> \<bar>?f3 t\<bar> \<le> M))"
             let ?boundM = "(SOME M. (\<forall>t. ?boundMP M t))"
-            have "\<exists>M. (\<forall>t. ?boundMP M t)" sorry
-            then have boundMP:"\<forall>t. ?boundMP (?boundM) t" using someI[of "(\<lambda> M. \<forall>t. ?boundMP M t)"] using theBound by blast
+            have compactf3:"compact (?f3 ` {tm..tM})"
+              apply(rule compact_continuous_image)
+              apply(rule continuous_on_compose2[of UNIV "sterm_sem I (f1 fid3 vid1)" "{tm..tM}" "ll_old.flow 0 (sol 0)"])
+              apply(rule sterm_continuous)
+              apply(rule good_interp)
+              subgoal by (auto intro: dfree.intros simp add: f1_def)
+              apply(rule continuous_on_subset)
+              prefer 2 apply (rule sub)
+              subgoal using ll_old.general.flow_continuous_on by blast
+              by auto
+            then have boundedf3:"bounded (?f3 ` {tm..tM})" using compact_imp_bounded by auto
+            then have boundedf3neg:"bounded ((\<lambda>x. -x) ` ?f3 ` {tm..tM})" using compact_imp_bounded neg_compact by auto
+            then have bdd_above_f3neg:"bdd_above ((\<lambda>x. -x) ` ?f3 ` {tm..tM})" by (rule bounded_imp_bdd_above)
+            then have bdd_above_f3:"bdd_above ( ?f3 ` {tm..tM})" using bounded_imp_bdd_above boundedf3 by auto
+            have bdd_above_f3_abs:"bdd_above (abs ` ?f3 ` {tm..tM})" 
+              using bdd_above_f3neg bdd_above_f3 unfolding bdd_above_def
+              apply auto
+              subgoal for M1 M2
+                apply(rule exI[where x="max M1 M2"])
+                  by fastforce
+              done
+            then have theBound:"\<exists>L. (\<forall>t. ?boundMP L t)" 
+              unfolding bdd_above_def norm_conv_dist 
+              apply (auto simp add: norm_conv_dist real_norm_def norm_bcontfun_def dist_0_norm dist_blinfun_def)
+              by fastforce
+            then have boundMP:"\<forall>t. ?boundMP (?boundM) t" using someI[of "(\<lambda> M. \<forall>t. ?boundMP M t)"] by blast
             show "\<exists>M L. \<forall>t\<in>{tm..tM}. \<forall>x. \<bar>x * ?f2 t + ?f3 t\<bar> \<le> M + L * \<bar>x\<bar>"
               apply(rule exI[where x="?boundM"])
               apply(rule exI[where x="?boundL"])
