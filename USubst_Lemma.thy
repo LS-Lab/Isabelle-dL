@@ -58,7 +58,48 @@ proof(induction rule: dfree.induct[OF free])
       apply(rule continuous_on_vec_lambda) by auto
     done
 qed (auto simp add: continuous_intros)
-  
+
+lemma extendf_deriv_bounded:
+  fixes f'::"('sf + 'sz,'sz) trm" and I::"('sf,'sc,'sz) interp"
+  assumes free:"dfree f'"
+  assumes good_interp:"is_interp I"
+  shows "bounded_linear (extendf_deriv I i f' \<nu> x)"
+proof(induction rule: dfree.induct[OF free])
+  case (1 i)
+  then show ?case by auto
+next
+  case (2 r)
+  then show ?case by auto
+next
+  case (3 args f)
+  then show ?case apply auto
+    apply(cases f)
+    apply auto
+    subgoal for a
+    apply(rule bounded_linear_compose[of "(THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
+           (\<chi> i. dterm_sem
+                  \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. x $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                     ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
+                  (args i) \<nu>)"])
+      subgoal using good_interp unfolding is_interp_def  using has_derivative_bounded_linear  by fastforce
+      apply(rule bounded_linear_vec)
+      by auto
+    done
+next
+  case (4 \<theta>\<^sub>1 \<theta>\<^sub>2)
+  then show ?case apply auto
+    using bounded_linear_add by blast
+next
+  case (5 \<theta>\<^sub>1 \<theta>\<^sub>2)
+  then show ?case apply auto
+    apply(rule bounded_linear_add)
+    apply(rule bounded_linear_const_mult)
+    subgoal by auto
+    apply(rule bounded_linear_mult_const)
+    subgoal by auto
+    done
+qed
+
 lemma extendf_deriv_continuous:
   fixes f'::"('sf + 'sz,'sz) trm" and I::"('sf,'sc,'sz) interp"
   assumes free:"dfree f'"
