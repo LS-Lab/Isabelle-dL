@@ -15,7 +15,7 @@ text \<open>
   variables, which are then instantiated by uniform substitution, as opposed
   metavariables.
   
-  This section cointains axioms and rules for propositional connectives and programs other than
+  This section contains axioms and rules for propositional connectives and programs other than
   ODE's. Differential axioms are handled separately because the proofs are significantly more involved.
   \<close>
 
@@ -170,6 +170,7 @@ definition Skolem_holds :: "('sf, 'sc, 'sz) formula \<Rightarrow> 'sz \<Rightarr
 definition MP_holds :: "('sf, 'sc, 'sz) formula \<Rightarrow> ('sf, 'sc, 'sz) formula \<Rightarrow> bool"
   where "MP_holds \<phi> \<psi> \<equiv> valid (\<phi> \<rightarrow> \<psi>) \<longrightarrow> valid \<phi> \<longrightarrow> valid \<psi>"
 
+(* TODO: Should I do a version that allows all the variables?*)
 definition CT_holds :: "'sf \<Rightarrow> ('sf, 'sz) trm \<Rightarrow> ('sf, 'sz) trm \<Rightarrow> bool"
   where "CT_holds g \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>')
     \<longrightarrow> valid (Equals (Function g (singleton \<theta>)) (Function g (singleton \<theta>')))"
@@ -216,7 +217,7 @@ theorem CT_sound: "CT_holds var \<theta> \<theta>'"
   apply(simp add: CT_lemma)
 done
 
-(* TODO: I think this lemma actually makes no sense.*)
+(* TODO: Why are there two I's *)
 lemma CQ_lemma:"\<And>I::('sf,'sc,'sz) interp. \<And>\<nu>. \<forall>I::('sf,'sc,'sz) interp. \<forall>\<nu>. is_interp I \<longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta>' \<nu> \<Longrightarrow>
            is_interp I \<Longrightarrow>
            Predicates I (var::'sz) (vec_lambda(\<lambda>i. dterm_sem I (if i = vid1 then \<theta> else  (Const 0)) \<nu>)) =
@@ -262,5 +263,4 @@ theorem CE_sound: "CE_holds var \<phi> \<psi>"
   apply(simp)
   apply(metis subsetI subset_antisym surj_pair)
 done
-
 end end

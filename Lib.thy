@@ -82,8 +82,6 @@ lemmas [simp] = blinfun_vec.rep_eq
 lemma continuous_blinfun_vec:"(\<And>i. continuous_on UNIV (blinfun_apply (g i))) \<Longrightarrow> continuous_on UNIV (blinfun_vec g)"
   by (simp add: continuous_on_vec_lambda)  
 
-(*lemma continuous_blinfun_vec':"continuous blinfun_vec"*)
-
 lemma blinfun_elim:"\<And>g. (blinfun_apply (blinfun_vec g)) = (\<lambda>x. \<chi> i. g i x)"
   using blinfun_vec.rep_eq by auto
 
@@ -124,7 +122,6 @@ proof (auto simp add:  LIM_def continuous_on_def)
   fix x1 and \<epsilon>::real
   assume \<epsilon>:"0 < \<epsilon>"
   let ?n = "card (UNIV::'a set)"
-  (*obtain x xs where xxs:"x \<notin> xs \<and> insert x xs = (UNIV::'a set)" by (metis Set.set_insert UNIV_I)*)
   have conts':" \<And>i x1 \<epsilon>. 0 < \<epsilon> \<Longrightarrow> \<exists>\<delta>>0. \<forall>x2. x2 \<noteq> x1 \<and> dist x2 x1 < \<delta> \<longrightarrow> dist (f i  x2) (f i x1) < \<epsilon>"  
     using conts by(auto simp add: LIM_def continuous_on_def)
   have conts'':"\<And>i. \<exists>\<delta>>0. \<forall>x2. x2 \<noteq> x1 \<and> dist x2 x1 < \<delta> \<longrightarrow> dist (f i  x2) (f i x1) < (\<epsilon>/?n)"
@@ -181,7 +178,6 @@ proof (auto simp add:  LIM_def continuous_on_def)
         (\<And>i. bdd_above (f i ` R)) \<Longrightarrow>
         (SUP x:R . (\<Sum>i \<in> S. f i x)) \<le> (\<Sum>i \<in> S. (SUP x:R. f i x))"
         proof -
-          (* {ord,order,euclidean_space,Sup,complete_lattice}*)
           fix  R::"'d set" and S ::"('a)set"  and f  ::"'a \<Rightarrow> 'd \<Rightarrow> real"
           assume non:"R \<noteq> {} "
           assume fin:"finite S"

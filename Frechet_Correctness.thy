@@ -285,7 +285,6 @@ lemma sterm_continuous':
 lemma frechet_continuous:
 fixes I :: "('sf, 'sc, 'sz) interp"
 assumes good_interp:"is_interp I"
-(* TODO: Needs GREAT interp as well, i.e. continuous derivatives *)
 shows "dfree \<theta> \<Longrightarrow> continuous_on UNIV (blin_frechet (good_interp I) (simple_term \<theta>))"    
 proof (induction rule: dfree.induct)
   case (dfree_Var i)
@@ -331,12 +330,6 @@ next
     using frechet_blin[OF good_interp free] by auto
   have bounded_linears:"\<And>x. bounded_linear (FunctionFrechet I f x)" using good_interp unfolding is_interp_def by blast
   let ?blin_ff ="(\<lambda>x. Blinfun (FunctionFrechet I f x))" 
-  (*have some_eq:"(\<lambda>x. Blinfun (FunctionFrechet I f (\<chi> i. sterm_sem I (args i) x))) = 
-                (\<lambda>x. blinfun_compose (?blin_ff x) (Blinfun(\<lambda>x. (\<chi> i. sterm_sem I (args i) x))))"
-    apply(rule ext)
-    apply(rule blinfun_eqI)
-    subgoal for x i
-      using bounded_comps[of x] bounded_sem_vecs sledgehammer*)
   have some_eq:"(\<lambda>x. Blinfun (FunctionFrechet I f (\<chi> i. sterm_sem I (args i) x))) = 
                 ((?blin_ff) \<circ> (\<lambda>x. (\<chi> i. sterm_sem I (args i) x)))"
     apply(rule ext)
@@ -346,10 +339,6 @@ next
     apply(rule continuous_intros)+
     apply (simp add: frees good_interp sterm_continuous')
     using continuous_on_subset great_interp by blast
-  (*have sub_cont:"continuous_on UNIV (\<lambda>x. blinfun_compose (?blin_ff x) (Blinfun(\<lambda>x. (\<chi> i. sterm_sem I (args i) x))))"
-    apply(rule continuous_intros(146))
-    apply(rule great_interp)
-    using continuous_on_const by blast*)
   have blin_frech_vec:"\<And>x. bounded_linear (\<lambda>v'. \<chi> i. frechet I (args i) x v')" 
     by (simp add: bounded_linear_vec frechet_linear frees good_interp)
   have frech_vec_eq:"(\<lambda>x. Blinfun (\<lambda>v'. \<chi> i. frechet I (args i) x v')) = (\<lambda>x. blinfun_vec (\<lambda> i. blin_frechet (good_interp I) (simple_term (args i)) x))"

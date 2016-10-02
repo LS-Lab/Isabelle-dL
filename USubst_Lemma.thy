@@ -114,12 +114,6 @@ proof (induction rule: dfree.induct[OF free])
   apply(cases f)
   subgoal for a 
     apply simp
-    (*
-    using continuous_on_compose2[of UNIV "(\<lambda>y. Blinfun ((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
-                        (\<chi> i. dterm_sem
-                               \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. x $ f'), Predicates = Predicates I, Contexts = Contexts I,
-                                  Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
-                               (args i) \<nu>) ))"]*)
     proof -
       have boundedF:"\<And>x. bounded_linear (((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
                         (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>) ))"

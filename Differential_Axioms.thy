@@ -238,7 +238,7 @@ lemma DE_valid:"valid DEaxiom"
       by (simp add: dfree_Const)
     show "valid DEaxiom"
     apply(auto simp only: DEaxiom_def valid_def Let_def iff_sem impl_sem)
-    apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq box_sem) (* simp del: prog_sem.simps(8) simp add: ode_alt_sem[OF osafe fsafe] *)
+    apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq box_sem)
   proof -
     fix I::"('sf,'sc,'sz) interp"
     and aa ba ab bb sol 
@@ -407,8 +407,7 @@ lemma DS_valid:"valid DSaxiom"
       using singleton.simps dsafe_Const by (auto intro: dfree.intros)
     show "valid DSaxiom"
   apply(auto simp only: DSaxiom_def valid_def Let_def iff_sem impl_sem box_sem)
-  apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq  iff_sem impl_sem box_sem forall_sem
-       (*simp del: prog_sem.simps(8) simp add: ode_alt_sem[OF osafe fsafe]*))
+  apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq  iff_sem impl_sem box_sem forall_sem)
   proof -
     fix I::"('sf,'sc,'sz) interp" 
     and a b r aa ba
@@ -807,6 +806,7 @@ proof -
   then show "?thesis" using geq0 by auto
 qed
 
+(* TODO: Can get this more easily from frechet being bounded_linear. *)
 lemma frech_linear:
   fixes x \<theta> \<nu> \<nu>' I
   assumes good_interp:"is_interp I"
@@ -957,48 +957,22 @@ lemma rift_in_space_time:
         apply(cases x)
         subgoal for a
           apply(cases "a \<in> ODE_vars I ODE")
-          subgoal
-            apply(erule allE[where x=i])+
-            apply(simp)
-            by (metis (no_types, lifting) FVT ODE_vars_lr Vagree_def mk_v_agree mk_xode.elims set_mp snd_conv)
-          subgoal
-            apply(erule allE[where x=i])+
-            by(simp)
-        done
+          by (simp | metis (no_types, lifting) FVT ODE_vars_lr Vagree_def mk_v_agree mk_xode.elims set_mp snd_conv)+
         subgoal for a
-             apply(cases "a \<in> ODE_vars I ODE")
-          subgoal
-            apply(erule allE[where x=i])+
-            apply(simp)
-            by (metis (no_types, lifting) FVT ODE_vars_lr Vagree_def mk_v_agree mk_xode.elims set_mp snd_conv)
-          subgoal
-            apply(erule allE[where x=i])+
-            by(simp)
-          done
+          apply(cases "a \<in> ODE_vars I ODE")
+          by (simp | metis (no_types, lifting) FVT Vagree_def mk_v_agree mk_xode.elims set_mp snd_conv)+
         done
       subgoal for i x
         apply(cases x)
         subgoal for a
           apply(cases "a \<in> ODE_vars I ODE")
-          subgoal
-            apply(erule allE[where x=i])+
-            by(simp)
-            
-          subgoal
-            apply(erule allE[where x=i])+
-            using FVT ODE_vars_lr Vagree_def mk_v_agree mk_xode.elims set_mp snd_conv
-            by auto
-        done
+          using FVT ODE_vars_lr Vagree_def mk_v_agree mk_xode.elims set_mp snd_conv
+          by auto
         subgoal for a
           apply(cases "a \<in> ODE_vars I ODE")
-          subgoal
-            apply(erule allE[where x=i])+
-            by(simp)
-          subgoal
-            apply(erule allE[where x=i])+
-            using FVT ODE_vars_lr Vagree_def mk_v_agree mk_xode.elims set_mp snd_conv
-            by auto
-          done
+          apply(erule allE[where x=i])+
+          using FVT ODE_vars_lr Vagree_def mk_v_agree mk_xode.elims set_mp snd_conv
+          by auto
         done
       done
     done 
@@ -1009,7 +983,6 @@ lemma rift_in_space_time:
         apply(rule ext | rule vec_extensionality)+
         subgoal for x
           using frech_linear[of I \<theta> x "(fst (mk_v I ODE (sol 0, b) (sol s)))" "(snd (mk_v I ODE (sol 0, b) (sol s)))", OF good_interp free]
-          apply auto
           using coincidence_frechet[OF free, of "(?co'\<nu>1 x)" "(?co'\<nu>2 x)", OF co_agree'[of x], of I]
           by auto
         done
@@ -1026,92 +999,14 @@ lemma dterm_sterm_dfree:
    "dfree \<theta> \<Longrightarrow> (\<And>\<nu> \<nu>'. sterm_sem I \<theta> \<nu> = dterm_sem I \<theta> (\<nu>, \<nu>'))"
   by(induction rule: dfree.induct, auto)
 
-(*lemma confused:"(\<lambda>x. blinfun_vec
-           (\<lambda>i. if i = vid1
-                then Blinfun (FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) x)
-                              (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) x))
-                else 0)) = undefined "*)
-(*"g x: ('a::finite \<Rightarrow> 'b::real_normed_vector \<Rightarrow>\<^sub>L real)"
-g x i :: vec \<Rightarrow>_L real 
-*)
 (*
-lemma blinfun_elim':
-  fixes g :: "'a::real_normed_vector \<Rightarrow> 'b::finite \<Rightarrow> 'a::real_normed_vector \<Rightarrow> real"
-  shows "\<And>g. (\<lambda>x. blinfun_vec (\<lambda> i. Blinfun(\<lambda>y. g x i y))) = (\<lambda>x. Blinfun(\<lambda>y. \<chi> i. g x i y))"
-  apply(rule ext)
-  apply(rule blinfun_eqI)
-  apply(rule vec_extensionality)
-  apply (auto simp add: blinfun_elim)
-  sorry*)
-
 lemma continuous_blinfun_vec':
   fixes g :: "'a::{real_normed_vector,abs} \<Rightarrow> 'b::{finite,linorder} \<Rightarrow> 'a \<Rightarrow>\<^sub>L real"
   assumes con:"(\<And>i. continuous_on UNIV (\<lambda> x.(g x i)))"
   shows "continuous_on UNIV (\<lambda>x. blinfun_vec (\<lambda> i. (g x i)))"
     apply(rule Lib.continuous_blinfun_vec') 
-    using con by auto    
-(*
-lemma continuous_blinfun_vec'':
-  fixes g :: "'a::{real_normed_vector,abs} \<Rightarrow> 'b::{finite,linorder} \<Rightarrow> 'a \<Rightarrow>\<^sub>L real"
-  assumes con:"(\<And>i. continuous_on UNIV (\<lambda> x::'a.(g x i)))"
-  shows "continuous_on (UNIV::(real * 'a)set) (\<lambda>x. blinfun_vec (\<lambda> i. (g (snd x) i)))"
-proof -
-  have cons:"\<And>i. continuous_on UNIV (\<lambda> x::(real * 'a). (g (snd x) i))" 
-    subgoal for i 
-      using continuous_on_compose2[of UNIV "(\<lambda>x. g x i)" UNIV snd]
-      using con[of i] continuous_on_snd by auto
-    done
-  show "continuous_on (UNIV::(real * 'a)set) (\<lambda>x. blinfun_vec (g (snd x)))"
-    using continuous_blinfun_vec' sorry
-qed*)
- (*
-lemma continuous:
-  fixes I ::"('sf, 'sc, 'sz) interp"
-  assumes good_interp:"is_interp I"
-  shows "continuous_on UNIV (\<lambda>(t,b). blinfun_vec (\<lambda>i::('sz::{finite,linorder}). if i = vid1 then Blinfun(\<lambda>b'. FunctionFrechet I fid1 (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b)
-                                     (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) b b')) else 0))"
-    apply(simp add: split_beta' )
-    apply(rule continuous_blinfun_vec'')
-    subgoal for i
-      apply(cases "i = vid1")
-      apply auto
-      defer apply (rule continuous_on_const)
-      proof -
-        have free:"dfree (Function fid1 (\<lambda>i. if i = vid1 then (Var vid1) else Const 0))" by (auto simp add: dfree_Const)
-        have eq:"\<And>x b'. (blin_frechet (good_interp I) (simple_term ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) x b' = 
-          (THE f'. \<forall>x. (Functions I fid1 has_derivative f' x) (at x))
-                         (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) x)
-                         (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) x b')"
-          apply(auto)
-          using frechet_continuous[OF good_interp free] good_interp free bounded_linear_Blinfun_apply good_interp_inverse simple_term_inverse
-          by (simp add: good_interp_inverse simple_term_inverse)
-        have bounded_linear:"\<And>b. bounded_linear (\<lambda>b'. (THE f'. \<forall>x. (Functions I fid1 has_derivative f' x) (at x))
-                         (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) b)
-                         (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) b b'))"
-          using frechet_linear[OF good_interp free] by auto
-        have eq':"(\<lambda>x. Blinfun (\<lambda>b'. (THE f'. \<forall>x. (Functions I fid1 has_derivative f' x) (at x))
-                         (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (snd x))
-                         (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) (snd x) b'))) 
-                      = (\<lambda>(t,b). (blin_frechet (good_interp I) (simple_term ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) b)"
-          apply(simp add: split_beta')
-          apply(rule ext)
-          apply(rule blinfun_eqI)
-          using eq bounded_linear
-          by (simp add: Blinfun_inverse)
-        have "continuous_on UNIV (\<lambda>(t,b). (blin_frechet (good_interp I) (simple_term ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) b)"
-          apply(simp add: split_beta')
-          using frechet_continuous[OF good_interp free]
-          continuous_on_snd Topological_Spaces.continuous_on_compose2
-          by blast
-        then show "continuous_on UNIV
-     (\<lambda>x. Blinfun (\<lambda>b'. (THE f'. \<forall>x. (Functions I fid1 has_derivative f' x) (at x))
-                         (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) x)
-                         (\<chi> i. frechet I (if i = vid1 then trm.Var vid1 else Const 0) x b')))"
-          apply (auto simp add: split_beta')
-          sorry
-        qed
-        sorry
-*)
+    using con by auto    *)
+
 (*  
 g(x)\<ge> h(x) \<rightarrow> p(x) \<and> [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c]g(x) \<ge> h(x)
 *)
@@ -1435,23 +1330,9 @@ lemma DG_valid:"valid DGaxiom"
     have fsafe:"fsafe (p1 vid1 vid1)" 
       by(auto simp add: p1_def dfree_Const)
     have osafe2:"osafe (OProd (OSing vid1 (f1 fid1 vid1)) (OSing vid2 (Plus (Times (f1 fid2 vid1) (trm.Var vid2)) (f1 fid3 vid1))))"
-      apply(auto simp add: f1_def expand_singleton)
-      apply(rule osafe_Prod)
-      apply(rule osafe_Sing)
-      apply(rule dfree_Fun)
-      subgoal for i by (auto simp add: dfree_Const)
-      apply(rule osafe_Sing)
-      apply(rule dfree_Plus)
-      apply(rule dfree_Times)
-      apply(rule dfree_Fun)
-      subgoal for i by (auto simp add: dfree_Const)
-      apply(rule dfree_Var)
-      apply(rule dfree_Fun)
-      subgoal for i by (auto simp add: dfree_Const)
-      by (auto simp add: vne12)
+      by(auto simp add: f1_def expand_singleton osafe.intros dfree.intros vne12)
     note sem = ode_alt_sem[OF osafe fsafe]
     note sem2 = ode_alt_sem[OF osafe2 fsafe]
-
     have p2safe:"fsafe (p1 vid2 vid1)" by(auto simp add: p1_def dfree_Const)
     show "valid DGaxiom"
     apply(auto simp  del: prog_sem.simps(8) simp add: DGaxiom_def valid_def sem sem2)
@@ -1948,7 +1829,7 @@ lemma DG_valid:"valid DGaxiom"
         have sol_deriv_orig:"\<And>s. s\<in>?ivl \<Longrightarrow>  (?flow has_derivative (\<lambda>xa. xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0))) (at s within ?ivl)"
           using sol_old apply simp
           apply(drule solves_odeD(1))
-          by (auto simp add: has_vderiv_on_def has_vector_derivative_def) (* (\<lambda>xa. (xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0)) $ i) *)
+          by (auto simp add: has_vderiv_on_def has_vector_derivative_def)
         have sol_eta:"(\<lambda>t. \<chi> i. ?flow t $ i) = ?flow" by(rule ext, rule vec_extensionality, auto)
         have sol_deriv_eq1:"\<And>s i. (\<lambda>xa. xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0)) = (\<lambda>xa. \<chi> i. xa * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0))"
           by(rule ext, rule vec_extensionality, auto)
