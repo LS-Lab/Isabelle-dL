@@ -86,16 +86,7 @@ and ('a, 'b, 'c) formula =
  * (the semantics of) formulas, thus C(\<phi>) is another formula. While not necessary
  * in terms of expressiveness, contexts allow for more efficient reasoning principles. *)
 | InContext 'b "('a, 'b, 'c) formula"
-  
-named_theorems "expr_diseq" "Structural disequality rules for expressions"  
-lemma [expr_diseq]:"p \<noteq> And p q" by(induction p, auto)
-lemma [expr_diseq]:"q \<noteq> And p q" by(induction q, auto)
-lemma [expr_diseq]:"p \<noteq> Not p" by(induction p, auto)
-lemma [expr_diseq]:"p \<noteq> Exists x p" by(induction p, auto)
-lemma [expr_diseq]:"p \<noteq> Diamond a p" by(induction p, auto)
-lemma [expr_diseq]:"p \<noteq> InContext C p" by(induction p, auto)
-  
-  
+    
 (* Derived forms *)
 definition Or :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" (infixl "||" 7)
   where "Or P Q = Not (And (Not P) (Not Q))"
@@ -123,6 +114,18 @@ definition TT ::"('a,'b,'c) formula"
 
 definition FF ::"('a,'b,'c) formula" 
   where "FF = Geq (Const 0) (Const 1)"
+
+named_theorems "expr_diseq" "Structural disequality rules for expressions"  
+lemma [expr_diseq]:"p \<noteq> And p q" by(induction p, auto)
+lemma [expr_diseq]:"q \<noteq> And p q" by(induction q, auto)
+lemma [expr_diseq]:"p \<noteq> Not p" by(induction p, auto)
+lemma [expr_diseq]:"p \<noteq> Or p q" sorry
+lemma [expr_diseq]:"q \<noteq> Or p q" sorry
+lemma [expr_diseq]:"p \<noteq> Implies p q" sorry 
+lemma [expr_diseq]:"q \<noteq> Implies p q" sorry
+lemma [expr_diseq]:"p \<noteq> Exists x p" by(induction p, auto)
+lemma [expr_diseq]:"p \<noteq> Diamond a p" by(induction p, auto)
+lemma [expr_diseq]:"p \<noteq> InContext C p" by(induction p, auto)
 
 (* A predicational is like a context with no argument, i.e. a variable standing for a 
  * state-dependent formula, given meaning by the interpretation. This differs from a predicate

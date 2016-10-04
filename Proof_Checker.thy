@@ -38,6 +38,9 @@ where "sound R \<longleftrightarrow> (\<forall>I. is_interp I \<longrightarrow> 
 lemma soundI:"(\<And>I. is_interp I \<Longrightarrow> (\<And>i. i \<ge> 0 \<Longrightarrow> i < length SG \<Longrightarrow> seq_sem I (nth SG i) = UNIV) \<Longrightarrow> seq_sem I G = UNIV) \<Longrightarrow> sound (SG,G)"
   unfolding sound_def by auto
 
+lemma soundI':"(\<And>I \<nu>. is_interp I \<Longrightarrow> (\<And>i . i \<ge> 0 \<Longrightarrow> i < length SG \<Longrightarrow> \<nu> \<in> seq_sem I (nth SG i)) \<Longrightarrow> \<nu> \<in> seq_sem I G) \<Longrightarrow> sound (SG,G)"
+  unfolding sound_def by auto
+
 fun start_proof::"('sf,'sc,'sz) sequent \<Rightarrow> ('sf,'sc,'sz) rule"
 where "start_proof S = ([S], S)"
   
@@ -165,7 +168,7 @@ where "closeI L i = close L (nth L i)"
 fun Lrule_result :: "lrule \<Rightarrow> nat \<Rightarrow> ('sf, 'sc, 'sz) sequent \<Rightarrow> ('sf, 'sc, 'sz) sequent list"
 where "Lrule_result AndL j (A,S) = (case (nth A j) of And p q \<Rightarrow> [(close ([p, q] @ A) (nth A j), S)])"
   | "Lrule_result ImplyL j (A,S) = (case (nth A j) of Not (And (Not q) (Not (Not p))) \<Rightarrow> 
-     [(close (q # A) (nth A j), S), (close (p # S) (nth A j), S)])"
+     [(close (q # A) (nth A j), S), (close A (nth A j), p # S)])"
   
 (* Note: Some of the pattern-matching here is... interesting. The reason for this is that we can only
    match on things in the base grammar, when we would quite like to check things in the derived grammar.
@@ -199,7 +202,7 @@ where "proof_result (D,S) = deriv_result (start_proof D) S"
 inductive lrule_ok ::"('sf,'sc,'sz) sequent list \<Rightarrow> ('sf,'sc,'sz) sequent \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> lrule \<Rightarrow> bool"
 where
   Lrule_And:"\<And>p q. nth (fst (nth SG i)) j = (p && q) \<Longrightarrow> lrule_ok SG C i j AndL"
-| Lrule_Imply:"\<And>p q. nth (fst (nth SG i)) j = (p \<rightarrow> q) \<Longrightarrow> lrule_ok SG C i j AndL"
+| Lrule_Imply:"\<And>p q. nth (fst (nth SG i)) j = (p \<rightarrow> q) \<Longrightarrow> lrule_ok SG C i j ImplyL"
 
 inductive rrule_ok ::"('sf,'sc,'sz) rule \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> rrule \<Rightarrow> bool"
 where
@@ -257,7 +260,10 @@ lemma sound_weaken:"\<And>SG SGS C. sound (SGS, C) \<Longrightarrow> sound (SG #
     done
   done
 
-lemma sound_weaken_app:"\<And>SG SGS C. sound (SG, C) \<Longrightarrow> sound (SG @ SGS, C)"
+lemma sound_weaken_appR:"\<And>SG SGS C. sound (SG, C) \<Longrightarrow> sound (SG @ SGS, C)"
+  sorry
+
+lemma sound_weaken_appL:"\<And>SG SGS C. sound (SGS, C) \<Longrightarrow> sound (SG @ SGS, C)"
   sorry
 
 lemma fml_seq_valid:"valid \<phi> \<Longrightarrow> seq_valid ([], [\<phi>])"
@@ -280,6 +286,9 @@ lemma close_nonmember:"(\<not>(List.member B a) \<Longrightarrow> seq_valid (B, 
 
 lemma close_app_neq:"List.member A x \<Longrightarrow> x \<noteq> a \<Longrightarrow> close (A @ B) a \<noteq> B" sorry
 
+lemma close_nonmember_eq:"\<not>(List.member A a) \<Longrightarrow> close A a = A"
+  sorry
+
 named_theorems member_intros "Prove that stuff is in lists"
 
 lemma mem_sing[member_intros]:"\<And>x. List.member [x] x" sorry
@@ -291,6 +300,24 @@ lemma member_singD:"\<And>x P. P x \<Longrightarrow> (\<And>y. List.member [x] y
 
 lemma fst_neq:"A \<noteq> B \<Longrightarrow> (A,C) \<noteq> (B,D)"
   by auto
+
+lemma seq_semI:"((\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>) \<Longrightarrow> List.member \<Delta> \<psi> \<Longrightarrow> \<nu> \<in> fml_sem I \<psi>) \<Longrightarrow> \<nu> \<in> seq_sem I (\<Gamma>,\<Delta>)"
+  sorry
+
+lemma seq_semI':"(\<nu> \<in> fml_sem I (fold And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (fold Or \<Delta> FF)) \<Longrightarrow> \<nu> \<in> seq_sem I (\<Gamma>,\<Delta>)"
+  sorry
+
+lemma seq_MP:"\<nu> \<in> seq_sem I (\<Gamma>,\<Delta>) \<Longrightarrow> \<nu> \<in> fml_sem I (fold And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (fold Or \<Delta> FF)"
+  sorry
+
+lemma \<Gamma>_sub_sem:"sublist \<Gamma>1 \<Gamma>2 \<Longrightarrow> \<nu> \<in> fml_sem I (fold And \<Gamma>2 TT) \<Longrightarrow> \<nu> \<in> fml_sem I (fold And \<Gamma>1 TT)"
+  sorry
+
+lemma close_sub:"sublist (close \<Gamma> \<phi>) \<Gamma>"
+  sorry
+
+lemma close_app_comm:"close (A @ B) x  = close A x @ close B x"
+  sorry
 
 lemma lrule_sound: "lrule_ok SG C i j L \<Longrightarrow> i < length SG \<Longrightarrow> sound (SG,C) \<Longrightarrow> sound (close (append SG (Lrule_result L j (nth SG i))) (nth SG i), C)"
 proof(induction rule: lrule_ok.induct)
@@ -316,14 +343,98 @@ proof(induction rule: lrule_ok.induct)
       using cool AIjeq by auto
    show "?case"
     apply(rule close_provable_sound)
-    apply(rule sound_weaken_app)
+    apply(rule sound_weaken_appR)
     apply(rule sound)
     using res_sound SG_dec by auto
 next
   case (Lrule_Imply SG i j C p q)
-  then show ?case sorry
+    have implyL_simp:"\<And>AI SI SS p q. 
+      (nth AI  j) = (Not (And (Not q) (Not (Not p)))) \<Longrightarrow> 
+      (AI,SI) = SS \<Longrightarrow> 
+      Lrule_result ImplyL j SS = [(close (q # AI) (nth AI j), SI), (close AI (nth AI j), p # SI)]"
+      subgoal for AI SI SS p q apply(cases SS) by auto done
+    assume eq:"fst (SG ! i) ! j = (p \<rightarrow> q)"
+    assume sound:"sound (SG, C)"
+    obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)"
+      by (metis seq2fml.cases)
+    have res_eq:"Lrule_result ImplyL j (SG ! i) = 
+      [(close (q # \<Gamma>) (nth \<Gamma> j), \<Delta>), 
+       (close \<Gamma> (nth \<Gamma> j), p # \<Delta>)]"
+      apply(rule implyL_simp)
+      using SG_dec eq Implies_def Or_def 
+      by (metis fstI)+
+    have AIjeq:"\<Gamma> ! j = (*(Not (And (Not q) (Not (Not p))))*) (p \<rightarrow> q)" 
+      using SG_dec eq unfolding Implies_def Or_def
+      by (metis fst_conv)
+    have big_sound:"sound ([(close (q # \<Gamma>) (p \<rightarrow> q), \<Delta>), (close \<Gamma> (p \<rightarrow> q), p # \<Delta>)], (\<Gamma>,\<Delta>))"
+      apply(rule soundI')
+      apply(rule seq_semI')
+      proof -
+        fix I::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+        assume good:"is_interp I"
+        assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow>
+                 i < length [(close (q # \<Gamma>) (p \<rightarrow> q), \<Delta>), (close \<Gamma> (p \<rightarrow> q), p # \<Delta>)] \<Longrightarrow>
+                 \<nu> \<in> seq_sem I ([(close (q # \<Gamma>) (p \<rightarrow> q), \<Delta>), (close \<Gamma> (p \<rightarrow> q), p # \<Delta>)] ! i))"
+        have sg1:"\<nu> \<in> seq_sem I (close (q # \<Gamma>) (p \<rightarrow> q), \<Delta>)" using sgs[of 0] by auto
+        have sg2:"\<nu> \<in> seq_sem I (close \<Gamma> (p \<rightarrow> q), p # \<Delta>)" using sgs[of "Suc 0"] by auto
+        assume \<Gamma>:"\<nu> \<in> fml_sem I (fold And \<Gamma> TT)"
+        then have imp:"\<nu> \<in> fml_sem I (p \<rightarrow> q)" sorry
+        have sub:"sublist (close \<Gamma> (p \<rightarrow> q)) \<Gamma>"
+          by (rule close_sub)
+        have \<Gamma>C:"\<nu> \<in> fml_sem I (fold And (close \<Gamma> (p \<rightarrow> q)) TT)"
+          by (rule \<Gamma>_sub_sem[OF sub \<Gamma>])
+        have "\<nu> \<in> fml_sem I (fold op || (p # \<Delta>) FF)"
+          by(rule seq_MP[OF sg2 \<Gamma>C])
+        then have disj:"\<nu> \<in> fml_sem I p \<and> \<nu> \<in> fml_sem I (fold op || \<Delta> FF)"
+          apply auto 
+          apply (metis UNIV_I ff_sem fold_simps(1) impl_sem mem_to_nonempty seq2fml.simps seq_sem.simps seq_semI tt_sem)
+          using \<Gamma> seq_MP seq_semI by blast
+        { assume p:"\<nu> \<in> fml_sem I p"
+          have q:"\<nu> \<in> fml_sem I q" using p imp by simp
+          have res: "\<nu> \<in> fml_sem I (fold op || \<Delta> FF)" sorry
+          have conj:"\<nu> \<in> fml_sem I (fold op && (q # \<Gamma>) TT)"
+            using q \<Gamma> sorry
+          have conj:"\<nu> \<in> fml_sem I (fold op && (close (q # \<Gamma>) (p \<rightarrow> q)) TT)"
+            apply(rule \<Gamma>_sub_sem)
+            defer
+            apply(rule conj)
+            by(rule close_sub)
+          have \<Delta>1:"\<nu> \<in> fml_sem I (fold op || \<Delta> FF)"
+            by(rule seq_MP[OF sg1 conj])
+          }
+        then show "\<nu> \<in> fml_sem I (fold op || \<Delta> FF)"
+          using disj by auto
+      qed
+      have neq1:"close ([q] @ \<Gamma>) (p \<rightarrow> q) \<noteq> \<Gamma>"
+        apply(rule close_app_neq)
+        apply(rule mem_sing)
+        by (auto simp add: expr_diseq)
+      have neq2:"p # \<Delta> \<noteq> \<Delta>"
+        by(induction p, auto)
+      have close_eq:"close [(close (q # \<Gamma>) (p \<rightarrow> q), \<Delta>), (close \<Gamma> (p \<rightarrow> q), p # \<Delta>)] (\<Gamma>,\<Delta>) = [(close (q # \<Gamma>) (p \<rightarrow> q), \<Delta>), (close \<Gamma> (p \<rightarrow> q), p # \<Delta>)]"
+        apply(rule close_nonmember_eq)
+        apply auto
+        using neq1 neq2  
+        apply (simp add: member_rec)
+      proof -
+        assume a1: "q = (p \<rightarrow> q)"
+        assume "List.member [([y\<leftarrow>\<Gamma> . y \<noteq> q], \<Delta>), ([y\<leftarrow>\<Gamma> . y \<noteq> q], p # \<Delta>)] (\<Gamma>, \<Delta>)"
+          then have "[f\<leftarrow>\<Gamma> . f \<noteq> q] = \<Gamma>"
+        by (simp add: member_rec)
+        then show False
+          using a1 neq1 by fastforce
+      qed       
+  show ?case 
+    apply(rule close_provable_sound)
+    apply(rule sound_weaken_appR)
+    apply(rule sound)
+    apply(unfold res_eq)
+    apply(unfold AIjeq)
+    unfolding close_app_comm
+    apply (rule sound_weaken_appL)
+    using close_eq big_sound SG_dec   
+    by simp
 qed
-  sorry
 
 lemma step_sound:"step_ok R i S \<Longrightarrow> i \<ge> 0 \<Longrightarrow> i < length (fst R) \<Longrightarrow> sound R \<Longrightarrow> sound (step_result R (i,S))"
 proof(induction rule: step_ok.induct)
