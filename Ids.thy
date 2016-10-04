@@ -14,6 +14,7 @@ locale ids =
   fixes pid1 :: "('sc::finite)"
   fixes pid2 :: 'sc
   fixes pid3 :: 'sc
+  fixes pid4 :: 'sc
   assumes vne12:"vid1 \<noteq> vid2"
   assumes vne23:"vid2 \<noteq> vid3"
   assumes vne13:"vid1 \<noteq> vid3"
@@ -23,4 +24,5 @@ locale ids =
   assumes pne12:"pid1 \<noteq> pid2"
   assumes pne23:"pid2 \<noteq> pid3"
   assumes pne13:"pid1 \<noteq> pid3"
+  assumes pne34:"pid3 \<noteq> pid4"
 end

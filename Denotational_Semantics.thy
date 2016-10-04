@@ -377,6 +377,9 @@ lemma diamond_sem [simp]: "fml_sem I (Diamond \<alpha> \<phi>)
   = {\<nu>. \<exists> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<and> \<omega> \<in> fml_sem I \<phi>}"
   by auto
 
+lemma tt_sem [simp]:"fml_sem I TT = UNIV" unfolding TT_def by auto
+lemma ff_sem [simp]:"fml_sem I FF = {}" unfolding FF_def by auto
+
 lemma iff_to_impl: "((\<nu> \<in> fml_sem I A) \<longleftrightarrow> (\<nu> \<in> fml_sem I B))
   \<longleftrightarrow> (((\<nu> \<in> fml_sem I A) \<longrightarrow> (\<nu> \<in> fml_sem I B))
      \<and> ((\<nu> \<in> fml_sem I B) \<longrightarrow> (\<nu> \<in> fml_sem I A)))"

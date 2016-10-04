@@ -32,5 +32,6 @@ imports
   "./USubst"
   "./USubst_Lemma"
   "./Uniform_Renaming"
+  "./Proof_Checker"
 begin
 end

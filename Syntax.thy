@@ -110,6 +110,12 @@ definition Greater :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a
 definition Box :: "('a, 'b, 'c) hp \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" ("([[_]]_)" 10)
   where "Box \<alpha> P = Not (Diamond \<alpha> (Not P))"
   
+definition TT ::"('a,'b,'c) formula" 
+  where "TT = Geq (Const 0) (Const 0)"
+
+definition FF ::"('a,'b,'c) formula" 
+  where "FF = Geq (Const 0) (Const 1)"
+
 (* A predicational is like a context with no argument, i.e. a variable standing for a 
  * state-dependent formula, given meaning by the interpretation. This differs from a predicate
  * because predicates depend only on their arguments (which might then indirectly depend on the state).
