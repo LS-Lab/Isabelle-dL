@@ -21,7 +21,7 @@ type_synonym ('a,'b,'c) sequent = "('a,'b,'c) formula list * ('a,'b,'c) formula 
 
 fun seq2fml :: "('a,'b,'c) sequent \<Rightarrow> ('a,'b,'c) formula"
 where
-  "seq2fml (ante,succ) = Implies (fold And ante TT) (fold Or succ FF)"
+  "seq2fml (ante,succ) = Implies (foldr And ante TT) (foldr Or succ FF)"
   
 fun seq_sem ::"('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sc, 'sz) sequent \<Rightarrow> 'sz state set"
 where "seq_sem I S = fml_sem I (seq2fml S)"
@@ -301,16 +301,20 @@ lemma member_singD:"\<And>x P. P x \<Longrightarrow> (\<And>y. List.member [x] y
 lemma fst_neq:"A \<noteq> B \<Longrightarrow> (A,C) \<noteq> (B,D)"
   by auto
 
+lemma and_foldl_sem:"\<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> (\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>)"
+  by(induction \<Gamma>, auto simp add: member_rec)
+    
 lemma seq_semI:"((\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>) \<Longrightarrow> List.member \<Delta> \<psi> \<Longrightarrow> \<nu> \<in> fml_sem I \<psi>) \<Longrightarrow> \<nu> \<in> seq_sem I (\<Gamma>,\<Delta>)"
+  apply auto
   sorry
 
-lemma seq_semI':"(\<nu> \<in> fml_sem I (fold And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (fold Or \<Delta> FF)) \<Longrightarrow> \<nu> \<in> seq_sem I (\<Gamma>,\<Delta>)"
+lemma seq_semI':"(\<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr Or \<Delta> FF)) \<Longrightarrow> \<nu> \<in> seq_sem I (\<Gamma>,\<Delta>)"
+  by auto 
+
+lemma seq_MP:"\<nu> \<in> seq_sem I (\<Gamma>,\<Delta>) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr Or \<Delta> FF)"
   sorry
 
-lemma seq_MP:"\<nu> \<in> seq_sem I (\<Gamma>,\<Delta>) \<Longrightarrow> \<nu> \<in> fml_sem I (fold And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (fold Or \<Delta> FF)"
-  sorry
-
-lemma \<Gamma>_sub_sem:"sublist \<Gamma>1 \<Gamma>2 \<Longrightarrow> \<nu> \<in> fml_sem I (fold And \<Gamma>2 TT) \<Longrightarrow> \<nu> \<in> fml_sem I (fold And \<Gamma>1 TT)"
+lemma \<Gamma>_sub_sem:"sublist \<Gamma>1 \<Gamma>2 \<Longrightarrow> \<nu> \<in> fml_sem I (foldr And \<Gamma>2 TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr And \<Gamma>1 TT)"
   sorry
 
 lemma close_sub:"sublist (close \<Gamma> \<phi>) \<Gamma>"
@@ -319,7 +323,11 @@ lemma close_sub:"sublist (close \<Gamma> \<phi>) \<Gamma>"
 lemma close_app_comm:"close (A @ B) x  = close A x @ close B x"
   sorry
 
-lemma lrule_sound: "lrule_ok SG C i j L \<Longrightarrow> i < length SG \<Longrightarrow> sound (SG,C) \<Longrightarrow> sound (close (append SG (Lrule_result L j (nth SG i))) (nth SG i), C)"
+lemma nth_member:"n < List.length L \<Longrightarrow> List.member L (List.nth L n)"
+  apply(induction L, auto simp add: member_rec)
+  by (metis in_set_member length_Cons nth_mem set_ConsD)
+
+lemma lrule_sound: "lrule_ok SG C i j L \<Longrightarrow> 0 \<le> i \<Longrightarrow> i < length SG \<Longrightarrow> j \<ge> 0 \<Longrightarrow> j < length (fst (SG ! i)) \<Longrightarrow> sound (SG,C) \<Longrightarrow> sound (close (append SG (Lrule_result L j (nth SG i))) (nth SG i), C)"
 proof(induction rule: lrule_ok.induct)
   case (Lrule_And SG i j C p q)
     assume eq:"fst (SG ! i) ! j = (p && q)"
@@ -354,6 +362,10 @@ next
       Lrule_result ImplyL j SS = [(close (q # AI) (nth AI j), SI), (close AI (nth AI j), p # SI)]"
       subgoal for AI SI SS p q apply(cases SS) by auto done
     assume eq:"fst (SG ! i) ! j = (p \<rightarrow> q)"
+    assume i0:"0 \<le> i"
+    assume iL:"i < length SG"
+    assume j0:"j \<ge> 0"
+    assume jL:"j < length (fst (SG ! i))"
     assume sound:"sound (SG, C)"
     obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)"
       by (metis seq2fml.cases)
@@ -363,7 +375,7 @@ next
       apply(rule implyL_simp)
       using SG_dec eq Implies_def Or_def 
       by (metis fstI)+
-    have AIjeq:"\<Gamma> ! j = (*(Not (And (Not q) (Not (Not p))))*) (p \<rightarrow> q)" 
+    have AIjeq:"\<Gamma> ! j = (p \<rightarrow> q)" 
       using SG_dec eq unfolding Implies_def Or_def
       by (metis fst_conv)
     have big_sound:"sound ([(close (q # \<Gamma>) (p \<rightarrow> q), \<Delta>), (close \<Gamma> (p \<rightarrow> q), p # \<Delta>)], (\<Gamma>,\<Delta>))"
@@ -377,32 +389,38 @@ next
                  \<nu> \<in> seq_sem I ([(close (q # \<Gamma>) (p \<rightarrow> q), \<Delta>), (close \<Gamma> (p \<rightarrow> q), p # \<Delta>)] ! i))"
         have sg1:"\<nu> \<in> seq_sem I (close (q # \<Gamma>) (p \<rightarrow> q), \<Delta>)" using sgs[of 0] by auto
         have sg2:"\<nu> \<in> seq_sem I (close \<Gamma> (p \<rightarrow> q), p # \<Delta>)" using sgs[of "Suc 0"] by auto
-        assume \<Gamma>:"\<nu> \<in> fml_sem I (fold And \<Gamma> TT)"
-        then have imp:"\<nu> \<in> fml_sem I (p \<rightarrow> q)" sorry
+        assume \<Gamma>:"\<nu> \<in> fml_sem I (foldr And \<Gamma> TT)"
+        have \<Gamma>_proj:"\<And>\<phi> \<Gamma>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>"
+          apply(induction \<Gamma>, auto simp add: member_rec)
+          using and_foldl_sem by blast
+        have imp:"\<nu> \<in> fml_sem I (p \<rightarrow> q)" 
+          apply(rule \<Gamma>_proj[of \<Gamma>])
+          using AIjeq j0 jL SG_dec nth_member
+          apply (metis fst_conv)
+          by (rule \<Gamma>)
         have sub:"sublist (close \<Gamma> (p \<rightarrow> q)) \<Gamma>"
           by (rule close_sub)
-        have \<Gamma>C:"\<nu> \<in> fml_sem I (fold And (close \<Gamma> (p \<rightarrow> q)) TT)"
+        have \<Gamma>C:"\<nu> \<in> fml_sem I (foldr And (close \<Gamma> (p \<rightarrow> q)) TT)"
           by (rule \<Gamma>_sub_sem[OF sub \<Gamma>])
-        have "\<nu> \<in> fml_sem I (fold op || (p # \<Delta>) FF)"
+        have "\<nu> \<in> fml_sem I (foldr op || (p # \<Delta>) FF)"
           by(rule seq_MP[OF sg2 \<Gamma>C])
-        then have disj:"\<nu> \<in> fml_sem I p \<and> \<nu> \<in> fml_sem I (fold op || \<Delta> FF)"
-          apply auto 
-          apply (metis UNIV_I ff_sem fold_simps(1) impl_sem mem_to_nonempty seq2fml.simps seq_sem.simps seq_semI tt_sem)
-          using \<Gamma> seq_MP seq_semI by blast
+        then have disj:"\<nu> \<in> fml_sem I p \<or> \<nu> \<in> fml_sem I (foldr op || \<Delta> FF)"
+          by auto 
         { assume p:"\<nu> \<in> fml_sem I p"
           have q:"\<nu> \<in> fml_sem I q" using p imp by simp
-          have res: "\<nu> \<in> fml_sem I (fold op || \<Delta> FF)" sorry
-          have conj:"\<nu> \<in> fml_sem I (fold op && (q # \<Gamma>) TT)"
-            using q \<Gamma> sorry
-          have conj:"\<nu> \<in> fml_sem I (fold op && (close (q # \<Gamma>) (p \<rightarrow> q)) TT)"
+          have res: "\<nu> \<in> fml_sem I (foldr op || \<Delta> FF)" 
+            using disj \<Gamma> seq_semI by auto
+          have conj:"\<nu> \<in> fml_sem I (foldr op && (q # \<Gamma>) TT)"
+            using q \<Gamma> by auto
+          have conj:"\<nu> \<in> fml_sem I (foldr op && (close (q # \<Gamma>) (p \<rightarrow> q)) TT)"
             apply(rule \<Gamma>_sub_sem)
             defer
             apply(rule conj)
             by(rule close_sub)
-          have \<Delta>1:"\<nu> \<in> fml_sem I (fold op || \<Delta> FF)"
+          have \<Delta>1:"\<nu> \<in> fml_sem I (foldr op || \<Delta> FF)"
             by(rule seq_MP[OF sg1 conj])
           }
-        then show "\<nu> \<in> fml_sem I (fold op || \<Delta> FF)"
+        then show "\<nu> \<in> fml_sem I (foldr op || \<Delta> FF)"
           using disj by auto
       qed
       have neq1:"close ([q] @ \<Gamma>) (p \<rightarrow> q) \<noteq> \<Gamma>"
