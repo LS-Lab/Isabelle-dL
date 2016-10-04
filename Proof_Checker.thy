@@ -278,12 +278,16 @@ lemma closeI_valid_sound:"\<And>i. sound (SG, C) \<Longrightarrow> seq_valid (nt
 lemma close_nonmember:"(\<not>(List.member B a) \<Longrightarrow> seq_valid (B, [a]) \<Longrightarrow> sound ([(close (B @ A) a,SI)], (A,SI)))"
   sorry
 
-lemma mem_sing:"\<And>x. List.member [x] x" sorry
-lemma mem_appR:"\<And>A B x. List.member B x \<Longrightarrow> List.member (A @ B) x" sorry
-lemma mem_filter:"\<And>A P x. P x \<Longrightarrow> List.member A x \<Longrightarrow> List.member (filter P A) x"
-    sorry
-lemma close_app_neq:"List.member A x \<Longrightarrow> x \<noteq> a \<Longrightarrow> close (A @ B) a \<noteq> B"
-  sorry
+lemma close_app_neq:"List.member A x \<Longrightarrow> x \<noteq> a \<Longrightarrow> close (A @ B) a \<noteq> B" sorry
+
+named_theorems member_intros "Prove that stuff is in lists"
+
+lemma mem_sing[member_intros]:"\<And>x. List.member [x] x" sorry
+lemma mem_appR[member_intros]:"\<And>A B x. List.member B x \<Longrightarrow> List.member (A @ B) x" sorry
+lemma mem_filter[member_intros]:"\<And>A P x. P x \<Longrightarrow> List.member A x \<Longrightarrow> List.member (filter P A) x" sorry
+
+lemma member_singD:"\<And>x P. P x \<Longrightarrow> (\<And>y. List.member [x] y \<Longrightarrow> P y)"
+  by (metis member_rec(1) member_rec(2))
 
 lemma fst_neq:"A \<noteq> B \<Longrightarrow> (A,C) \<noteq> (B,D)"
   by auto
@@ -292,38 +296,21 @@ lemma lrule_sound: "lrule_ok SG C i j L \<Longrightarrow> i < length SG \<Longri
 proof(induction rule: lrule_ok.induct)
   case (Lrule_And SG i j C p q)
     assume eq:"fst (SG ! i) ! j = (p && q)"
-    assume "i < length SG"
     assume sound:"sound (SG, C)"
     obtain AI and SI where SG_dec:"(AI,SI) = (SG ! i)"
       by (metis seq2fml.cases)
     have AIjeq:"AI ! j = (p && q)" using SG_dec eq
       by (metis fst_conv)
-    have obvious:"p \<noteq> (Syntax.And p q)" sorry
-    have not_mem:" \<not> List.member [p, q] (And p q)" apply (auto simp add: member_rec) sorry
-    have true:"sound ([(close ([p, q] @ AI) (p && q),SI)], (AI,SI))"
-      apply(rule close_nonmember)
-      subgoal by (rule not_mem)
-      unfolding seq_valid_def by auto
-    have member_singD:"\<And>x P. P x \<Longrightarrow> (\<And>y. List.member [x] y \<Longrightarrow> P y)"
-      by (metis member_rec(1) member_rec(2))
-    have mems:"\<And>x. List.member [(close ([p, q] @ AI) (p && q),SI)] x \<Longrightarrow> List.member ([y\<leftarrow>SG . y \<noteq> (AI, SI)] @ [y\<leftarrow> [(close ([p, q] @ AI) (p && q), SI)] . y \<noteq> (AI, SI)]) x"
-      apply(rule member_singD [of "\<lambda>y. List.member ([y\<leftarrow>SG . y \<noteq> (AI, SI)] @ [y\<leftarrow> [(close ([p, q] @ AI) (p && q), SI)] . y \<noteq> (AI, SI)]) y" "(close ([p, q] @ AI) (p && q),SI)"])
-      prefer 2
-      subgoal by assumption
-      apply(rule mem_appR)
-      apply(rule mem_filter)
-      defer
-      apply(rule mem_sing)
-      apply(rule fst_neq)
-      apply(rule close_app_neq[of "[p, q]" p "p && q" AI])
-      subgoal by(auto simp add: member_rec)
-      using obvious by blast  
-     have sub:"sublist [(close ([p, q] @ AI) (p && q),SI)] ([y\<leftarrow>SG . y \<noteq> (AI, SI)] @ [y\<leftarrow> [(close (p # q # AI) (p && q), SI)] . y \<noteq> (AI, SI)])"
+    have sub:"sublist [(close ([p, q] @ AI) (p && q),SI)] ([y\<leftarrow>SG . y \<noteq> (AI, SI)] @ [y\<leftarrow> [(close (p # q # AI) (p && q), SI)] . y \<noteq> (AI, SI)])"
       apply (rule sublistI)
-      using mems by auto
+      using member_singD [of "\<lambda>y. List.member ([y\<leftarrow>SG . y \<noteq> (AI, SI)] @ [y\<leftarrow> [(close ([p, q] @ AI) (p && q), SI)] . y \<noteq> (AI, SI)]) y" "(close ([p, q] @ AI) (p && q),SI)"]
+      using close_app_neq[of "[p, q]" p "p && q" AI] 
+      by(auto intro: member_intros fst_neq simp add: member_rec expr_diseq )
     have cool:"sound ([y\<leftarrow>SG . y \<noteq> (AI, SI)] @ [y\<leftarrow> [(close (p # q # AI) (p && q), SI)] . y \<noteq> (AI, SI)], AI, SI)"
       apply(rule sound_weaken_gen[OF sub] )
-      by(rule true)
+      apply(rule close_nonmember)
+      apply(auto simp add: member_rec expr_diseq)
+      unfolding seq_valid_def by auto
     have res_sound:"sound ([y\<leftarrow>SG . y \<noteq> (AI,SI)] @ [y\<leftarrow>Lrule_result AndL j (AI,SI) . y \<noteq> (AI,SI)],(AI,SI))"
       apply (simp)
       using cool AIjeq by auto
@@ -331,9 +318,7 @@ proof(induction rule: lrule_ok.induct)
     apply(rule close_provable_sound)
     apply(rule sound_weaken_app)
     apply(rule sound)
-    using SG_dec apply(auto simp add: eq SG_dec)
-    using res_sound SG_dec eq by auto
-   
+    using res_sound SG_dec by auto
 next
   case (Lrule_Imply SG i j C p q)
   then show ?case sorry

@@ -87,6 +87,14 @@ and ('a, 'b, 'c) formula =
  * in terms of expressiveness, contexts allow for more efficient reasoning principles. *)
 | InContext 'b "('a, 'b, 'c) formula"
   
+named_theorems "expr_diseq" "Structural disequality rules for expressions"  
+lemma [expr_diseq]:"p \<noteq> And p q" by(induction p, auto)
+lemma [expr_diseq]:"q \<noteq> And p q" by(induction q, auto)
+lemma [expr_diseq]:"p \<noteq> Not p" by(induction p, auto)
+lemma [expr_diseq]:"p \<noteq> Exists x p" by(induction p, auto)
+lemma [expr_diseq]:"p \<noteq> Diamond a p" by(induction p, auto)
+lemma [expr_diseq]:"p \<noteq> InContext C p" by(induction p, auto)
+  
   
 (* Derived forms *)
 definition Or :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" (infixl "||" 7)
@@ -121,7 +129,7 @@ definition FF ::"('a,'b,'c) formula"
  * because predicates depend only on their arguments (which might then indirectly depend on the state).
  * We encode a predicational as a context applied to a formula whose truth value is constant with
  * respect to the state (specifically, always true)*)
-fun Predicational :: "'b \<Rightarrow> ('a, 'b, 'c) formula"
+fun Predicational :: "'b \<Rightarrow> ('a, 'b, 'c) formula" ("Pc")
   where "Predicational P = InContext P (Geq (Const 0) (Const 0))"
 
 (* Abbreviations for common syntactic constructs in order to make axiom definitions, etc. more
