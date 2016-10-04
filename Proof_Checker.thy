@@ -33,16 +33,16 @@ where "seq_valid S \<equiv> \<forall>I. is_interp I \<longrightarrow> seq_sem I 
 type_synonym ('a,'b,'c) rule = "('a,'b,'c) sequent list * ('a,'b,'c) sequent"
   
 definition sound :: "('sf, 'sc, 'sz) rule \<Rightarrow> bool"
-where "sound R \<longleftrightarrow> (\<forall>I. is_interp I \<longrightarrow> (\<forall>i. i \<in> {0..(length (fst R)-1)} \<longrightarrow> seq_sem I (nth (fst R) i) = UNIV) \<longrightarrow> seq_sem I (snd R) = UNIV)"
+where "sound R \<longleftrightarrow> (\<forall>I. is_interp I \<longrightarrow> (\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst R) \<longrightarrow> seq_sem I (nth (fst R) i) = UNIV) \<longrightarrow> seq_sem I (snd R) = UNIV)"
 
-lemma soundI:"(\<And>I. is_interp I \<Longrightarrow> (\<And>i. i \<in> {0..(length SG-1)} \<Longrightarrow> seq_sem I (nth SG i) = UNIV) \<Longrightarrow> seq_sem I G = UNIV) \<Longrightarrow> sound (SG,G)"
+lemma soundI:"(\<And>I. is_interp I \<Longrightarrow> (\<And>i. i \<ge> 0 \<Longrightarrow> i < length SG \<Longrightarrow> seq_sem I (nth SG i) = UNIV) \<Longrightarrow> seq_sem I G = UNIV) \<Longrightarrow> sound (SG,G)"
   unfolding sound_def by auto
 
 fun start_proof::"('sf,'sc,'sz) sequent \<Rightarrow> ('sf,'sc,'sz) rule"
 where "start_proof S = ([S], S)"
   
-lemma start_proof_sound:"seq_valid S \<Longrightarrow> sound (start_proof S)"
-  unfolding sound_def seq_valid_def by auto
+lemma start_proof_sound:"sound (start_proof S)"
+  unfolding sound_def by auto
   
 datatype axiom =
     AloopIter | AI | Atest | Abox | Achoice | AK | AV | Aassign
@@ -70,6 +70,63 @@ where
 | "get_axiom ADIGr = DIGraxiom"
 | "get_axiom ADG = DGaxiom"
   
+  lemma axiom_valid:"valid (get_axiom a)"
+proof (cases a)
+  case AloopIter
+  then show ?thesis by (simp add: loop_valid) 
+next
+  case AI
+  then show ?thesis by (simp add: I_valid)
+next
+  case Atest
+  then show ?thesis by (simp add: test_valid)
+next
+  case Abox
+  then show ?thesis by (simp add: box_valid)
+next
+  case Achoice
+  then show ?thesis by (simp add: choice_valid)
+next
+  case AK
+  then show ?thesis by (simp add: K_valid)
+next
+  case AV
+  then show ?thesis by (simp add: V_valid)
+next
+  case Aassign
+  then show ?thesis by (simp add: assign_valid)
+next
+  case AdConst
+  then show ?thesis by (simp add: diff_const_axiom_valid)
+next
+  case AdPlus
+  then show ?thesis by (simp add: diff_plus_axiom_valid)
+next
+  case AdMult
+  then show ?thesis by (simp add: diff_times_axiom_valid)
+next
+  case ADW
+  then show ?thesis by (simp add: DW_valid)
+next
+  case ADE
+  then show ?thesis by (simp add: DE_valid)
+next
+  case ADC
+  then show ?thesis by (simp add: DC_valid)
+next
+  case ADS
+  then show ?thesis by (simp add: DS_valid)
+next
+  case ADIGeq
+  then show ?thesis by (simp add: DIGeq_valid)
+next
+  case ADIGr
+  then show ?thesis by (simp add: DIGr_valid)
+next
+  case ADG
+  then show ?thesis by (simp add: DG_valid)
+qed
+
 datatype rrule = ImplyR | AndR | CohideR | CohideRR
 datatype lrule = ImplyL | AndL
   
@@ -99,36 +156,36 @@ where "seq_to_string (A,S) = join '', '' (map fml_to_string A) @ '' |- '' @ join
 fun rule_to_string :: "('sf, 'sc, 'sz) rule \<Rightarrow> char list"
 where "rule_to_string (SG, C) = (join '';;   '' (map seq_to_string SG)) @ ''            '' @  (*[char_of_nat 10] @ *)seq_to_string C"
 
-fun close :: "'a list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a list"
-where 
-  "close (SG # SGs) 0 m = SGs"
-| "close (SG # SGs) (Suc n) m = SG # (close SGs n m)"
-| "close _ _ _ = undefined"
+fun close :: "'a list \<Rightarrow> 'a \<Rightarrow>'a list"
+where "close L x = filter (\<lambda>y. y \<noteq> x) L"
 
+fun closeI ::"'a list \<Rightarrow> nat \<Rightarrow>'a list"
+where "closeI L i = close L (nth L i)"
+  
 fun Lrule_result :: "lrule \<Rightarrow> nat \<Rightarrow> ('sf, 'sc, 'sz) sequent \<Rightarrow> ('sf, 'sc, 'sz) sequent list"
-where "Lrule_result AndL j (A,S) = (case (nth A j) of And p q \<Rightarrow> [(p # q # (close A j (length A)), S)])"
+where "Lrule_result AndL j (A,S) = (case (nth A j) of And p q \<Rightarrow> [(close ([p, q] @ A) (nth A j), S)])"
   | "Lrule_result ImplyL j (A,S) = (case (nth A j) of Not (And (Not q) (Not (Not p))) \<Rightarrow> 
-     [(q # (close A j (length A)), S), (close A j (length A), p # S)])"
+     [(close (q # A) (nth A j), S), (close (p # S) (nth A j), S)])"
   
 (* Note: Some of the pattern-matching here is... interesting. The reason for this is that we can only
    match on things in the base grammar, when we would quite like to check things in the derived grammar.
    So all the pattern-matches have the definitions expanded, sometimes in a silly way. *)
 fun Rrule_result :: "rrule \<Rightarrow> nat \<Rightarrow> ('sf, 'sc, 'sz) sequent \<Rightarrow> ('sf, 'sc, 'sz) sequent list"
 where 
-  "Rrule_result ImplyR j (A,S) = (case (nth S j) of Not (And (Not q) (Not (Not p))) \<Rightarrow> [(p # A, q # (close S j (length A)))] | _ \<Rightarrow> undefined)"
-| "Rrule_result AndR j (A,S) = (case (nth S j) of (And p q) \<Rightarrow> [(A, p # (close S j (length A))), (A, q # (close S j (length A)))])"
+  "Rrule_result ImplyR j (A,S) = (case (nth S j) of Not (And (Not q) (Not (Not p))) \<Rightarrow> [(p # A, q # (closeI S j ))] | _ \<Rightarrow> undefined)"
+| "Rrule_result AndR j (A,S) = (case (nth S j) of (And p q) \<Rightarrow> [(A, p # (closeI S j )), (A, q # (closeI S j))])"
 | "Rrule_result CohideR j (A,S) = [(A, [nth S 0])]"
 | "Rrule_result CohideRR j (A,S) = [([], [nth S 0])]"
 
 fun step_result :: "('sf, 'sc, 'sz) rule \<Rightarrow> (nat * ('sf, 'sc, 'sz) step) \<Rightarrow>  ('sf, 'sc, 'sz) rule"
 where
-  "step_result (SG,C) (i,Axiom a)   = (close SG i (length SG), C)"
-| "step_result (SG,C) (i,Lrule L j) = (append (close SG i (length SG)) (Lrule_result L j (nth SG i)), C)"
-| "step_result (SG,C) (i,Rrule L j) = (append (close SG i (length SG)) (Rrule_result L j (nth SG i)), C)" 
-| "step_result (SG,C) (i,Cut \<phi>) = (let (A,S) = nth SG i in ((\<phi> # A, S) # ((A, \<phi> # S) # (close SG i (length SG))), C))"
-| "step_result (SG,C) (i,VSubst \<phi> \<sigma>) = (close SG i (length SG), C)"
-| "step_result (SG,C) (i,CloseId j k) = (close SG i (length SG), C)"
-| "step_result (SG,C) (i,G) = (case nth SG i of (_, (Not (Diamond q (Not p))) # Nil) \<Rightarrow> (([], [p]) # close SG i (length SG), C))"
+  "step_result (SG,C) (i,Axiom a)   = (closeI SG i, C)"
+| "step_result (SG,C) (i,Lrule L j) = (close (append SG (Lrule_result L j (nth SG i))) (nth SG i), C)"
+| "step_result (SG,C) (i,Rrule L j) = (append (closeI SG i) (Rrule_result L j (nth SG i)), C)" 
+| "step_result (SG,C) (i,Cut \<phi>) = (let (A,S) = nth SG i in ((\<phi> # A, S) # ((A, \<phi> # S) # (closeI SG i)), C))"
+| "step_result (SG,C) (i,VSubst \<phi> \<sigma>) = (closeI SG i, C)"
+| "step_result (SG,C) (i,CloseId j k) = (closeI SG i, C)"
+| "step_result (SG,C) (i,G) = (case nth SG i of (_, (Not (Diamond q (Not p))) # Nil) \<Rightarrow> (([], [p]) # closeI SG i, C))"
 | "step_result R (i,S) = R"
   
 fun deriv_result :: "('sf, 'sc, 'sz) rule \<Rightarrow> ('sf, 'sc, 'sz) derivation \<Rightarrow> ('sf, 'sc, 'sz) rule"
@@ -139,10 +196,10 @@ where
 fun proof_result :: "('sf, 'sc, 'sz) pf \<Rightarrow> ('sf, 'sc, 'sz) rule"
 where "proof_result (D,S) = deriv_result (start_proof D) S"
   
-inductive lrule_ok ::"('sf,'sc,'sz) rule \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> lrule \<Rightarrow> bool"
+inductive lrule_ok ::"('sf,'sc,'sz) sequent list \<Rightarrow> ('sf,'sc,'sz) sequent \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> lrule \<Rightarrow> bool"
 where
-  Lrule_And:"\<And>p q. nth (fst (nth SG i)) j = (p && q) \<Longrightarrow> lrule_ok (SG,C) i j AndL"
-| Lrule_Imply:"\<And>p q. nth (fst (nth SG i)) j = (p \<rightarrow> q) \<Longrightarrow> lrule_ok (SG,C) i j AndL"
+  Lrule_And:"\<And>p q. nth (fst (nth SG i)) j = (p && q) \<Longrightarrow> lrule_ok SG C i j AndL"
+| Lrule_Imply:"\<And>p q. nth (fst (nth SG i)) j = (p \<rightarrow> q) \<Longrightarrow> lrule_ok SG C i j AndL"
 
 inductive rrule_ok ::"('sf,'sc,'sz) rule \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> rrule \<Rightarrow> bool"
 where
@@ -154,7 +211,7 @@ where
 inductive step_ok  :: "('sf, 'sc, 'sz) rule \<Rightarrow> nat \<Rightarrow> ('sf, 'sc, 'sz) step \<Rightarrow> bool"
 where
   Step_Axiom:"(nth SG i) = ([], [get_axiom a]) \<Longrightarrow> step_ok (SG,C) i (Axiom a)"
-| Step_Lrule:"lrule_ok R i j L \<Longrightarrow> step_ok R i (Lrule L j)"
+| Step_Lrule:"lrule_ok SG C i j L \<Longrightarrow> step_ok (SG,C) i (Lrule L j)"
 | Step_Rrule:"rrule_ok R i j L \<Longrightarrow> step_ok R i (Rrule L j)"
 | Step_Cut:"fsafe \<phi> \<Longrightarrow> i \<in> {0 .. length SG-1} \<Longrightarrow> step_ok (SG,C) i (Cut \<phi>)"
 | Step_CloseId:"nth (fst (nth SG i)) j = nth (snd (nth SG i)) k \<Longrightarrow> step_ok (SG,C) i (CloseId j k) "
@@ -163,12 +220,173 @@ where
 inductive deriv_ok :: "('sf, 'sc, 'sz) rule \<Rightarrow> ('sf, 'sc, 'sz) derivation \<Rightarrow> bool"
 where 
   Deriv_Nil:"deriv_ok R Nil"
-| Deriv_Cons:"step_ok R i S \<Longrightarrow> deriv_ok (step_result R (i,S)) SS \<Longrightarrow> deriv_ok R ((i,S) # SS)"
+| Deriv_Cons:"step_ok R i S \<Longrightarrow> i \<ge> 0 \<Longrightarrow> i < length (fst R) \<Longrightarrow> deriv_ok (step_result R (i,S)) SS \<Longrightarrow> deriv_ok R ((i,S) # SS)"
   
 inductive proof_ok :: "('sf, 'sc, 'sz) pf \<Rightarrow> bool"
 where
   Proof_ok:"deriv_ok (start_proof D) S \<Longrightarrow> proof_ok (D,S)"
 
+lemma nonempty_induct:"\<And>P. (\<And>j. P [] j) \<Longrightarrow> (\<And>x L. P (x # L) 0) \<Longrightarrow> (\<And>x xs j. (P xs j \<Longrightarrow> P (x # xs) (Suc j))) \<Longrightarrow> (\<And>L j. P L j)"
+  sorry
+  (*by(metis list_nonempty_induct)*) 
+
+lemma close_length:"\<And>L j. length L > 0 \<longrightarrow> i \<ge> 0 \<longrightarrow> i < length L \<longrightarrow> length (close L i) = length L - 1"
+  (*subgoal for L
+    by(induction rule: nonempty_induct[of "(\<lambda> L j. (length L > 0 \<longrightarrow> j \<ge> 0 \<longrightarrow> j < length L \<longrightarrow> length (close L j) = length L - 1))"], auto)
+  done*)
+  sorry
+  (*using nonempty_induct[of "(\<lambda> L j. (length L > 0 \<longrightarrow> j \<ge> 0 \<longrightarrow> j < length L \<longrightarrow> length (close L i) = length L - 1))"]*)
+  (*using nonempty_induct[of "(\<lambda> L j. j = length SG \<longrightarrow> (\<forall>i. (seq_valid (nth SG i) \<longrightarrow> sound (SG,C) \<longrightarrow> i \<ge> 0 \<longrightarrow> i < j \<longrightarrow> sound(close SG i, C))))"]*)
+
+definition sublist::"'a list \<Rightarrow> 'a list \<Rightarrow> bool"
+where "sublist A B \<equiv> (\<forall>x. List.member A x \<longrightarrow> List.member B x)"
+
+lemma sublistI:"(\<And>x. List.member A x \<Longrightarrow> List.member B x) \<Longrightarrow> sublist A B"
+  unfolding sublist_def by auto
+  
+lemma sound_weaken_gen:"\<And>A B C. sublist A B \<Longrightarrow> sound (A, C) \<Longrightarrow> sound (B,C)"
+  sorry
+
+lemma sound_weaken:"\<And>SG SGS C. sound (SGS, C) \<Longrightarrow> sound (SG # SGS, C)"
+  subgoal for SG SGS C
+    apply(induction SGS)
+    subgoal unfolding sound_def by auto
+    subgoal for SG2 SGS
+      unfolding sound_def 
+      by (metis fst_conv le0 length_Cons not_less_eq nth_Cons_Suc snd_conv)
+    done
+  done
+
+lemma sound_weaken_app:"\<And>SG SGS C. sound (SG, C) \<Longrightarrow> sound (SG @ SGS, C)"
+  sorry
+
+lemma fml_seq_valid:"valid \<phi> \<Longrightarrow> seq_valid ([], [\<phi>])"
+  unfolding seq_valid_def valid_def by auto
+
+lemma close_provable_sound:"sound (SG, C) \<Longrightarrow> sound (close SG \<phi>, \<phi>) \<Longrightarrow> sound (close SG \<phi>, C)"
+  sorry
+
+lemma closeI_provable_sound:"\<And>i. sound (SG, C) \<Longrightarrow> sound (closeI SG i, (nth SG i)) \<Longrightarrow> sound (closeI SG i, C)"
+  sorry
+
+lemma closeI_valid_sound:"\<And>i. sound (SG, C) \<Longrightarrow> seq_valid (nth SG i) \<Longrightarrow> sound (closeI SG i, C)"
+  sorry
+
+(*lemma close_nonmember:"(\<not>(List.member B a) \<Longrightarrow> seq_valid (B, [a]) \<Longrightarrow> sound ([(A,SI)], (close (B @ A) a,SI)))"
+  sorry*)
+
+lemma close_nonmember:"(\<not>(List.member B a) \<Longrightarrow> seq_valid (B, [a]) \<Longrightarrow> sound ([(close (B @ A) a,SI)], (A,SI)))"
+  sorry
+
+lemma mem_sing:"\<And>x. List.member [x] x" sorry
+lemma mem_appR:"\<And>A B x. List.member B x \<Longrightarrow> List.member (A @ B) x" sorry
+lemma mem_filter:"\<And>A P x. P x \<Longrightarrow> List.member A x \<Longrightarrow> List.member (filter P A) x"
+    sorry
+lemma close_app_neq:"List.member A x \<Longrightarrow> x \<noteq> a \<Longrightarrow> close (A @ B) a \<noteq> B"
+  sorry
+
+lemma fst_neq:"A \<noteq> B \<Longrightarrow> (A,C) \<noteq> (B,D)"
+  by auto
+
+lemma lrule_sound: "lrule_ok SG C i j L \<Longrightarrow> i < length SG \<Longrightarrow> sound (SG,C) \<Longrightarrow> sound (close (append SG (Lrule_result L j (nth SG i))) (nth SG i), C)"
+proof(induction rule: lrule_ok.induct)
+  case (Lrule_And SG i j C p q)
+    assume eq:"fst (SG ! i) ! j = (p && q)"
+    assume "i < length SG"
+    assume sound:"sound (SG, C)"
+    obtain AI and SI where SG_dec:"(AI,SI) = (SG ! i)"
+      by (metis seq2fml.cases)
+    have AIjeq:"AI ! j = (p && q)" using SG_dec eq
+      by (metis fst_conv)
+    have obvious:"p \<noteq> (Syntax.And p q)" sorry
+    have not_mem:" \<not> List.member [p, q] (And p q)" apply (auto simp add: member_rec) sorry
+    have true:"sound ([(close ([p, q] @ AI) (p && q),SI)], (AI,SI))"
+      apply(rule close_nonmember)
+      subgoal by (rule not_mem)
+      unfolding seq_valid_def by auto
+    have member_singD:"\<And>x P. P x \<Longrightarrow> (\<And>y. List.member [x] y \<Longrightarrow> P y)"
+      by (metis member_rec(1) member_rec(2))
+    have mems:"\<And>x. List.member [(close ([p, q] @ AI) (p && q),SI)] x \<Longrightarrow> List.member ([y\<leftarrow>SG . y \<noteq> (AI, SI)] @ [y\<leftarrow> [(close ([p, q] @ AI) (p && q), SI)] . y \<noteq> (AI, SI)]) x"
+      apply(rule member_singD [of "\<lambda>y. List.member ([y\<leftarrow>SG . y \<noteq> (AI, SI)] @ [y\<leftarrow> [(close ([p, q] @ AI) (p && q), SI)] . y \<noteq> (AI, SI)]) y" "(close ([p, q] @ AI) (p && q),SI)"])
+      prefer 2
+      subgoal by assumption
+      apply(rule mem_appR)
+      apply(rule mem_filter)
+      defer
+      apply(rule mem_sing)
+      apply(rule fst_neq)
+      apply(rule close_app_neq[of "[p, q]" p "p && q" AI])
+      subgoal by(auto simp add: member_rec)
+      using obvious by blast  
+     have sub:"sublist [(close ([p, q] @ AI) (p && q),SI)] ([y\<leftarrow>SG . y \<noteq> (AI, SI)] @ [y\<leftarrow> [(close (p # q # AI) (p && q), SI)] . y \<noteq> (AI, SI)])"
+      apply (rule sublistI)
+      using mems by auto
+    have cool:"sound ([y\<leftarrow>SG . y \<noteq> (AI, SI)] @ [y\<leftarrow> [(close (p # q # AI) (p && q), SI)] . y \<noteq> (AI, SI)], AI, SI)"
+      apply(rule sound_weaken_gen[OF sub] )
+      by(rule true)
+    have res_sound:"sound ([y\<leftarrow>SG . y \<noteq> (AI,SI)] @ [y\<leftarrow>Lrule_result AndL j (AI,SI) . y \<noteq> (AI,SI)],(AI,SI))"
+      apply (simp)
+      using cool AIjeq by auto
+   show "?case"
+    apply(rule close_provable_sound)
+    apply(rule sound_weaken_app)
+    apply(rule sound)
+    using SG_dec apply(auto simp add: eq SG_dec)
+    using res_sound SG_dec eq by auto
+   
+next
+  case (Lrule_Imply SG i j C p q)
+  then show ?case sorry
+qed
+  sorry
+
+lemma step_sound:"step_ok R i S \<Longrightarrow> i \<ge> 0 \<Longrightarrow> i < length (fst R) \<Longrightarrow> sound R \<Longrightarrow> sound (step_result R (i,S))"
+proof(induction rule: step_ok.induct)
+  case (Step_Axiom SG i a C)
+    assume is_axiom:"SG ! i = ([], [get_axiom a])"
+    assume sound:"sound (SG, C)"
+    assume i0:"0 \<le> i"
+    assume "i < length (fst (SG, C))"
+    then have iL:"i < length (SG)" 
+      by auto
+    have "seq_valid ([], [get_axiom a])"
+      apply(rule fml_seq_valid)
+      by(rule axiom_valid)
+    then have seq_valid:"seq_valid (SG ! i)"
+      using is_axiom by auto
+    (*  i0 iL *)
+  then show ?case 
+    using closeI_valid_sound[OF sound seq_valid] by simp
+next
+  case (Step_Lrule R i j L)
+  then show ?case
+    using lrule_sound
+    by (metis step_result.simps(2) surj_pair)
+    
+next
+  case (Step_Rrule R i j L)
+  then show ?case sorry
+next
+  case (Step_Cut \<phi> i SG C)
+  then show ?case sorry
+next
+  case (Step_CloseId SG i j k C)
+  then show ?case sorry
+next
+  case (Step_G SG i C a p)
+  then show ?case sorry
+qed
+  
+lemma deriv_sound:"deriv_ok R D \<Longrightarrow> sound R \<Longrightarrow> sound (deriv_result R D)"
+  apply(induction rule: deriv_ok.induct)
+  using step_sound by auto
+  
+lemma proof_sound:"proof_ok Pf \<Longrightarrow> sound (proof_result Pf)"
+  apply(induct rule: proof_ok.induct)
+  unfolding proof_result.simps  apply(rule deriv_sound)
+  apply assumption
+  by(rule start_proof_sound)
+  
 (* DI Example *)  
 definition DIAndConcl::"('sf,'sc,'sz) sequent"
 where "DIAndConcl = ([], [Implies (And (Predicational pid1) (Predicational pid2)) 
@@ -348,3 +566,72 @@ lemma example_result_correct:"proof_result DIAndProof = DIAnd"
   by (auto)
 
 end end
+
+(* TODO: Think this is just the wrong approach *)
+(*lemma close_valid_sound':"\<And>SG i. (seq_valid (nth SG i) \<longrightarrow> sound (SG,C) \<longrightarrow> i \<ge> 0 \<longrightarrow> i < length SG \<longrightarrow> sound(closeI SG i, C))"
+  subgoal for SG i
+    sorry*)
+  (*  apply(induction rule: nonempty_induct[of "(\<lambda> SG j. (seq_valid (nth SG j) \<longrightarrow> sound (SG,C) \<longrightarrow> j \<ge> 0 \<longrightarrow> j < length SG \<longrightarrow> sound(close SG j, C)))"])*)
+    (*using nonempty_induct[of "(\<lambda> SG j. (seq_valid (nth SG j) \<longrightarrow> sound (SG,C) \<longrightarrow> j \<ge> 0 \<longrightarrow> j < length SG \<longrightarrow> sound(close SG j, C)))"]
+    apply(induction rule: nonempty_induct)*)
+    (*subgoal for j by (auto simp add: seq_valid_def sound_def)*)
+    
+    (*subgoal for x L apply (auto simp add: seq_valid_def sound_def) by (simp add: nth_Cons')*)
+    
+    (*subgoal for x xs j
+      apply(simp add: seq_valid_def)
+      apply(standard)
+      apply(rule impI | rule allI)+
+      proof -
+        assume IH: "(\<forall>I. is_interp I \<longrightarrow> fml_sem I (seq2fml (xs ! j)) = UNIV) \<longrightarrow> sound (xs, C) \<longrightarrow> j < length xs \<longrightarrow> sound (close xs j, C)"
+        assume fact:"\<forall>I. is_interp I \<longrightarrow> fml_sem I (seq2fml (xs ! j)) = UNIV"
+        from IH fact have 
+          IH2:"sound (xs, C) \<Longrightarrow> j < length xs \<Longrightarrow> sound (close xs j, C)"
+          by blast
+        
+        assume "sound (x # xs, C)"
+        assume "j < length xs"          
+        have soundXs:"sound (close xs j, C)"
+          sorry
+        show "sound (x # close xs j, C)"
+          by(rule sound_weaken[OF soundXs])
+      qed
+      done
+    done*)
+      (*apply(rule soundI)
+      subgoal for I
+        apply(erule allE[where x=I])+
+        unfolding sound_def
+        apply(erule allE[where x=I])+
+        apply simp
+       
+        sledgehammer
+      apply(rule allI)
+      
+      (*apply (auto simp add: seq_valid_def sound_def)*)
+      using seq_valid_def sound_def close_length nth_Cons'
+      sledgehammer
+    (*subgoal by (auto simp add: seq_valid_def sound_def)
+    subgoal for x by (auto simp add: seq_valid_def sound_def)
+    subgoal for x xs apply (auto simp add: seq_valid_def sound_def)
+      sledgehammer
+    apply(cases "SG")
+    subgoal by auto
+    subgoal for S SGG
+      apply(induction "SGG")
+      subgoal apply (auto simp add: seq_valid_def sound_def) 
+        done
+      subgoal for S2 SGS
+        apply (auto simp add: seq_valid_def sound_def)
+        using seq_valid_def sound_def 
+        
+        sledgehammer
+        
+      done*)
+    done
+  done*)
+        
+      
+
+(*lemma close_valid_sound:"\<And>SG i. seq_valid (nth SG i) \<Longrightarrow> sound (SG,C) \<Longrightarrow> i \<ge> 0 \<Longrightarrow> i < length SG \<Longrightarrow> sound(close SG i, C)"
+  using close_valid_sound' by blast*)
