@@ -575,11 +575,8 @@ proof(induction rule: rrule_ok.induct)
       (\<Gamma>,\<Delta>) = SS \<Longrightarrow> 
       Rrule_result AndR j SS = [(\<Gamma>, p # (close \<Delta> (nth \<Delta> j))), (\<Gamma>, q # (close \<Delta> (nth \<Delta> j)))]"
       subgoal for AI SI SS p q apply(cases SS) by auto done
-    
     have res_eq:"Rrule_result AndR j (SG ! i) = 
-      [(\<Gamma>, p # (close \<Delta> (nth \<Delta> j))), (\<Gamma>, q # (close \<Delta> (nth \<Delta> j)))]
-      (*[(close \<Gamma> (nth \<Gamma> j), p # \<Delta>), 
-       (close \<Gamma> (nth \<Gamma> j), q # \<Delta>)]*)"
+      [(\<Gamma>, p # (close \<Delta> (nth \<Delta> j))), (\<Gamma>, q # (close \<Delta> (nth \<Delta> j)))]"
       using SG_dec andR_simp apply auto
       using SG_dec eq Implies_def Or_def
       using fstI
@@ -587,7 +584,6 @@ proof(induction rule: rrule_ok.induct)
     have AIjeq:"\<Delta> ! j = (p && q)" 
       using SG_dec eq snd_conv
       by metis
-               (*sound (close [(\<Gamma>, p # close \<Delta> (p && q)), (\<Gamma>, q # close \<Delta> (p && q))] (SG ! i), SG ! i)*)
     have big_sound:"sound ([(\<Gamma>, p # (close \<Delta> (nth \<Delta> j))), (\<Gamma>, q # (close \<Delta> (nth \<Delta> j)))], (\<Gamma>,\<Delta>))"
       apply(rule soundI')
       apply(rule seq_semI')
@@ -616,10 +612,43 @@ proof(induction rule: rrule_ok.induct)
         then show "\<nu> \<in> fml_sem I (foldr op || \<Delta> FF)"
           using \<Delta>' by auto  
       qed
-    have neq1:"[p] @ close \<Delta> (p && q) \<noteq> \<Delta>"
-      sorry
+    have list_neqI1:"\<And>L1 L2 x. List.member L1 x \<Longrightarrow> \<not>(List.member L2 x) \<Longrightarrow> L1 \<noteq> L2"
+      by(auto)
+    have list_neqI2:"\<And>L1 L2 x. \<not>(List.member L1 x) \<Longrightarrow> (List.member L2 x) \<Longrightarrow> L1 \<noteq> L2"
+      by(auto)
+    have notin_cons:"\<And>x y ys. x \<noteq> y \<Longrightarrow> \<not>(List.member ys x) \<Longrightarrow> \<not>(List.member (y # ys) x)"
+      subgoal for x y ys
+        by(induction ys, auto simp add: member_rec)
+      done
+    have notin_close:"\<And>L x. \<not>(List.member (close L x) x)"
+      subgoal for L x
+        by(induction L, auto simp add: member_rec)
+      done
+    have neq_lemma:"\<And>L x y. List.member L x \<Longrightarrow> y \<noteq> x \<Longrightarrow> (y # (close L x)) \<noteq> L"
+      subgoal for L x y
+        apply(cases "List.member L y")
+        subgoal
+          apply(rule list_neqI2[of "y # close L x" x])
+          apply(rule notin_cons)
+          defer
+          apply(rule notin_close)
+          by(auto)
+        subgoal
+          apply(rule list_neqI2[of "y # close L x" x])
+          apply(rule notin_cons)
+          defer
+          apply(rule notin_close)
+          by(auto)
+        done
+      done
+    have neq1:"p # close \<Delta> (p && q) \<noteq> \<Delta>"
+      apply(rule neq_lemma)
+      apply (metis Rrule_And.prems(2) SG_dec eq nth_member sndI)
+      by(auto simp add: expr_diseq) 
     have neq2:"q # close \<Delta> (p && q) \<noteq> \<Delta>"
-      sorry
+      apply(rule neq_lemma)
+      apply (metis Rrule_And.prems(2) SG_dec eq nth_member sndI)
+      by(auto simp add: expr_diseq)
     have close_eq:"close [(\<Gamma>, p # close \<Delta> (p && q)), (\<Gamma>, q # close \<Delta> (p && q))] (\<Gamma>,\<Delta>) = [(\<Gamma>, p # close \<Delta> (p && q)), (\<Gamma>, q # close \<Delta> (p && q))]"
       apply(rule close_nonmember_eq)
       apply auto
@@ -645,7 +674,6 @@ next
   case (Rrule_CohideRR SG i j C)
   then show ?case sorry
 qed
-
 
 lemma step_sound:"step_ok R i S \<Longrightarrow> i \<ge> 0 \<Longrightarrow> i < length (fst R) \<Longrightarrow> sound R \<Longrightarrow> sound (step_result R (i,S))"
 proof(induction rule: step_ok.induct)
