@@ -239,6 +239,10 @@ lemma soundI_mem:"(\<And>I. is_interp I \<Longrightarrow> (\<And>\<phi>. List.me
   apply (auto simp add: sound_def)
   by (metis in_set_conv_nth in_set_member iso_tuple_UNIV_I seq2fml.simps)
 
+lemma soundI_memv:"(\<And>I. is_interp I \<Longrightarrow> (\<And>\<phi> \<nu>. List.member SG \<phi> \<Longrightarrow> \<nu> \<in> seq_sem I \<phi>) \<Longrightarrow> (\<And>\<nu>. \<nu> \<in> seq_sem I C)) \<Longrightarrow> sound (SG,C)"
+  apply(rule soundI_mem)
+  using impl_sem by blast
+
 lemma soundD_mem:"sound (SG,C) \<Longrightarrow> (\<And>I. is_interp I \<Longrightarrow> (\<And>\<phi>. List.member SG \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV) \<Longrightarrow> seq_sem I C = UNIV)"
   apply (auto simp add: sound_def)
   using in_set_conv_nth in_set_member iso_tuple_UNIV_I seq2fml.simps
@@ -830,13 +834,44 @@ next
   case (Step_Cut \<phi> i SG C)
   then show ?case sorry
 next
+  case (Step_G SG i C a p)
+    assume eq:"SG ! i = ([], [([[a]]p)])"
+    assume iL:"i < length (fst (SG, C))"
+    assume sound:"sound (SG, C)"
+    have "sound (([], [p]) # (close SG ([], [([[ a ]] p)])), C)"
+      apply(rule soundI_memv)
+      proof -
+        fix I::"('sf,'sc,'sz) interp" and  \<nu>::"'sz state"
+        assume "is_interp I"
+        assume sgs:"(\<And>\<phi> \<nu>. List.member (([], [p]) # close SG ([], [([[a]]p)])) \<phi> \<Longrightarrow> \<nu> \<in> seq_sem I \<phi>)"
+        have sg0:"(\<And>\<nu>. \<nu> \<in> seq_sem I ([], [p]))"
+          using sgs by (meson member_rec(1))
+        then have sg0':"(\<And>\<nu>. \<nu> \<in> seq_sem I ([], [([[a]]p)]))"
+          by auto
+        have sgTail:"(\<And>\<phi> \<nu>. List.member (close SG ([], [([[a]]p)])) \<phi> \<Longrightarrow> \<nu> \<in> seq_sem I \<phi>)"
+          using sgs by (simp add: member_rec(1))
+        have same_mem:"\<And>x. List.member SG x \<Longrightarrow> List.member (([], [([[a]]p)]) # close SG ([], [([[a]]p)])) x"
+          subgoal for s
+            by(induction SG, auto simp add: member_rec)
+          done
+        have sgsC:"(\<And>\<phi> \<nu>. List.member SG \<phi> \<Longrightarrow> \<nu> \<in> seq_sem I \<phi>)"
+          apply auto
+          using sgTail sg0' same_mem member_rec
+          by (metis seq_MP)
+        then show "\<nu> \<in> seq_sem I C"
+          using sound
+          by (metis UNIV_eq_I \<open>is_interp I\<close> iso_tuple_UNIV_I soundD_mem)
+      qed
+    then show ?case 
+      by(auto simp add: eq Box_def)
+next
   case (Step_CloseId SG i j k C)
     assume match:"fst (SG ! i) ! j = snd (SG ! i) ! k"
-    assume "i < length (fst (SG, C))"
-    then have iL:"i < length (SG)" 
-      by auto
     assume jL:"j < length (fst (SG ! i))"
     assume kL:"k < length (snd (SG ! i))"
+    assume iL:"i < length (fst (SG, C))"
+    then have iL:"i < length (SG)" 
+      by auto
     assume sound:"sound (SG, C)"
     obtain \<Gamma> \<Delta> where SG_dec:"(\<Gamma>, \<Delta>) = SG ! i" 
       using prod.collapse by blast
@@ -868,11 +903,8 @@ next
     then have seq_valid:"seq_valid (SG ! i)"
       unfolding seq_valid_def using SG_dec
       by (metis UNIV_eq_I seq_semI')
-  then show ?case 
-    using closeI_valid_sound[OF sound seq_valid] by simp
-  next
-  case (Step_G SG i C a p)
-  then show ?case sorry
+    then show "sound (step_result (SG, C) (i, CloseId j k))" 
+      using closeI_valid_sound[OF sound seq_valid] by simp
 qed
   
 lemma deriv_sound:"deriv_ok R D \<Longrightarrow> sound R \<Longrightarrow> sound (deriv_result R D)"
