@@ -214,7 +214,7 @@ where
 inductive step_ok  :: "('sf, 'sc, 'sz) rule \<Rightarrow> nat \<Rightarrow> ('sf, 'sc, 'sz) step \<Rightarrow> bool"
 where
   Step_Axiom:"(nth SG i) = ([], [get_axiom a]) \<Longrightarrow> step_ok (SG,C) i (Axiom a)"
-| Step_Lrule:"lrule_ok SG C i j L \<Longrightarrow> step_ok (SG,C) i (Lrule L j)"
+| Step_Lrule:"lrule_ok SG C i j L \<Longrightarrow> j < length (fst (nth SG i)) \<Longrightarrow>  step_ok (SG,C) i (Lrule L j)"
 | Step_Rrule:"rrule_ok R i j L \<Longrightarrow> step_ok R i (Rrule L j)"
 | Step_Cut:"fsafe \<phi> \<Longrightarrow> i \<in> {0 .. length SG-1} \<Longrightarrow> step_ok (SG,C) i (Cut \<phi>)"
 | Step_CloseId:"nth (fst (nth SG i)) j = nth (snd (nth SG i)) k \<Longrightarrow> step_ok (SG,C) i (CloseId j k) "
@@ -327,7 +327,7 @@ lemma nth_member:"n < List.length L \<Longrightarrow> List.member L (List.nth L 
   apply(induction L, auto simp add: member_rec)
   by (metis in_set_member length_Cons nth_mem set_ConsD)
 
-lemma lrule_sound: "lrule_ok SG C i j L \<Longrightarrow> 0 \<le> i \<Longrightarrow> i < length SG \<Longrightarrow> j \<ge> 0 \<Longrightarrow> j < length (fst (SG ! i)) \<Longrightarrow> sound (SG,C) \<Longrightarrow> sound (close (append SG (Lrule_result L j (nth SG i))) (nth SG i), C)"
+lemma lrule_sound: "lrule_ok SG C i j L \<Longrightarrow> i < length SG \<Longrightarrow> j < length (fst (SG ! i)) \<Longrightarrow> sound (SG,C) \<Longrightarrow> sound (close (append SG (Lrule_result L j (nth SG i))) (nth SG i), C)"
 proof(induction rule: lrule_ok.induct)
   case (Lrule_And SG i j C p q)
     assume eq:"fst (SG ! i) ! j = (p && q)"
@@ -362,9 +362,7 @@ next
       Lrule_result ImplyL j SS = [(close (q # AI) (nth AI j), SI), (close AI (nth AI j), p # SI)]"
       subgoal for AI SI SS p q apply(cases SS) by auto done
     assume eq:"fst (SG ! i) ! j = (p \<rightarrow> q)"
-    assume i0:"0 \<le> i"
     assume iL:"i < length SG"
-    assume j0:"j \<ge> 0"
     assume jL:"j < length (fst (SG ! i))"
     assume sound:"sound (SG, C)"
     obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)"
@@ -395,7 +393,7 @@ next
           using and_foldl_sem by blast
         have imp:"\<nu> \<in> fml_sem I (p \<rightarrow> q)" 
           apply(rule \<Gamma>_proj[of \<Gamma>])
-          using AIjeq j0 jL SG_dec nth_member
+          using AIjeq  jL SG_dec nth_member
           apply (metis fst_conv)
           by (rule \<Gamma>)
         have sub:"sublist (close \<Gamma> (p \<rightarrow> q)) \<Gamma>"
@@ -475,8 +473,8 @@ next
   case (Step_Lrule R i j L)
   then show ?case
     using lrule_sound
-    by (metis step_result.simps(2) surj_pair)
-    
+    using step_result.simps(2) surj_pair
+    by simp
 next
   case (Step_Rrule R i j L)
   then show ?case sorry
