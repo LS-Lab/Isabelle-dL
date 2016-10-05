@@ -216,7 +216,7 @@ where
   Step_Axiom:"(nth SG i) = ([], [get_axiom a]) \<Longrightarrow> step_ok (SG,C) i (Axiom a)"
 | Step_Lrule:"lrule_ok SG C i j L \<Longrightarrow> j < length (fst (nth SG i)) \<Longrightarrow> step_ok (SG,C) i (Lrule L j)"
 | Step_Rrule:"rrule_ok SG C i j L \<Longrightarrow> j < length (snd (nth SG i)) \<Longrightarrow> step_ok (SG,C) i (Rrule L j)"
-| Step_Cut:"fsafe \<phi> \<Longrightarrow> i \<in> {0 .. length SG-1} \<Longrightarrow> step_ok (SG,C) i (Cut \<phi>)"
+| Step_Cut:"fsafe \<phi> \<Longrightarrow> i < length SG \<Longrightarrow> step_ok (SG,C) i (Cut \<phi>)"
 | Step_CloseId:"nth (fst (nth SG i)) j = nth (snd (nth SG i)) k \<Longrightarrow> j < length (fst (nth SG i)) \<Longrightarrow> k < length (snd (nth SG i)) \<Longrightarrow> step_ok (SG,C) i (CloseId j k) "
 | Step_G:"\<And>a p. nth SG i = ([], [([[a]]p)]) \<Longrightarrow> step_ok (SG,C) i G"
   
@@ -247,6 +247,10 @@ lemma soundD_mem:"sound (SG,C) \<Longrightarrow> (\<And>I. is_interp I \<Longrig
   apply (auto simp add: sound_def)
   using in_set_conv_nth in_set_member iso_tuple_UNIV_I seq2fml.simps
   by (metis seq2fml.elims)
+
+lemma soundD_memv:"sound (SG,C) \<Longrightarrow> (\<And>I. is_interp I \<Longrightarrow> (\<And>\<phi> \<nu>. List.member SG \<phi> \<Longrightarrow> \<nu> \<in> seq_sem I \<phi>) \<Longrightarrow> (\<And>\<nu>. \<nu> \<in> seq_sem I C))"
+  using soundD_mem
+  by (metis UNIV_I UNIV_eq_I)
 
 lemma close_provable_sound:"sound (SG, C) \<Longrightarrow> sound (close SG \<phi>, \<phi>) \<Longrightarrow> sound (close SG \<phi>, C)"
   proof (rule soundI_mem)
@@ -832,7 +836,49 @@ next
     by simp
 next
   case (Step_Cut \<phi> i SG C)
-  then show ?case sorry
+    assume safe:"fsafe \<phi>"
+    assume "i < length (fst (SG, C))"
+    then have iL:"i < length SG" by auto
+    assume sound:"sound (SG, C)"
+    obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)"
+      by (metis seq2fml.cases)
+    have "sound ((\<phi> # \<Gamma>, \<Delta>) # (\<Gamma>, \<phi> # \<Delta>) # [y\<leftarrow>SG . y \<noteq> SG ! i], C)"
+      apply(rule soundI_memv)
+      proof -
+        fix I::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+        assume good:"is_interp I"
+        assume sgs:"(\<And>\<phi>' \<nu>. List.member ((\<phi> # \<Gamma>, \<Delta>) # (\<Gamma>, \<phi> # \<Delta>) # [y\<leftarrow>SG . y \<noteq> SG ! i]) \<phi>' \<Longrightarrow> \<nu> \<in> seq_sem I \<phi>')"
+        have sg1:"\<And>\<nu>. \<nu> \<in> seq_sem I (\<phi> # \<Gamma>, \<Delta>)" using sgs by (meson member_rec(1))
+        have sg2:"\<And>\<nu>. \<nu> \<in> seq_sem I (\<Gamma>, \<phi> # \<Delta>)" using sgs by (meson member_rec(1))
+        have sgs:"\<And>\<phi> \<nu>. (List.member (close SG (nth SG i)) \<phi>) \<Longrightarrow> \<nu> \<in> seq_sem I \<phi>"
+          using sgs  by (simp add: member_rec(1))
+        then have sgs:"\<And>\<phi> \<nu>. (List.member (close SG (\<Gamma>,\<Delta>)) \<phi>) \<Longrightarrow> \<nu> \<in> seq_sem I \<phi>"
+          using SG_dec by auto
+        have sgNew:"\<And>\<nu>. \<nu> \<in> seq_sem I (\<Gamma>, \<Delta>)"
+          using sg1 sg2 by auto
+        have same_mem:"\<And>x. List.member SG x \<Longrightarrow> List.member ((\<Gamma>,\<Delta>) # close SG (\<Gamma>,\<Delta>)) x"
+          subgoal for s
+            by(induction SG, auto simp add: member_rec)
+          done
+        have SGS:"(\<And>\<phi>' \<nu>. List.member SG \<phi>' \<Longrightarrow> \<nu> \<in> seq_sem I \<phi>')"
+          using sgNew sgs same_mem member_rec(1) seq_MP
+          by metis
+        show "\<nu> \<in> seq_sem I C"
+          using sound apply simp
+          apply(drule soundD_memv)
+          apply(rule good)
+          using SGS 
+          apply blast
+          by auto
+      qed
+    then show ?case 
+      using SG_dec case_prod_conv
+    proof -
+      have "(\<And>f. ((case nth SG i of (x, xa) \<Rightarrow> ((f x xa)::('sf, 'sc, 'sz) rule)) = (f \<Gamma> \<Delta>)))"
+        by (metis (no_types) SG_dec case_prod_conv)
+      then show ?thesis
+        by (simp add: \<open>sound ((\<phi> # \<Gamma>, \<Delta>) # (\<Gamma>, \<phi> # \<Delta>) # [y\<leftarrow>SG . y \<noteq> SG ! i], C)\<close>)
+    qed
 next
   case (Step_G SG i C a p)
     assume eq:"SG ! i = ([], [([[a]]p)])"
