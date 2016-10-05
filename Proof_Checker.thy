@@ -674,8 +674,8 @@ lemma print_example_result:"rule_to_string(proof_result (DIAndProof)) = undefine
   
 lemma example_result_correct:"proof_result DIAndProof = DIAnd"
   unfolding DIAndProof_def DIAndConcl_def Implies_def Or_def 
-   DIAndCutP12_def  DIAndSG1_def DIAndSG2_def DIAndCutP1_def Box_def DIAndCut34Elim1_def DIAndCut12Intro_def DIAndCut34Elim2_def DIAnd_def
-  by (auto)
+  proof_result.simps deriv_result.simps start_proof.simps DIAndCutP12_def  DIAndSG1_def DIAndSG2_def DIAndCutP1_def Box_def DIAndCut34Elim1_def DIAndCut12Intro_def DIAndCut34Elim2_def DIAnd_def
+  using pne12 pne13 pne14 pne23 pne24 pne34 by (auto)
 
 end end
 
