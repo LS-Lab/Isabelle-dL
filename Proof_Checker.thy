@@ -1141,4 +1141,21 @@ lemma example_result_correct:"proof_result DIAndProof = DIAnd"
   proof_result.simps deriv_result.simps start_proof.simps DIAndCutP12_def  DIAndSG1_def DIAndSG2_def DIAndCutP1_def Box_def DIAndCut34Elim1_def DIAndCut12Intro_def DIAndCut34Elim2_def DIAnd_def
   using pne12 pne13 pne14 pne23 pne24 pne34 by (auto)
 
+lemma DIAndSound:"sound (proof_result DIAndProof)"
+  apply(rule proof_sound)
+  unfolding DIAndProof_def DIAndConcl_def Box_def
+  apply(rule Proof_ok)
+  apply(rule Deriv_Cons)
+  subgoal
+    unfolding start_proof.simps
+    apply(rule Step_Rrule)
+    apply(rule Rrule_Imply)
+    by auto
+  subgoal by auto
+  subgoal by auto
+(* Lrule_And Lrule_Imply Rrule_And Rrule_Imply Rrule_Cohide Rrule_CohideRR 
+Step_Axiom Step_Lrule Step_Rrule Step_Cut Step_CloseId  Step_G*)
+  
+  apply(auto intro: deriv_ok.intros)
+
 end end
