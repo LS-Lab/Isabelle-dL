@@ -249,13 +249,16 @@ inductive_simps
   and dfree_Times_simps[simp]: "dfree (Times a b)"
   and dfree_Var_simps[simp]: "dfree (Var x)"
   and dfree_Fun_simps[simp]: "dfree (Function i args)"
+  and dfree_Const_simps[simp]: "dfree (Const r)"
 
 inductive_simps
       dsafe_Plus_simps[simp]: "dsafe (Plus a b)"
   and dsafe_Times_simps[simp]: "dsafe (Times a b)"
   and dsafe_Var_simps[simp]: "dsafe (Var x)"
+  and dsafe_DiffVar_simps[simp]: "dsafe (DiffVar x)"
   and dsafe_Fun_simps[simp]: "dsafe (Function i args)"
   and dsafe_Diff_simps[simp]: "dsafe (Differential a)"
+  and dsafe_Const_simps[simp]: "dsafe (Const r)"
 
 inductive_simps
       hpsafe_Pvar_simps[simp]: "hpsafe (Pvar a)"

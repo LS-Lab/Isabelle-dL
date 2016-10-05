@@ -175,21 +175,21 @@ where "Lrule_result AndL j (A,S) = (case (nth A j) of And p q \<Rightarrow> [(cl
    So all the pattern-matches have the definitions expanded, sometimes in a silly way. *)
 fun Rrule_result :: "rrule \<Rightarrow> nat \<Rightarrow> ('sf, 'sc, 'sz) sequent \<Rightarrow> ('sf, 'sc, 'sz) sequent list"
 where 
-  "Rrule_result ImplyR j (A,S) = (case (nth S j) of Not (And (Not q) (Not (Not p))) \<Rightarrow> [(p # A, q # (closeI S j ))] | _ \<Rightarrow> undefined)"
-| "Rrule_result AndR j (A,S) = (case (nth S j) of (And p q) \<Rightarrow> [(A, p # (closeI S j )), (A, q # (closeI S j))])"
-| "Rrule_result CohideR j (A,S) = [(A, [nth S j])]"
-| "Rrule_result CohideRR j (A,S) = [([], [nth S j])]"
+  Rstep_Imply:"Rrule_result ImplyR j (A,S) = (case (nth S j) of Not (And (Not q) (Not (Not p))) \<Rightarrow> [(p # A, q # (closeI S j ))] | _ \<Rightarrow> undefined)"
+| Rstep_And:"Rrule_result AndR j (A,S) = (case (nth S j) of (And p q) \<Rightarrow> [(A, p # (closeI S j )), (A, q # (closeI S j))])"
+| Rstep_CohideR:"Rrule_result CohideR j (A,S) = [(A, [nth S j])]"
+| Rstep_CohideRR:"Rrule_result CohideRR j (A,S) = [([], [nth S j])]"
 
 fun step_result :: "('sf, 'sc, 'sz) rule \<Rightarrow> (nat * ('sf, 'sc, 'sz) step) \<Rightarrow>  ('sf, 'sc, 'sz) rule"
 where
-  "step_result (SG,C) (i,Axiom a)   = (closeI SG i, C)"
-| "step_result (SG,C) (i,Lrule L j) = (close (append SG (Lrule_result L j (nth SG i))) (nth SG i), C)"
-| "step_result (SG,C) (i,Rrule L j) = (close (append SG (Rrule_result L j (nth SG i))) (nth SG i), C)" 
-| "step_result (SG,C) (i,Cut \<phi>) = (let (A,S) = nth SG i in ((\<phi> # A, S) # ((A, \<phi> # S) # (closeI SG i)), C))"
-| "step_result (SG,C) (i,VSubst \<phi> \<sigma>) = (closeI SG i, C)"
-| "step_result (SG,C) (i,CloseId j k) = (closeI SG i, C)"
-| "step_result (SG,C) (i,G) = (case nth SG i of (_, (Not (Diamond q (Not p))) # Nil) \<Rightarrow> (([], [p]) # closeI SG i, C))"
-| "step_result R (i,S) = R"
+  Step_axiom:"step_result (SG,C) (i,Axiom a)   = (closeI SG i, C)"
+| Step_Lrule:"step_result (SG,C) (i,Lrule L j) = (close (append SG (Lrule_result L j (nth SG i))) (nth SG i), C)"
+| Step_Rrule:"step_result (SG,C) (i,Rrule L j) = (close (append SG (Rrule_result L j (nth SG i))) (nth SG i), C)" 
+| Step_Cut:"step_result (SG,C) (i,Cut \<phi>) = (let (A,S) = nth SG i in ((\<phi> # A, S) # ((A, \<phi> # S) # (closeI SG i)), C))"
+| Step_Vsubst:"step_result (SG,C) (i,VSubst \<phi> \<sigma>) = (closeI SG i, C)"
+| Step_CloseId:"step_result (SG,C) (i,CloseId j k) = (closeI SG i, C)"
+| Step_G:"step_result (SG,C) (i,G) = (case nth SG i of (_, (Not (Diamond q (Not p))) # Nil) \<Rightarrow> (([], [p]) # closeI SG i, C))"
+| Step_default:"step_result R (i,S) = R"
   
 fun deriv_result :: "('sf, 'sc, 'sz) rule \<Rightarrow> ('sf, 'sc, 'sz) derivation \<Rightarrow> ('sf, 'sc, 'sz) rule"
 where 
@@ -204,13 +204,31 @@ where
   Lrule_And:"\<And>p q. nth (fst (nth SG i)) j = (p && q) \<Longrightarrow> lrule_ok SG C i j AndL"
 | Lrule_Imply:"\<And>p q. nth (fst (nth SG i)) j = (p \<rightarrow> q) \<Longrightarrow> lrule_ok SG C i j ImplyL"
 
+named_theorems prover "Simplification rules for checking validity of proof certificates"
+lemma [prover]: "(x # xs) @ ys = x # (xs @ ys)" by simp
+lemma [prover]: "[] @ ys = ys" by simp
+lemma [prover]: "filter Pr (X @ Y) = (filter Pr X) @ (filter Pr Y)" by (rule filter_append)
+lemma [prover]: "(Pr \<rightarrow> Qr) = (Qr || ! Pr)" by (rule Implies_def)
+lemma [prover]: "(Pr || Qr) = ! (! Pr && ! Qr)" by (rule Or_def)
+lemma [prover]: "([[\<alpha>]]Pr) = ! (\<langle> \<alpha> \<rangle> ! Pr)" by (rule Box_def)
+
+inductive_simps 
+    Lrule_And[prover]: "lrule_ok SG C i j AndL"
+and Lrule_Imply[prover]: "lrule_ok SG C i j ImplyL"
+
 inductive rrule_ok ::"('sf,'sc,'sz) sequent list \<Rightarrow> ('sf,'sc,'sz) sequent \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> rrule \<Rightarrow> bool"
 where
   Rrule_And:"\<And>p q. nth (snd (nth SG i)) j = (p && q) \<Longrightarrow> rrule_ok SG C i j AndR"
 | Rrule_Imply:"\<And>p q. nth (snd (nth SG i)) j = (p \<rightarrow> q) \<Longrightarrow> rrule_ok SG C i j ImplyR"
 | Rrule_Cohide:"length (snd (nth SG i)) > j \<Longrightarrow> (\<And>\<Gamma> q. (nth SG i) \<noteq> (\<Gamma>, [q])) \<Longrightarrow> rrule_ok SG C i j CohideR"
 | Rrule_CohideRR:"length (snd (nth SG i)) > j  \<Longrightarrow> (\<And>q. (nth SG i) \<noteq> ([], [q])) \<Longrightarrow> rrule_ok SG C i j CohideRR"
-  
+
+inductive_simps 
+    Rrule_And_simps[prover]: "rrule_ok SG C i j AndR"
+and Rrule_Imply_simps[prover]: "rrule_ok SG C i j ImplyR"
+and Rrule_CohideR_simps[prover]: "rrule_ok SG C i j CohideR"
+and Rrule_CohideRR_simps[prover]: "rrule_ok SG C i j CohideRR"
+
 inductive step_ok  :: "('sf, 'sc, 'sz) rule \<Rightarrow> nat \<Rightarrow> ('sf, 'sc, 'sz) step \<Rightarrow> bool"
 where
   Step_Axiom:"(nth SG i) = ([], [get_axiom a]) \<Longrightarrow> step_ok (SG,C) i (Axiom a)"
@@ -220,14 +238,28 @@ where
 | Step_CloseId:"nth (fst (nth SG i)) j = nth (snd (nth SG i)) k \<Longrightarrow> j < length (fst (nth SG i)) \<Longrightarrow> k < length (snd (nth SG i)) \<Longrightarrow> step_ok (SG,C) i (CloseId j k) "
 | Step_G:"\<And>a p. nth SG i = ([], [([[a]]p)]) \<Longrightarrow> step_ok (SG,C) i G"
   
+inductive_simps 
+    Step_G_simps[prover]: "step_ok (SG,C) i G"
+and Step_CloseId_simps[prover]: "step_ok (SG,C) i (CloseId j k)"
+and Step_Cut_simps[prover]: "step_ok (SG,C) i (Cut \<phi>)"
+and Step_Rrule_simps[prover]: "step_ok (SG,C) i (Rrule j L)"
+and Step_Lrule_simps[prover]: "step_ok (SG,C) i (Lrule j L)"
+and Step_Axiom_simps[prover]: "step_ok (SG,C) i (Axiom a)"
+
 inductive deriv_ok :: "('sf, 'sc, 'sz) rule \<Rightarrow> ('sf, 'sc, 'sz) derivation \<Rightarrow> bool"
 where 
   Deriv_Nil:"deriv_ok R Nil"
 | Deriv_Cons:"step_ok R i S \<Longrightarrow> i \<ge> 0 \<Longrightarrow> i < length (fst R) \<Longrightarrow> deriv_ok (step_result R (i,S)) SS \<Longrightarrow> deriv_ok R ((i,S) # SS)"
   
+inductive_simps 
+    Deriv_nil_simps[prover]: "deriv_ok R Nil"
+and Deriv_cons_simps[prover]: "deriv_ok R ((i,S)#SS)"
+
 inductive proof_ok :: "('sf, 'sc, 'sz) pf \<Rightarrow> bool"
 where
   Proof_ok:"deriv_ok (start_proof D) S \<Longrightarrow> proof_ok (D,S)"
+
+inductive_simps Proof_ok_simps[prover]: "proof_ok (D,S)"
 
 definition sublist::"'a list \<Rightarrow> 'a list \<Rightarrow> bool"
 where "sublist A B \<equiv> (\<forall>x. List.member A x \<longrightarrow> List.member B x)"
@@ -1130,7 +1162,10 @@ where "DIAndProof =
   ])
   "
 
-lemma print_example_result:"rule_to_string(proof_result (DIAndProof)) = undefined"
+fun proof_take :: "nat \<Rightarrow> ('sf,'sc,'sz) pf \<Rightarrow> ('sf,'sc,'sz) pf"
+where "proof_take n (C,D) = (C,List.take n D)"
+
+lemma print_example_result:"rule_to_string(proof_result (proof_take 20 DIAndProof)) = undefined"
   unfolding DIAndProof_def DIAndConcl_def Implies_def Or_def 
   proof_result.simps deriv_result.simps start_proof.simps DIAndCutP12_def  DIAndSG1_def DIAndSG2_def DIAndCutP1_def Box_def DIAndCut34Elim1_def DIAndCut12Intro_def DIAndCut34Elim2_def DIAnd_def
   using pne12 pne13 pne14 pne23 pne24 pne34 apply (auto)
@@ -1141,10 +1176,25 @@ lemma example_result_correct:"proof_result DIAndProof = DIAnd"
   proof_result.simps deriv_result.simps start_proof.simps DIAndCutP12_def  DIAndSG1_def DIAndSG2_def DIAndCutP1_def Box_def DIAndCut34Elim1_def DIAndCut12Intro_def DIAndCut34Elim2_def DIAnd_def
   using pne12 pne13 pne14 pne23 pne24 pne34 by (auto)
 
-lemma DIAndSound:"sound (proof_result DIAndProof)"
+lemma filter_expand:"filter (\<lambda>x. x \<noteq> (\<lambda>y. 0)) [(\<lambda>y. 1) ] = undefined"
+  sorry
+
+lemma DIAndSound:"sound (proof_result (proof_take 20 DIAndProof))"
   apply(rule proof_sound)
-  unfolding DIAndProof_def DIAndConcl_def Box_def
-  apply(rule Proof_ok)
+  unfolding DIAndProof_def DIAndConcl_def Box_def DIAndCutP1_def DIAndSG1_def DIAndCut34Elim1_def
+  (*apply(auto)
+  unfolding proof_take.simps start_proof.simps take.simps*)
+  apply (auto simp add: prover)
+  done
+  (*apply(rule Proof_ok)
+  apply(rule Deriv_Cons)
+  subgoal by (auto simp add: prover) apply(auto)[1] apply(auto)[1]
+  apply(rule Deriv_Cons)
+  subgoal by (auto simp add: prover) apply(auto  simp add: prover)[1] apply(auto  simp add: prover)[1]
+  apply(rule Deriv_Nil)*)
+  
+  (*apply(auto)*)
+  (*
   apply(rule Deriv_Cons)
   subgoal
     unfolding start_proof.simps
@@ -1156,6 +1206,6 @@ lemma DIAndSound:"sound (proof_result DIAndProof)"
 (* Lrule_And Lrule_Imply Rrule_And Rrule_Imply Rrule_Cohide Rrule_CohideRR 
 Step_Axiom Step_Lrule Step_Rrule Step_Cut Step_CloseId  Step_G*)
   
-  apply(auto intro: deriv_ok.intros)
+  apply(auto intro: deriv_ok.intros)*)
 
 end end
