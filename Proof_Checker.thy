@@ -217,7 +217,7 @@ where
 | Step_Lrule:"lrule_ok SG C i j L \<Longrightarrow> j < length (fst (nth SG i)) \<Longrightarrow> step_ok (SG,C) i (Lrule L j)"
 | Step_Rrule:"rrule_ok SG C i j L \<Longrightarrow> j < length (snd (nth SG i)) \<Longrightarrow> step_ok (SG,C) i (Rrule L j)"
 | Step_Cut:"fsafe \<phi> \<Longrightarrow> i \<in> {0 .. length SG-1} \<Longrightarrow> step_ok (SG,C) i (Cut \<phi>)"
-| Step_CloseId:"nth (fst (nth SG i)) j = nth (snd (nth SG i)) k \<Longrightarrow> step_ok (SG,C) i (CloseId j k) "
+| Step_CloseId:"nth (fst (nth SG i)) j = nth (snd (nth SG i)) k \<Longrightarrow> j < length (fst (nth SG i)) \<Longrightarrow> k < length (snd (nth SG i)) \<Longrightarrow> step_ok (SG,C) i (CloseId j k) "
 | Step_G:"\<And>a p. nth SG i = ([], [([[a]]p)]) \<Longrightarrow> step_ok (SG,C) i G"
   
 inductive deriv_ok :: "('sf, 'sc, 'sz) rule \<Rightarrow> ('sf, 'sc, 'sz) derivation \<Rightarrow> bool"
@@ -831,8 +831,46 @@ next
   then show ?case sorry
 next
   case (Step_CloseId SG i j k C)
-  then show ?case sorry
-next
+    assume match:"fst (SG ! i) ! j = snd (SG ! i) ! k"
+    assume "i < length (fst (SG, C))"
+    then have iL:"i < length (SG)" 
+      by auto
+    assume jL:"j < length (fst (SG ! i))"
+    assume kL:"k < length (snd (SG ! i))"
+    assume sound:"sound (SG, C)"
+    obtain \<Gamma> \<Delta> where SG_dec:"(\<Gamma>, \<Delta>) = SG ! i" 
+      using prod.collapse by blast
+    have j\<Gamma>:"j < length \<Gamma>"
+      using SG_dec jL
+      by (metis fst_conv)
+    have k\<Delta>:"k < length \<Delta>"
+      using SG_dec kL
+      by (metis snd_conv)
+    have "\<And>I \<nu>. is_interp I \<Longrightarrow> \<nu> \<in> fml_sem I (foldr op&& \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr op|| \<Delta> FF)"
+      proof -
+        fix I::"('sf,'sc,'sz)interp" and \<nu>::"'sz state"
+        assume good:"is_interp I"
+        assume \<Gamma>_sem:"\<nu> \<in> fml_sem I (foldr op&& \<Gamma> TT)"
+        have mem:"List.member \<Gamma> (\<Gamma> ! j)"
+          using j\<Gamma> nth_member by blast
+        have mem2:"List.member \<Delta> (\<Delta> ! k)"
+          using k\<Delta> nth_member by blast
+        have "\<nu> \<in> fml_sem I (\<Gamma> ! j)"
+          using \<Gamma>_sem mem
+          using and_foldl_sem by blast
+        then have "\<nu> \<in> fml_sem I (\<Delta> ! k)"
+          using match SG_dec
+          by (metis fst_conv snd_conv)
+        then show "\<nu> \<in> fml_sem I (foldr op|| \<Delta> FF)"
+          using mem2
+          using or_foldl_sem by blast
+      qed
+    then have seq_valid:"seq_valid (SG ! i)"
+      unfolding seq_valid_def using SG_dec
+      by (metis UNIV_eq_I seq_semI')
+  then show ?case 
+    using closeI_valid_sound[OF sound seq_valid] by simp
+  next
   case (Step_G SG i C a p)
   then show ?case sorry
 qed
