@@ -288,10 +288,13 @@ lemma fml_seq_valid:"valid \<phi> \<Longrightarrow> seq_valid ([], [\<phi>])"
   unfolding seq_valid_def valid_def by auto
 
 lemma soundI_mem:"(\<And>I. is_interp I \<Longrightarrow> (\<And>\<phi>. List.member SG \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV) \<Longrightarrow> seq_sem I C = UNIV) \<Longrightarrow> sound (SG,C)"
-  sorry
+  apply (auto simp add: sound_def)
+  by (metis in_set_conv_nth in_set_member iso_tuple_UNIV_I seq2fml.simps)
 
 lemma soundD_mem:"sound (SG,C) \<Longrightarrow> (\<And>I. is_interp I \<Longrightarrow> (\<And>\<phi>. List.member SG \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV) \<Longrightarrow> seq_sem I C = UNIV)"
-  sorry
+  apply (auto simp add: sound_def)
+  using in_set_conv_nth in_set_member iso_tuple_UNIV_I seq2fml.simps
+  by (metis seq2fml.elims)
 
 lemma close_provable_sound:"sound (SG, C) \<Longrightarrow> sound (close SG \<phi>, \<phi>) \<Longrightarrow> sound (close SG \<phi>, C)"
   proof (rule soundI_mem)
@@ -321,31 +324,12 @@ lemma close_provable_sound:"sound (SG, C) \<Longrightarrow> sound (close SG \<ph
       using SGs apply auto
       using impl_sem by blast
     qed
-      
-(*      
-  apply(rule soundI_mem)
-  apply(erule soundD_mem)+
-  subgoal for I by auto
-  apply auto
-  subgoal for I a b aa ba
-    
-    apply(cases "(a,b) = \<phi>")
-    apply(auto)
-    apply(drule soundD_mem[of "[y\<leftarrow>SG . y \<noteq> (a, b)]" "(a,b)"])
-    apply(auto)
-    apply(drule soundD_mem)
-    apply(auto)
-    sledgehammer*)
-
 
 lemma closeI_provable_sound:"\<And>i. sound (SG, C) \<Longrightarrow> sound (closeI SG i, (nth SG i)) \<Longrightarrow> sound (closeI SG i, C)"
   sorry
 
 lemma closeI_valid_sound:"\<And>i. sound (SG, C) \<Longrightarrow> seq_valid (nth SG i) \<Longrightarrow> sound (closeI SG i, C)"
   sorry
-
-(*lemma close_nonmember:"(\<not>(List.member B a) \<Longrightarrow> seq_valid (B, [a]) \<Longrightarrow> sound ([(A,SI)], (close (B @ A) a,SI)))"
-  sorry*)
 
 lemma close_nonmember:"(\<not>(List.member B a) \<Longrightarrow> seq_valid (B, [a]) \<Longrightarrow> sound ([(close (B @ A) a,SI)], (A,SI)))"
   apply (auto simp add: seq_valid_def sound_def)
