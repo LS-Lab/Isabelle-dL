@@ -177,8 +177,8 @@ fun Rrule_result :: "rrule \<Rightarrow> nat \<Rightarrow> ('sf, 'sc, 'sz) seque
 where 
   "Rrule_result ImplyR j (A,S) = (case (nth S j) of Not (And (Not q) (Not (Not p))) \<Rightarrow> [(p # A, q # (closeI S j ))] | _ \<Rightarrow> undefined)"
 | "Rrule_result AndR j (A,S) = (case (nth S j) of (And p q) \<Rightarrow> [(A, p # (closeI S j )), (A, q # (closeI S j))])"
-| "Rrule_result CohideR j (A,S) = [(A, [nth S 0])]"
-| "Rrule_result CohideRR j (A,S) = [([], [nth S 0])]"
+| "Rrule_result CohideR j (A,S) = [(A, [nth S j])]"
+| "Rrule_result CohideRR j (A,S) = [([], [nth S j])]"
 
 fun step_result :: "('sf, 'sc, 'sz) rule \<Rightarrow> (nat * ('sf, 'sc, 'sz) step) \<Rightarrow>  ('sf, 'sc, 'sz) rule"
 where
@@ -666,7 +666,7 @@ proof(induction rule: rrule_ok.induct)
       by (simp add: AIjeq)
 next
   case (Rrule_Imply SG i j C p q)
-  assume eq:"snd (SG ! i) ! j = (p \<rightarrow> q)"
+    assume eq:"snd (SG ! i) ! j = (p \<rightarrow> q)"
     assume "i < length SG"
     assume "j < length (snd (SG ! i))"
     assume sound:"sound (SG, C)"
@@ -731,7 +731,38 @@ next
     by (simp add: AIjeq)
 next
   case (Rrule_Cohide SG i j C)
-  then show ?case sorry
+    assume "i < length SG"
+    assume "j < length (snd (SG ! i))"
+    assume sound:"sound (SG, C)"
+    obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)"
+      by (metis seq2fml.cases)
+    have cohideR_simp:"\<And>\<Gamma> \<Delta> SS p q. 
+      (\<Gamma>,\<Delta>) = SS \<Longrightarrow> 
+      Rrule_result CohideR j SS = [(\<Gamma>, [nth \<Delta> j])]"
+      subgoal for AI SI SS p q by(cases SS, auto) done
+    have res_eq:"Rrule_result CohideR j (SG ! i) =  [(\<Gamma>, [nth \<Delta> j])]"
+      using SG_dec cohideR_simp by auto
+    (*have close_eq:"close [(\<Gamma>, [nth \<Delta> j])] (\<Gamma>,\<Delta>) = [(\<Gamma>, [nth \<Delta> j])]"
+      sorry*)
+    have big_sound:"sound ([(\<Gamma>, [nth \<Delta> j])], (\<Gamma>,\<Delta>))"
+      apply(rule soundI')
+      apply(rule seq_semI')
+      sorry
+      (*apply(rule close_nonmember_eq)
+      by (simp add: member_rec)*)
+    
+    show ?case
+    apply(rule close_provable_sound)
+    apply(rule sound_weaken_appR)
+    apply(rule sound)
+     using res_eq
+    apply(unfold res_eq)
+    unfolding close_app_comm
+    apply (rule sound_weaken_appL)
+    using big_sound SG_dec
+    apply(cases "[nth \<Delta> j] = \<Delta>")
+    apply(auto)
+    sledgehammer
 next
   case (Rrule_CohideRR SG i j C)
   then show ?case sorry
