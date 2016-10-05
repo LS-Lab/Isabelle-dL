@@ -229,63 +229,11 @@ inductive proof_ok :: "('sf, 'sc, 'sz) pf \<Rightarrow> bool"
 where
   Proof_ok:"deriv_ok (start_proof D) S \<Longrightarrow> proof_ok (D,S)"
 
-lemma nonempty_induct:"\<And>P. (\<And>j. P [] j) \<Longrightarrow> (\<And>x L. P (x # L) 0) \<Longrightarrow> (\<And>x xs j. (P xs j \<Longrightarrow> P (x # xs) (Suc j))) \<Longrightarrow> (\<And>L j. P L j)"
-  sorry
-  (*by(metis list_nonempty_induct)*) 
-
-lemma close_length:"\<And>L j. length L > 0 \<longrightarrow> i \<ge> 0 \<longrightarrow> i < length L \<longrightarrow> length (close L i) = length L - 1"
-  (*subgoal for L
-    by(induction rule: nonempty_induct[of "(\<lambda> L j. (length L > 0 \<longrightarrow> j \<ge> 0 \<longrightarrow> j < length L \<longrightarrow> length (close L j) = length L - 1))"], auto)
-  done*)
-  sorry
-  (*using nonempty_induct[of "(\<lambda> L j. (length L > 0 \<longrightarrow> j \<ge> 0 \<longrightarrow> j < length L \<longrightarrow> length (close L i) = length L - 1))"]*)
-  (*using nonempty_induct[of "(\<lambda> L j. j = length SG \<longrightarrow> (\<forall>i. (seq_valid (nth SG i) \<longrightarrow> sound (SG,C) \<longrightarrow> i \<ge> 0 \<longrightarrow> i < j \<longrightarrow> sound(close SG i, C))))"]*)
-
 definition sublist::"'a list \<Rightarrow> 'a list \<Rightarrow> bool"
 where "sublist A B \<equiv> (\<forall>x. List.member A x \<longrightarrow> List.member B x)"
 
 lemma sublistI:"(\<And>x. List.member A x \<Longrightarrow> List.member B x) \<Longrightarrow> sublist A B"
   unfolding sublist_def by auto
-  
-lemma sound_weaken_gen:"\<And>A B C. sublist A B \<Longrightarrow> sound (A, C) \<Longrightarrow> sound (B,C)"
-  sorry
-
-lemma sound_weaken:"\<And>SG SGS C. sound (SGS, C) \<Longrightarrow> sound (SG # SGS, C)"
-  subgoal for SG SGS C
-    apply(induction SGS)
-    subgoal unfolding sound_def by auto
-    subgoal for SG2 SGS
-      unfolding sound_def 
-      by (metis fst_conv le0 length_Cons not_less_eq nth_Cons_Suc snd_conv)
-    done
-  done
-
-lemma member_filter:"\<And>P. List.member (filter P L) x \<Longrightarrow> List.member L x"
-  apply(induction L, auto)
-  by(metis (full_types) member_rec(1))
-
-lemma close_sub:"sublist (close \<Gamma> \<phi>) \<Gamma>"
-  apply (auto simp add: sublist_def)
-  using member_filter by fastforce
-
-lemma close_app_comm:"close (A @ B) x  = close A x @ close B x"
-  by auto
-
-lemma nth_member:"n < List.length L \<Longrightarrow> List.member L (List.nth L n)"
-  apply(induction L, auto simp add: member_rec)
-  by (metis in_set_member length_Cons nth_mem set_ConsD)
-
-lemma seq_semI':"(\<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr Or \<Delta> FF)) \<Longrightarrow> \<nu> \<in> seq_sem I (\<Gamma>,\<Delta>)"
-  by auto 
-
-lemma sound_weaken_appR:"\<And>SG SGS C. sound (SG, C) \<Longrightarrow> sound (SG @ SGS, C)"
-  sorry
-
-lemma sound_weaken_appL:"\<And>SG SGS C. sound (SGS, C) \<Longrightarrow> sound (SG @ SGS, C)"
-  sorry
-
-lemma fml_seq_valid:"valid \<phi> \<Longrightarrow> seq_valid ([], [\<phi>])"
-  unfolding seq_valid_def valid_def by auto
 
 lemma soundI_mem:"(\<And>I. is_interp I \<Longrightarrow> (\<And>\<phi>. List.member SG \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV) \<Longrightarrow> seq_sem I C = UNIV) \<Longrightarrow> sound (SG,C)"
   apply (auto simp add: sound_def)
@@ -324,6 +272,80 @@ lemma close_provable_sound:"sound (SG, C) \<Longrightarrow> sound (close SG \<ph
       using SGs apply auto
       using impl_sem by blast
     qed
+    
+lemma sound_weaken_gen:"\<And>A B C. sublist A B \<Longrightarrow> sound (A, C) \<Longrightarrow> sound (B,C)"
+  proof (rule soundI_mem)
+    fix A B::"('sf,'sc,'sz) sequent list" 
+      and C::"('sf,'sc,'sz) sequent" 
+      and I::"('sf,'sc,'sz) interp"
+    assume sub:"sublist A B"
+    assume good:"is_interp I"
+    assume "sound (A, C)"
+    then have soundC:"(\<And>\<phi>. List.member A \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV) \<Longrightarrow> seq_sem I C = UNIV"
+      apply simp
+      apply(drule soundD_mem)
+      by (auto simp add: good)
+    assume SG:"(\<And>\<phi>. List.member B \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV)"
+    show "seq_sem I C = UNIV"
+      using soundC SG sub unfolding sublist_def by auto
+  qed
+  
+lemma sound_weaken:"\<And>SG SGS C. sound (SGS, C) \<Longrightarrow> sound (SG # SGS, C)"
+  subgoal for SG SGS C
+    apply(induction SGS)
+    subgoal unfolding sound_def by auto
+    subgoal for SG2 SGS
+      unfolding sound_def 
+      by (metis fst_conv le0 length_Cons not_less_eq nth_Cons_Suc snd_conv)
+    done
+  done
+
+lemma member_filter:"\<And>P. List.member (filter P L) x \<Longrightarrow> List.member L x"
+  apply(induction L, auto)
+  by(metis (full_types) member_rec(1))
+
+lemma close_sub:"sublist (close \<Gamma> \<phi>) \<Gamma>"
+  apply (auto simp add: sublist_def)
+  using member_filter by fastforce
+
+lemma close_app_comm:"close (A @ B) x  = close A x @ close B x"
+  by auto
+
+lemma nth_member:"n < List.length L \<Longrightarrow> List.member L (List.nth L n)"
+  apply(induction L, auto simp add: member_rec)
+  by (metis in_set_member length_Cons nth_mem set_ConsD)
+
+lemma seq_semI':"(\<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr Or \<Delta> FF)) \<Longrightarrow> \<nu> \<in> seq_sem I (\<Gamma>,\<Delta>)"
+  by auto 
+
+lemma mem_appL:"List.member A x \<Longrightarrow> List.member (A @ B) x"
+  by(induction A, auto simp add: member_rec)
+
+lemma sound_weaken_appR:"\<And>SG SGS C. sound (SG, C) \<Longrightarrow> sound (SG @ SGS, C)"
+  subgoal for SG SGS C
+    apply(rule sound_weaken_gen)
+    apply(auto)
+    unfolding sublist_def apply(rule allI)
+    subgoal for x
+      using mem_appL[of SG x SGS] by auto 
+    done
+  done
+
+lemma mem_appR:"List.member B x \<Longrightarrow> List.member (A @ B) x"
+  by(induction A, auto simp add: member_rec)
+
+lemma sound_weaken_appL:"\<And>SG SGS C. sound (SGS, C) \<Longrightarrow> sound (SG @ SGS, C)"
+  subgoal for SG SGS C
+    apply(rule sound_weaken_gen)
+    apply(auto)
+    unfolding sublist_def apply(rule allI)
+    subgoal for x
+      using mem_appR[of SGS x SG] by auto
+    done
+  done
+
+lemma fml_seq_valid:"valid \<phi> \<Longrightarrow> seq_valid ([], [\<phi>])"
+  unfolding seq_valid_def valid_def by auto
 
 lemma closeI_provable_sound:"\<And>i. sound (SG, C) \<Longrightarrow> sound (closeI SG i, (nth SG i)) \<Longrightarrow> sound (closeI SG i, C)"
   sorry
