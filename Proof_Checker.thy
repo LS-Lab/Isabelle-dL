@@ -260,6 +260,24 @@ lemma sound_weaken:"\<And>SG SGS C. sound (SGS, C) \<Longrightarrow> sound (SG #
     done
   done
 
+lemma member_filter:"\<And>P. List.member (filter P L) x \<Longrightarrow> List.member L x"
+  apply(induction L, auto)
+  by(metis (full_types) member_rec(1))
+
+lemma close_sub:"sublist (close \<Gamma> \<phi>) \<Gamma>"
+  apply (auto simp add: sublist_def)
+  using member_filter by fastforce
+
+lemma close_app_comm:"close (A @ B) x  = close A x @ close B x"
+  by auto
+
+lemma nth_member:"n < List.length L \<Longrightarrow> List.member L (List.nth L n)"
+  apply(induction L, auto simp add: member_rec)
+  by (metis in_set_member length_Cons nth_mem set_ConsD)
+
+lemma seq_semI':"(\<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr Or \<Delta> FF)) \<Longrightarrow> \<nu> \<in> seq_sem I (\<Gamma>,\<Delta>)"
+  by auto 
+
 lemma sound_weaken_appR:"\<And>SG SGS C. sound (SG, C) \<Longrightarrow> sound (SG @ SGS, C)"
   sorry
 
@@ -284,16 +302,28 @@ lemma closeI_valid_sound:"\<And>i. sound (SG, C) \<Longrightarrow> seq_valid (nt
 lemma close_nonmember:"(\<not>(List.member B a) \<Longrightarrow> seq_valid (B, [a]) \<Longrightarrow> sound ([(close (B @ A) a,SI)], (A,SI)))"
   sorry
 
-lemma close_app_neq:"List.member A x \<Longrightarrow> x \<noteq> a \<Longrightarrow> close (A @ B) a \<noteq> B" sorry
+lemma close_noneq_nonempty:"List.member A x \<Longrightarrow> x \<noteq> a \<Longrightarrow> close A a \<noteq> []"
+  by(induction A, auto simp add: member_rec)
 
+lemma close_app_neq:"List.member A x \<Longrightarrow> x \<noteq> a \<Longrightarrow> close (A @ B) a \<noteq> B" 
+  using append_self_conv2[of "close A a" "close B a"] append_self_conv2[of "close A a" "B"] close_app_comm[of A B a] close_noneq_nonempty[of A x a]
+  apply(cases "close B a = B")
+  apply (auto)
+  by (metis (no_types, lifting) filter_True filter_append mem_Collect_eq set_filter)
+  
 lemma close_nonmember_eq:"\<not>(List.member A a) \<Longrightarrow> close A a = A"
-  sorry
+  by (induction A, auto simp add: member_rec)
 
 named_theorems member_intros "Prove that stuff is in lists"
 
-lemma mem_sing[member_intros]:"\<And>x. List.member [x] x" sorry
-lemma mem_appR[member_intros]:"\<And>A B x. List.member B x \<Longrightarrow> List.member (A @ B) x" sorry
-lemma mem_filter[member_intros]:"\<And>A P x. P x \<Longrightarrow> List.member A x \<Longrightarrow> List.member (filter P A) x" sorry
+lemma mem_sing[member_intros]:"\<And>x. List.member [x] x"
+  by(auto simp add: member_rec)
+lemma mem_appR[member_intros]:"\<And>A B x. List.member B x \<Longrightarrow> List.member (A @ B) x"
+  subgoal for A by(induction A, auto simp add: member_rec) done
+lemma mem_filter[member_intros]:"\<And>A P x. P x \<Longrightarrow> List.member A x \<Longrightarrow> List.member (filter P A) x"
+  subgoal for A
+    by(induction A, auto simp add: member_rec)
+  done
 
 lemma member_singD:"\<And>x P. P x \<Longrightarrow> (\<And>y. List.member [x] y \<Longrightarrow> P y)"
   by (metis member_rec(1) member_rec(2))
@@ -303,30 +333,24 @@ lemma fst_neq:"A \<noteq> B \<Longrightarrow> (A,C) \<noteq> (B,D)"
 
 lemma and_foldl_sem:"\<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> (\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>)"
   by(induction \<Gamma>, auto simp add: member_rec)
-    
-lemma seq_semI:"((\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>) \<Longrightarrow> List.member \<Delta> \<psi> \<Longrightarrow> \<nu> \<in> fml_sem I \<psi>) \<Longrightarrow> \<nu> \<in> seq_sem I (\<Gamma>,\<Delta>)"
-  apply auto
-  sorry
 
-lemma seq_semI':"(\<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr Or \<Delta> FF)) \<Longrightarrow> \<nu> \<in> seq_sem I (\<Gamma>,\<Delta>)"
-  by auto 
+lemma and_foldl_sem_conv:"(\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr And \<Gamma> TT)"
+  by(induction \<Gamma>, auto simp add: member_rec)
 
-lemma seq_MP:"\<nu> \<in> seq_sem I (\<Gamma>,\<Delta>) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr Or \<Delta> FF)"
-  sorry
+lemma or_foldl_sem:"List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I (foldr Or \<Gamma> FF)"
+  by(induction \<Gamma>, auto simp add: member_rec)
 
 lemma \<Gamma>_sub_sem:"sublist \<Gamma>1 \<Gamma>2 \<Longrightarrow> \<nu> \<in> fml_sem I (foldr And \<Gamma>2 TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr And \<Gamma>1 TT)"
-  sorry
+  unfolding sublist_def 
+  by (smt and_foldl_sem and_foldl_sem_conv)
 
-lemma close_sub:"sublist (close \<Gamma> \<phi>) \<Gamma>"
-  sorry
-
-lemma close_app_comm:"close (A @ B) x  = close A x @ close B x"
-  sorry
-
-lemma nth_member:"n < List.length L \<Longrightarrow> List.member L (List.nth L n)"
-  apply(induction L, auto simp add: member_rec)
-  by (metis in_set_member length_Cons nth_mem set_ConsD)
-
+lemma seq_semI:"List.member \<Delta> \<psi> \<Longrightarrow>((\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>) \<Longrightarrow> \<nu> \<in> fml_sem I \<psi>) \<Longrightarrow> \<nu> \<in> seq_sem I (\<Gamma>,\<Delta>)"
+  apply(rule seq_semI')
+  using and_foldl_sem[of \<nu> I \<Gamma>] or_foldl_sem by blast
+  
+lemma seq_MP:"\<nu> \<in> seq_sem I (\<Gamma>,\<Delta>) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr Or \<Delta> FF)"
+  by(induction \<Delta>, auto)
+  
 lemma lrule_sound: "lrule_ok SG C i j L \<Longrightarrow> i < length SG \<Longrightarrow> j < length (fst (SG ! i)) \<Longrightarrow> sound (SG,C) \<Longrightarrow> sound (close (append SG (Lrule_result L j (nth SG i))) (nth SG i), C)"
 proof(induction rule: lrule_ok.induct)
   case (Lrule_And SG i j C p q)
