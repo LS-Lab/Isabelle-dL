@@ -208,8 +208,8 @@ inductive rrule_ok ::"('sf,'sc,'sz) sequent list \<Rightarrow> ('sf,'sc,'sz) seq
 where
   Rrule_And:"\<And>p q. nth (snd (nth SG i)) j = (p && q) \<Longrightarrow> rrule_ok SG C i j AndR"
 | Rrule_Imply:"\<And>p q. nth (snd (nth SG i)) j = (p \<rightarrow> q) \<Longrightarrow> rrule_ok SG C i j ImplyR"
-| Rrule_Cohide:"length (snd (nth SG i)) > j  \<Longrightarrow> rrule_ok SG C i j CohideR"
-| Rrule_CohideRR:"length (snd (nth SG i)) > j  \<Longrightarrow> rrule_ok SG C i j CohideRR"
+| Rrule_Cohide:"length (snd (nth SG i)) > j \<Longrightarrow> (\<And>\<Gamma> q. (nth SG i) \<noteq> (\<Gamma>, [q])) \<Longrightarrow> rrule_ok SG C i j CohideR"
+| Rrule_CohideRR:"length (snd (nth SG i)) > j  \<Longrightarrow> (\<And>q. (nth SG i) \<noteq> ([], [q])) \<Longrightarrow> rrule_ok SG C i j CohideRR"
   
 inductive step_ok  :: "('sf, 'sc, 'sz) rule \<Rightarrow> nat \<Rightarrow> ('sf, 'sc, 'sz) step \<Rightarrow> bool"
 where
@@ -733,6 +733,7 @@ next
   case (Rrule_Cohide SG i j C)
     assume "i < length SG"
     assume "j < length (snd (SG ! i))"
+    assume chg:"(\<And>\<Gamma> q. (nth SG i) \<noteq> (\<Gamma>, [q]))"
     assume sound:"sound (SG, C)"
     obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)"
       by (metis seq2fml.cases)
@@ -742,30 +743,58 @@ next
       subgoal for AI SI SS p q by(cases SS, auto) done
     have res_eq:"Rrule_result CohideR j (SG ! i) =  [(\<Gamma>, [nth \<Delta> j])]"
       using SG_dec cohideR_simp by auto
-    (*have close_eq:"close [(\<Gamma>, [nth \<Delta> j])] (\<Gamma>,\<Delta>) = [(\<Gamma>, [nth \<Delta> j])]"
-      sorry*)
+    have close_eq:"close [(\<Gamma>, [nth \<Delta> j])] (\<Gamma>,\<Delta>) = [(\<Gamma>, [nth \<Delta> j])]"
+      using chg 
+      by (metis SG_dec close_nonmember_eq member_rec(1) member_rec(2))
     have big_sound:"sound ([(\<Gamma>, [nth \<Delta> j])], (\<Gamma>,\<Delta>))"
       apply(rule soundI')
       apply(rule seq_semI')
-      sorry
-      (*apply(rule close_nonmember_eq)
-      by (simp add: member_rec)*)
-    
+      by (metis (no_types, lifting) Rrule_Cohide.prems(2) SG_dec length_greater_0_conv less_or_eq_imp_le list.distinct(1) member_singD nth_Cons_0 nth_member or_foldl_sem or_foldl_sem_conv seq_MP snd_conv)
     show ?case
-    apply(rule close_provable_sound)
-    apply(rule sound_weaken_appR)
-    apply(rule sound)
-     using res_eq
-    apply(unfold res_eq)
-    unfolding close_app_comm
-    apply (rule sound_weaken_appL)
-    using big_sound SG_dec
-    apply(cases "[nth \<Delta> j] = \<Delta>")
-    apply(auto)
-    sorry
+      apply(rule close_provable_sound)
+      apply(rule sound_weaken_appR)
+      apply(rule sound)
+       using res_eq
+      apply(unfold res_eq)
+      unfolding close_app_comm
+      apply (rule sound_weaken_appL)
+      using big_sound SG_dec
+      apply(cases "[nth \<Delta> j] = \<Delta>")
+      apply(auto)
+      using chg by (metis)+
 next
   case (Rrule_CohideRR SG i j C)
-  then show ?case sorry
+    assume "i < length SG"
+    assume "j < length (snd (SG ! i))"
+    assume chg:"(\<And>q. (nth SG i) \<noteq> ([], [q]))"
+    assume sound:"sound (SG, C)"
+    obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)"
+      by (metis seq2fml.cases)
+    have cohideRR_simp:"\<And>\<Gamma> \<Delta> SS p q. 
+      (\<Gamma>,\<Delta>) = SS \<Longrightarrow> 
+      Rrule_result CohideRR j SS = [([], [nth \<Delta> j])]"
+      subgoal for AI SI SS p q by(cases SS, auto) done
+    have res_eq:"Rrule_result CohideRR j (SG ! i) =  [([], [nth \<Delta> j])]"
+      using SG_dec cohideRR_simp by auto
+    have close_eq:"close [([], [nth \<Delta> j])] (\<Gamma>,\<Delta>) = [([], [nth \<Delta> j])]"
+      using chg 
+      by (metis SG_dec close_nonmember_eq member_rec(1) member_rec(2))
+    have big_sound:"sound ([([], [nth \<Delta> j])], (\<Gamma>,\<Delta>))"
+      apply(rule soundI')
+      apply(rule seq_semI')
+      by (metis (no_types, lifting) Rrule_CohideRR.prems(2) SG_dec and_foldl_sem_conv length_greater_0_conv less_or_eq_imp_le list.distinct(1) member_rec(2) member_singD nth_Cons_0 nth_member or_foldl_sem or_foldl_sem_conv seq_MP snd_conv)
+    show ?case
+      apply(rule close_provable_sound)
+      apply(rule sound_weaken_appR)
+      apply(rule sound)
+       using res_eq
+      apply(unfold res_eq)
+      unfolding close_app_comm
+      apply (rule sound_weaken_appL)
+      using big_sound SG_dec
+      apply(cases "[nth \<Delta> j] = \<Delta>")
+      apply(auto)
+      using chg by (metis)+
 qed
 
 lemma step_sound:"step_ok R i S \<Longrightarrow> i \<ge> 0 \<Longrightarrow> i < length (fst R) \<Longrightarrow> sound R \<Longrightarrow> sound (step_result R (i,S))"
