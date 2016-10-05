@@ -130,7 +130,7 @@ next
   then show ?thesis by (simp add: DG_valid)
 qed
 
-datatype rrule = ImplyR | AndR | CohideR | CohideRR
+datatype rrule = ImplyR | AndR
 datatype lrule = ImplyL | AndL
   
 datatype ('a, 'b, 'c) step =
@@ -148,6 +148,7 @@ datatype ('a, 'b, 'c) step =
 | BRename
 | Rrule rrule nat
 | Lrule lrule nat
+| CohideR | CohideRR
 | CloseId nat nat
 | Cut "('a, 'b, 'c) formula"
   
@@ -177,14 +178,14 @@ fun Rrule_result :: "rrule \<Rightarrow> nat \<Rightarrow> ('sf, 'sc, 'sz) seque
 where 
   "Rrule_result ImplyR j (A,S) = (case (nth S j) of Not (And (Not q) (Not (Not p))) \<Rightarrow> [(p # A, q # (closeI S j ))] | _ \<Rightarrow> undefined)"
 | "Rrule_result AndR j (A,S) = (case (nth S j) of (And p q) \<Rightarrow> [(A, p # (closeI S j )), (A, q # (closeI S j))])"
-| "Rrule_result CohideR j (A,S) = [(A, [nth S j])]"
-| "Rrule_result CohideRR j (A,S) = [([], [nth S j])]"
 
 fun step_result :: "('sf, 'sc, 'sz) rule \<Rightarrow> (nat * ('sf, 'sc, 'sz) step) \<Rightarrow>  ('sf, 'sc, 'sz) rule"
 where
   "step_result (SG,C) (i,Axiom a)   = (closeI SG i, C)"
 | "step_result (SG,C) (i,Lrule L j) = (close (append SG (Lrule_result L j (nth SG i))) (nth SG i), C)"
-| "step_result (SG,C) (i,Rrule L j) = (close (append SG (Rrule_result L j (nth SG i))) (nth SG i), C)" 
+| "step_result (SG,C) (i,Rrule L j) = (close (append SG (Rrule_result L j (nth SG i))) (nth SG i), C)"
+| "step_result (SG,C) (i,CohideR) = ([(fst (nth SG i), [nth (snd (nth SG i)) 0])], C)"
+| "step_result (SG,C) (i,CohideRR) = ([([], [nth (snd (nth SG i)) 0])], C)"
 | "step_result (SG,C) (i,Cut \<phi>) = (let (A,S) = nth SG i in ((\<phi> # A, S) # ((A, \<phi> # S) # (closeI SG i)), C))"
 | "step_result (SG,C) (i,VSubst \<phi> \<sigma>) = (closeI SG i, C)"
 | "step_result (SG,C) (i,CloseId j k) = (closeI SG i, C)"
@@ -208,8 +209,6 @@ inductive rrule_ok ::"('sf,'sc,'sz) sequent list \<Rightarrow> ('sf,'sc,'sz) seq
 where
   Rrule_And:"\<And>p q. nth (snd (nth SG i)) j = (p && q) \<Longrightarrow> rrule_ok SG C i j AndR"
 | Rrule_Imply:"\<And>p q. nth (snd (nth SG i)) j = (p \<rightarrow> q) \<Longrightarrow> rrule_ok SG C i j ImplyR"
-| Rrule_Cohide:"length (snd (nth SG i)) > j  \<Longrightarrow> rrule_ok SG C i j CohideR"
-| Rrule_CohideRR:"length (snd (nth SG i)) > j  \<Longrightarrow> rrule_ok SG C i j CohideRR"
   
 inductive step_ok  :: "('sf, 'sc, 'sz) rule \<Rightarrow> nat \<Rightarrow> ('sf, 'sc, 'sz) step \<Rightarrow> bool"
 where
@@ -219,6 +218,8 @@ where
 | Step_Cut:"fsafe \<phi> \<Longrightarrow> i \<in> {0 .. length SG-1} \<Longrightarrow> step_ok (SG,C) i (Cut \<phi>)"
 | Step_CloseId:"nth (fst (nth SG i)) j = nth (snd (nth SG i)) k \<Longrightarrow> step_ok (SG,C) i (CloseId j k) "
 | Step_G:"\<And>a p. nth SG i = ([], [([[a]]p)]) \<Longrightarrow> step_ok (SG,C) i G"
+| Step_CohideR:"length (snd (nth SG i)) > j  \<Longrightarrow> step_ok (SG,C) i CohideR"
+| Step_CohideRR:"length (snd (nth SG i)) > j  \<Longrightarrow> step_ok (SG,C) i CohideRR"
   
 inductive deriv_ok :: "('sf, 'sc, 'sz) rule \<Rightarrow> ('sf, 'sc, 'sz) derivation \<Rightarrow> bool"
 where 
@@ -729,7 +730,42 @@ next
     apply (rule sound_weaken_appL)
     using close_eq big_sound SG_dec AIjeq
     by (simp add: AIjeq)
+  qed
+
+lemma step_sound:"step_ok R i S \<Longrightarrow> i \<ge> 0 \<Longrightarrow> i < length (fst R) \<Longrightarrow> sound R \<Longrightarrow> sound (step_result R (i,S))"
+proof(induction rule: step_ok.induct)
+  case (Step_Axiom SG i a C)
+    assume is_axiom:"SG ! i = ([], [get_axiom a])"
+    assume sound:"sound (SG, C)"
+    assume i0:"0 \<le> i"
+    assume "i < length (fst (SG, C))"
+    then have iL:"i < length (SG)" 
+      by auto
+    have "seq_valid ([], [get_axiom a])"
+      apply(rule fml_seq_valid)
+      by(rule axiom_valid)
+    then have seq_valid:"seq_valid (SG ! i)"
+      using is_axiom by auto
+    (*  i0 iL *)
+  then show ?case 
+    using closeI_valid_sound[OF sound seq_valid] by simp
 next
+  case (Step_Lrule R i j L)
+  then show ?case
+    using lrule_sound
+    using step_result.simps(2) surj_pair
+    by simp
+next
+  case (Step_Rrule R i SG j L)
+  then show ?case 
+    using rrule_sound
+    using step_result.simps(2) surj_pair
+    by simp
+next
+  case (Step_CohideR R i SG C)
+  then show ?case sorry 
+
+(* next
   case (Rrule_Cohide SG i j C)
     assume "i < length SG"
     assume "j < length (snd (SG ! i))"
@@ -767,36 +803,10 @@ next
   case (Rrule_CohideRR SG i j C)
   then show ?case sorry
 qed
-
-lemma step_sound:"step_ok R i S \<Longrightarrow> i \<ge> 0 \<Longrightarrow> i < length (fst R) \<Longrightarrow> sound R \<Longrightarrow> sound (step_result R (i,S))"
-proof(induction rule: step_ok.induct)
-  case (Step_Axiom SG i a C)
-    assume is_axiom:"SG ! i = ([], [get_axiom a])"
-    assume sound:"sound (SG, C)"
-    assume i0:"0 \<le> i"
-    assume "i < length (fst (SG, C))"
-    then have iL:"i < length (SG)" 
-      by auto
-    have "seq_valid ([], [get_axiom a])"
-      apply(rule fml_seq_valid)
-      by(rule axiom_valid)
-    then have seq_valid:"seq_valid (SG ! i)"
-      using is_axiom by auto
-    (*  i0 iL *)
-  then show ?case 
-    using closeI_valid_sound[OF sound seq_valid] by simp
+*)
 next
-  case (Step_Lrule R i j L)
-  then show ?case
-    using lrule_sound
-    using step_result.simps(2) surj_pair
-    by simp
-next
-  case (Step_Rrule R i SG j L)
-  then show ?case 
-    using rrule_sound
-    using step_result.simps(2) surj_pair
-    by simp
+  case (Step_CohideRR R i SG C)
+  then show ?case sorry
 next
   case (Step_Cut \<phi> i SG C)
   then show ?case sorry
@@ -927,7 +937,7 @@ where "DIAndProof =
   ,(0, Rrule ImplyR 0)
   ,(0, Cut DIAndCutP1)
   ,(1, Cut DIAndSG1)
-  ,(0, Rrule CohideR 0)
+  ,(0, CohideR)
   ,(Suc (Suc 0), Lrule ImplyL 0)
   ,(Suc (Suc (Suc 0)), CloseId 1 0)
   ,(Suc (Suc 0), Lrule ImplyL 0)
@@ -935,9 +945,9 @@ where "DIAndProof =
   ,(Suc (Suc 0), Cut DIAndCut34Elim1)
   ,(0, Lrule ImplyL 0)
   ,(Suc (Suc (Suc 0)), Lrule ImplyL 0)
-  ,(0, Rrule CohideRR 0)
-  ,(0, Rrule CohideRR 0)
-  ,(Suc 0, Rrule CohideRR 0)
+  ,(0, CohideRR)
+  ,(0, CohideRR)
+  ,(Suc 0, CohideRR)
   ,(Suc (Suc (Suc (Suc (Suc 0)))), G)  
   ,(0, Rrule ImplyR 0)
   ,(Suc (Suc (Suc (Suc (Suc 0)))), Lrule AndL 0)
@@ -952,9 +962,9 @@ where "DIAndProof =
   ,(Suc (Suc 0), CloseId 0 0)
   ,(Suc 0, Cut DIAndCutP12)
   ,(0, Lrule ImplyL 0)
-  ,(0, Rrule CohideRR 0)
+  ,(0, CohideRR)
   ,(Suc (Suc (Suc (Suc 0))), VSubst Kaxiom DIAndCurry12)
-  ,(Suc (Suc (Suc 0)), Rrule CohideRR 0)
+  ,(Suc (Suc (Suc 0)),  CohideRR)
   ,(Suc (Suc 0), Lrule ImplyL 0)
   ,(Suc (Suc 0), G)  
   ,(0, Rrule ImplyR 0)  
@@ -966,9 +976,9 @@ where "DIAndProof =
   ,(Suc (Suc 0), CloseId 1 0)  
   ,(Suc 0, Cut DIAndCut34Elim2)
   ,(0, Lrule ImplyL 0)
-  ,(0, Rrule CohideRR 0)
+  ,(0, CohideRR)
   ,(Suc (Suc (Suc 0)), VSubst Kaxiom DIAndSubst342)
-  ,(Suc (Suc 0), Rrule CohideRR 0)
+  ,(Suc (Suc 0), CohideRR)
   ,(Suc (Suc 0), G)
   ,(0, Rrule ImplyR 0)
   ,(Suc (Suc 0), Lrule AndL 0)
@@ -977,7 +987,7 @@ where "DIAndProof =
   ,(Suc (Suc 0), CloseId 1 0)
   ,(1, Cut DIAndSG2)
   ,(0, Lrule ImplyL 0)
-  ,(0, Rrule CohideRR 0)
+  ,(0, CohideRR)
   ,(Suc (Suc 0), CloseId 4 0)
   ,(1, Lrule ImplyL 0)
   ,(Suc (Suc 0), CloseId 0 0)
