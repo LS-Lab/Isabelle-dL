@@ -207,7 +207,7 @@ where
 inductive rrule_ok ::"('sf,'sc,'sz) sequent list \<Rightarrow> ('sf,'sc,'sz) sequent \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> rrule \<Rightarrow> bool"
 where
   Rrule_And:"\<And>p q. nth (snd (nth SG i)) j = (p && q) \<Longrightarrow> rrule_ok SG C i j AndR"
-| Rrule_Imply:"\<And>p q. nth (snd (nth SG i)) j = (p \<rightarrow> q) \<Longrightarrow> rrule_ok SG C i j AndR"
+| Rrule_Imply:"\<And>p q. nth (snd (nth SG i)) j = (p \<rightarrow> q) \<Longrightarrow> rrule_ok SG C i j ImplyR"
 | Rrule_Cohide:"length (snd (nth SG i)) > j  \<Longrightarrow> rrule_ok SG C i j CohideR"
 | Rrule_CohideRR:"length (snd (nth SG i)) > j  \<Longrightarrow> rrule_ok SG C i j CohideRR"
   
@@ -666,7 +666,69 @@ proof(induction rule: rrule_ok.induct)
       by (simp add: AIjeq)
 next
   case (Rrule_Imply SG i j C p q)
-  then show ?case sorry
+  assume eq:"snd (SG ! i) ! j = (p \<rightarrow> q)"
+    assume "i < length SG"
+    assume "j < length (snd (SG ! i))"
+    assume sound:"sound (SG, C)"
+    obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)"
+      by (metis seq2fml.cases)
+    have impR_simp:"\<And>\<Gamma> \<Delta> SS p q. 
+      (nth \<Delta> j) = Implies p q \<Longrightarrow> 
+      (\<Gamma>,\<Delta>) = SS \<Longrightarrow> 
+      Rrule_result ImplyR j SS = [(p # \<Gamma>, q # (close \<Delta> (nth \<Delta> j)))]"
+      subgoal for AI SI SS p q apply(cases SS) by (auto simp add: Implies_def Or_def) done
+    have res_eq:"Rrule_result ImplyR j (SG ! i) = 
+      [(p # \<Gamma>, q # (close \<Delta> (nth \<Delta> j)))]"
+      using SG_dec impR_simp apply auto
+      using SG_dec eq Implies_def Or_def
+      using fstI
+      by (metis impR_simp close.simps snd_conv)
+    have AIjeq:"\<Delta> ! j = (p \<rightarrow> q)" 
+      using SG_dec eq snd_conv
+      by metis
+    have close_eq:"close [(p # \<Gamma>, q # (close \<Delta> (nth \<Delta> j)))] (\<Gamma>,\<Delta>) = [(p # \<Gamma>, q # (close \<Delta> (nth \<Delta> j)))]"
+      apply(rule close_nonmember_eq)
+      by (simp add: member_rec)
+    have big_sound:"sound ([(p # \<Gamma>, q # close \<Delta> (\<Delta> ! j))], (\<Gamma>,\<Delta>))"
+      apply(rule soundI')
+      apply(rule seq_semI')
+      proof -
+        fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+        assume "is_interp I"
+        assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [(p # \<Gamma>, q # close \<Delta> (\<Delta> ! j))] \<Longrightarrow> \<nu> \<in> seq_sem I ([(p # \<Gamma>, q # close \<Delta> (\<Delta> ! j))] ! i))"
+          have sg:"\<nu> \<in> seq_sem I (p # \<Gamma>, q # close \<Delta> (\<Delta> ! j))" using sgs[of 0] by auto
+        assume \<Gamma>_sem:"\<nu> \<in> fml_sem I (foldr op && \<Gamma> TT)"
+        show "\<nu> \<in> fml_sem I (foldr op || \<Delta> FF)"
+          using \<Gamma>_sem sg 
+            AIjeq Rrule_Imply.prems(2) SG_dec and_foldl_sem_conv close_sub impl_sem local.sublist_def member_rec(1) nth_member or_foldl_sem_conv seq_MP seq_semI snd_conv
+            \<Gamma>_sub_sem and_foldl_sem or_foldl_sem seq_sem.simps sublistI
+        proof -
+          have f1: "\<forall>fs p i. \<exists>f. (p \<in> fml_sem i (foldr op && fs (TT::('sf, 'sc, 'sz) formula)) \<or> List.member fs f) \<and> (p \<notin> fml_sem i f \<or> p \<in> fml_sem i (foldr op && fs TT))"
+            using and_foldl_sem_conv by blast
+          have "\<forall>p i fs. \<exists>f. \<forall>pa ia fa fb pb ib fc fd. p \<in> fml_sem i (f::('sf, 'sc, 'sz) formula) \<and> (pa \<in> fml_sem ia (fa::('sf, 'sc, 'sz) formula) \<or> pa \<in> fml_sem ia (fa \<rightarrow> fb)) \<and> (pb \<notin> fml_sem ib (fc::('sf, 'sc, 'sz) formula) \<or> pb \<in> fml_sem ib (fd \<rightarrow> fc)) \<and> (p \<notin> fml_sem i (foldr op || fs FF) \<or> List.member fs f)"
+            by (metis impl_sem or_foldl_sem_conv)
+          then obtain ff :: "(real, 'sz) vec \<times> (real, 'sz) vec \<Rightarrow> ('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sc, 'sz) formula list \<Rightarrow> ('sf, 'sc, 'sz) formula" where
+            f2: "\<And>p i fs pa ia f fa pb ib fb fc. p \<in> fml_sem i (ff p i fs) \<and> (pa \<in> fml_sem ia (f::('sf, 'sc, 'sz) formula) \<or> pa \<in> fml_sem ia (f \<rightarrow> fa)) \<and> (pb \<notin> fml_sem ib (fb::('sf, 'sc, 'sz) formula) \<or> pb \<in> fml_sem ib (fc \<rightarrow> fb)) \<and> (p \<notin> fml_sem i (foldr op || fs FF) \<or> List.member fs (ff p i fs))"
+            by metis
+          then have "\<And>fs. \<nu> \<notin> fml_sem I (foldr op && (p # \<Gamma>) TT) \<or> \<not> local.sublist (close \<Delta> (p \<rightarrow> q)) fs \<or> ff \<nu> I (q # close \<Delta> (p \<rightarrow> q)) = q \<or> List.member fs (ff \<nu> I (q # close \<Delta> (p \<rightarrow> q)))"
+            by (metis (no_types) AIjeq local.sublist_def member_rec(1) seq_MP sg)
+          then have "\<exists>f. List.member \<Delta> f \<and> \<nu> \<in> fml_sem I f"
+            using f2 f1 by (metis (no_types) AIjeq Rrule_Imply.prems(2) SG_dec \<Gamma>_sem and_foldl_sem close_sub member_rec(1) nth_member snd_conv)
+          then show ?thesis
+            using or_foldl_sem by blast
+        qed
+      qed
+   show ?case
+    apply(rule close_provable_sound)
+    apply(rule sound_weaken_appR)
+    apply(rule sound)
+     using res_eq
+    apply(unfold res_eq)
+    apply(unfold AIjeq)
+    unfolding close_app_comm
+    apply (rule sound_weaken_appL)
+    using close_eq big_sound SG_dec AIjeq
+    by (simp add: AIjeq)
 next
   case (Rrule_Cohide SG i j C)
   then show ?case sorry
