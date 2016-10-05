@@ -287,8 +287,56 @@ lemma sound_weaken_appL:"\<And>SG SGS C. sound (SGS, C) \<Longrightarrow> sound 
 lemma fml_seq_valid:"valid \<phi> \<Longrightarrow> seq_valid ([], [\<phi>])"
   unfolding seq_valid_def valid_def by auto
 
-lemma close_provable_sound:"sound (SG, C) \<Longrightarrow> sound (close SG \<phi>, \<phi>) \<Longrightarrow> sound (close SG \<phi>, C)"
+lemma soundI_mem:"(\<And>I. is_interp I \<Longrightarrow> (\<And>\<phi>. List.member SG \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV) \<Longrightarrow> seq_sem I C = UNIV) \<Longrightarrow> sound (SG,C)"
   sorry
+
+lemma soundD_mem:"sound (SG,C) \<Longrightarrow> (\<And>I. is_interp I \<Longrightarrow> (\<And>\<phi>. List.member SG \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV) \<Longrightarrow> seq_sem I C = UNIV)"
+  sorry
+
+lemma close_provable_sound:"sound (SG, C) \<Longrightarrow> sound (close SG \<phi>, \<phi>) \<Longrightarrow> sound (close SG \<phi>, C)"
+  proof (rule soundI_mem)
+    fix I::"('sf,'sc,'sz) interp"
+    assume S1:"sound (SG, C)"
+    assume S2:"sound (close SG \<phi>, \<phi>)"
+    assume good:"is_interp I"
+    assume SGCs:"(\<And>\<phi>'. List.member (close SG \<phi>) \<phi>' \<Longrightarrow> seq_sem I \<phi>' = UNIV)"
+    have S\<phi>:"seq_sem I \<phi> = UNIV"
+      using S2 apply simp
+      apply(drule soundD_mem)
+      using good apply auto
+      using SGCs UNIV_I by fastforce
+    have mem_close:"\<And>P. List.member SG P \<Longrightarrow> P \<noteq> \<phi> \<Longrightarrow> List.member (close SG \<phi>) P"
+      by(induction SG, auto simp add: member_rec)
+    have SGs:"\<And>P. List.member SG P \<Longrightarrow> seq_sem I P = UNIV"
+      subgoal for P
+        apply(cases "P = \<phi>")
+        subgoal using S\<phi> by auto
+        subgoal using mem_close[of P] SGCs by auto
+        done
+      done
+    show "seq_sem I C = UNIV"
+      using S1 apply simp
+      apply(drule soundD_mem)
+      using good apply auto
+      using SGs apply auto
+      using impl_sem by blast
+    qed
+      
+(*      
+  apply(rule soundI_mem)
+  apply(erule soundD_mem)+
+  subgoal for I by auto
+  apply auto
+  subgoal for I a b aa ba
+    
+    apply(cases "(a,b) = \<phi>")
+    apply(auto)
+    apply(drule soundD_mem[of "[y\<leftarrow>SG . y \<noteq> (a, b)]" "(a,b)"])
+    apply(auto)
+    apply(drule soundD_mem)
+    apply(auto)
+    sledgehammer*)
+
 
 lemma closeI_provable_sound:"\<And>i. sound (SG, C) \<Longrightarrow> sound (closeI SG i, (nth SG i)) \<Longrightarrow> sound (closeI SG i, C)"
   sorry
@@ -300,6 +348,7 @@ lemma closeI_valid_sound:"\<And>i. sound (SG, C) \<Longrightarrow> seq_valid (nt
   sorry*)
 
 lemma close_nonmember:"(\<not>(List.member B a) \<Longrightarrow> seq_valid (B, [a]) \<Longrightarrow> sound ([(close (B @ A) a,SI)], (A,SI)))"
+  apply (auto simp add: seq_valid_def sound_def)
   sorry
 
 lemma close_noneq_nonempty:"List.member A x \<Longrightarrow> x \<noteq> a \<Longrightarrow> close A a \<noteq> []"
@@ -431,7 +480,13 @@ next
         { assume p:"\<nu> \<in> fml_sem I p"
           have q:"\<nu> \<in> fml_sem I q" using p imp by simp
           have res: "\<nu> \<in> fml_sem I (foldr op || \<Delta> FF)" 
-            using disj \<Gamma> seq_semI by auto
+            using disj \<Gamma> seq_semI
+            proof -
+              have "\<nu> \<in> fml_sem I (foldr op && (q # \<Gamma>) TT)"
+                using \<Gamma> q by auto
+              then show ?thesis
+                by (meson \<Gamma>_sub_sem close_sub seq_MP sg1)
+            qed
           have conj:"\<nu> \<in> fml_sem I (foldr op && (q # \<Gamma>) TT)"
             using q \<Gamma> by auto
           have conj:"\<nu> \<in> fml_sem I (foldr op && (close (q # \<Gamma>) (p \<rightarrow> q)) TT)"
