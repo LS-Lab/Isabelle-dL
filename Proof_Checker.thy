@@ -1120,10 +1120,6 @@ definition DIAndCut12Intro :: "('sf,'sc,'sz) formula"
 where "DIAndCut12Intro = (([[Pvar vid1]](Pc pid2  \<rightarrow> (Pc pid1 && Pc pid2)))
   \<rightarrow> (([[Pvar vid1]](Pc pid2)) \<rightarrow> ([[Pvar vid1]](Pc pid1 && Pc pid2))))" 
 
-(*definition DIAndCut12Intro :: "('sf,'sc,'sz) formula"
-where "DIAndCut12Intro = (([[Pvar vid1]](Pc pid2  \<rightarrow> (Pc pid1 && Pc pid2)))
-  \<rightarrow> (([[Pvar vid1]](Pc pid2)) \<rightarrow> ([[Pvar vid1]](Pc pid1 && Pc pid2))))" 
-*)
 definition DIAndProof :: "('sf, 'sc, 'sz) pf"
 where "DIAndProof =
   (DIAndConcl, [
@@ -1188,7 +1184,6 @@ where "DIAndProof =
   ,(Suc (Suc (Suc 0)), CloseId 0 0)
   ,(Suc (Suc (Suc 0)), CloseId 0 0)
   ,(1, CloseId 1 0)
-  (*,(Suc (Suc 0), CloseId 0 0)*)
   ])
   "
 
@@ -1207,10 +1202,6 @@ lemma print_example_result:"rule_to_string(proof_result (proof_take 59 DIAndProo
   apply (auto simp add: id_simps  DIAndSubst341_def DIAndCut12Intro_def DIAndSubst12_def
     DIAndCutP12_def DIAndCurry12_def DIAndSubst342_def)
   sorry
-  
-
-lemma filter_expand:"filter (\<lambda>x. x \<noteq> (\<lambda>y. 0)) [(\<lambda>y. 1) ] = undefined"
-  sorry
 
 fun last_step::"('sf,'sc,'sz) pf \<Rightarrow> nat \<Rightarrow> nat * ('sf,'sc,'sz ) step"
 where "last_step (C,D) n = List.last (take n D)"
@@ -1224,34 +1215,10 @@ lemma DIAndSound_lemma:"sound (proof_result (proof_take 61 DIAndProof))"
     DIAndCutP12_def DIAndCurry12_def DIAndSubst342_def
     DIAndCut34Elim2_def (* 43*)
     DIAndSG2_def (* 54*)
-  (*apply(auto)
-  unfolding proof_take.simps start_proof.simps take.simps*)
   apply (auto simp add: prover)
   done
 
 theorem DIAnd_sound: "sound DIAnd"
   using DIAndSound_lemma example_result_correct by auto
-(* (Suc 0, AxSubst AK DIAndSubst12) *)
-  (*apply(rule Proof_ok)
-  apply(rule Deriv_Cons)
-  subgoal by (auto simp add: prover) apply(auto)[1] apply(auto)[1]
-  apply(rule Deriv_Cons)
-  subgoal by (auto simp add: prover) apply(auto  simp add: prover)[1] apply(auto  simp add: prover)[1]
-  apply(rule Deriv_Nil)*)
-  
-  (*apply(auto)*)
-  (*
-  apply(rule Deriv_Cons)
-  subgoal
-    unfolding start_proof.simps
-    apply(rule Step_Rrule)
-    apply(rule Rrule_Imply)
-    by auto
-  subgoal by auto
-  subgoal by auto
-(* Lrule_And Lrule_Imply Rrule_And Rrule_Imply Rrule_Cohide Rrule_CohideRR 
-Step_Axiom Step_Lrule Step_Rrule Step_Cut Step_CloseId  Step_G*)
-  
-  apply(auto intro: deriv_ok.intros)*)
 
 end end
