@@ -251,6 +251,7 @@ and Step_Cut_simps[prover]: "step_ok (SG,C) i (Cut \<phi>)"
 and Step_Rrule_simps[prover]: "step_ok (SG,C) i (Rrule j L)"
 and Step_Lrule_simps[prover]: "step_ok (SG,C) i (Lrule j L)"
 and Step_Axiom_simps[prover]: "step_ok (SG,C) i (Axiom a)"
+and Step_AxSubst_simps[prover]: "step_ok (SG,C) i (AxSubst a \<sigma>)"
 
 inductive deriv_ok :: "('sf, 'sc, 'sz) rule \<Rightarrow> ('sf, 'sc, 'sz) derivation \<Rightarrow> bool"
 where 
@@ -1151,11 +1152,11 @@ where "DIAndProof =
   ,(0, Rrule ImplyR 0)
   ,(Suc (Suc (Suc (Suc (Suc 0)))), Lrule AndL 0)
   ,(Suc (Suc (Suc (Suc (Suc 0)))), CloseId 0 0)
-  ,(Suc (Suc (Suc 0)), VSubst Kaxiom DIAndSubst341)
+  ,(Suc (Suc (Suc 0)), AxSubst AK DIAndSubst341)
   ,(Suc (Suc 0), CloseId 0 0)
   ,(Suc 0, CloseId 0 0)
   ,(0, Cut DIAndCut12Intro)
-  ,(Suc 0, VSubst Kaxiom DIAndSubst12)
+  ,(Suc 0, AxSubst AK DIAndSubst12)
   ,(0, Lrule ImplyL 0)
   ,(1, Lrule ImplyL 0)
   ,(Suc (Suc 0), CloseId 0 0)
@@ -1211,12 +1212,13 @@ lemma example_result_correct:"proof_result DIAndProof = DIAnd"
 lemma filter_expand:"filter (\<lambda>x. x \<noteq> (\<lambda>y. 0)) [(\<lambda>y. 1) ] = undefined"
   sorry
 
-lemma DIAndSound:"sound (proof_result (proof_take 20 DIAndProof))"
+lemma pne12E:"pid2 = pid1 = False" using pne12 by auto
+lemma DIAndSound:"sound (proof_result (proof_take 21 DIAndProof))"
   apply(rule proof_sound)
-  unfolding DIAndProof_def DIAndConcl_def Box_def DIAndCutP1_def DIAndSG1_def DIAndCut34Elim1_def
+  unfolding DIAndProof_def DIAndConcl_def Box_def DIAndCutP1_def DIAndSG1_def DIAndCut34Elim1_def Kaxiom_def DIAndSubst341_def
   (*apply(auto)
   unfolding proof_take.simps start_proof.simps take.simps*)
-  apply (auto simp add: prover)
+  apply (auto simp add: prover Kaxiom_def ssafe_def SDom_def FUadmit_def PFUadmit_def pne12E)
   done
   (*apply(rule Proof_ok)
   apply(rule Deriv_Cons)
