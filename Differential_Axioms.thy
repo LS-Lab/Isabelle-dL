@@ -3,9 +3,10 @@ imports
   "../afp/thys/Ordinary_Differential_Equations/ODE_Analysis"
   "./Ids"
   "./Lib"
-  "./Syntax"                                                                                                                  
+  "./Syntax"     
   "./Denotational_Semantics"
   "./Frechet_Correctness"
+  "./Axioms"
   "./Coincidence"
 begin context ids begin
 section \<open>Differential Axioms\<close>
@@ -16,44 +17,44 @@ axioms are more involved, often requiring extensive use of the ODE libraries.\<c
 
 subsection \<open>Differentiation Axioms\<close>
 definition diff_const_axiom :: "('sf, 'sc, 'sz) formula"
-  where "diff_const_axiom \<equiv> Equals (Differential ($f fid1 empty)) (Const 0)"
+  where [axiom_defs]:"diff_const_axiom \<equiv> Equals (Differential ($f fid1 empty)) (Const 0)"
 
 definition diff_var_axiom :: "('sf, 'sc, 'sz) formula"
-  where "diff_var_axiom \<equiv> Equals (Differential (Var vid1)) (DiffVar vid1)"
+  where [axiom_defs]:"diff_var_axiom \<equiv> Equals (Differential (Var vid1)) (DiffVar vid1)"
   
 definition state_fun ::"'sf \<Rightarrow> ('sf, 'sz) trm"
-  where "state_fun f = ($f f (\<lambda>i. Var i))"
+  where [axiom_defs]:"state_fun f = ($f f (\<lambda>i. Var i))"
   
 definition diff_plus_axiom :: "('sf, 'sc, 'sz) formula"
-  where "diff_plus_axiom \<equiv> Equals (Differential (Plus (state_fun fid1) (state_fun fid2))) 
+  where [axiom_defs]:"diff_plus_axiom \<equiv> Equals (Differential (Plus (state_fun fid1) (state_fun fid2))) 
       (Plus (Differential (state_fun fid1)) (Differential (state_fun fid2)))"
 
 definition diff_times_axiom :: "('sf, 'sc, 'sz) formula"
-  where "diff_times_axiom \<equiv> Equals (Differential (Times (state_fun fid1) (state_fun fid2))) 
+  where [axiom_defs]:"diff_times_axiom \<equiv> Equals (Differential (Times (state_fun fid1) (state_fun fid2))) 
       (Plus (Times (Differential (state_fun fid1)) (state_fun fid2)) 
             (Times (state_fun fid1) (Differential (state_fun fid2))))"
 
 (* [y=g(x)][y'=1](f(g(x))' = f(y)')*)
 definition diff_chain_axiom::"('sf, 'sc, 'sz) formula"
-  where "diff_chain_axiom \<equiv> [[Assign vid2 (f1 fid2 vid1)]]([[DiffAssign vid2 (Const 1)]] 
+  where [axiom_defs]:"diff_chain_axiom \<equiv> [[Assign vid2 (f1 fid2 vid1)]]([[DiffAssign vid2 (Const 1)]] 
     (Equals (Differential ($f fid1 (singleton (f1 fid2 vid1)))) (Times (Differential (f1 fid1 vid2)) (Differential (f1 fid2 vid1)))))"
 
 subsection \<open>ODE Axioms\<close>
 definition DWaxiom :: "('sf, 'sc, 'sz) formula"
-  where "DWaxiom = ([[EvolveODE (OVar vid1) (Predicational pid1)]](Predicational pid1))"
+  where [axiom_defs]:"DWaxiom = ([[EvolveODE (OVar vid1) (Predicational pid1)]](Predicational pid1))"
 
 definition DWaxiom' :: "('sf, 'sc, 'sz) formula"
-  where "DWaxiom' = ([[EvolveODE (OSing vid1 (Function fid1 (singleton (Var vid1)))) (Prop vid2 (singleton (Var vid1)))]](Prop vid2 (singleton (Var vid1))))"
+  where [axiom_defs]:"DWaxiom' = ([[EvolveODE (OSing vid1 (Function fid1 (singleton (Var vid1)))) (Prop vid2 (singleton (Var vid1)))]](Prop vid2 (singleton (Var vid1))))"
   
 definition DCaxiom :: "('sf, 'sc, 'sz) formula"
-  where "DCaxiom = (
+  where [axiom_defs]:"DCaxiom = (
 ([[EvolveODE (OVar vid1) (Predicational pid1)]]Predicational pid3) \<rightarrow>
 (([[EvolveODE (OVar vid1) (Predicational pid1)]](Predicational pid2)) 
   \<leftrightarrow>  
        ([[EvolveODE (OVar vid1) (And (Predicational pid1) (Predicational pid3))]]Predicational pid2)))"
 
 definition DEaxiom :: "('sf, 'sc, 'sz) formula"
-  where "DEaxiom = 
+  where [axiom_defs]:"DEaxiom = 
 (([[EvolveODE (OSing vid1 (f1 fid1 vid1)) (p1 vid2 vid1)]] (P pid1))
 \<leftrightarrow>
  ([[EvolveODE (OSing vid1 (f1 fid1 vid1)) (p1 vid2 vid1)]]
@@ -75,7 +76,7 @@ definition DSaxiom :: "('sf, 'sc, 'sz) formula"
 g(x)\<ge> h(x) \<rightarrow> p(x) \<and> [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c & p(x)]g(x) \<ge> h(x)
 *)
 definition DIGeqaxiom :: "('sf, 'sc, 'sz) formula"
-  where "DIGeqaxiom = 
+  where [axiom_defs]:"DIGeqaxiom = 
     (Implies (Geq (f1 fid2 vid1) (f1 fid3 vid1)) (Implies (And (p1 vid1 vid1) ([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (p1 vid1 vid1)]]
     (Geq (Differential (f1 fid2  vid1)) (Differential (f1 fid3 vid1)))
     )) ([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (p1 vid1 vid1)]](Geq (f1 fid2 vid1) (f1 fid3 vid1)))))"
@@ -84,7 +85,7 @@ definition DIGeqaxiom :: "('sf, 'sc, 'sz) formula"
 g(x) > h(x) \<rightarrow> p(x) \<and> [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c & p(x)]g(x) > h(x)
 *)
 definition DIGraxiom :: "('sf, 'sc, 'sz) formula"
-  where "DIGraxiom = 
+  where [axiom_defs]:"DIGraxiom = 
     (Implies (Greater (f1 fid2 vid1) (f1 fid3 vid1)) (Implies (And (p1 vid1 vid1) ([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (p1 vid1 vid1)]]
     (Geq (Differential (f1 fid2  vid1)) (Differential (f1 fid3 vid1)))
     )) ([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (p1 vid1 vid1)]](Greater (f1 fid2 vid1) (f1 fid3 vid1)))))"
@@ -92,7 +93,7 @@ definition DIGraxiom :: "('sf, 'sc, 'sz) formula"
 (* [{1' = 1(1) & 1(1)}]2(1) <->
    \<exists>2. [{1'=1(1), 2' = 2(1)*2 + 3(1) & 1(1)}]2(1)*)
 definition DGaxiom :: "('sf, 'sc, 'sz) formula"
-  where "DGaxiom = (([[EvolveODE (OSing vid1 (f1 fid1 vid1)) (p1 vid1 vid1)]]p1 vid2 vid1) \<leftrightarrow> 
+  where [axiom_defs]:"DGaxiom = (([[EvolveODE (OSing vid1 (f1 fid1 vid1)) (p1 vid1 vid1)]]p1 vid2 vid1) \<leftrightarrow> 
   (Exists vid2 
     ([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1)) (OSing vid2 (Plus (Times (f1 fid2 vid1) (Var vid2)) (f1 fid3 vid1)))) (p1 vid1 vid1)]]
        p1 vid2 vid1)))"
@@ -1282,7 +1283,7 @@ proof -
        apply (rule osafe_Sing)
        subgoal unfolding f1_def expand_singleton
          apply(rule dfree_Fun)
-         subgoal for i apply(cases "i = vid1") apply (auto, rule dfree_Const) done
+         subgoal for i apply(cases "i = vid1") apply (auto) done
          done
        apply (rule osafe_Var)
        by auto
@@ -2224,7 +2225,7 @@ lemma DG_valid:"valid DGaxiom"
                           ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
               (\<chi> y. if vid2 = y then r else fst (a, b) $ y, b) (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i)) (FVT (if i = vid1 then trm.Var vid1 else Const 0))"
            subgoal for s i using agree_sub[OF FVT[of i] agree[of s]] by auto done
-         have safe:"\<And>i. dsafe (if i = vid1 then trm.Var vid1 else Const 0)" subgoal for i apply(cases "i = vid1", auto) apply(rule dsafe_Const) done done           
+         have safe:"\<And>i. dsafe (if i = vid1 then trm.Var vid1 else Const 0)" subgoal for i apply(cases "i = vid1", auto) done done           
          have dterm_sem_eq:"\<And>s i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol s)) 
            = dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
            (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))

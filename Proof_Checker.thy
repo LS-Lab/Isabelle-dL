@@ -210,20 +210,7 @@ where
 | Lrule_Imply:"\<And>p q. nth (fst (nth SG i)) j = (p \<rightarrow> q) \<Longrightarrow> lrule_ok SG C i j ImplyL"
 
 named_theorems prover "Simplification rules for checking validity of proof certificates" 
-lemmas [prover] = axiom_defs Box_def Or_def Implies_def filter_append ssafe_def SDom_def FUadmit_def PFUadmit_def
-(*lemma [prover]: "(x # xs) @ ys = x # (xs @ ys)" by simp
-lemma [prover]: "[] @ ys = ys" by simp*)
-(*lemma [prover]: "([[$\<alpha> vid1]](Pc pid1 \<rightarrow> Pc pid2)) \<rightarrow> (([[$\<alpha> vid1]]Pc pid1) \<rightarrow> ([[$\<alpha> vid1]]Pc pid2))" 
-  by(rule Kaxiom_def)
-*)
-(*thm prover
-thm Kaxiom_def ssafe_def SDom_def FUadmit_def PFUadmit_def*)  
-
-  (*apply(auto)
-  unfolding proof_take.simps start_proof.simps take.simps*)
-(* TODO: Make lots of these *)
-lemma [prover]:"pid2 = pid1 = False" using pne12 by auto 
-
+lemmas [prover] = axiom_defs Box_def Or_def Implies_def filter_append ssafe_def SDom_def FUadmit_def PFUadmit_def id_simps
 
 inductive_simps 
     Lrule_And[prover]: "lrule_ok SG C i j AndL"
@@ -1220,7 +1207,6 @@ lemma example_result_correct:"proof_result DIAndProof = DIAnd"
 lemma filter_expand:"filter (\<lambda>x. x \<noteq> (\<lambda>y. 0)) [(\<lambda>y. 1) ] = undefined"
   sorry
 
-lemma pne12E:"pid2 = pid1 = False" using pne12 by auto
 lemma DIAndSound:"sound (proof_result (proof_take 21 DIAndProof))"
   apply(rule proof_sound)
   unfolding DIAndProof_def DIAndConcl_def  DIAndCutP1_def DIAndSG1_def DIAndCut34Elim1_def  DIAndSubst341_def

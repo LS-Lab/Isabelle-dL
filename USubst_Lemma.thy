@@ -4081,7 +4081,7 @@ next
    have FA:"Fadmit \<sigma> \<phi>"
    and FUA:"FUadmit \<sigma> \<phi> UNIV"
    and some:"SContexts \<sigma> C = Some C'"
-   and PFA:"PFadmit (\<lambda>(). Fsubst \<phi> \<sigma>) C'"
+   and PFA:"PFadmit (\<lambda>_. Fsubst \<phi> \<sigma>) C'"
    and IH:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"
      by auto
    have "fsafe (InContext C \<phi>) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst (InContext C \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) (InContext C \<phi>)))"
@@ -4095,7 +4095,7 @@ next
          using uadmit_fml_adjoint[OF FUA agree fsafe ssafe good_interp] by auto
        have eq:"(\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>)"
          using adj_eq IH[OF fsafe ssafe] by auto
-       let ?sub = "(\<lambda>(). Fsubst \<phi> \<sigma>)"
+       let ?sub = "(\<lambda>_. Fsubst \<phi> \<sigma>)"
        let ?R1 = "fml_sem I (Fsubst \<phi> \<sigma>)"
        let ?R2 = "fml_sem (adjoint I \<sigma> \<nu>) \<phi>"
        have eq':"?R1 = ?R2"
@@ -4115,7 +4115,7 @@ next
        have extend_PF:"(PFadjoint I ?sub) = (extendc I ?R2)"
          unfolding PFadjoint_def using IH apply (simp)
          by (metis old.unit.case old.unit.exhaust)
-       have "(\<nu> \<in> fml_sem I (Fsubst (InContext C \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem I (PFsubst C' (\<lambda>(). Fsubst \<phi> \<sigma>)))"
+       have "(\<nu> \<in> fml_sem I (Fsubst (InContext C \<phi>) \<sigma>)) = (\<nu> \<in> fml_sem I (PFsubst C' (\<lambda>_. Fsubst \<phi> \<sigma>)))"
          using some by simp
        moreover have "... = (\<nu> \<in> fml_sem (PFadjoint I ?sub) C')"
          using IH2 by auto
@@ -4187,7 +4187,6 @@ proof -
         apply(rule adjoint_safe[OF good_interp])
         using ssafe unfolding ssafe_def by auto
       have \<phi>sem:"\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>" using valid using good_adj unfolding valid_def by blast
-      (*then sub_sem"\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>"*)
       then show "?thesis I \<nu>"
         using subst_fml[OF good_interp Fadmit fsafe ssafe]
         by auto

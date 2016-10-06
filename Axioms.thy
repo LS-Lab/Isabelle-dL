@@ -21,27 +21,27 @@ text \<open>
 named_theorems axiom_defs "Axiom definitions"
 
 definition assign_axiom :: "('sf, 'sc, 'sz) formula"
-  where [axioms_defs]:"assign_axiom \<equiv>
+  where [axiom_defs]:"assign_axiom \<equiv>
     ([[vid1 := ($f fid1 empty)]] (Prop vid1 (singleton (Var vid1))))
       \<leftrightarrow> Prop vid1 (singleton ($f fid1 empty))"
   
 definition loop_iterate_axiom :: "('sf, 'sc, 'sz) formula"
-  where "loop_iterate_axiom \<equiv> ([[$\<alpha> vid1**]]Predicational pid1)
+  where [axiom_defs]:"loop_iterate_axiom \<equiv> ([[$\<alpha> vid1**]]Predicational pid1)
     \<leftrightarrow> ((Predicational pid1) && ([[$\<alpha> vid1]][[$\<alpha> vid1**]]Predicational pid1))"
 
 definition test_axiom :: "('sf, 'sc, 'sz) formula"
-  where "test_axiom \<equiv>
+  where [axiom_defs]:"test_axiom \<equiv>
     ([[?($\<phi> vid2 empty)]]$\<phi> vid1 empty) \<leftrightarrow> (($\<phi> vid2 empty) \<rightarrow> ($\<phi> vid1 empty))"
 
 definition box_axiom :: "('sf, 'sc, 'sz) formula"
-  where "box_axiom \<equiv> (\<langle>$\<alpha> vid1\<rangle>Predicational pid1) \<leftrightarrow> !([[$\<alpha> vid1]]!(Predicational pid1))"
+  where [axiom_defs]:"box_axiom \<equiv> (\<langle>$\<alpha> vid1\<rangle>Predicational pid1) \<leftrightarrow> !([[$\<alpha> vid1]]!(Predicational pid1))"
 
 definition choice_axiom :: "('sf, 'sc, 'sz) formula"
-  where "choice_axiom \<equiv> ([[$\<alpha> vid1 \<union>\<union> $\<alpha> vid2]]Predicational pid1)
+  where [axiom_defs]:"choice_axiom \<equiv> ([[$\<alpha> vid1 \<union>\<union> $\<alpha> vid2]]Predicational pid1)
     \<leftrightarrow> (([[$\<alpha> vid1]]Predicational pid1) && ([[$\<alpha> vid2]]Predicational pid1))"
 
 definition Kaxiom :: "('sf, 'sc, 'sz) formula"
-  where "Kaxiom \<equiv> ([[$\<alpha> vid1]]((Predicational pid1) \<rightarrow> (Predicational pid2)))
+  where [axiom_defs]:"Kaxiom \<equiv> ([[$\<alpha> vid1]]((Predicational pid1) \<rightarrow> (Predicational pid2)))
     \<rightarrow> ([[$\<alpha> vid1]]Predicational pid1) \<rightarrow> ([[$\<alpha> vid1]]Predicational pid2)"
 
 (* Here is an example of an old version of the induction axiom that was too weak
@@ -53,12 +53,12 @@ definition Ibroken :: "('sf, 'sc, 'sz) formula"
     \<rightarrow> ($P [] \<rightarrow> ([[($$a)**]]$P [])))"*)
 
 definition Iaxiom :: "('sf, 'sc, 'sz) formula"
-  where "Iaxiom \<equiv> 
+  where [axiom_defs]:"Iaxiom \<equiv> 
   ([[($\<alpha> vid1)**]](Predicational pid1 \<rightarrow> ([[$\<alpha> vid1]]Predicational pid1)))
     \<rightarrow>((Predicational pid1 \<rightarrow> ([[($\<alpha> vid1)**]]Predicational pid1)))"
 
 definition Vaxiom :: "('sf, 'sc, 'sz) formula"
-  where "Vaxiom \<equiv> ($\<phi> vid1 empty) \<rightarrow> ([[$\<alpha> vid1]]($\<phi> vid1 empty))"
+  where [axiom_defs]:"Vaxiom \<equiv> ($\<phi> vid1 empty) \<rightarrow> ([[$\<alpha> vid1]]($\<phi> vid1 empty))"
 
 subsection \<open>Validity/Soundness proofs for axioms and rules\<close>
 theorem test_valid: "valid test_axiom"

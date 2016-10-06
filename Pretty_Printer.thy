@@ -70,11 +70,5 @@ where
   | "hp_to_string (Choice a b) = hp_to_string a @ ''U'' @ hp_to_string b"
   | "hp_to_string (Sequence a b) = hp_to_string a @ '';'' @ hp_to_string b"
   | "hp_to_string (Loop a) = hp_to_string a @ ''*''"
-  
-fun seq_to_string :: "('sf, 'sc, 'sz) sequent \<Rightarrow> char list"
-where "seq_to_string (A,S) = join '', '' (map fml_to_string A) @ '' |- '' @ join '', '' (map fml_to_string S)"
-  
-fun rule_to_string :: "('sf, 'sc, 'sz) rule \<Rightarrow> char list"
-where "rule_to_string (SG, C) = (join '';;   '' (map seq_to_string SG)) @ ''            '' @  (*[char_of_nat 10] @ *)seq_to_string C"
-  
+    
 end end
