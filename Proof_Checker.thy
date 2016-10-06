@@ -1127,7 +1127,7 @@ where "DIAndCut12Intro = (([[Pvar vid1]](Pc pid2  \<rightarrow> (Pc pid1 && Pc p
 definition DIAndProof :: "('sf, 'sc, 'sz) pf"
 where "DIAndProof =
   (DIAndConcl, [
-   (0, Rrule ImplyR 0)
+   (0, Rrule ImplyR 0)  (* 1 *)
   ,(0, Lrule AndL 0)
   ,(0, Rrule ImplyR 0)
   ,(0, Cut DIAndCutP1)
@@ -1137,7 +1137,7 @@ where "DIAndProof =
   ,(Suc (Suc (Suc 0)), CloseId 1 0)
   ,(Suc (Suc 0), Lrule ImplyL 0)
   ,(Suc (Suc 0), CloseId 0 0)
-  ,(Suc (Suc 0), Cut DIAndCut34Elim1)
+  ,(Suc (Suc 0), Cut DIAndCut34Elim1) (* 11 *)
   ,(0, Lrule ImplyL 0)
   ,(Suc (Suc (Suc 0)), Lrule ImplyL 0)
   ,(0, Rrule CohideRR 0)
@@ -1147,73 +1147,91 @@ where "DIAndProof =
   ,(0, Rrule ImplyR 0)
   ,(Suc (Suc (Suc (Suc (Suc 0)))), Lrule AndL 0)
   ,(Suc (Suc (Suc (Suc (Suc 0)))), CloseId 0 0)
-  ,(Suc (Suc (Suc 0)), AxSubst AK DIAndSubst341)
+  ,(Suc (Suc (Suc 0)), AxSubst AK DIAndSubst341) (* 21 *)
   ,(Suc (Suc 0), CloseId 0 0)
   ,(Suc 0, CloseId 0 0)
   ,(0, Cut DIAndCut12Intro)
-  ,(Suc 0, AxSubst AK DIAndSubst12)
+  ,(Suc 0, Rrule CohideRR 0)
+  ,(Suc (Suc 0), AxSubst AK DIAndSubst12)
   ,(0, Lrule ImplyL 0)
   ,(1, Lrule ImplyL 0)
   ,(Suc (Suc 0), CloseId 0 0)
   ,(Suc 0, Cut DIAndCutP12)
-  ,(0, Lrule ImplyL 0)
+  ,(0, Lrule ImplyL 0) (* 31 *)
   ,(0, Rrule CohideRR 0)
-  ,(Suc (Suc (Suc (Suc 0))), VSubst Kaxiom DIAndCurry12)
+  ,(Suc (Suc (Suc (Suc 0))), AxSubst AK DIAndCurry12)
   ,(Suc (Suc (Suc 0)), Rrule CohideRR 0)
   ,(Suc (Suc 0), Lrule ImplyL 0)
   ,(Suc (Suc 0), G)  
   ,(0, Rrule ImplyR 0)  
   ,(Suc (Suc (Suc (Suc 0))), Rrule ImplyR 0)  
   ,(Suc (Suc (Suc (Suc 0))), Rrule AndR 0)  
-  ,(Suc (Suc (Suc (Suc 0))), CloseId 1 0)  
-  ,(Suc (Suc (Suc (Suc 0))), CloseId 0 0)  
-  ,(Suc (Suc (Suc 0)), CloseId 1 0)  
-  ,(Suc (Suc 0), CloseId 1 0)  
+  ,(Suc (Suc (Suc (Suc (Suc 0)))), CloseId 0 0)
+  ,(Suc (Suc (Suc (Suc 0))), CloseId 1 0) (* 41 *)
+  ,(Suc (Suc  0), CloseId 0 0)   
   ,(Suc 0, Cut DIAndCut34Elim2)
   ,(0, Lrule ImplyL 0)
   ,(0, Rrule CohideRR 0)
-  ,(Suc (Suc (Suc 0)), VSubst Kaxiom DIAndSubst342)
-  ,(Suc (Suc 0), Rrule CohideRR 0)
-  ,(Suc (Suc 0), G)
+  ,(Suc (Suc (Suc (Suc 0))), AxSubst AK DIAndSubst342) (* 46 *)
+  ,(Suc (Suc (Suc 0)), Rrule CohideRR 0)
+  ,(Suc (Suc (Suc 0)), G) (* 48 *)
   ,(0, Rrule ImplyR 0)
-  ,(Suc (Suc 0), Lrule AndL 0)
-  ,(Suc (Suc 0), CloseId 1 0)
-  ,(Suc 0, Lrule ImplyL 0)
-  ,(Suc (Suc 0), CloseId 1 0)
+  ,(Suc (Suc (Suc 0)), Lrule AndL 0) (* 50 *)
+  ,(Suc (Suc (Suc 0)), CloseId 1 0)
+  ,(Suc (Suc 0), Lrule ImplyL 0)
+  ,(Suc 0, CloseId 0 0)
   ,(1, Cut DIAndSG2)
   ,(0, Lrule ImplyL 0)
   ,(0, Rrule CohideRR 0)
-  ,(Suc (Suc 0), CloseId 4 0)
-  ,(1, Lrule ImplyL 0)
-  ,(Suc (Suc 0), CloseId 0 0)
-  ,(Suc (Suc 0), CloseId 0 0)
+  ,(Suc (Suc (Suc 0)), CloseId 4 0)
+  ,(Suc (Suc 0), Lrule ImplyL 0)
+  ,(Suc (Suc (Suc 0)), CloseId 0 0)
+  ,(Suc (Suc (Suc 0)), CloseId 0 0)
+  ,(1, CloseId 1 0)
+  (*,(Suc (Suc 0), CloseId 0 0)*)
   ])
   "
 
 fun proof_take :: "nat \<Rightarrow> ('sf,'sc,'sz) pf \<Rightarrow> ('sf,'sc,'sz) pf"
 where "proof_take n (C,D) = (C,List.take n D)"
 
-lemma print_example_result:"rule_to_string(proof_result (proof_take 20 DIAndProof)) = undefined"
-  unfolding DIAndProof_def DIAndConcl_def Implies_def Or_def 
-  proof_result.simps deriv_result.simps start_proof.simps DIAndCutP12_def  DIAndSG1_def DIAndSG2_def DIAndCutP1_def Box_def DIAndCut34Elim1_def DIAndCut12Intro_def DIAndCut34Elim2_def DIAnd_def
-  using pne12 pne13 pne14 pne23 pne24 pne34 apply (auto)
-  sorry
-  
-lemma example_result_correct:"proof_result DIAndProof = DIAnd"
+  lemma example_result_correct:"proof_result (proof_take 61 DIAndProof) = DIAnd"
   unfolding DIAndProof_def DIAndConcl_def Implies_def Or_def 
   proof_result.simps deriv_result.simps start_proof.simps DIAndCutP12_def  DIAndSG1_def DIAndSG2_def DIAndCutP1_def Box_def DIAndCut34Elim1_def DIAndCut12Intro_def DIAndCut34Elim2_def DIAnd_def
   using pne12 pne13 pne14 pne23 pne24 pne34 by (auto)
+                                                                         
+lemma print_example_result:"rule_to_string(proof_result (proof_take 59 DIAndProof)) = undefined"
+  unfolding DIAndProof_def DIAndConcl_def Implies_def Or_def 
+  proof_result.simps deriv_result.simps start_proof.simps DIAndCutP12_def  DIAndSG1_def DIAndSG2_def DIAndCutP1_def Box_def DIAndCut34Elim1_def DIAndCut12Intro_def DIAndCut34Elim2_def DIAnd_def
+  
+  apply (auto simp add: id_simps  DIAndSubst341_def DIAndCut12Intro_def DIAndSubst12_def
+    DIAndCutP12_def DIAndCurry12_def DIAndSubst342_def)
+  sorry
+  
 
 lemma filter_expand:"filter (\<lambda>x. x \<noteq> (\<lambda>y. 0)) [(\<lambda>y. 1) ] = undefined"
   sorry
 
-lemma DIAndSound:"sound (proof_result (proof_take 21 DIAndProof))"
+fun last_step::"('sf,'sc,'sz) pf \<Rightarrow> nat \<Rightarrow> nat * ('sf,'sc,'sz ) step"
+where "last_step (C,D) n = List.last (take n D)"
+  
+lemma whereami:"last_step DIAndProof 60 = undefined"
+  unfolding DIAndProof_def apply auto sorry
+  
+lemma DIAndSound_lemma:"sound (proof_result (proof_take 61 DIAndProof))"
   apply(rule proof_sound)
-  unfolding DIAndProof_def DIAndConcl_def  DIAndCutP1_def DIAndSG1_def DIAndCut34Elim1_def  DIAndSubst341_def
+  unfolding DIAndProof_def DIAndConcl_def  DIAndCutP1_def DIAndSG1_def DIAndCut34Elim1_def  DIAndSubst341_def DIAndCut12Intro_def DIAndSubst12_def
+    DIAndCutP12_def DIAndCurry12_def DIAndSubst342_def
+    DIAndCut34Elim2_def (* 43*)
+    DIAndSG2_def (* 54*)
   (*apply(auto)
   unfolding proof_take.simps start_proof.simps take.simps*)
   apply (auto simp add: prover)
   done
+
+theorem DIAnd_sound: "sound DIAnd"
+  using DIAndSound_lemma example_result_correct by auto
+(* (Suc 0, AxSubst AK DIAndSubst12) *)
   (*apply(rule Proof_ok)
   apply(rule Deriv_Cons)
   subgoal by (auto simp add: prover) apply(auto)[1] apply(auto)[1]
