@@ -261,6 +261,11 @@ inductive_simps
   and dsafe_Const_simps[simp]: "dsafe (Const r)"
 
 inductive_simps
+      osafe_OVar_simps[simp]:"osafe (OVar c)"
+  and osafe_OSing_simps[simp]:"osafe (OSing x \<theta>)"
+  and osafe_OProd_simps[simp]:"osafe (OProd ODE1 ODE2)"
+
+inductive_simps
       hpsafe_Pvar_simps[simp]: "hpsafe (Pvar a)"
   and hpsafe_Sequence_simps[simp]: "hpsafe (a ;; b)"
   and hpsafe_Loop_simps[simp]: "hpsafe (a**)"

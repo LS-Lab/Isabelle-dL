@@ -338,7 +338,7 @@ shows "is_interp (adjoint I \<sigma> \<nu>)"
   subgoal for x i
     apply(cases "SFunctions \<sigma> i = None")
     subgoal
-      apply(auto  simp del: extendf.simps extendc.simps)
+      apply(auto simp del: extendf.simps extendc.simps)
       using good_interp unfolding is_interp_def by simp
     apply(auto  simp del: extendf.simps extendc.simps)
     subgoal for f'
@@ -376,8 +376,8 @@ shows "is_interp (adjoint I \<sigma> \<nu>)"
         let ?Pred = "(\<lambda>fd. (\<forall>x. (?f has_derivative (fd x)) (at x)))"
         let ?f''="extendf_deriv I i f' \<nu>"
         have Pf:"?Pred ?f''"
-            using extendf_deriv[OF good_subst[of i f'] good_interp, of \<nu> i, OF some]
-            by auto
+          using extendf_deriv[OF good_subst[of i f'] good_interp, of \<nu> i, OF some]
+          by auto
         have "\<And>x. (THE G. (?f has_derivative G) (at x)) = ?f'' x"
           apply(rule the_deriv)
           using Pf by auto
@@ -1582,8 +1582,6 @@ lemma ntadj_sub_ode:"\<And>\<sigma> x1 x2. (\<Union>y\<in>{y. Inl (Inl y) \<in> 
   by auto
 
 lemma uadmit_prog_fml_ntadjoint':
-  (*fixes \<alpha> :: "('sf + 'sf,'sc,'sz) hp"*)
-  (*fixes \<phi> :: "('sf + 'sf,'sc,'sz) formula"*)
   fixes \<sigma> I
   assumes ssafe:"\<And>i. dfree (\<sigma> i)"
   assumes good_interp:"is_interp I"
@@ -3558,7 +3556,6 @@ next
           note hmmm = hmmsubst
           from hmmm have hmmm':"\<And>s. s \<in> {0..t} \<Longrightarrow> VSagree (sol 0) (sol s) {x. Inl x \<in> (-(BVO (Osubst ODE \<sigma>)))}"
             unfolding VSagree_def Vagree_def by auto
-          (* Necessary *)
           have Vagree_of_VSagree:"\<And>\<nu>1 \<nu>2 \<omega>1 \<omega>2 S. VSagree \<nu>1 \<nu>2 {x. Inl x \<in> S} \<Longrightarrow> VSagree \<omega>1 \<omega>2 {x. Inr x \<in> S} \<Longrightarrow> Vagree (\<nu>1, \<omega>1) (\<nu>2, \<omega>2) S"
             unfolding VSagree_def Vagree_def by auto
           have mkv:"\<And>s. s \<in> {0..t} \<Longrightarrow> mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s) = mk_v (adjoint I \<sigma> (sol s, bb)) ODE (sol 0, bb) (sol s)"
@@ -3703,10 +3700,6 @@ next
           
           from hmm have hmm':"\<And>s. s \<in> {0..t} \<Longrightarrow> VSagree (sol 0) (sol s) {x. Inl x \<in> (-(BVO ODE))}"
             unfolding VSagree_def Vagree_def by auto
-          (*note hmmm = hmmsubst
-          from hmmm have hmmm':"\<And>s. s \<in> {0..t} \<Longrightarrow> VSagree (sol 0) (sol s) {x. Inl x \<in> (-(BVO (Osubst ODE \<sigma>)))}"
-            unfolding VSagree_def Vagree_def by auto*)
-          (* Necessary *)
           have Vagree_of_VSagree:"\<And>\<nu>1 \<nu>2 \<omega>1 \<omega>2 S. VSagree \<nu>1 \<nu>2 {x. Inl x \<in> S} \<Longrightarrow> VSagree \<omega>1 \<omega>2 {x. Inr x \<in> S} \<Longrightarrow> Vagree (\<nu>1, \<omega>1) (\<nu>2, \<omega>2) S"
             unfolding VSagree_def Vagree_def by auto
           have mkv:"\<And>s. s \<in> {0..t} \<Longrightarrow> mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s) = mk_v (adjoint I \<sigma> (sol s, bb)) ODE (sol 0, bb) (sol s)"
@@ -4167,5 +4160,38 @@ next
         show "?thesis \<nu>"  using none Ieq sem by auto
       qed
   then show ?case by auto
+qed
+
+lemma subst_fml:
+fixes I::"('sf, 'sc, 'sz) interp" and \<nu>::"'sz state"
+assumes good_interp:"is_interp I"
+assumes Fadmit:"Fadmit \<sigma> \<phi>"
+assumes fsafe:"fsafe \<phi>"
+assumes ssafe:"ssafe \<sigma>"
+shows "(\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>)"
+    using subst_fml_hp[OF good_interp] Fadmit fsafe ssafe by blast
+  
+lemma subst_fml_valid:
+fixes I::"('sf, 'sc, 'sz) interp" and \<nu>::"'sz state"
+assumes Fadmit:"Fadmit \<sigma> \<phi>"
+assumes fsafe:"fsafe \<phi>"
+assumes ssafe:"ssafe \<sigma>"
+assumes valid:"valid \<phi>"
+shows "valid (Fsubst \<phi> \<sigma>)"
+proof -
+  have sub_sem:"\<And>I \<nu>. is_interp I \<Longrightarrow> \<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)"
+    proof -
+      fix I::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+      assume good_interp:"is_interp I"
+      have good_adj:"is_interp (adjoint I \<sigma> \<nu>)"
+        apply(rule adjoint_safe[OF good_interp])
+        using ssafe unfolding ssafe_def by auto
+      have \<phi>sem:"\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>" using valid using good_adj unfolding valid_def by blast
+      (*then sub_sem"\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>"*)
+      then show "?thesis I \<nu>"
+        using subst_fml[OF good_interp Fadmit fsafe ssafe]
+        by auto
+    qed
+  then show ?thesis unfolding valid_def by blast 
 qed
 end end

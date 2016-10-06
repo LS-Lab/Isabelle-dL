@@ -73,7 +73,10 @@ where
 | "get_axiom ADIGr = DIGraxiom"
 | "get_axiom ADG = DGaxiom"
   
-  lemma axiom_valid:"valid (get_axiom a)"
+lemma axiom_safe:"fsafe (get_axiom a)"
+  by(cases a, auto simp add: loop_iterate_axiom_def Iaxiom_def test_axiom_def choice_axiom_def box_axiom_def empty_def Kaxiom_def Vaxiom_def assign_axiom_def diff_const_axiom_def diff_plus_axiom_def diff_times_axiom_def DWaxiom_def Equals_def state_fun_def DEaxiom_def DCaxiom_def DSaxiom_def DIGeqaxiom_def DIGraxiom_def f1_def p1_def P_def expand_singleton f0_def Forall_def DGaxiom_def Equiv_def Implies_def Or_def Box_def Greater_def vne12)
+
+lemma axiom_valid:"valid (get_axiom a)"
 proof (cases a)
   case AloopIter
   then show ?thesis by (simp add: loop_valid) 
@@ -144,6 +147,7 @@ datatype ('a, 'b, 'c) step =
 (* Apply Usubst to some other (valid) formula *)
 (* TODO: I don't think I want this, might be easier to do an axiom instantiation rule *)
 | VSubst "('a, 'b, 'c) formula" "('a, 'b, 'c) subst"
+| AxSubst axiom "('a, 'b, 'c) subst"
 | URename
 | BRename
 | Rrule rrule nat
@@ -183,6 +187,7 @@ where
 fun step_result :: "('sf, 'sc, 'sz) rule \<Rightarrow> (nat * ('sf, 'sc, 'sz) step) \<Rightarrow>  ('sf, 'sc, 'sz) rule"
 where
   Step_axiom:"step_result (SG,C) (i,Axiom a)   = (closeI SG i, C)"
+| Step_AxSubst:"step_result (SG,C) (i,AxSubst a \<sigma>)   = (closeI SG i, C)"
 | Step_Lrule:"step_result (SG,C) (i,Lrule L j) = (close (append SG (Lrule_result L j (nth SG i))) (nth SG i), C)"
 | Step_Rrule:"step_result (SG,C) (i,Rrule L j) = (close (append SG (Rrule_result L j (nth SG i))) (nth SG i), C)" 
 | Step_Cut:"step_result (SG,C) (i,Cut \<phi>) = (let (A,S) = nth SG i in ((\<phi> # A, S) # ((A, \<phi> # S) # (closeI SG i)), C))"
@@ -232,6 +237,7 @@ and Rrule_CohideRR_simps[prover]: "rrule_ok SG C i j CohideRR"
 inductive step_ok  :: "('sf, 'sc, 'sz) rule \<Rightarrow> nat \<Rightarrow> ('sf, 'sc, 'sz) step \<Rightarrow> bool"
 where
   Step_Axiom:"(nth SG i) = ([], [get_axiom a]) \<Longrightarrow> step_ok (SG,C) i (Axiom a)"
+| Step_AxSubst:"(nth SG i) = ([], [Fsubst (get_axiom a) \<sigma>]) \<Longrightarrow> Fadmit \<sigma> (get_axiom a) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> step_ok (SG,C) i (AxSubst a \<sigma>)"
 | Step_Lrule:"lrule_ok SG C i j L \<Longrightarrow> j < length (fst (nth SG i)) \<Longrightarrow> step_ok (SG,C) i (Lrule L j)"
 | Step_Rrule:"rrule_ok SG C i j L \<Longrightarrow> j < length (snd (nth SG i)) \<Longrightarrow> step_ok (SG,C) i (Rrule L j)"
 | Step_Cut:"fsafe \<phi> \<Longrightarrow> i < length SG \<Longrightarrow> step_ok (SG,C) i (Cut \<phi>)"
@@ -849,6 +855,32 @@ proof(induction rule: step_ok.induct)
     have "seq_valid ([], [get_axiom a])"
       apply(rule fml_seq_valid)
       by(rule axiom_valid)
+    then have seq_valid:"seq_valid (SG ! i)"
+      using is_axiom by auto
+    (*  i0 iL *)
+  then show ?case 
+    using closeI_valid_sound[OF sound seq_valid] by simp
+next
+case (Step_AxSubst SG i a \<sigma> C)
+    assume is_axiom:"SG ! i = ([], [Fsubst (get_axiom a) \<sigma>])"
+    assume sound:"sound (SG, C)"
+    assume ssafe:"ssafe \<sigma>"
+    assume i0:"0 \<le> i"
+    assume Fadmit:"Fadmit \<sigma> (get_axiom a)"
+    assume "i < length (fst (SG, C))"
+    then have iL:"i < length (SG)" 
+      by auto
+    have valid_axiom:"valid (get_axiom a)"
+      by(rule axiom_valid)
+    have subst_valid:"valid (Fsubst (get_axiom a) \<sigma>)"
+      apply(rule subst_fml_valid)
+      apply(rule Fadmit)
+      apply(rule axiom_safe)
+      apply(rule ssafe)
+      by(rule valid_axiom)
+    have "seq_valid ([], [(Fsubst (get_axiom a) \<sigma>)])"
+      apply(rule fml_seq_valid)
+      by(rule subst_valid)
     then have seq_valid:"seq_valid (SG ! i)"
       using is_axiom by auto
     (*  i0 iL *)
