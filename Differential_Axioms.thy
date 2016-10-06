@@ -60,7 +60,7 @@ definition DEaxiom :: "('sf, 'sc, 'sz) formula"
     [[DiffAssign vid1 (f1 fid1 vid1)]]P pid1))"
   
 definition DSaxiom :: "('sf, 'sc, 'sz) formula"
-  where "DSaxiom = 
+  where [axiom_defs]:"DSaxiom = 
 (([[EvolveODE (OSing vid1 (f0 fid1)) (p1 vid2 vid1)]]p1 vid3 vid1)
 \<leftrightarrow> 
 (Forall vid2 
@@ -526,7 +526,6 @@ lemma DS_valid:"valid DSaxiom"
   have sem_eq:"?abba \<in> fml_sem I (p1 vid3 vid1) \<longleftrightarrow> (aa,ba) \<in> fml_sem I (p1 vid3 vid1)"
     apply(rule coincidence_formula)
     apply (auto simp add: aaba Vagree_def p1_def f0_def empty_def)
-    subgoal by (auto intro: dfree.intros)
     subgoal using Iagree_refl by auto
     done
   from inPred sem_eq have  inPred':"(aa,ba) \<in> fml_sem I (p1 vid3 vid1)"
@@ -1126,7 +1125,7 @@ lemma DIGeq_valid:"valid DIGeqaxiom"
          apply (rule osafe_Sing)
          subgoal unfolding f1_def expand_singleton
            apply(rule dfree_Fun)
-           subgoal for i apply(cases "i = vid1") apply (auto, rule dfree_Const) done
+           subgoal for i apply(cases "i = vid1") apply (auto ) done
            done
          apply (rule osafe_Var)
          by auto
@@ -1836,7 +1835,6 @@ lemma DG_valid:"valid DGaxiom"
         have sol_deriv_proj:"\<And>s i. s\<in>?ivl \<Longrightarrow>  ((\<lambda>t. ?flow t $ i) has_derivative (\<lambda>xa. (xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0)) $ i)) (at s within ?ivl)"         
           subgoal for s i
             apply(rule has_derivative_proj[of "(\<lambda> i t. ?flow t $ i)" "(\<lambda> i t'. (t' *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0)) $ i)" "(at s within ?ivl)" "i"])
-            apply auto
             using sol_deriv_orig[of s] sol_eta sol_deriv_eq1 by auto
           done
         have sol_deriv_eq2:"\<And>s i. (\<lambda>xa. xa * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0)) = (\<lambda>xa. (xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0)) $ i)"
@@ -1847,12 +1845,8 @@ lemma DG_valid:"valid DGaxiom"
           subgoal for s
             using sol_deriv_proj'[of s vid1] by auto done
         have deriv1_args:"\<And>s. s \<in> ?ivl \<Longrightarrow> ((\<lambda> t. (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (?flow t))) has_derivative ((\<lambda> t'. \<chi> i . t' * (if i = vid1 then sterm_sem I (f1 fid1 vid1) (?flow s) else 0)))) (at s within ?ivl)"
-          subgoal for s
-            apply(rule has_derivative_vec)
-            subgoal for i
-              by (auto simp add: sol_deriv_proj_vid1[of s])
-            done
-          done
+          apply(rule has_derivative_vec)
+          by (auto simp add: sol_deriv_proj_vid1)          
         have con_fid:"\<And>fid. continuous_on ?ivl (\<lambda>x. sterm_sem I (f1 fid vid1) (?flow x))"
           subgoal for fid
           apply(rule has_derivative_continuous_on[of "?ivl" "(\<lambda>x. sterm_sem I (f1 fid vid1) (?flow x))"

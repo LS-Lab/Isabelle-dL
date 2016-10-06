@@ -18,12 +18,13 @@ text \<open>
   This section contains axioms and rules for propositional connectives and programs other than
   ODE's. Differential axioms are handled separately because the proofs are significantly more involved.
   \<close>
+named_theorems axiom_defs "Axiom definitions"
 
 definition assign_axiom :: "('sf, 'sc, 'sz) formula"
-  where "assign_axiom \<equiv>
+  where [axioms_defs]:"assign_axiom \<equiv>
     ([[vid1 := ($f fid1 empty)]] (Prop vid1 (singleton (Var vid1))))
       \<leftrightarrow> Prop vid1 (singleton ($f fid1 empty))"
-
+  
 definition loop_iterate_axiom :: "('sf, 'sc, 'sz) formula"
   where "loop_iterate_axiom \<equiv> ([[$\<alpha> vid1**]]Predicational pid1)
     \<leftrightarrow> ((Predicational pid1) && ([[$\<alpha> vid1]][[$\<alpha> vid1**]]Predicational pid1))"
