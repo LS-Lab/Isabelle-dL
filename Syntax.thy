@@ -25,6 +25,7 @@ text \<open>
   The types of terms and ODE systems follow the same approach, but have only two type 
   variables because they cannot contain contexts.
 \<close>
+(* BEGIN SOUNDNESS-CRITICAL *)
 datatype ('a, 'c) trm =
 (* Real-valued variables given meaning by the state and modified by programs. *)
   Var 'c
@@ -114,6 +115,7 @@ definition TT ::"('a,'b,'c) formula"
 
 definition FF ::"('a,'b,'c) formula" 
   where "FF = Geq (Const 0) (Const 1)"
+(* END SOUNDNESS-CRITICAL *)
 
 named_theorems "expr_diseq" "Structural disequality rules for expressions"  
 lemma [expr_diseq]:"p \<noteq> And p q" by(induction p, auto)
@@ -187,6 +189,7 @@ where
 
 (* Explictly-written variables that are bound by the ODE. Needed to compute whether
  * ODE's are valid (e.g. whether they bind the same variable twice) *)
+(* BEGIN SOUNDNESS-CRITICAL *)
 fun ODE_dom::"('a, 'c) ODE \<Rightarrow> 'c set"
 where 
   "ODE_dom (OVar c) =  {}"
@@ -198,6 +201,7 @@ where
   osafe_Var:"osafe (OVar c)"
 | osafe_Sing:"dfree \<theta> \<Longrightarrow> osafe (OSing x \<theta>)"
 | osafe_Prod:"osafe ODE1 \<Longrightarrow> osafe ODE2 \<Longrightarrow> ODE_dom ODE1 \<inter> ODE_dom ODE2 = {} \<Longrightarrow> osafe (OProd ODE1 ODE2)"
+(* END SOUNDNESS-CRITICAL *)
 
 inductive hpfree:: "('a, 'b, 'c) hp \<Rightarrow> bool"
 and ffree::        "('a, 'b, 'c) formula \<Rightarrow> bool"

@@ -17,6 +17,7 @@ imports
   
 begin context ids begin
 
+(* BEGIN SOUNDNESS-CRITICAL *)
 type_synonym ('a,'b,'c) sequent = "('a,'b,'c) formula list * ('a,'b,'c) formula list"
 
 fun seq2fml :: "('a,'b,'c) sequent \<Rightarrow> ('a,'b,'c) formula"
@@ -34,6 +35,7 @@ type_synonym ('a,'b,'c) rule = "('a,'b,'c) sequent list * ('a,'b,'c) sequent"
   
 definition sound :: "('sf, 'sc, 'sz) rule \<Rightarrow> bool"
 where "sound R \<longleftrightarrow> (\<forall>I. is_interp I \<longrightarrow> (\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst R) \<longrightarrow> seq_sem I (nth (fst R) i) = UNIV) \<longrightarrow> seq_sem I (snd R) = UNIV)"
+(* END SOUNDNESS-CRITICAL *)
 
 lemma soundI:"(\<And>I. is_interp I \<Longrightarrow> (\<And>i. i \<ge> 0 \<Longrightarrow> i < length SG \<Longrightarrow> seq_sem I (nth SG i) = UNIV) \<Longrightarrow> seq_sem I G = UNIV) \<Longrightarrow> sound (SG,G)"
   unfolding sound_def by auto
@@ -1016,8 +1018,10 @@ qed
 lemma deriv_sound:"deriv_ok R D \<Longrightarrow> sound R \<Longrightarrow> sound (deriv_result R D)"
   apply(induction rule: deriv_ok.induct)
   using step_sound by auto
-  
+
+(* BEGIN SOUNDNESS-CRITICAL *)
 lemma proof_sound:"proof_ok Pf \<Longrightarrow> sound (proof_result Pf)"
+(* END SOUNDNESS-CRITICAL *)
   apply(induct rule: proof_ok.induct)
   unfolding proof_result.simps  apply(rule deriv_sound)
   apply assumption
@@ -1208,7 +1212,7 @@ where "last_step (C,D) n = List.last (take n D)"
   
 lemma whereami:"last_step DIAndProof 60 = undefined"
   unfolding DIAndProof_def apply auto sorry
-  
+
 lemma DIAndSound_lemma:"sound (proof_result (proof_take 61 DIAndProof))"
   apply(rule proof_sound)
   unfolding DIAndProof_def DIAndConcl_def  DIAndCutP1_def DIAndSG1_def DIAndCut34Elim1_def  DIAndSubst341_def DIAndCut12Intro_def DIAndSubst12_def
