@@ -24,7 +24,12 @@ definition assign_axiom :: "('sf, 'sc, 'sz) formula"
   where [axiom_defs]:"assign_axiom \<equiv>
     ([[vid1 := ($f fid1 empty)]] (Prop vid1 (singleton (Var vid1))))
       \<leftrightarrow> Prop vid1 (singleton ($f fid1 empty))"
-  
+
+definition diff_assign_axiom :: "('sf, 'sc, 'sz) formula"
+  where [axiom_defs]:"diff_assign_axiom \<equiv>
+    ([[DiffAssign vid1  ($f fid1 empty)]] (Prop vid1 (singleton (DiffVar vid1))))
+      \<leftrightarrow> Prop vid1 (singleton ($f fid1 empty))"
+
 definition loop_iterate_axiom :: "('sf, 'sc, 'sz) formula"
   where [axiom_defs]:"loop_iterate_axiom \<equiv> ([[$\<alpha> vid1**]]Predicational pid1)
     \<leftrightarrow> ((Predicational pid1) && ([[$\<alpha> vid1]][[$\<alpha> vid1**]]Predicational pid1))"
@@ -73,10 +78,22 @@ lemma assign_lem1:
 "
  by (cases "i = vid1") (auto simp: proj_sing1)
 
+lemma diff_assign_lem1:
+"dterm_sem I (if i = vid1 then DiffVar vid1 else (Const 0))
+                   (fst \<nu>, vec_lambda (\<lambda>y. if vid1 = y then Functions I fid1 (vec_lambda (\<lambda>i. dterm_sem I (empty i) \<nu>)) else  vec_nth (snd \<nu>) y))
+=
+ dterm_sem I (if i = vid1 then $f fid1 empty else (Const 0)) \<nu>
+"
+ by (cases "i = vid1") (auto simp: proj_sing1)
+
 theorem assign_valid: "valid assign_axiom"
   unfolding  valid_def assign_axiom_def
   by (simp add: assign_lem1) 
-  
+
+theorem diff_assign_valid: "valid diff_assign_axiom"
+  unfolding  valid_def diff_assign_axiom_def
+  by (simp add: diff_assign_lem1) 
+
 lemma mem_to_nonempty: "\<omega> \<in> S \<Longrightarrow> (S \<noteq> {})"
   by (auto)
 

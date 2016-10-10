@@ -34,15 +34,15 @@ where
 | "trm_to_string (Function f args) = []"
 | "trm_to_string (Plus t1 t2) = trm_to_string t1 @ ''+'' @ trm_to_string t2"
 | "trm_to_string (Times t1 t2) = trm_to_string t1 @ ''*'' @ trm_to_string t2"
-| "trm_to_string (DiffVar x) = vid_to_string x @ ''' ''"
-| "trm_to_string (Differential t) = '''('' @ trm_to_string t @ '')''"
+| "trm_to_string (DiffVar x) = ''Dv{'' @ vid_to_string x @ ''}''"
+| "trm_to_string (Differential t) = ''D{'' @ trm_to_string t @ ''}''"
   
 primrec ode_to_string::"('sf,'sz) ODE \<Rightarrow> char list"
 where  
   "ode_to_string (OVar x) = oid_to_string x"
-| "ode_to_string (OSing x t) = vid_to_string x @ '''='' @ trm_to_string t"
+| "ode_to_string (OSing x t) = ''d'' @ vid_to_string x @ ''='' @ trm_to_string t"
 | "ode_to_string (OProd ODE1 ODE2) = ode_to_string ODE1 @ '', '' @ ode_to_string ODE2 "
-  
+     
 fun fml_to_string ::"('sf, 'sc, 'sz) formula \<Rightarrow> char list"
 and hp_to_string ::"('sf, 'sc, 'sz) hp \<Rightarrow> char list"
 where 
@@ -51,7 +51,9 @@ where
   | "fml_to_string (Not p) = 
      (case p of (And (Not q) (Not (Not p))) \<Rightarrow> fml_to_string p @ ''->'' @ fml_to_string q
                | (Exists x (Not p)) \<Rightarrow> ''A''@ vid_to_string x @ ''.'' @ fml_to_string p
-               | (Diamond a (Not p)) \<Rightarrow> ''[''@ hp_to_string a @ '']'' @ fml_to_string p 
+               | (Diamond a (Not p)) \<Rightarrow> ''[''@ hp_to_string a @ '']'' @ fml_to_string p
+               | (And (Not (And p q)) (Not (And (Not p') (Not q')))) \<Rightarrow> 
+                (if (p = p' \<and> q = q') then fml_to_string p @ ''<->'' @ fml_to_string q else ''!'' @ fml_to_string (And (Not (And p q)) (Not (And (Not p') (Not q')))))
                | _ \<Rightarrow> ''!'' @ fml_to_string p)"
   | "fml_to_string (And p q) = fml_to_string p @ ''&'' @ fml_to_string q"
   | "fml_to_string (Exists x p) = ''E'' @ vid_to_string x @ '' . '' @ fml_to_string p"
@@ -64,7 +66,7 @@ where
   
   | "hp_to_string (Pvar a) = hpid_to_string a"
   | "hp_to_string (Assign x e) = vid_to_string x @ '':='' @ trm_to_string e"
-  | "hp_to_string (DiffAssign x e) = vid_to_string x @ ''':='' @ trm_to_string e"
+  | "hp_to_string (DiffAssign x e) = ''D{'' @ vid_to_string x @ ''}:='' @ trm_to_string e"
   | "hp_to_string (Test p) = ''?'' @ fml_to_string p"
   | "hp_to_string (EvolveODE ODE p) = ''{'' @ ode_to_string ODE @ ''&'' @ fml_to_string p @ ''}''"
   | "hp_to_string (Choice a b) = hp_to_string a @ ''U'' @ hp_to_string b"
