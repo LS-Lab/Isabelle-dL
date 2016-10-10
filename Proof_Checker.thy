@@ -255,7 +255,7 @@ where
 | Rrule_Equiv:"\<And>p q. nth (snd (nth SG i)) j = (p \<leftrightarrow> q) \<Longrightarrow> rrule_ok SG C i j EquivR"
 | Rrule_Cohide:"length (snd (nth SG i)) > j \<Longrightarrow> (\<And>\<Gamma> q. (nth SG i) \<noteq> (\<Gamma>, [q])) \<Longrightarrow> rrule_ok SG C i j CohideR"
 | Rrule_CohideRR:"length (snd (nth SG i)) > j  \<Longrightarrow> (\<And>q. (nth SG i) \<noteq> ([], [q])) \<Longrightarrow> rrule_ok SG C i j CohideRR"
-| Rrule_TrueR:"nth (snd (nth SG i)) j = TT \<Longrightarrow> rrule_ok SG C i j TrueR"
+| Rrule_True:"nth (snd (nth SG i)) j = TT \<Longrightarrow> rrule_ok SG C i j TrueR"
   
 inductive_simps 
     Rrule_And_simps[prover]: "rrule_ok SG C i j AndR"
@@ -279,16 +279,25 @@ where
   ([], [Fsubst ((([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]] (P pid1)) \<leftrightarrow>
           ([[EvolveODE ((OProd ODE (OSing vid1 (f1 fid1 vid1)))) (p1 vid2 vid1)]]
                [[DiffAssign vid1 (f1 fid1 vid1)]]P pid1))) \<sigma>])
+    \<Longrightarrow> ssafe \<sigma>
+    \<Longrightarrow> osafe ODE
+    \<Longrightarrow> {Inl vid1, Inr vid1} \<inter> FVO ODE = {}
     \<Longrightarrow> Fadmit \<sigma> ((([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]] (P pid1)) \<leftrightarrow>
           ([[EvolveODE ((OProd ODE (OSing vid1 (f1 fid1 vid1)))) (p1 vid2 vid1)]]
                [[DiffAssign vid1 (f1 fid1 vid1)]]P pid1))) 
     \<Longrightarrow> step_ok (SG,C) i (DEAxiomSchema \<sigma>)"
   | Step_CE:"nth SG i = ([], [Fsubst (Equiv (InContext pid1 \<phi>) (InContext pid1 \<psi>)) \<sigma>]) 
     \<Longrightarrow> valid (Equiv \<phi> \<psi>) 
+    \<Longrightarrow> fsafe \<phi>
+    \<Longrightarrow> fsafe \<psi>
+    \<Longrightarrow> ssafe \<sigma>
     \<Longrightarrow> Fadmit \<sigma> (Equiv (InContext pid1 \<phi>) (InContext pid1 \<psi>))
     \<Longrightarrow> step_ok (SG,C) i (CE \<phi> \<psi> \<sigma>)"
-  | Step_CQ:"nth SG i = ([], [Fsubst (Equiv (InContext pid1 \<phi>) (InContext pid1 \<psi>)) \<sigma>]) 
+  | Step_CQ:"nth SG i = ([], [Fsubst (Equiv (Prop p (singleton \<theta>)) (Prop p (singleton \<theta>'))) \<sigma>]) 
     \<Longrightarrow> valid (Equals \<theta> \<theta>') 
+    \<Longrightarrow> dfree \<theta>
+    \<Longrightarrow> dfree \<theta>'
+    \<Longrightarrow> ssafe \<sigma>
     \<Longrightarrow> Fadmit \<sigma> (Equiv (Prop p (singleton \<theta>)) (Prop p (singleton \<theta>')))
     \<Longrightarrow> step_ok (SG,C) i (CQ \<theta> \<theta>' \<sigma>)"
   
@@ -705,8 +714,7 @@ next
         have \<Gamma>C:"\<nu> \<in> fml_sem I (foldr And (close \<Gamma> (p \<rightarrow> q)) TT)"
           by (rule \<Gamma>_sub_sem[OF sub \<Gamma>])
         have "\<nu> \<in> fml_sem I (foldr op || (p # \<Delta>) FF)"
-          sorry
-          (*by(rule seq_MP[OF sg2 \<Gamma>C])*)
+          by (metis \<Gamma> \<Gamma>_sub_sem close_sub iff_sem imp member_rec(1) or_foldl_sem or_foldl_sem_conv seq_MP sg2)
         then have disj:"\<nu> \<in> fml_sem I p \<or> \<nu> \<in> fml_sem I (foldr op || \<Delta> FF)"
           by auto 
         { assume p:"\<nu> \<in> fml_sem I p"
@@ -717,8 +725,7 @@ next
               have "\<nu> \<in> fml_sem I (foldr op && (q # \<Gamma>) TT)"
                 using \<Gamma> q by auto
               then show ?thesis
-                sorry
-                (*by (meson \<Gamma>_sub_sem close_sub seq_MP sg1)*)
+                by (smt and_foldl_sem and_foldl_sem_conv close_sub local.sublist_def member_rec(1) p seq_MP sg1)
             qed
           have conj:"\<nu> \<in> fml_sem I (foldr op && (q # \<Gamma>) TT)"
             using q \<Gamma> by auto
@@ -728,31 +735,29 @@ next
             apply(rule conj)
             by(rule close_sub)
           have \<Delta>1:"\<nu> \<in> fml_sem I (foldr op || \<Delta> FF)"
-            sorry
-            (*by(rule seq_MP[OF sg1 conj])*)
+            using res by blast
           }
         then show "\<nu> \<in> fml_sem I (foldr op || \<Delta> FF)"
           using disj by auto
       qed
-      have neq1:"close ([q] @ \<Gamma>) (p \<rightarrow> q) \<noteq> \<Gamma>"
+      have neq1:"close ([q] @ \<Gamma>) (p \<leftrightarrow> q) \<noteq> \<Gamma>"
         apply(rule close_app_neq)
         apply(rule mem_sing)
         by (auto simp add: expr_diseq)
       have neq2:"p # \<Delta> \<noteq> \<Delta>"
         by(induction p, auto)
-      have close_eq:"close [(close (q # \<Gamma>) (p \<rightarrow> q), \<Delta>), (close \<Gamma> (p \<rightarrow> q), p # \<Delta>)] (\<Gamma>,\<Delta>) = [(close (q # \<Gamma>) (p \<rightarrow> q), \<Delta>), (close \<Gamma> (p \<rightarrow> q), p # \<Delta>)]"
+                     
+      have close_eq:"close [(close (p # \<Gamma>) (p \<leftrightarrow> q), \<Delta>), (close \<Gamma> (p \<leftrightarrow> q), q # \<Delta>)] (\<Gamma>,\<Delta>) = [(close (p # \<Gamma>) (p \<leftrightarrow> q), \<Delta>), (close \<Gamma> (p \<leftrightarrow> q), q # \<Delta>)]"
         apply(rule close_nonmember_eq)
         apply auto
         using neq1 neq2  
         apply (simp add: member_rec)
-      proof -
-        assume a1: "q = (p \<rightarrow> q)"
-        assume "List.member [([y\<leftarrow>\<Gamma> . y \<noteq> q], \<Delta>), ([y\<leftarrow>\<Gamma> . y \<noteq> q], p # \<Delta>)] (\<Gamma>, \<Delta>)"
-          then have "[f\<leftarrow>\<Gamma> . f \<noteq> q] = \<Gamma>"
-        by (simp add: member_rec)
-        then show False
-          using a1 neq1 by fastforce
-      qed       
+        apply (metis append_Cons append_Nil close.simps close_app_neq member_rec(1))
+        proof -
+           assume a1:"p = (p \<leftrightarrow> q)"
+           then show False
+             by (simp add: expr_diseq)
+        qed
   show ?case 
     apply(rule close_provable_sound)
     apply(rule sound_weaken_appR)
@@ -762,8 +767,106 @@ next
     unfolding close_app_comm
     apply (rule sound_weaken_appL)
     using close_eq big_sound SG_dec   
-    sorry
-    (*by simp*)
+    by simp
+next
+  case (Lrule_EquivForward SG i j C p q)
+    have equivLForward_simp:"\<And>AI SI SS p q. 
+      (nth AI  j) = Not (And (Not (And p q)) (Not (And (Not p) (Not q)))) \<Longrightarrow> 
+      (AI,SI) = SS \<Longrightarrow> 
+      Lrule_result EquivForwardL j SS = [(close (q # AI) (nth AI j), SI), (close AI (nth AI j), p # SI)]"
+      subgoal for AI SI SS p q apply(cases SS) by auto done
+    assume eq:"fst (SG ! i) ! j = (p \<leftrightarrow> q)"
+    assume iL:"i < length SG"
+    assume jL:"j < length (fst (SG ! i))"
+    assume sound:"sound (SG, C)"
+    obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)"
+      by (metis seq2fml.cases)
+    have res_eq:"Lrule_result EquivForwardL j (SG ! i) = 
+      [(close (q # \<Gamma>) (nth \<Gamma> j), \<Delta>), 
+       (close \<Gamma> (nth \<Gamma> j), p # \<Delta>)]"
+      apply(rule equivLForward_simp)
+      using SG_dec eq Equiv_def Or_def 
+      by (metis fstI)+
+    have AIjeq:"\<Gamma> ! j = (p \<leftrightarrow> q)" 
+      using SG_dec eq unfolding Implies_def Or_def
+      by (metis fst_conv)
+    have big_sound:"sound ([(close (q # \<Gamma>) (p \<leftrightarrow> q), \<Delta>), (close \<Gamma> (p \<leftrightarrow> q), p # \<Delta>)], (\<Gamma>,\<Delta>))"
+      apply(rule soundI')
+      apply(rule seq_semI')
+      proof -
+        fix I::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+        assume good:"is_interp I"
+        assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow>
+                 i < length [(close (q # \<Gamma>) (p \<leftrightarrow> q), \<Delta>), (close \<Gamma> (p \<leftrightarrow> q), p # \<Delta>)] \<Longrightarrow>
+                 \<nu> \<in> seq_sem I ([(close (q # \<Gamma>) (p \<leftrightarrow> q), \<Delta>), (close \<Gamma> (p \<leftrightarrow> q), p # \<Delta>)] ! i))"
+        have sg1:"\<nu> \<in> seq_sem I (close (q # \<Gamma>) (p \<leftrightarrow> q), \<Delta>)" using sgs[of 0] by auto
+        have sg2:"\<nu> \<in> seq_sem I (close \<Gamma> (p \<leftrightarrow> q), p # \<Delta>)" using sgs[of "Suc 0"] by auto 
+        assume \<Gamma>:"\<nu> \<in> fml_sem I (foldr And \<Gamma> TT)"
+        have \<Gamma>_proj:"\<And>\<phi> \<Gamma>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>"
+          apply(induction \<Gamma>, auto simp add: member_rec)
+          using and_foldl_sem by blast
+        have imp:"\<nu> \<in> fml_sem I (p \<leftrightarrow> q)" 
+          apply(rule \<Gamma>_proj[of \<Gamma>])
+          using AIjeq  jL SG_dec nth_member
+          apply (metis fst_conv)
+          by (rule \<Gamma>)
+        have sub:"sublist (close \<Gamma> (p \<rightarrow> q)) \<Gamma>"
+          by (rule close_sub)
+        have \<Gamma>C:"\<nu> \<in> fml_sem I (foldr And (close \<Gamma> (p \<rightarrow> q)) TT)"
+          by (rule \<Gamma>_sub_sem[OF sub \<Gamma>])
+        have "\<nu> \<in> fml_sem I (foldr op || (p # \<Delta>) FF)"
+          by (metis \<Gamma> \<Gamma>_sub_sem close_sub iff_sem imp member_rec(1) or_foldl_sem or_foldl_sem_conv seq_MP sg2)
+        then have disj:"\<nu> \<in> fml_sem I p \<or> \<nu> \<in> fml_sem I (foldr op || \<Delta> FF)"
+          by auto 
+        { assume p:"\<nu> \<in> fml_sem I p"
+          have q:"\<nu> \<in> fml_sem I q" using p imp by simp
+          have res: "\<nu> \<in> fml_sem I (foldr op || \<Delta> FF)" 
+            using disj \<Gamma> seq_semI
+            proof -
+              have "\<nu> \<in> fml_sem I (foldr op && (q # \<Gamma>) TT)"
+                using \<Gamma> q by auto
+              then show ?thesis
+                by (smt and_foldl_sem and_foldl_sem_conv close_sub local.sublist_def member_rec(1) p seq_MP sg1)
+            qed
+          have conj:"\<nu> \<in> fml_sem I (foldr op && (q # \<Gamma>) TT)"
+            using q \<Gamma> by auto
+          have conj:"\<nu> \<in> fml_sem I (foldr op && (close (q # \<Gamma>) (p \<rightarrow> q)) TT)"
+            apply(rule \<Gamma>_sub_sem)
+            defer
+            apply(rule conj)
+            by(rule close_sub)
+          have \<Delta>1:"\<nu> \<in> fml_sem I (foldr op || \<Delta> FF)"
+            using res by blast
+          }
+        then show "\<nu> \<in> fml_sem I (foldr op || \<Delta> FF)"
+          using disj by auto
+      qed
+      have neq1:"close ([q] @ \<Gamma>) (p \<leftrightarrow> q) \<noteq> \<Gamma>"
+        apply(rule close_app_neq)
+        apply(rule mem_sing)
+        by (auto simp add: expr_diseq)
+      have neq2:"p # \<Delta> \<noteq> \<Delta>"
+        by(induction p, auto)
+      have close_eq:"close [(close (q # \<Gamma>) (p \<leftrightarrow> q), \<Delta>), (close \<Gamma> (p \<leftrightarrow> q), p # \<Delta>)] (\<Gamma>,\<Delta>) = [(close (q # \<Gamma>) (p \<leftrightarrow> q), \<Delta>), (close \<Gamma> (p \<leftrightarrow> q), p # \<Delta>)]"
+        apply(rule close_nonmember_eq)
+        apply auto
+        using neq1 neq2  
+        apply (simp add: member_rec)
+        proof -
+           assume a1:"q = (p \<leftrightarrow> q)"
+           then show False
+             by (simp add: expr_diseq)
+        qed
+  show ?case 
+    apply(rule close_provable_sound)
+    apply(rule sound_weaken_appR)
+    apply(rule sound)
+    apply(unfold res_eq)
+    apply(unfold AIjeq)
+    unfolding close_app_comm
+    apply (rule sound_weaken_appL)
+    using close_eq big_sound SG_dec   
+    by simp
 qed
 
 lemma rrule_sound: "rrule_ok SG C i j L \<Longrightarrow> i < length SG \<Longrightarrow> j < length (snd (SG ! i)) \<Longrightarrow> sound (SG,C) \<Longrightarrow> sound (close (append SG (Rrule_result L j (nth SG i))) (nth SG i), C)"
@@ -1001,7 +1104,7 @@ next
       apply(auto)
       using chg by (metis)+
 next
-  case (Rrule_TrueR SG i j C)
+  case (Rrule_True SG i j C)
     assume tt:"snd (SG ! i) ! j = TT"
     assume iL:"i < length SG"
     assume iJ:"j < length (snd (SG ! i))"
@@ -1026,6 +1129,69 @@ next
     show ?case
       using closeI_valid_sound[OF sound seq_valid]
       by (simp add: sound_weaken_appR)
+next
+  case (Rrule_Equiv SG i j C p q)
+    assume eq:"snd (SG ! i) ! j = (p \<leftrightarrow> q)"
+    assume iL:"i < length SG"
+    assume jL:"j < length (snd (SG ! i))"
+    assume sound:"sound (SG, C)"
+    obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)"
+      by (metis seq2fml.cases)
+    have equivR_simp:"\<And>\<Gamma> \<Delta> SS p q. 
+      (nth \<Delta> j) = Equiv p q \<Longrightarrow> 
+      (\<Gamma>,\<Delta>) = SS \<Longrightarrow> 
+      Rrule_result EquivR j SS = [(p # \<Gamma>, q # (closeI \<Delta> j)), (q # \<Gamma>, p # (closeI \<Delta> j))]"
+      subgoal for AI SI SS p q apply(cases SS) by (auto simp add: Equiv_def Implies_def Or_def) done
+    have res_eq:"Rrule_result EquivR j (SG ! i) = 
+      [(p # \<Gamma>, q # (closeI \<Delta> j)), (q # \<Gamma>, p # (closeI \<Delta> j))]"
+      apply(rule equivR_simp)
+      subgoal using eq SG_dec by (metis snd_conv)
+      by (rule SG_dec) 
+    have AIjeq:"\<Delta> ! j = (p \<leftrightarrow> q)" 
+      using SG_dec eq snd_conv
+      by metis
+    have close_eq:"close [(p # \<Gamma>, q # (closeI \<Delta> j)), (q # \<Gamma>, p # (closeI \<Delta> j))] (\<Gamma>,\<Delta>) = [(p # \<Gamma>, q # (closeI \<Delta> j)), (q # \<Gamma>, p # (closeI \<Delta> j))]"
+      apply(rule close_nonmember_eq)
+      by (simp add: member_rec)
+    have big_sound:"sound ([(p # \<Gamma>, q # (closeI \<Delta> j)), (q # \<Gamma>, p # (closeI \<Delta> j))], (\<Gamma>,\<Delta>))"
+      apply(rule soundI')
+      apply(rule seq_semI')
+      proof -
+        fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+        assume good:"is_interp I"
+        assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [(p # \<Gamma>, q # (closeI \<Delta> j)), (q # \<Gamma>, p # (closeI \<Delta> j))] \<Longrightarrow> \<nu> \<in> seq_sem I ([(p # \<Gamma>, q # (closeI \<Delta> j)), (q # \<Gamma>, p # (closeI \<Delta> j))] ! i))"
+          have sg1:"\<nu> \<in> seq_sem I (p # \<Gamma>, q # close \<Delta> (\<Delta> ! j))" using sgs[of 0] by auto
+          have sg2:"\<nu> \<in> seq_sem I (q # \<Gamma>, p # (closeI \<Delta> j))" using sgs[of 1] by auto
+        assume \<Gamma>_sem:"\<nu> \<in> fml_sem I (foldr op && \<Gamma> TT)"
+        have case1:"\<nu> \<in> fml_sem I p \<Longrightarrow> \<nu> \<in> fml_sem I (foldr op || \<Delta> FF)"
+          proof -
+            assume sem:"\<nu> \<in> fml_sem I p"
+            have "\<nu> \<in> fml_sem I (foldr op || (q # (close \<Delta> (nth \<Delta> j))) FF)"
+              using sem \<Gamma>_sem sg1 by auto
+            show "\<nu> \<in> fml_sem I (foldr op || \<Delta> FF)"
+              by (smt AIjeq SG_dec \<open>\<nu> \<in> fml_sem I (foldr op || (q # close \<Delta> (\<Delta> ! j)) FF)\<close> close_sub iff_sem jL local.sublist_def member_rec(1) nth_member or_foldl_sem or_foldl_sem_conv sem snd_conv)
+          qed
+        have case2:"\<nu> \<notin> fml_sem I p \<Longrightarrow> \<nu> \<in> fml_sem I (foldr op || \<Delta> FF)"
+          proof -
+            assume sem:"\<nu> \<notin> fml_sem I p"
+            have "\<nu> \<in> fml_sem I q \<Longrightarrow>  \<nu> \<notin> fml_sem I (foldr op || \<Delta> FF) \<Longrightarrow> False"
+              by (smt \<Gamma>_sem and_foldl_sem and_foldl_sem_conv closeI.simps close_sub local.sublist_def member_rec(1) or_foldl_sem or_foldl_sem_conv sem seq_MP sg2)
+            show "\<nu> \<in> fml_sem I (foldr op || \<Delta> FF)"
+              by (metis AIjeq SG_dec \<open>\<lbrakk>\<nu> \<in> fml_sem I q; \<nu> \<notin> fml_sem I (foldr op || \<Delta> FF)\<rbrakk> \<Longrightarrow> False\<close> iff_sem jL nth_member or_foldl_sem sem snd_eqD)
+          qed
+        show "\<nu> \<in> fml_sem I (foldr op || \<Delta> FF)"
+          by(cases "\<nu> \<in> fml_sem I p", (simp add: case1 case2)+)
+        qed
+   show ?case
+    apply(rule close_provable_sound)
+    apply(rule sound_weaken_appR)
+    apply(rule sound)
+     using res_eq
+    apply(unfold res_eq)
+    unfolding close_app_comm
+    apply (rule sound_weaken_appL)
+    using close_eq big_sound SG_dec AIjeq
+    by (simp add: AIjeq)
 qed
 
 lemma step_sound:"step_ok R i S \<Longrightarrow> i \<ge> 0 \<Longrightarrow> i < length (fst R) \<Longrightarrow> sound R \<Longrightarrow> sound (step_result R (i,S))"
@@ -1200,13 +1366,99 @@ next
       by (metis UNIV_eq_I seq_semI')
     then show "sound (step_result (SG, C) (i, CloseId j k))" 
       using closeI_valid_sound[OF sound seq_valid] by simp
+next
+  case (Step_DEAxiom_schema SG i \<sigma> C ODE)
+    assume isNth:"nth SG i =
+    ([], [Fsubst (([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]]P pid1) \<leftrightarrow>
+                  ([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]][[DiffAssign vid1 (f1 fid1 vid1)]]P pid1)) \<sigma>])"
+    assume FA:"Fadmit \<sigma>
+     (([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]]P pid1) \<leftrightarrow>
+      ([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]][[DiffAssign vid1 (f1 fid1 vid1)]]P pid1))"
+    assume disj:"{Inl vid1, Inr vid1} \<inter> FVO ODE = {}"
+    have schem_valid:"valid (([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]] (P pid1)) \<leftrightarrow>
+      ([[EvolveODE ((OProd ODE (OSing vid1 (f1 fid1 vid1)))) (p1 vid2 vid1)]]
+      [[DiffAssign vid1 (f1 fid1 vid1)]]P pid1))"
+      using DE_sys_valid[OF disj] by auto
+    assume ssafe:"ssafe \<sigma>"
+    assume osafe:"osafe ODE"
+    have subst_valid:"valid (Fsubst (([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]]P pid1) \<leftrightarrow>
+                  ([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]][[DiffAssign vid1 (f1 fid1 vid1)]]P pid1)) \<sigma>)"
+      apply(rule subst_fml_valid)
+      apply(rule FA)
+      subgoal using disj by(auto simp add: f1_def Box_def p1_def P_def Equiv_def Or_def expand_singleton osafe, induction ODE, auto)
+      subgoal by (rule ssafe)
+      by (rule schem_valid)
+    assume "0 \<le> i" 
+    assume "i < length (fst (SG, C))" 
+    assume sound:"sound (SG, C)"
+    have "seq_valid ([], [(Fsubst (([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]]P pid1) \<leftrightarrow>
+                  ([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]][[DiffAssign vid1 (f1 fid1 vid1)]]P pid1)) \<sigma>)])"
+      apply(rule fml_seq_valid)
+      by(rule subst_valid)
+  then have seq_valid:"seq_valid (SG ! i)"
+      using isNth by auto
+    (*  i0 iL *)
+  then show ?case 
+    using closeI_valid_sound[OF sound seq_valid] by simp
+next
+  case (Step_CE SG i \<phi> \<psi> \<sigma> C)
+    assume isNth:"SG ! i = ([], [Fsubst (InContext pid1 \<phi> \<leftrightarrow> InContext pid1 \<psi>) \<sigma>])"
+    assume valid:"valid (\<phi> \<leftrightarrow> \<psi>)"
+    assume FA:"Fadmit \<sigma> (InContext pid1 \<phi> \<leftrightarrow> InContext pid1 \<psi>)"
+    assume "0 \<le> i"
+    assume "i < length (fst (SG, C))"
+    assume sound:"sound (SG, C)"
+    assume fsafe1:"fsafe \<phi>"
+    assume fsafe2:"fsafe \<psi>"
+    assume ssafe:"ssafe \<sigma>"
+    have schem_valid:"valid (InContext pid1 \<phi> \<leftrightarrow> InContext pid1 \<psi>)"
+      using valid unfolding valid_def 
+      by (metis CE_holds_def CE_sound fml_sem.simps(7) iff_sem surj_pair valid_def)+
+    have subst_valid:"valid (Fsubst (InContext pid1 \<phi> \<leftrightarrow> InContext pid1 \<psi>) \<sigma>)"
+      apply(rule subst_fml_valid)
+      apply(rule FA)
+      subgoal by(auto simp add: f1_def Box_def p1_def P_def Equiv_def Or_def expand_singleton fsafe1 fsafe2)
+      subgoal by (rule ssafe)
+      by (rule schem_valid)
+    have "seq_valid ([], [Fsubst (InContext pid1 \<phi> \<leftrightarrow> InContext pid1 \<psi>) \<sigma>])"
+      apply(rule fml_seq_valid)
+      by(rule subst_valid)
+    then have seq_valid:"seq_valid (SG ! i)"
+      using isNth by auto
+    show "sound (step_result (SG, C) (i, CE \<phi> \<psi> \<sigma>))"
+      using closeI_valid_sound[OF sound seq_valid] by simp
+next
+  case (Step_CQ SG i p \<theta> \<theta>' \<sigma> C)
+    assume isNth:"nth SG  i = ([], [Fsubst (Equiv (Prop p (singleton \<theta>)) (Prop p (singleton \<theta>'))) \<sigma>])"
+    assume valid:"valid (Equals \<theta> \<theta>')"
+    assume FA:"Fadmit \<sigma> ($\<phi> p (singleton \<theta>) \<leftrightarrow> $\<phi> p (singleton \<theta>'))"
+    assume "0 \<le> i"
+    assume "i < length (fst (SG, C))"
+    assume sound:"sound (SG, C)"
+    assume dsafe1:"dfree \<theta>"
+    assume dsafe2:"dfree \<theta>'"
+    assume ssafe:"ssafe \<sigma>"
+    have schem_valid:"valid ($\<phi> p (singleton \<theta>) \<leftrightarrow> $\<phi> p (singleton \<theta>'))"
+      using valid unfolding valid_def 
+      by (metis CQ_holds_def CQ_sound fml_sem.simps(7) iff_sem surj_pair valid_def)+
+    have subst_valid:"valid (Fsubst ($\<phi> p (singleton \<theta>) \<leftrightarrow> $\<phi> p (singleton \<theta>')) \<sigma>)"
+      apply(rule subst_fml_valid)
+      apply(rule FA)
+      subgoal by (auto simp add: f1_def Box_def p1_def P_def Equiv_def Or_def expand_singleton dsafe1 dsafe2 expand_singleton) 
+      subgoal by (rule ssafe)
+      by (rule schem_valid)
+    have "seq_valid ([], [Fsubst ($\<phi> p (singleton \<theta>) \<leftrightarrow> $\<phi> p (singleton \<theta>')) \<sigma>])"
+      apply(rule fml_seq_valid)
+      by(rule subst_valid)
+    then have seq_valid:"seq_valid (SG ! i)"
+      using isNth by auto
+    show "sound (step_result (SG, C) (i, CQ \<theta> \<theta>' \<sigma>))"
+      using closeI_valid_sound[OF sound seq_valid] by simp
 qed
 
-oops
 lemma deriv_sound:"deriv_ok R D \<Longrightarrow> sound R \<Longrightarrow> sound (deriv_result R D)"
   apply(induction rule: deriv_ok.induct)
-  sorry
-  (*using step_sound by auto*)
+  using step_sound by auto
 
 (* BEGIN SOUNDNESS-CRITICAL *)
 lemma proof_sound:"proof_ok Pf \<Longrightarrow> sound (proof_result Pf)"
@@ -1485,7 +1737,7 @@ where "SystemCEFml1 = Geq (Differential (Var vid1)) (Differential (Const 0))"
 definition SystemCEFml2::"('sf,'sc,'sz) formula"
 where "SystemCEFml2 = Geq (DiffVar vid1) (Const 0)"
 
- (*)x>=r->r>=r&[{dx=, dy=x&r>=r}]D{x}>=D{r}->[{dx=, dy=x&r>=r}]x>=r *)
+(* v\<ge>0 \<and> A()\<ge>0 \<rightarrow> [{x'=v, v'=A()}]v\<ge>0 *)
 definition SystemProof :: "('sf, 'sc, 'sz) pf"
 where "SystemProof =
   (SystemConcl, [
@@ -1615,7 +1867,6 @@ lemma example_result_correct:"proof_result (proof_take 61 DIAndProof) = DIAnd"
 lemma print_example_result:"rule_to_string(proof_result (proof_take 59 DIAndProof)) = undefined"
   unfolding DIAndProof_def DIAndConcl_def Implies_def Or_def 
   proof_result.simps deriv_result.simps start_proof.simps DIAndCutP12_def  DIAndSG1_def DIAndSG2_def DIAndCutP1_def Box_def DIAndCut34Elim1_def DIAndCut12Intro_def DIAndCut34Elim2_def DIAnd_def
-  
   apply (auto simp add: id_simps  DIAndSubst341_def DIAndCut12Intro_def DIAndSubst12_def
     DIAndCutP12_def DIAndCurry12_def DIAndSubst342_def)
   sorry
