@@ -169,7 +169,7 @@ datatype ('a, 'b, 'c) step =
 | Lrule lrule nat
 | CloseId nat nat
 | Cut "('a, 'b, 'c) formula"
-| DEAxiomSchema "('a, 'b, 'c) subst"
+| DEAxiomSchema "('a,'c) ODE" "('a, 'b, 'c) subst"
   
 type_synonym ('a, 'b, 'c) derivation = "(nat * ('a, 'b, 'c) step) list"
 type_synonym ('a, 'b, 'c) pf = "('a,'b,'c) sequent * ('a, 'b, 'c) derivation"
@@ -219,7 +219,7 @@ where
 | Step_Vsubst:"step_result (SG,C) (i,VSubst \<phi> \<sigma>) = (closeI SG i, C)"
 | Step_CloseId:"step_result (SG,C) (i,CloseId j k) = (closeI SG i, C)"
 | Step_G:"step_result (SG,C) (i,G) = (case nth SG i of (_, (Not (Diamond q (Not p))) # Nil) \<Rightarrow> (([], [p]) # closeI SG i, C))"
-| Step_DEAxiomSchema:"step_result (SG,C) (i,DEAxiomSchema \<sigma>) = (closeI SG i, C)"
+| Step_DEAxiomSchema:"step_result (SG,C) (i,DEAxiomSchema ODE \<sigma>) = (closeI SG i, C)"
 | Step_CE:"step_result (SG,C) (i, CE \<phi> \<psi> \<sigma>) =  (closeI SG i, C)"
 | Step_CQ:"step_result (SG,C) (i, CQ \<theta>\<^sub>1 \<theta>\<^sub>2 \<sigma>) =  (closeI SG i, C)"
 | Step_default:"step_result R (i,S) = R"
@@ -275,17 +275,17 @@ where
 | Step_CloseId:"nth (fst (nth SG i)) j = nth (snd (nth SG i)) k \<Longrightarrow> j < length (fst (nth SG i)) \<Longrightarrow> k < length (snd (nth SG i)) \<Longrightarrow> step_ok (SG,C) i (CloseId j k) "
 | Step_G:"\<And>a p. nth SG i = ([], [([[a]]p)]) \<Longrightarrow> step_ok (SG,C) i G"
 | Step_DEAxiom_schema:
-  "\<And>ODE. nth SG i = 
-  ([], [Fsubst ((([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]] (P pid1)) \<leftrightarrow>
-          ([[EvolveODE ((OProd ODE (OSing vid1 (f1 fid1 vid1)))) (p1 vid2 vid1)]]
+  " nth SG i = 
+  ([], [Fsubst ((([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1)) ODE) (p1 vid2 vid1)]] (P pid1)) \<leftrightarrow>
+          ([[EvolveODE ((OProd  (OSing vid1 (f1 fid1 vid1))) ODE) (p1 vid2 vid1)]]
                [[DiffAssign vid1 (f1 fid1 vid1)]]P pid1))) \<sigma>])
     \<Longrightarrow> ssafe \<sigma>
     \<Longrightarrow> osafe ODE
-    \<Longrightarrow> {Inl vid1, Inr vid1} \<inter> FVO ODE = {}
-    \<Longrightarrow> Fadmit \<sigma> ((([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]] (P pid1)) \<leftrightarrow>
-          ([[EvolveODE ((OProd ODE (OSing vid1 (f1 fid1 vid1)))) (p1 vid2 vid1)]]
+    \<Longrightarrow> {Inl vid1, Inr vid1} \<inter> BVO ODE = {}
+    \<Longrightarrow> Fadmit \<sigma> ((([[EvolveODE (OProd  (OSing vid1 (f1 fid1 vid1))ODE) (p1 vid2 vid1)]] (P pid1)) \<leftrightarrow>
+          ([[EvolveODE ((OProd  (OSing vid1 (f1 fid1 vid1))ODE)) (p1 vid2 vid1)]]
                [[DiffAssign vid1 (f1 fid1 vid1)]]P pid1))) 
-    \<Longrightarrow> step_ok (SG,C) i (DEAxiomSchema \<sigma>)"
+    \<Longrightarrow> step_ok (SG,C) i (DEAxiomSchema ODE \<sigma>)"
   | Step_CE:"nth SG i = ([], [Fsubst (Equiv (InContext pid1 \<phi>) (InContext pid1 \<psi>)) \<sigma>]) 
     \<Longrightarrow> valid (Equiv \<phi> \<psi>) 
     \<Longrightarrow> fsafe \<phi>
@@ -310,7 +310,7 @@ and Step_Rrule_simps[prover]: "step_ok (SG,C) i (Rrule j L)"
 and Step_Lrule_simps[prover]: "step_ok (SG,C) i (Lrule j L)"
 and Step_Axiom_simps[prover]: "step_ok (SG,C) i (Axiom a)"
 and Step_AxSubst_simps[prover]: "step_ok (SG,C) i (AxSubst a \<sigma>)"
-and Step_DEAxiom_schema_simps[prover]: "step_ok (SG,C) i (DEAxiomSchema \<sigma>)"
+and Step_DEAxiom_schema_simps[prover]: "step_ok (SG,C) i (DEAxiomSchema ODE \<sigma>)"
 and Step_CE_simps[prover]: "step_ok (SG,C) i (CE \<phi> \<psi> \<sigma>)"
 and Step_CQ_simps[prover]: "step_ok (SG,C) i (CQ \<theta> \<theta>' \<sigma>)"
 
@@ -1367,22 +1367,22 @@ next
     then show "sound (step_result (SG, C) (i, CloseId j k))" 
       using closeI_valid_sound[OF sound seq_valid] by simp
 next
-  case (Step_DEAxiom_schema SG i \<sigma> C ODE)
+  case (Step_DEAxiom_schema SG i ODE \<sigma> C )
     assume isNth:"nth SG i =
-    ([], [Fsubst (([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]]P pid1) \<leftrightarrow>
-                  ([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]][[DiffAssign vid1 (f1 fid1 vid1)]]P pid1)) \<sigma>])"
+    ([], [Fsubst (([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1))ODE) (p1 vid2 vid1)]]P pid1) \<leftrightarrow>
+                  ([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1))ODE) (p1 vid2 vid1)]][[DiffAssign vid1 (f1 fid1 vid1)]]P pid1)) \<sigma>])"
     assume FA:"Fadmit \<sigma>
-     (([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]]P pid1) \<leftrightarrow>
-      ([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]][[DiffAssign vid1 (f1 fid1 vid1)]]P pid1))"
-    assume disj:"{Inl vid1, Inr vid1} \<inter> FVO ODE = {}"
-    have schem_valid:"valid (([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]] (P pid1)) \<leftrightarrow>
-      ([[EvolveODE ((OProd ODE (OSing vid1 (f1 fid1 vid1)))) (p1 vid2 vid1)]]
+     (([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1))ODE) (p1 vid2 vid1)]]P pid1) \<leftrightarrow>
+      ([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1))ODE) (p1 vid2 vid1)]][[DiffAssign vid1 (f1 fid1 vid1)]]P pid1))"
+    assume disj:"{Inl vid1, Inr vid1} \<inter> BVO ODE = {}"
+    have schem_valid:"valid (([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1))ODE) (p1 vid2 vid1)]] (P pid1)) \<leftrightarrow>
+      ([[EvolveODE ((OProd (OSing vid1 (f1 fid1 vid1))ODE)) (p1 vid2 vid1)]]
       [[DiffAssign vid1 (f1 fid1 vid1)]]P pid1))"
       using DE_sys_valid[OF disj] by auto
     assume ssafe:"ssafe \<sigma>"
     assume osafe:"osafe ODE"
-    have subst_valid:"valid (Fsubst (([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]]P pid1) \<leftrightarrow>
-                  ([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]][[DiffAssign vid1 (f1 fid1 vid1)]]P pid1)) \<sigma>)"
+    have subst_valid:"valid (Fsubst (([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1))ODE) (p1 vid2 vid1)]]P pid1) \<leftrightarrow>
+                  ([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1))ODE) (p1 vid2 vid1)]][[DiffAssign vid1 (f1 fid1 vid1)]]P pid1)) \<sigma>)"
       apply(rule subst_fml_valid)
       apply(rule FA)
       subgoal using disj by(auto simp add: f1_def Box_def p1_def P_def Equiv_def Or_def expand_singleton osafe, induction ODE, auto)
@@ -1391,8 +1391,8 @@ next
     assume "0 \<le> i" 
     assume "i < length (fst (SG, C))" 
     assume sound:"sound (SG, C)"
-    have "seq_valid ([], [(Fsubst (([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]]P pid1) \<leftrightarrow>
-                  ([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]][[DiffAssign vid1 (f1 fid1 vid1)]]P pid1)) \<sigma>)])"
+    have "seq_valid ([], [(Fsubst (([[EvolveODE (OProd  (OSing vid1 (f1 fid1 vid1))ODE) (p1 vid2 vid1)]]P pid1) \<leftrightarrow>
+                  ([[EvolveODE (OProd  (OSing vid1 (f1 fid1 vid1))ODE) (p1 vid2 vid1)]][[DiffAssign vid1 (f1 fid1 vid1)]]P pid1)) \<sigma>)])"
       apply(rule fml_seq_valid)
       by(rule subst_valid)
   then have seq_valid:"seq_valid (SG ! i)"
@@ -1675,7 +1675,11 @@ where "SystemDCCut =
 definition SystemVCut::"('sf,'sc,'sz) formula"
 where "SystemVCut = 
   Implies (Geq (f0 fid1) (Const 0)) ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const 0)))]](Geq (f0 fid1) (Const 0)))" 
-  
+
+definition SystemVCut2::"('sf,'sc,'sz) formula"
+where "SystemVCut2 = 
+  Implies (Geq (f0 fid1) (Const 0)) ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]](Geq (f0 fid1) (Const 0)))" 
+
 definition SystemDECut::"('sf,'sc,'sz) formula"
 where "SystemDECut = (([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const 0)))]] ((Geq (Differential (Var vid1)) (Differential (Const 0))))) \<leftrightarrow>
  ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const 0)))]]
@@ -1813,16 +1817,75 @@ where "SystemDISubst =
   \<rparr>"
   
 definition SystemDCSubst::"('sf,'sc,'sz) subst"
-where "SystemDCSubst = SystemDISubst"
+where "SystemDCSubst = 
+  \<lparr> SFunctions = (\<lambda>f.  None),
+    SPredicates = (\<lambda>p.  None),
+    SContexts = (\<lambda>C. 
+    if C = pid1 then
+      Some TT
+    else if C = pid2 then
+      Some (Geq (Differential (Var vid1)) (Differential (Const 0)))
+    else if C = pid3 then
+      Some (Geq (Function fid1 empty) (Const 0)) 
+    else 
+     None),
+    SPrograms = (\<lambda>_. None),
+    SODEs = (\<lambda>c. if c = vid1 then Some (OProd (OSing vid1 (Function fid1 empty)) (OSing vid2 (trm.Var vid1))) else None)
+  \<rparr>"
 
 definition SystemVSubst::"('sf,'sc,'sz) subst"
-where "SystemVSubst = SystemDISubst"
+where "SystemVSubst = 
+  \<lparr> SFunctions = (\<lambda>f.  None),
+    SPredicates = (\<lambda>p. if p = vid1 then Some (Geq (Function (Inl fid1) empty) (Const 0)) else None),
+    SContexts = (\<lambda>_. None),
+    SPrograms = (\<lambda>a. if a = vid1 then 
+      Some (EvolveODE (OProd 
+                         (OSing vid1 (Function fid1 empty)) 
+                         (OSing vid2 (Var vid1))) 
+                      (And TT (Geq (Function fid1 empty) (Const 0)))) 
+                      else None),
+    SODEs = (\<lambda>_. None)
+  \<rparr>"
+
+definition SystemVSubst2::"('sf,'sc,'sz) subst"
+where "SystemVSubst2 = 
+  \<lparr> SFunctions = (\<lambda>f.  None),
+    SPredicates = (\<lambda>p. if p = vid1 then Some (Geq (Function (Inl fid1) empty) (Const 0)) else None),
+    SContexts = (\<lambda>_. None),
+    SPrograms = (\<lambda>a. if a = vid1 then 
+      Some (EvolveODE (OProd 
+                         (OSing vid1 (Function fid1 empty)) 
+                         (OSing vid2 (Var vid1))) 
+                      TT) 
+                      else None),
+    SODEs = (\<lambda>_. None)
+  \<rparr>"
 
 definition SystemDESubst::"('sf,'sc,'sz) subst"
-where "SystemDESubst = SystemDISubst"
+where "SystemDESubst = 
+  \<lparr> SFunctions = (\<lambda>f. if f = fid1 then Some(Function (Inl fid1) empty) else None),
+    SPredicates = (\<lambda>p. if p = vid2 then Some(And TT (Geq (Function (Inl fid1) empty) (Const 0))) else None),
+    SContexts = (\<lambda>C. if C = pid1 then Some(Geq (Differential (Var vid1)) (Differential (Const 0))) else None),
+    SPrograms = (\<lambda>_. None),
+    SODEs = (\<lambda>_. None)
+  \<rparr>"
 
+lemma systemdesubst_correct:"\<exists> ODE.(([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const 0)))]] ((Geq (Differential (Var vid1)) (Differential (Const 0))))) \<leftrightarrow>
+ ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const 0)))]]
+    [[DiffAssign vid1 (f0 fid1)]](Geq (Differential (Var vid1)) (Differential (Const 0)))))
+    = Fsubst ((([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1)) ODE) (p1 vid2 vid1)]] (P pid1)) \<leftrightarrow>
+          ([[EvolveODE ((OProd  (OSing vid1 (f1 fid1 vid1))) ODE) (p1 vid2 vid1)]]
+               [[DiffAssign vid1 (f1 fid1 vid1)]]P pid1))) SystemDESubst"
+  apply(rule exI[where x="OSing vid2 (trm.Var vid1)"])
+  by(auto simp add: f0_def f1_def Box_def Or_def Equiv_def empty_def TT_def P_def p1_def SystemDESubst_def empty_def)
+  
 definition SystemKSubst::"('sf,'sc,'sz) subst"
-where "SystemKSubst = SystemDISubst"
+where "SystemKSubst = \<lparr> SFunctions = (\<lambda>f.  None),
+    SPredicates = (\<lambda>_. None),
+    SContexts = (\<lambda>_. None),
+    SPrograms = (\<lambda>_. None),
+    SODEs = (\<lambda>_. None)
+  \<rparr>"
 
 definition SystemDWSubst::"('sf,'sc,'sz) subst"
 where "SystemDWSubst = SystemDISubst"
@@ -1857,7 +1920,7 @@ where "SystemProof =
   ,(0, Lrule EquivBackwardL 0)
   ,(0, Rrule CohideR 0)
   ,(0, AxSubst ADC SystemDCSubst) (* 17 *)
-  ,(0, CloseId 0 1)
+  ,(0, CloseId 0 0)
   ,(0, Rrule CohideRR 0)
   ,(0, Cut SystemVCut)
   ,(0, Lrule ImplyL 0) 
@@ -1865,28 +1928,35 @@ where "SystemProof =
   ,(0, Cut SystemDECut)
   ,(0, Lrule EquivBackwardL 0)
   ,(0, Rrule CohideRR 0)
-  ,(0, CloseId 0 0)
-  ,(0, CloseId 1 0)
-  ,(0, AxSubst AV SystemVSubst) (* 28 *)
-  ,(0, CloseId 0 0)
+  ,(1, CloseId 1 0)
+  ,(Suc 1, CloseId 0 0)
+  ,(1, AxSubst AV SystemVSubst) (* 28 *)
+  ,(0, Cut SystemVCut2)
+  
+  ,(0, Lrule ImplyL 0)
   ,(0, Rrule CohideRR 0)
-  ,(0, DEAxiomSchema SystemDESubst) (* 31 *)
+  ,(Suc 1, CloseId 0 0)
+  ,(Suc 1, CloseId 2 0)
+  
+  ,(Suc 1, AxSubst AV SystemVSubst2) (* 34 *)
+  ,(0, Rrule CohideRR 0)
+  ,(0, DEAxiomSchema (OSing vid2 (trm.Var vid1)) SystemDESubst) (* 36 *)
   ,(0, Cut SystemKCut)
   ,(0, Lrule ImplyL 0)
   ,(0, Rrule CohideRR 0)
   ,(0, Lrule ImplyL 0)
   ,(0, Rrule CohideRR 0)
-  ,(0, AxSubst AK SystemKSubst) (* 37 *)
+  ,(0, AxSubst AK SystemKSubst) (* 42 *)
   ,(0, CloseId 0 0)
   ,(0, Rrule CohideR 0)
-  ,(1, AxSubst ADW SystemDWSubst) (* 40 *)
+  ,(1, AxSubst ADW SystemDWSubst) (* 45 *)
   ,(0, G)
   ,(0, Cut SystemEquivCut)
   ,(0, Lrule EquivBackwardL 0)
   ,(0, Rrule CohideR 0)
   ,(0, CloseId 0 0)
   ,(0, Rrule CohideR 0)
-  ,(0, CE SystemCEFml1 SystemCEFml2 SystemCESubst) (* 47 *)
+  ,(0, CE SystemCEFml1 SystemCEFml2 SystemCESubst) (* 52 *)
   ,(0, Rrule ImplyR 0)
   ,(0, Lrule AndL 0)
   ,(0, Cut SystemDiffAssignCut) 
@@ -1894,7 +1964,7 @@ where "SystemProof =
   ,(0, Rrule CohideRR 0)
   ,(0, CloseId 0 0)
   ,(0, CloseId 1 0)
-  ,(0, AxSubst Adassign SystemDiffAssignSubst) (* 55 *)
+  ,(0, AxSubst Adassign SystemDiffAssignSubst) (* 60 *)
   ])"
 
 
@@ -1914,25 +1984,27 @@ lemma system_result_correct:"proof_result SystemProof =
   SystemDiffAssignCut_def
   by (auto simp add:  prover)
 
-lemma whereami:"last_step SystemProof 8 = undefined"
+lemma whereami:"last_step SystemProof 36 = undefined"
   unfolding SystemProof_def apply auto
   unfolding SystemDISubst_def
   sorry
 
-lemma print_sys_progress:"rule_to_string(proof_result (proof_take 7 SystemProof)) = undefined"
+lemma print_sys_progress:"rule_to_string(proof_result (proof_take 35 SystemProof)) = undefined"
   unfolding SystemProof_def SystemConcl_def Implies_def Or_def f0_def TT_def Equiv_def SystemDICut_def SystemDCCut_def
   proof_result.simps deriv_result.simps start_proof.simps  Box_def SystemDCSubst_def SystemVCut_def SystemDECut_def SystemKCut_def SystemEquivCut_def
-  SystemDiffAssignCut_def
+  SystemDiffAssignCut_def SystemVCut2_def
   apply (auto simp add: id_simps)
   sorry
 
-lemma SystemSound_lemma:"sound (proof_result (proof_take 8 SystemProof))"
+lemma SystemSound_lemma:"sound (proof_result (proof_take 36 SystemProof))"
   apply(rule proof_sound)
   unfolding SystemProof_def SystemConcl_def CQ1Concl_def CQ2Concl_def Equiv_def CQRightSubst_def diff_const_axiom_valid diff_var_axiom_valid empty_def Or_def expand_singleton 
   diff_var_axiom_def SystemDICut_def
   apply (auto simp add: prover CEProof_def CEReq_def CQ1Concl_def CQ2Concl_def Equiv_def
     CQRightSubst_def diff_const_axiom_valid diff_var_axiom_valid empty_def Or_def expand_singleton 
-    TUadmit_def NTUadmit_def almost_diff_const CQLeftSubst_def almost_diff_var f0_def TT_def SystemDISubst_def f1_def p1_def)
+    TUadmit_def NTUadmit_def almost_diff_const CQLeftSubst_def almost_diff_var f0_def TT_def SystemDISubst_def f1_def p1_def SystemDCCut_def SystemDCSubst_def
+    SystemVCut_def SystemDECut_def SystemVSubst_def
+    SystemVCut2_def SystemVSubst2_def  SystemDESubst_def P_def)
   sledgehammer
   
 
