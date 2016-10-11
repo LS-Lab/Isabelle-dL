@@ -43,6 +43,15 @@ where
 | NTadmit_Var:"NTadmit \<sigma> (Var x)"
 | NTadmit_Const:"NTadmit \<sigma> (Const r)"
 
+inductive_simps
+      NTadmit_Plus_simps[simp]: "NTadmit \<sigma> (Plus a b)"
+  and NTadmit_Times_simps[simp]: "NTadmit \<sigma> (Times a b)"
+  and NTadmit_Var_simps[simp]: "NTadmit \<sigma> (Var x)"
+  and NTadmit_DiffVar_simps[simp]: "NTadmit \<sigma> (DiffVar x)"
+  and NTadmit_Differential_simps[simp]: "NTadmit \<sigma> (Differential \<theta>)"
+  and NTadmit_Const_simps[simp]: "NTadmit \<sigma> (Const r)"
+  and NTadmit_Fun_simps[simp]: "NTadmit \<sigma> (Function i args)"
+
 primrec NTsubst::"('a + 'b, 'c) trm \<Rightarrow> ('b \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'c) trm"
 where
   "NTsubst (Var v) \<sigma> = Var v"
