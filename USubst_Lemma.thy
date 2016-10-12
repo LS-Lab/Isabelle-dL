@@ -1907,9 +1907,6 @@ proof (induction rule: TFadmit.induct)
       using IH by auto
     assume some:"SFunctions \<sigma> f = Some f'" 
     let ?sub = "(\<lambda> i. Tsubst (args i) \<sigma>)"
-      (*have other_eq:" sterm_sem (NTadjoint I ?sub \<nu>) f' (fst \<nu>) 
-        = Functions (local.adjoint I \<sigma> \<nu>) f (\<chi> i. sterm_sem (local.adjoint I \<sigma> \<nu>) (args i) (fst \<nu>))" 
-        using IH[OF admits ] (*sledgehammer*)*)
       have IH2:"sterm_sem I (NTsubst f' ?sub) (fst \<nu>) = sterm_sem (NTadjoint I ?sub \<nu>) f' (fst \<nu>)"
         apply(rule nsubst_sterm)
         apply(rule subFree)
@@ -1920,15 +1917,15 @@ proof (induction rule: TFadmit.induct)
       by (auto simp add: some adjoint_free[OF subFreeer, of \<sigma> "(\<lambda> x y. x)" I \<nu>] NTadjoint_free[OF frees])      
 next
   case (TFadmit_Fun2  \<sigma> args f) 
+    assume none:"SFunctions \<sigma> f = None" 
     note admit = TFadmit_Fun2.hyps(1) and sfree = TFadmit_Fun2.prems(1)
     have IH:"(\<And>i. TFadmit \<sigma> (args i) \<Longrightarrow>
         sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>))" 
       using  TFadmit_Fun2.prems TFadmit_Fun2.IH by auto
-    (*have eqs:"\<And>i. sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)"
-      by (auto simp add: IH admit)*)
+    have eqs:"\<And>i. sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)"
+      by (auto simp add: IH admit)
     show "?case" 
-      sorry
-        (*qed (auto simp add: IH adjoint_def vec_extensionality )*)
+      by(auto simp add: none IH adjoint_def vec_extensionality eqs)
   qed auto
 
 lemma nsubst_dterm':
