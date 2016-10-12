@@ -45,11 +45,11 @@ where
 
 inductive_simps
   NTFadmit_Diff_simps[simp]: "NTFadmit \<sigma> (Differential \<theta>)"
-| NTFadmit_Fun_simps[simp]: "NTFadmit \<sigma> (Functions f args)"
-| NTFadmit_Plus_simps[simp]: "NTFadmit \<sigma> (Plus t1 t2)"
-| NTFadmit_Times_simps[simp]: "NTFadmit \<sigma> (Times t1 t2)"
-| NTFadmit_Var_simps[simp]: "NTFadmit \<sigma> (Var x)"
-| NTFadmit_Const_simps[simp]: "NTFadmit \<sigma> (Const r)"
+and NTFadmit_Fun_simps[simp]: "NTFadmit \<sigma> (Function f args)"
+and NTFadmit_Plus_simps[simp]: "NTFadmit \<sigma> (Plus t1 t2)"
+and NTFadmit_Times_simps[simp]: "NTFadmit \<sigma> (Times t1 t2)"
+and NTFadmit_Var_simps[simp]: "NTFadmit \<sigma> (Var x)"
+and NTFadmit_Const_simps[simp]: "NTFadmit \<sigma> (Const r)"
   
 primrec NTsubst::"('a + 'b, 'c) trm \<Rightarrow> ('b \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'c) trm"
 where
@@ -213,7 +213,7 @@ inductive_simps
 inductive TFadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) trm \<Rightarrow> bool"
 where 
   TFadmit_Diff:"TFadmit \<sigma> \<theta> \<Longrightarrow> TUadmit \<sigma> \<theta> UNIV \<Longrightarrow> TFadmit \<sigma> (Differential \<theta>)"
-| TFadmit_Fun1:"(\<And>i. TFadmit \<sigma> (args i)) \<Longrightarrow> SFunctions \<sigma> f = Some f' \<Longrightarrow> dfree (Tsubst (args i) \<sigma>) \<Longrightarrow> NTFadmit (\<lambda> i. Tsubst (args i) \<sigma>) f' \<Longrightarrow> TFadmit \<sigma> (Function f args)"
+| TFadmit_Fun1:"(\<And>i. TFadmit \<sigma> (args i)) \<Longrightarrow> SFunctions \<sigma> f = Some f' \<Longrightarrow> (\<And>i. dfree (Tsubst (args i) \<sigma>)) \<Longrightarrow> NTFadmit (\<lambda> i. Tsubst (args i) \<sigma>) f' \<Longrightarrow> TFadmit \<sigma> (Function f args)"
 | TFadmit_Fun2:"(\<And>i. TFadmit \<sigma> (args i)) \<Longrightarrow> SFunctions \<sigma> f = None \<Longrightarrow> TFadmit \<sigma> (Function f args)"
 | TFadmit_Plus:"TFadmit \<sigma> \<theta>1 \<Longrightarrow> TFadmit \<sigma> \<theta>2 \<Longrightarrow> TFadmit \<sigma> (Plus \<theta>1 \<theta>2)"
 | TFadmit_Times:"TFadmit \<sigma> \<theta>1 \<Longrightarrow> TFadmit \<sigma> \<theta>2 \<Longrightarrow> TFadmit \<sigma> (Times \<theta>1 \<theta>2)"

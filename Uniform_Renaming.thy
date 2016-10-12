@@ -729,8 +729,7 @@ next
       proof -
         assume fsafe:"fsafe (Prop p args)"
         fix \<nu>
-        from fsafe have dfrees:"\<And>i. dfree (args i)" by auto
-        from dfrees have dsafes:"\<And>i. dsafe (args i)" using dfree_is_dsafe by auto
+        from fsafe have dsafes:"\<And>i. dsafe (args i)" using dfree_is_dsafe by auto
         have IH:"\<And>i \<nu>. dterm_sem I (TUrename x y (args i)) \<nu> = dterm_sem I (args i) (Radj x y \<nu>)"
           using TUren[OF good_interp dsafes] by auto
         have "(\<nu> \<in> fml_sem I (FUrename x y (Prop p args))) = (\<nu> \<in> fml_sem I (Prop p (\<lambda>i . TUrename x y (args i))))" by auto

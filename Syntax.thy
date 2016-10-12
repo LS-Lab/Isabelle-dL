@@ -117,16 +117,39 @@ definition FF ::"('a,'b,'c) formula"
   where "FF = Geq (Const 0) (Const 1)"
 (* END SOUNDNESS-CRITICAL *)
 
+(* silliness to enable proving disequality lemmas *)
+primrec sizeF::"('sf,'sc, 'sz) formula \<Rightarrow> nat"
+and sizeP::"('sf,'sc, 'sz) hp \<Rightarrow> nat"
+where 
+  "sizeP (Pvar a) = 1"
+| "sizeP (Assign x \<theta>) = 1"
+| "sizeP (DiffAssign x \<theta>) = 1"
+| "sizeP (Test \<phi>) = Suc (sizeF \<phi>)"
+| "sizeP (EvolveODE ODE \<phi>) = Suc (sizeF \<phi>)"
+| "sizeP (Choice \<alpha> \<beta>) = Suc (sizeP \<alpha> + sizeP \<beta>)"
+| "sizeP (Sequence \<alpha> \<beta>) = Suc (sizeP \<alpha> + sizeP \<beta>)"
+| "sizeP (Loop \<alpha>) = Suc (sizeP \<alpha>)"
+| "sizeF (Geq p q) = 1"
+| "sizeF (Prop p args) = 1"
+| "sizeF (Not p) = Suc (sizeF p)"
+| "sizeF (And p q) = sizeF p + sizeF q"
+| "sizeF (Exists x p) = Suc (sizeF p)"
+| "sizeF (Diamond p q) = Suc (sizeP p + sizeF q)"
+| "sizeF (InContext C \<phi>) = Suc (sizeF \<phi>)"
+| "sizeF (DiffFormula e) = undefined"
+
+lemma sizeF_diseq:"sizeF p \<noteq> sizeF q \<Longrightarrow> p \<noteq> q" by auto
+  
 named_theorems "expr_diseq" "Structural disequality rules for expressions"  
 lemma [expr_diseq]:"p \<noteq> And p q" by(induction p, auto)
 lemma [expr_diseq]:"q \<noteq> And p q" by(induction q, auto)
 lemma [expr_diseq]:"p \<noteq> Not p" by(induction p, auto)
-lemma [expr_diseq]:"p \<noteq> Or p q" sorry
-lemma [expr_diseq]:"q \<noteq> Or p q" sorry
-lemma [expr_diseq]:"p \<noteq> Implies p q" sorry 
-lemma [expr_diseq]:"q \<noteq> Implies p q" sorry
-lemma [expr_diseq]:"p \<noteq> Equiv p q" sorry 
-lemma [expr_diseq]:"q \<noteq> Equiv p q" sorry
+lemma [expr_diseq]:"p \<noteq> Or p q" by(rule sizeF_diseq, auto simp add: Or_def)
+lemma [expr_diseq]:"q \<noteq> Or p q" by(rule sizeF_diseq, auto simp add: Or_def)
+lemma [expr_diseq]:"p \<noteq> Implies p q" by(rule sizeF_diseq, auto simp add: Implies_def Or_def)
+lemma [expr_diseq]:"q \<noteq> Implies p q" by(rule sizeF_diseq, auto simp add: Implies_def Or_def)
+lemma [expr_diseq]:"p \<noteq> Equiv p q" by(rule sizeF_diseq, auto simp add: Equiv_def Or_def)
+lemma [expr_diseq]:"q \<noteq> Equiv p q" by(rule sizeF_diseq, auto simp add: Equiv_def Or_def)
 lemma [expr_diseq]:"p \<noteq> Exists x p" by(induction p, auto)
 lemma [expr_diseq]:"p \<noteq> Diamond a p" by(induction p, auto)
 lemma [expr_diseq]:"p \<noteq> InContext C p" by(induction p, auto)

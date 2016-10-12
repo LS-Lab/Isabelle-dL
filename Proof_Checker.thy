@@ -2066,14 +2066,8 @@ lemma system_result_correct:"proof_result SystemProof =
   unfolding SystemProof_def SystemConcl_def Implies_def Or_def f0_def TT_def Equiv_def SystemDICut_def SystemDCCut_def
   proof_result.simps deriv_result.simps start_proof.simps  Box_def SystemDCSubst_def SystemVCut_def SystemDECut_def SystemKCut_def SystemEquivCut_def
   SystemDiffAssignCut_def
-  sorry
-  (*by (auto simp add:  prover)*)
-
-lemma whereami:"last_step SystemProof 52 = undefined"
-  unfolding SystemProof_def apply auto
-  unfolding SystemDISubst_def
-  sorry
-
+  apply (auto simp add:  prover)
+  
 lemma print_sys_progress:"(proof_result (proof_take 60 SystemProof)) = ([], SystemConcl)"
   unfolding SystemProof_def SystemConcl_def Implies_def Or_def f0_def TT_def Equiv_def SystemDICut_def SystemDCCut_def
   proof_result.simps deriv_result.simps start_proof.simps  Box_def SystemDCSubst_def SystemVCut_def SystemDECut_def SystemKCut_def SystemEquivCut_def
@@ -2095,20 +2089,13 @@ done
 lemma system_sond:"sound ([], SystemConcl)"
   using SystemSound_lemma print_sys_progress by auto
   
-lemma example_result_correct:"proof_result (proof_take 61 DIAndProof) = DIAnd"
+lemma DIAnd_result_correct:"proof_result (proof_take 61 DIAndProof) = DIAnd"
   unfolding DIAndProof_def DIAndConcl_def Implies_def Or_def 
   proof_result.simps deriv_result.simps start_proof.simps DIAndCutP12_def  DIAndSG1_def DIAndSG2_def DIAndCutP1_def Box_def DIAndCut34Elim1_def DIAndCut12Intro_def DIAndCut34Elim2_def DIAnd_def
   using pne12 pne13 pne14 pne23 pne24 pne34 by (auto)
-                                                                         
-lemma print_example_result:"rule_to_string(proof_result (proof_take 59 DIAndProof)) = undefined"
-  unfolding DIAndProof_def DIAndConcl_def Implies_def Or_def 
-  proof_result.simps deriv_result.simps start_proof.simps DIAndCutP12_def  DIAndSG1_def DIAndSG2_def DIAndCutP1_def Box_def DIAndCut34Elim1_def DIAndCut12Intro_def DIAndCut34Elim2_def DIAnd_def
-  apply (auto simp add: id_simps  DIAndSubst341_def DIAndCut12Intro_def DIAndSubst12_def
-    DIAndCutP12_def DIAndCurry12_def DIAndSubst342_def)
-  sorry
 
 theorem DIAnd_sound: "sound DIAnd"
-  using DIAndSound_lemma example_result_correct by auto
+  using DIAndSound_lemma DIAnd_result_correct by auto
 
 end end
  
