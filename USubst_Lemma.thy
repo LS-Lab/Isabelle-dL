@@ -1888,24 +1888,32 @@ shows "
   (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> 
    sterm_sem I (Tsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
 proof (induction rule: TFadmit.induct)
-  case (TFadmit_Fun1  \<sigma> args f f') 
+  case (TFadmit_Fun1  \<sigma> args f f') then
+    have subFree:" NTFadmit (\<lambda>i. Tsubst (args i) \<sigma>) f'" 
+      and safes:"\<And>i. dsafe (Tsubst (args i) \<sigma>)" 
+      and TFA:"\<And>i. TFadmit \<sigma> (args i)"
+      and NTFA:"NTFadmit (\<lambda>i. Tsubst (args i) \<sigma>) f'"
+      and theIH:"\<And>i. sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (local.adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)"
+        by auto
+    assume subFreeer:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
     note admit = TFadmit_Fun1.hyps(1) and sfree = TFadmit_Fun1.prems(1)
-    have IH:"(\<And>i. TFadmit \<sigma> (args i) \<Longrightarrow>
-        sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>))" 
-      using  TFadmit_Fun1.prems TFadmit_Fun1.IH by auto
+    have IH:"(\<And>i. sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>))" 
+      using  admit TFadmit_Fun1.prems TFadmit_Fun1.IH by auto
     have eqs:"\<And>i. sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)"
       by (auto simp add: IH admit)
       assume some:"SFunctions \<sigma> f = Some f'" 
       let ?sub = "(\<lambda> i. Tsubst (args i) \<sigma>)"
-      have subFree:" NTFadmit (\<lambda>i. Tsubst (args i) \<sigma>) f'"  
-        using admit sfree tsubst_preserves_free sorry
-      have safes:"\<And>i. dsafe (Tsubst (args i) \<sigma>)" sorry
+      (*have other_eq:" sterm_sem (NTadjoint I ?sub \<nu>) f' (fst \<nu>) 
+        = Functions (local.adjoint I \<sigma> \<nu>) f (\<chi> i. sterm_sem (local.adjoint I \<sigma> \<nu>) (args i) (fst \<nu>))" 
+        using IH[OF admits ] (*sledgehammer*)*)
       have IH2:"sterm_sem I (NTsubst f' ?sub) (fst \<nu>) = sterm_sem (NTadjoint I ?sub \<nu>) f' (fst \<nu>)"
         apply(rule nsubst_sterm)
         apply(rule subFree)
         by (rule safes)
     show "?case"
-      sorry
+      using adjoint_free[OF subFreeer]
+      IH some eqs IH2 TFA NTFA theIH sorry
+      
 next
   case (TFadmit_Fun2  \<sigma> args f) 
     note admit = TFadmit_Fun2.hyps(1) and sfree = TFadmit_Fun2.prems(1)
@@ -2451,11 +2459,11 @@ proof -
     using s  by (metis Compl_iff fst_conv  snd_conv)
 qed
 
-lemma NO_to_NOU:"NOadmit \<sigma> ODE (BVO ODE) \<Longrightarrow> NOUadmit \<sigma> ODE (BVO ODE)"
-  apply(induction ODE, auto )
-  sorry
-  (*using NOUadmit_def sledgehammer*)
-
+lemma NO_sub:"NOadmit \<sigma> ODE A \<Longrightarrow> B \<subseteq> A \<Longrightarrow> NOadmit \<sigma> ODE B"
+  by(induction ODE, auto simp add: NOUadmit_def)
+lemma NO_to_NOU:"NOadmit \<sigma> ODE S \<Longrightarrow> NOUadmit \<sigma> ODE S"
+  by(induction ODE, auto simp add: NOUadmit_def)
+  
 lemma nsubst_hp_fml:
 fixes I::"('sf, 'sc, 'sz) interp"
 assumes good_interp:"is_interp I"    
