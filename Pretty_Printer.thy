@@ -61,7 +61,6 @@ where
   | "fml_to_string (And p q) = fml_to_string p @ ''&'' @ fml_to_string q"
   | "fml_to_string (Exists x p) = ''E'' @ vid_to_string x @ '' . '' @ fml_to_string p"
   | "fml_to_string (Diamond a p) = ''<'' @ hp_to_string a @ ''>'' @ fml_to_string p"
-  | "fml_to_string (DiffFormula _) = []"
   | "fml_to_string (InContext C p) = 
       (case p of
         (Geq  _ _) \<Rightarrow> ppid_to_string C

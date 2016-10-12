@@ -1514,9 +1514,6 @@ next
       by auto
     show ?case using IH1[OF agree_sub[OF sub1 VA] safe1] IH2[OF agree_sub[OF sub2 VA] safe2] by auto
 next
-  case (DiffFormula x)
-  then show ?case sorry
-next
   case (InContext x1 x2)
     assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF x2. SFV \<sigma> a) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (local.adjoint I \<sigma> \<nu>) x2 = fml_sem (local.adjoint I \<sigma> \<omega>) x2"
     assume VA:"Vagree \<nu> \<omega> (\<Union>a\<in>SDom \<sigma> \<inter> SIGF (InContext x1 x2). SFV \<sigma> a)"
@@ -1794,9 +1791,6 @@ next
     have sub2:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF x2}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF (Diamond x1 x2)}. FVT (\<sigma> y))"
       by auto
     show ?case using IH1[OF agree_sub[OF sub1 VA] safe1] IH2[OF agree_sub[OF sub2 VA] safe2] by auto
-next
-  case (DiffFormula x)
-  then show ?case sorry
 next
   case (InContext x1 x2)
     assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGF x2}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (NTadjoint I \<sigma> \<nu>) x2 = fml_sem (NTadjoint I \<sigma> \<omega>) x2"
@@ -2148,151 +2142,6 @@ next
   then show ?case using IH1[OF NOUA1] IH2[OF NOUA2] disj' by (auto intro: osafe.intros)
 qed
 
-(*
-lemma npsubst_nfsubst_preserves_safe:
-assumes sfree:"\<And>i. dfree (\<sigma> i)"
-fixes \<alpha> ::"('a + 'd, 'b, 'c) hp" and \<phi> ::"('a + 'd, 'b, 'c) formula"
-shows "(hpsafe \<alpha> \<longrightarrow> NPadmit \<sigma> \<alpha> \<longrightarrow> hpsafe (NPsubst \<alpha> \<sigma>)) \<and> 
-    (fsafe \<phi> \<longrightarrow> NFadmit \<sigma> \<phi> \<longrightarrow> fsafe (NFsubst \<phi> \<sigma>))"
-proof (induction rule: hpsafe_fsafe.induct)
-  case (hpsafe_Pvar x)
-  then show ?case by (auto intro: hpsafe_fsafe.intros)
-next
-  case (hpsafe_Assign e x)
-  then show ?case using ntsubst_preserves_safe sfree by (auto intro: hpsafe_fsafe.intros)
-next
-  case (hpsafe_DiffAssign e x)
-  then show ?case using ntsubst_preserves_safe sfree by (auto intro: hpsafe_fsafe.intros)
-next
-  case (hpsafe_Evolve ODE P)
-  then show ?case using nosubst_preserves_safe sfree by (auto intro: hpsafe_fsafe.intros) 
-next
-  case (fsafe_Geq t1 t2)
-  then show ?case using ntsubst_preserves_safe sfree by (auto intro: hpsafe_fsafe.intros)
-next
-  case (fsafe_Prop args p)
-  then show ?case using sfree ntsubst_preserves_free sfree by (auto intro: hpsafe_fsafe.intros)
-next
-  case (fsafe_DiffFormula p)
-  then show ?case sorry
-qed (auto intro: hpsafe_fsafe.intros)
-*)
-(*
-lemma npsubst_preserves_safe:
-assumes sfree:"\<And>i. dfree (\<sigma> i)"
-fixes \<alpha> ::"('a + 'd, 'b, 'c) hp"
-assumes safe:"hpsafe \<alpha>"
-assumes admit:"NPadmit \<sigma> \<alpha>"
-shows "hpsafe (NPsubst \<alpha> \<sigma>)"
-using npsubst_nfsubst_preserves_safe sfree safe admit by auto
-
-lemma nfsubst_preserves_safe:
-assumes sfree:"\<And>i. dfree (\<sigma> i)"
-fixes \<phi> ::"('a + 'd, 'b, 'c) formula"
-assumes safe:"fsafe \<phi>"
-assumes admit:"NFadmit \<sigma> \<phi>"
-shows "fsafe (NFsubst \<phi> \<sigma>)"
-using npsubst_nfsubst_preserves_safe sfree safe admit by auto
-
-lemma ppsubst_pfsubst_preserves_safe:
-assumes sfree:"\<And>i. fsafe (\<sigma> i)"
-fixes \<alpha> ::"('a, 'b + 'd, 'c) hp" and \<phi> ::"('a, 'b + 'd, 'c) formula"
-shows "(hpsafe \<alpha> \<longrightarrow> PPadmit \<sigma> \<alpha> \<longrightarrow> hpsafe (PPsubst \<alpha> \<sigma>)) \<and> 
-    (fsafe \<phi> \<longrightarrow> PFadmit \<sigma> \<phi> \<longrightarrow> fsafe (PFsubst \<phi> \<sigma>))"
-proof (induction rule: hpsafe_fsafe.induct)
-  case (fsafe_InContext f C)
-  then show ?case using sfree ntsubst_preserves_free sfree 
-    by (cases "C", auto intro: hpsafe_fsafe.intros)
-next
-  case (hpsafe_Evolve ODE P)
-  then show ?case using nosubst_preserves_safe sfree 
-    by (auto intro: hpsafe_fsafe.intros)
-next
-  case (fsafe_DiffFormula p)
-  then show ?case sorry
-qed (auto intro: hpsafe_fsafe.intros)
-
-lemma ppsubst_preserves_safe:
-assumes sfree:"\<And>i. fsafe (\<sigma> i)"
-assumes safe:"hpsafe \<alpha>"
-assumes PPA:"PPadmit \<sigma> \<alpha>"
-shows "hpsafe (PPsubst \<alpha> \<sigma>)"
-    using sfree safe PPA ppsubst_pfsubst_preserves_safe by auto
-
-lemma pfsubst_preserves_safe:
-assumes sfree:"\<And>i. fsafe (\<sigma> i)"
-assumes safe:"fsafe \<phi>"
-assumes PFA:"PFadmit \<sigma> \<phi>"
-shows "fsafe (PFsubst \<phi> \<sigma>)"
-    using sfree safe PFA ppsubst_pfsubst_preserves_safe by auto
-
-lemma psubst_fsubst_preserves_safe:
-assumes ssafe:"ssafe \<sigma>"
-shows "(hpsafe \<alpha> \<longrightarrow> Padmit \<sigma> \<alpha> \<longrightarrow> hpsafe (Psubst \<alpha> \<sigma>)) \<and>
-   (fsafe \<phi> \<longrightarrow> Fadmit \<sigma> \<phi> \<longrightarrow> fsafe (Fsubst \<phi> \<sigma>))"
-proof (induction rule: hpsafe_fsafe.induct)
-  case (hpsafe_Pvar x)
-  then show ?case 
-    using ssafe unfolding ssafe_def by (cases "SPrograms \<sigma> x", auto intro: hpsafe_fsafe.intros)
-next
-  case (hpsafe_Assign e x) then
-  show ?case
-    using tsubst_preserves_safe ssafe unfolding ssafe_def by (auto intro: hpsafe_fsafe.intros)    
-next
-  case (hpsafe_DiffAssign e x) then 
-  show ?case
-    using tsubst_preserves_safe ssafe unfolding ssafe_def by (auto intro: hpsafe_fsafe.intros)
-next
-  case (hpsafe_Evolve ODE P) then
-    have osafe:"osafe ODE"
-    and fsafe:"fsafe P"
-    and IH:"Fadmit \<sigma> P \<Longrightarrow> fsafe (Fsubst P \<sigma>)"
-      by auto
-    have "Padmit \<sigma> (EvolveODE ODE P) \<Longrightarrow>  hpsafe (Psubst (EvolveODE ODE P) \<sigma>)"
-    proof -
-      assume PA:"Padmit \<sigma> (EvolveODE ODE P)"
-      have OA:"Oadmit \<sigma> ODE (BVO ODE)" and FA:"Fadmit \<sigma>  P" using PA by (auto dest: Padmit.cases)
-      show "?thesis"
-        using osubst_preserves_safe[of \<sigma> ODE, OF ssafe osafe OA] IH[OF FA] by (auto intro: hpsafe_fsafe.intros)
-    qed
-    then show ?case by auto
-next
-  case (fsafe_Geq t1 t2) then 
-  show ?case
-    using tsubst_preserves_safe ssafe unfolding ssafe_def by (auto intro: hpsafe_fsafe.intros)  
-next
-  case (fsafe_Prop args p) then
-  show ?case 
-    apply(cases "SPredicates \<sigma> p")
-    using tsubst_preserves_safe tsubst_preserves_free ssafe unfolding ssafe_def 
-    apply (auto intro: hpsafe_fsafe.intros) apply blast
-    using tsubst_preserves_safe tsubst_preserves_free ssafe unfolding ssafe_def 
-    apply (auto intro: hpsafe_fsafe.intros)
-    by (simp add: nfsubst_preserves_safe tsubst_preserves_free) 
-next
-  case (fsafe_DiffFormula p)
-  then show ?case sorry
-next
-  case (fsafe_InContext f C) then 
-  show ?case
-    using ssafe unfolding ssafe_def by (cases "SContexts \<sigma> C", auto simp add: case_unit_Unity ppsubst_pfsubst_preserves_safe)
-qed (auto intro: hpsafe_fsafe.intros)
-    
-lemma fsubst_preserves_safe:
-  assumes ssafe:"ssafe \<sigma>"
-  assumes fsafe:"fsafe \<phi>"
-  assumes FA:"Fadmit \<sigma> \<phi>"  
-  shows "fsafe (Fsubst \<phi> \<sigma>)"
-    using ssafe fsafe FA psubst_fsubst_preserves_safe by auto
-
-lemma psubst_preserves_safe:
-  assumes ssafe:"ssafe \<sigma>"
-  assumes hpsafe:"hpsafe \<alpha>"
-  assumes PA:"Padmit \<sigma> \<alpha>"  
-  shows "hpsafe (Psubst \<alpha> \<sigma>)"
-    using ssafe hpsafe PA psubst_fsubst_preserves_safe by auto
-  *)
-
 lemma nsubst_dterm:
 fixes I::"('sf, 'sc, 'sz) interp"
 fixes \<nu>::"'sz state"
@@ -2322,10 +2171,6 @@ proof (induction rule: NTadmit.induct)
       subgoal for x
         using nsubst_sterm'[of  \<sigma> \<theta> I "(fst \<nu>)" "(snd \<nu>)", OF NTFA subSafe] apply auto
         proof -
-          (*assume NT:"NTadmit \<sigma> \<theta>"
-          assume IH:"(dsafe \<theta> \<Longrightarrow> dterm_sem I (NTsubst \<theta> \<sigma>) \<nu> = dterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> \<nu>)"
-          assume free:"dfree \<theta>"
-          assume frees: "(\<And>i. dfree (\<sigma> i))"*)
           assume sem:"sterm_sem I (NTsubst \<theta> \<sigma>) (fst \<nu>) = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> (fst \<nu>)"
           have VA:"\<And>\<nu> \<omega>. Vagree \<nu> (x,snd \<nu>) (-UNIV)" unfolding Vagree_def by auto
           show "sterm_sem I (NTsubst \<theta> \<sigma>) x = sterm_sem (NTadjoint I \<sigma> \<nu>) \<theta> x"
@@ -2719,9 +2564,6 @@ next
       then show "?thesis \<nu>" unfolding NTadjoint_def by auto
     qed
   then show ?case by auto 
-next
-  case (NFadmit_DiffFormula \<sigma> \<phi>)
-  then show ?case sorry
 next
   case (NPadmit_Sequence \<sigma> a b) then 
   have PUA:"NPUadmit \<sigma> b (BVP (NPsubst a \<sigma>))"
@@ -3189,9 +3031,6 @@ next
       show "?thesis \<nu>" using  Ieq vec by auto
     qed
     then show "?case" by auto
-next
-  case (PFadmit_DiffFormula \<sigma> \<phi>)
-  then show ?case sorry
 next
   case (PPadmit_Sequence \<sigma> a b) then 
   have PUA:"PPUadmit \<sigma> b (BVP (PPsubst a \<sigma>))"
@@ -4024,9 +3863,6 @@ next
     have fsafe1:"fsafe (\<phi> && \<psi>) \<Longrightarrow> fsafe \<phi>" and fsafe2:"fsafe (\<phi> && \<psi>) \<Longrightarrow> fsafe \<psi>" 
       by (auto dest: fsafe.cases)
     show ?case using IH1[OF fsafe1] IH2[OF fsafe2] by auto
-next
-  case (Fadmit_DiffFormula \<sigma> \<phi>)
-  then show ?case sorry
 next
   case (Fadmit_Exists \<sigma> \<phi> x)
   then have IH:"fsafe \<phi> \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) \<phi>))"

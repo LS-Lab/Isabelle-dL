@@ -81,8 +81,6 @@ and ('a, 'b, 'c) formula =
 | Exists 'c "('a, 'b, 'c) formula"
 (* \<langle>\<alpha>\<rangle>\<phi> iff exists run of \<alpha> where \<phi> is true in end state *)
 | Diamond "('a, 'b, 'c) hp" "('a, 'b, 'c) formula"         ("(\<langle> _ \<rangle> _)" 10)
-(* DiffFormula \<phi> gives us the invariant for proving \<phi> by differential induction. *)
-| DiffFormula "('a, 'b, 'c) formula"
 (* Contexts C are symbols standing for functions from (the semantics of) formulas to 
  * (the semantics of) formulas, thus C(\<phi>) is another formula. While not necessary
  * in terms of expressiveness, contexts allow for more efficient reasoning principles. *)
@@ -136,7 +134,6 @@ where
 | "sizeF (Exists x p) = Suc (sizeF p)"
 | "sizeF (Diamond p q) = Suc (sizeP p + sizeF q)"
 | "sizeF (InContext C \<phi>) = Suc (sizeF \<phi>)"
-| "sizeF (DiffFormula e) = undefined"
 
 lemma sizeF_diseq:"sizeF p \<noteq> sizeF q \<Longrightarrow> p \<noteq> q" by auto
   
@@ -268,7 +265,6 @@ where
  | fsafe_And:"fsafe p \<Longrightarrow> fsafe q \<Longrightarrow> fsafe (And p q)"
  | fsafe_Exists:"fsafe p \<Longrightarrow> fsafe (Exists x p)"
  | fsafe_Diamond:"hpsafe a \<Longrightarrow> fsafe p \<Longrightarrow> fsafe (Diamond a p)"
- | fsafe_DiffFormula:"ffree p \<Longrightarrow> fsafe (DiffFormula p)"
  | fsafe_InContext:"fsafe f \<Longrightarrow> fsafe (InContext C f)"
 
 (* Auto-generated simplifier rules for safety predicates *)  
@@ -308,7 +304,6 @@ inductive_simps
   and fsafe_Prop_simps[simp]: "fsafe (Prop p args)"
   and fsafe_Not_simps[simp]: "fsafe (Not p)"
   and fsafe_And_simps[simp]: "fsafe (And p q)"
-  and fsafe_DiffFormula_simps[simp]: "fsafe (DiffFormula p)"
   and fsafe_Exists_simps[simp]: "fsafe (Exists x p)"
   and fsafe_Diamond_simps[simp]: "fsafe (Diamond a p)"
   and fsafe_Context_simps[simp]: "fsafe (InContext C p)"
@@ -336,7 +331,6 @@ lemma fml_induct:
 \<Longrightarrow> (\<And>p q. P p \<Longrightarrow> P q \<Longrightarrow> P (And p q))
 \<Longrightarrow> (\<And>x p. P p \<Longrightarrow> P (Exists x p))
 \<Longrightarrow> (\<And>a p. P p \<Longrightarrow> P (Diamond a p))
-\<Longrightarrow> (\<And>p. P p \<Longrightarrow> P (DiffFormula p))
 \<Longrightarrow> (\<And>C p. P p \<Longrightarrow> P (InContext C p))
 \<Longrightarrow> P \<phi>"
   by (induction rule: formula.induct) (auto)

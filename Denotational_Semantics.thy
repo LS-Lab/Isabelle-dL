@@ -271,7 +271,6 @@ where
 | "fml_sem I (Exists x \<phi>) = {v | v r. (repv v x r) \<in> fml_sem I \<phi>}"
 | "fml_sem I (Diamond \<alpha> \<phi>) = {\<nu> | \<nu> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<and> \<omega> \<in> fml_sem I \<phi>}"
 | "fml_sem I (InContext c \<phi>) = Contexts I c (fml_sem I \<phi>)"
-| "fml_sem I (DiffFormula p) = diff_formula_sem I p"
 
 | "diff_formula_sem I (Geq f g) = {v. dterm_sem I (Differential f) v \<ge> dterm_sem I (Differential g) v}"
 | "diff_formula_sem I (Not p) = diff_formula_sem I p"

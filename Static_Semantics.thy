@@ -53,7 +53,6 @@ where
 | "SIGF (And p1 p2) = SIGF p1 \<union> SIGF p2"
 | "SIGF (Exists var p) = SIGF p"
 | "SIGF (Diamond a p) = SIGP a \<union> SIGF p"
-| "SIGF (DiffFormula p) = SIGF p"
 | "SIGF (InContext var p) = {Inr (Inl var)} \<union> SIGF p"
 
 fun primify :: "('a + 'a) \<Rightarrow> ('a + 'a) set"
@@ -105,7 +104,6 @@ where
 | "BVF (And p q) = BVF p \<union> BVF q"
 | "BVF (Exists x p) = {Inl x} \<union> BVF p"
 | "BVF (Diamond \<alpha> p) = BVP \<alpha> \<union> BVF p"
-| "BVF (DiffFormula p) = BVF p"
 | "BVF (InContext C p) = UNIV"
 
 | "BVP (Pvar a) = UNIV"
@@ -138,7 +136,6 @@ where
  | "FVF (And p q) = FVF p \<union> FVF q"
  | "FVF (Exists x p) = FVF p - {Inl x}"
  | "FVF (Diamond \<alpha> p) =   FVP \<alpha> \<union> (FVF p - MBV \<alpha>)"
- | "FVF (DiffFormula p) = FVF p"
  | "FVF (InContext C p) = UNIV"
  | "FVP (Pvar a) = UNIV"
  | "FVP (Assign x \<theta>) = FVT \<theta>"

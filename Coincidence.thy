@@ -1372,14 +1372,6 @@ next
      qed
     then show "?case" unfolding coincide_fml_def by blast
 next
-  case (fsafe_DiffFormula p) then 
-  have "\<And>\<nu> \<nu>' I J.
-       Iagree I J (SIGF (DiffFormula p)) \<Longrightarrow>
-       Vagree \<nu> \<nu>' (FVF (DiffFormula p)) \<Longrightarrow> (\<nu> \<in> diff_formula_sem I p) = (\<nu>' \<in> diff_formula_sem J p)"
-    apply(auto)
-    sorry
-  then show "?case" unfolding coincide_fml_def by auto
-next
   case (fsafe_InContext \<phi>) then 
   have safe:"fsafe \<phi>"
     and IH:"(\<forall> \<nu> \<nu>' I J. Iagree I J (SIGF \<phi>) \<longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<longrightarrow> \<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem J \<phi>)"
