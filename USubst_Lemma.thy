@@ -1890,19 +1890,23 @@ shows "
 proof (induction rule: TFadmit.induct)
   case (TFadmit_Fun1  \<sigma> args f f') then
     have subFree:" NTFadmit (\<lambda>i. Tsubst (args i) \<sigma>) f'" 
-      and safes:"\<And>i. dsafe (Tsubst (args i) \<sigma>)" 
+      and frees:"\<And>i. dfree (Tsubst (args i) \<sigma>)" 
       and TFA:"\<And>i. TFadmit \<sigma> (args i)"
       and NTFA:"NTFadmit (\<lambda>i. Tsubst (args i) \<sigma>) f'"
       and theIH:"\<And>i. sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (local.adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)"
         by auto
+      from frees have safes:"\<And>i. dsafe (Tsubst (args i) \<sigma>)"
+        by (simp add: dfree_is_dsafe) 
+
     assume subFreeer:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
     note admit = TFadmit_Fun1.hyps(1) and sfree = TFadmit_Fun1.prems(1)
     have IH:"(\<And>i. sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>))" 
       using  admit TFadmit_Fun1.prems TFadmit_Fun1.IH by auto
-    have eqs:"\<And>i. sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)"
-      by (auto simp add: IH admit)
-      assume some:"SFunctions \<sigma> f = Some f'" 
-      let ?sub = "(\<lambda> i. Tsubst (args i) \<sigma>)"
+    have vec_eq:"(\<chi> i. sterm_sem (local.adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)) = (\<chi> i. sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>))"
+      apply(rule vec_extensionality)
+      using IH by auto
+    assume some:"SFunctions \<sigma> f = Some f'" 
+    let ?sub = "(\<lambda> i. Tsubst (args i) \<sigma>)"
       (*have other_eq:" sterm_sem (NTadjoint I ?sub \<nu>) f' (fst \<nu>) 
         = Functions (local.adjoint I \<sigma> \<nu>) f (\<chi> i. sterm_sem (local.adjoint I \<sigma> \<nu>) (args i) (fst \<nu>))" 
         using IH[OF admits ] (*sledgehammer*)*)
@@ -1911,9 +1915,9 @@ proof (induction rule: TFadmit.induct)
         apply(rule subFree)
         by (rule safes)
     show "?case"
-      using adjoint_free[OF subFreeer]
-      IH some eqs IH2 TFA NTFA theIH sorry
-      
+      apply (simp add: some)
+      unfolding vec_eq IH2
+      by (auto simp add: some adjoint_free[OF subFreeer, of \<sigma> "(\<lambda> x y. x)" I \<nu>] NTadjoint_free[OF frees])      
 next
   case (TFadmit_Fun2  \<sigma> args f) 
     note admit = TFadmit_Fun2.hyps(1) and sfree = TFadmit_Fun2.prems(1)
