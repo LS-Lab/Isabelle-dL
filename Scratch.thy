@@ -13,10 +13,10 @@ primrec eval :: "exp \<Rightarrow> nat"
  | "eval (Sum f) = (\<Sum>i\<in>(UNIV::arity set). eval (f i))"
 
  (*
-code_thms dl.ids.NTsubst
+code_thms dl.ids.TsubstFO
 print_codesetup
 ex
-port_code dl.ids.NTsubst in Haskell
+port_code dl.ids.TsubstFO in Haskell
 module_name Example file "examples/"
 *)
 (*

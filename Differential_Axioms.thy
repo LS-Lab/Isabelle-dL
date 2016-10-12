@@ -148,25 +148,6 @@ theorem diff_times_axiom_valid: "valid diff_times_axiom"
       unfolding directional_derivative_def by auto
   done
   
-theorem diff_chain_axiom_valid: "valid diff_chain_axiom"
-   apply(auto simp add: diff_chain_axiom_def valid_def f1_def)
-   subgoal for I a b
-     proof -
-       assume good_interp:"is_interp I"
-       have free1:"dfree ($f fid1 (singleton ($f fid2 (singleton (trm.Var vid1)))))" by (auto intro: dfree.intros)
-       have free2:"dfree ($f fid1 (singleton (Var vid2)))" by (auto intro: dfree.intros)
-       have free3:"dfree ($f fid2 (singleton (Var vid1)))" by (auto intro: dfree.intros)
-       note frech1 = frechet_correctness[OF good_interp free1]
-       note frech2 = frechet_correctness[OF good_interp free2]
-       note frech3 = frechet_correctness[OF good_interp free3]
-    show "?thesis"
-     using frech1 frech2 frech3 
-      unfolding state_fun_def local.singleton.simps  apply (auto intro: dfree.intros)
-      unfolding directional_derivative_def
-      sorry
-    qed
-    done
-  
 subsection \<open>Proofs for ODE Axioms\<close>
  
 lemma DW_valid:"valid DWaxiom"
