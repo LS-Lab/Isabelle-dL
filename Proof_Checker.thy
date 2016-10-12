@@ -2065,8 +2065,8 @@ lemma system_result_correct:"proof_result SystemProof =
         ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (TT)]]Geq (Var vid1) (Const 0))]))"
   unfolding SystemProof_def SystemConcl_def Implies_def Or_def f0_def TT_def Equiv_def SystemDICut_def SystemDCCut_def
   proof_result.simps deriv_result.simps start_proof.simps  Box_def SystemDCSubst_def SystemVCut_def SystemDECut_def SystemKCut_def SystemEquivCut_def
-  SystemDiffAssignCut_def
-  apply (auto simp add:  prover)
+  SystemDiffAssignCut_def SystemVCut2_def
+  by (auto simp add:  prover)
   
 lemma print_sys_progress:"(proof_result (proof_take 60 SystemProof)) = ([], SystemConcl)"
   unfolding SystemProof_def SystemConcl_def Implies_def Or_def f0_def TT_def Equiv_def SystemDICut_def SystemDCCut_def
