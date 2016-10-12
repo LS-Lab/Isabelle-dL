@@ -1764,19 +1764,46 @@ where "CEProof = (([],[CEReq]), [
  ,(0, CloseId 0 0)
  ])"  
 
-lemma print_sys_result:"rule_to_string(proof_result (proof_take 5 CEProof)) = undefined"
-  unfolding CEProof_def CEReq_def CQ1Concl_def  CQ2Concl_def Implies_def Or_def f0_def TT_def Equiv_def Box_def CQRightSubst_def
-  apply (auto simp add: id_simps prover)
-    sorry
-
 lemma CE_result_correct:"proof_result CEProof = ([],([],[CEReq]))"
   unfolding CEProof_def CEReq_def CQ1Concl_def  CQ2Concl_def Implies_def Or_def f0_def TT_def Equiv_def Box_def CQRightSubst_def
   by (auto simp add: id_simps)
 
-(* TODO: prove with prover *)
+definition DiffConstSubst::"('sf,'sc,'sz) subst"
+where "DiffConstSubst = \<lparr>
+    SFunctions = (\<lambda>f. (if f = fid1 then (Some (Const 0)) else None)),
+    SPredicates = (\<lambda>_. None),
+    SContexts = (\<lambda>_. None),
+    SPrograms = (\<lambda>_. None),
+    SODEs = (\<lambda>_. None)
+  \<rparr>"
+
+definition DiffConstProof::"('sf,'sc,'sz) pf"
+where "DiffConstProof = (([],[(Equals (Differential (Const 0)) (Const 0))]), [
+  (0, AxSubst AdConst DiffConstSubst)])"
+
+lemma diffconst_result_correct:"proof_result DiffConstProof = ([], ([],[Equals (Differential (Const 0)) (Const 0)]))"
+  by(auto simp add: prover DiffConstProof_def)
+
+lemma diffconst_sound_lemma:"sound (proof_result DiffConstProof)"
+  apply(rule proof_sound)
+  unfolding DiffConstProof_def
+  by (auto simp add: prover DiffConstProof_def DiffConstSubst_def Equals_def empty_def TUadmit_def)
+  
+lemma valid_of_sound:"sound ([], ([],[\<phi>])) \<Longrightarrow> valid \<phi>"
+  unfolding valid_def sound_def TT_def FF_def 
+  apply (auto simp add: TT_def FF_def Or_def)
+  subgoal for I a b
+  apply(erule allE[where x=I])
+    by(auto)
+  done
+
+lemma almost_diff_const_sound:"sound ([], ([], [Equals (Differential (Const 0)) (Const 0)]))"
+  using diffconst_result_correct diffconst_sound_lemma by simp
+
 lemma almost_diff_const:"valid (Equals (Differential (Const 0)) (Const 0))"
-  sorry
-  (*using diff_const_axiom_valid unfolding diff_const_axiom_def valid_def  sledgehammer*)
+  using almost_diff_const_sound valid_of_sound by auto
+
+(* Note: this is just unpacking the definition: the axiom is defined as literally this formula *)
 lemma almost_diff_var:"valid (Equals (Differential (trm.Var vid1)) ($' vid1))"
   using diff_var_axiom_valid unfolding diff_var_axiom_def by auto
 
@@ -1803,7 +1830,6 @@ lemma CE1pre_valid2:"valid (! (! (Geq (Differential (trm.Var vid1)) (Differentia
               ! (! (Geq (Differential (trm.Var vid1)) (Differential (Const 0))) && ! (Geq ($' vid1) (Const 0))))) "
   using CE1pre_valid unfolding CEReq_def Equiv_def Or_def by auto
 
-  (*unfolding DIAndProof_def apply auto sorry*)
 definition SystemDISubst::"('sf,'sc,'sz) subst"
 where "SystemDISubst = 
   \<lparr> SFunctions = (\<lambda>f. 
@@ -1913,13 +1939,6 @@ lemma pfsubst_box_simp:"PFsubst (Box p q) \<sigma> = (Box (PPsubst p \<sigma>) (
 lemma pfsubst_imp_simp:"PFsubst (Implies p q) \<sigma> = (Implies (PFsubst p \<sigma>) (PFsubst q \<sigma>))"
   unfolding Box_def Implies_def Or_def by auto
 
-  (* |- [{dx=, dy=x&r>=r&>=r}]r>=r&>=r->[D{x}:=]D{x}>=D{r}->[{dx=, dy=x&r>=r&>=r}]r>=r&>=r->[{dx=, dy=x&r>=r&>=r}][D{x}:=]D{x}>=D{r};; *)
-(*lemma system_k_subst_correct:"Fsubst Kaxiom SystemKSubst = undefined"
-  unfolding Kaxiom_def SystemKSubst_def apply (auto simp add: subst_imp_simp subst_box_simp id_simps pfsubst_box_simp)
-  *)
-  
-(*  [{dx=, dy=x&r>=r&>=r}]r>=r&>=r *)
-(* ([[EvolveODE (OVar vid1) (Predicational pid1)]](Predicational pid1)) *)
 definition SystemDWSubst::"('sf,'sc,'sz) subst"
 where "SystemDWSubst = \<lparr> SFunctions = (\<lambda>f.  None),
     SPredicates = (\<lambda>_. None),
@@ -1927,14 +1946,7 @@ where "SystemDWSubst = \<lparr> SFunctions = (\<lambda>f.  None),
     SPrograms = (\<lambda>_. None),
     SODEs = (\<lambda>c. if c = vid1 then Some (OProd (OSing vid1 (Function fid1 empty)) (OSing vid2 (Var vid1))) else None)
   \<rparr>"
-  
-(*  Geq (Differential (Var vid1)) (Differential (Const 0))
 
-    Geq (DiffVar vid1) (Const 0)
-C(_) = T&A\<ge>0\<rightarrow>([DA x A()] _)
-r>=r&>=r->[D{x}:=]D{x}>=D{r}<->r>=r&>=r->[D{x}:=]Dv{x}>=r  
-T&A\<ge>0\<rightarrow>[DA x A()]D{x}\<ge>D{r} \<leftrightarrow> T&A\<ge>0\<rightarrow>[DA x A()]Dv x \<ge> r
-*)
 definition SystemCESubst::"('sf,'sc,'sz) subst"
 where "SystemCESubst = \<lparr> SFunctions = (\<lambda>f.  None),
     SPredicates = (\<lambda>_. None),
@@ -1943,13 +1955,6 @@ where "SystemCESubst = \<lparr> SFunctions = (\<lambda>f.  None),
     SODEs = (\<lambda>_. None)
   \<rparr>"
 
-  (* nth SG i = ([], [Fsubst (Equiv (InContext pid1 \<phi>) (InContext pid1 \<psi>)) \<sigma>]) 
-    \<Longrightarrow> valid (Equiv \<phi> \<psi>) 
-    \<Longrightarrow> fsafe \<phi>
-    \<Longrightarrow> fsafe \<psi>
-    \<Longrightarrow> ssafe \<sigma>
-    \<Longrightarrow> Fadmit \<sigma> (Equiv (InContext pid1 \<phi>) (InContext pid1 \<psi>))
-    \<Longrightarrow> *)
 lemma SystemCESubstOK:
   "step_ok 
   ([([],[Equiv (Implies(And (Geq (Const 0) (Const 0)) (Geq (Function fid1 empty) (Const 0))) ([[DiffAssign vid1 (Function fid1 empty)]]( SystemCEFml1))) 
@@ -1983,6 +1988,7 @@ where "SystemDiffAssignSubst = \<lparr> SFunctions = (\<lambda>f.  None),
 lemma SystemDICutCorrect:"SystemDICut = Fsubst DIGeqaxiom SystemDISubst"
   unfolding SystemDICut_def DIGeqaxiom_def SystemDISubst_def 
   by (auto simp add: f1_def p1_def f0_def Implies_def Or_def id_simps TT_def Box_def empty_def)
+
 (* v\<ge>0 \<and> A()\<ge>0 \<rightarrow> [{x'=v, v'=A()}]v\<ge>0 *)
 definition SystemProof :: "('sf, 'sc, 'sz) pf"
 where "SystemProof =
@@ -2050,14 +2056,6 @@ where "SystemProof =
   ,(0, CloseId 1 0)
   ,(0, AxSubst Adassign SystemDiffAssignSubst) (* 60 *)
   ])"
-
-
-lemma print_sys_result':"(proof_result (proof_take 8 SystemProof)) = undefined"
-  unfolding SystemProof_def SystemConcl_def Implies_def Or_def f0_def TT_def Equiv_def SystemDICut_def SystemDCCut_def
-  proof_result.simps deriv_result.simps start_proof.simps  Box_def SystemDCSubst_def SystemVCut_def SystemDECut_def SystemKCut_def SystemEquivCut_def
-  SystemDiffAssignCut_def
-  apply (auto simp add: prover)
-    sorry
 
 lemma system_result_correct:"proof_result SystemProof = 
   ([],
