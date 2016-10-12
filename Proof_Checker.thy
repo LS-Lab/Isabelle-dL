@@ -77,7 +77,7 @@ where
 | "get_axiom ADG = DGaxiom"
   
 lemma axiom_safe:"fsafe (get_axiom a)"
-  sorry
+  by(cases a, auto simp add: axiom_defs Box_def Or_def Equiv_def Implies_def empty_def Equals_def f1_def p1_def P_def f0_def expand_singleton Forall_def Greater_def id_simps)
   (*apply(cases a)
   prefer 9
   subgoal
@@ -1444,9 +1444,7 @@ next
     have subst_valid:"valid (Fsubst ($\<phi> p (singleton \<theta>) \<leftrightarrow> $\<phi> p (singleton \<theta>')) \<sigma>)"
       apply(rule subst_fml_valid)
       apply(rule FA)
-      subgoal sorry (*by (auto simp add: f1_def Box_def p1_def P_def Equiv_def Or_def expand_singleton dsafe1 dsafe2 expand_singleton)*) 
-      subgoal by (rule ssafe)
-      by (rule schem_valid)
+      using schem_valid ssafe by (auto simp add: f1_def Box_def p1_def P_def Equiv_def Or_def expand_singleton dsafe1 dsafe2 expand_singleton) 
     have "seq_valid ([], [Fsubst ($\<phi> p (singleton \<theta>) \<leftrightarrow> $\<phi> p (singleton \<theta>')) \<sigma>])"
       apply(rule fml_seq_valid)
       by(rule subst_valid)
@@ -2086,12 +2084,13 @@ lemma SystemSound_lemma:"sound (proof_result (proof_take 60 SystemProof))"
   apply(rule proof_sound)
   unfolding SystemProof_def SystemConcl_def CQ1Concl_def CQ2Concl_def Equiv_def CQRightSubst_def diff_const_axiom_valid diff_var_axiom_valid empty_def Or_def expand_singleton 
   diff_var_axiom_def SystemDICut_def
-  by (auto simp add: prover CEProof_def CEReq_def CQ1Concl_def CQ2Concl_def Equiv_def
+  apply (auto simp add: prover CEProof_def CEReq_def CQ1Concl_def CQ2Concl_def Equiv_def
     CQRightSubst_def diff_const_axiom_valid diff_var_axiom_valid empty_def Or_def expand_singleton 
     TUadmit_def NTUadmit_def almost_diff_const CQLeftSubst_def almost_diff_var f0_def TT_def SystemDISubst_def f1_def p1_def SystemDCCut_def SystemDCSubst_def
     SystemVCut_def SystemDECut_def SystemVSubst_def
     SystemVCut2_def SystemVSubst2_def  SystemDESubst_def P_def SystemKCut_def  SystemKSubst_def SystemDWSubst_def SystemEquivCut_def
     SystemCESubst_def SystemCEFml1_def SystemCEFml2_def CE1pre_valid2 SystemDiffAssignCut_def SystemDiffAssignSubst_def)
+done
 
 lemma system_sond:"sound ([], SystemConcl)"
   using SystemSound_lemma print_sys_progress by auto

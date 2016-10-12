@@ -43,6 +43,14 @@ where
 | NTFadmit_Var:"NTFadmit \<sigma> (Var x)"
 | NTFadmit_Const:"NTFadmit \<sigma> (Const r)"
 
+inductive_simps
+  NTFadmit_Diff_simps[simp]: "NTFadmit \<sigma> (Differential \<theta>)"
+| NTFadmit_Fun_simps[simp]: "NTFadmit \<sigma> (Functions f args)"
+| NTFadmit_Plus_simps[simp]: "NTFadmit \<sigma> (Plus t1 t2)"
+| NTFadmit_Times_simps[simp]: "NTFadmit \<sigma> (Times t1 t2)"
+| NTFadmit_Var_simps[simp]: "NTFadmit \<sigma> (Var x)"
+| NTFadmit_Const_simps[simp]: "NTFadmit \<sigma> (Const r)"
+  
 primrec NTsubst::"('a + 'b, 'c) trm \<Rightarrow> ('b \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'c) trm"
 where
   "NTsubst (Var v) \<sigma> = Var v"
