@@ -2514,7 +2514,8 @@ next
             using ODE_bound_effect sol
             by (metis osubst_preserves_BVO)
           have FVT_sub:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y)) \<subseteq> (-(BVO ODE))"
-            using NOU NO_to_NOU by (auto simp add: NOUadmit_def)
+            using NOU NO_to_NOU NOUadmit_def 
+            by fastforce
           have agrees:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,b) (sol s, b) (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y))" 
             subgoal for s using agree_sub[OF FVT_sub hmm[of s]] by auto done
           have "\<And>s. s \<in> {0..t} \<Longrightarrow> mk_v (NTadjoint I \<sigma> (sol s, b)) ODE  = mk_v (NTadjoint I \<sigma> (sol 0, b)) ODE"
@@ -2616,7 +2617,7 @@ next
             using ODE_bound_effect sol
             by (metis osubst_preserves_ODE_vars)
           have FVT_sub:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y)) \<subseteq> (-(BVO ODE))"
-            using NOU NO_to_NOU unfolding NOUadmit_def by auto
+            using NOU NO_to_NOU unfolding NOUadmit_def by fastforce
           have agrees:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,b) (sol s, b) (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y))" 
             subgoal for s using agree_sub[OF FVT_sub hmm[of s]] by auto done
           have "\<And>s. s \<in> {0..t} \<Longrightarrow> mk_v (NTadjoint I \<sigma> (sol s, b)) ODE  = mk_v (NTadjoint I \<sigma> (sol 0, b)) ODE"
