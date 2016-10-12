@@ -125,6 +125,8 @@ lemma [expr_diseq]:"p \<noteq> Or p q" sorry
 lemma [expr_diseq]:"q \<noteq> Or p q" sorry
 lemma [expr_diseq]:"p \<noteq> Implies p q" sorry 
 lemma [expr_diseq]:"q \<noteq> Implies p q" sorry
+lemma [expr_diseq]:"p \<noteq> Equiv p q" sorry 
+lemma [expr_diseq]:"q \<noteq> Equiv p q" sorry
 lemma [expr_diseq]:"p \<noteq> Exists x p" by(induction p, auto)
 lemma [expr_diseq]:"p \<noteq> Diamond a p" by(induction p, auto)
 lemma [expr_diseq]:"p \<noteq> InContext C p" by(induction p, auto)
@@ -141,11 +143,11 @@ fun Predicational :: "'b \<Rightarrow> ('a, 'b, 'c) formula" ("Pc")
  * readable. *)
 context ids begin
 (* "Empty" function argument tuple, encoded as tuple where all arguments assume a constant value. *)
-definition empty::" 'sz \<Rightarrow> ('sf, 'sz) trm"
+definition empty::" 'b \<Rightarrow> ('a, 'b) trm"
   where "empty \<equiv> \<lambda>i.(Const 0)"
 
 (* Function argument tuple with (effectively) one argument, where all others have a constant value. *)
-fun singleton :: "('sf, 'sz) trm \<Rightarrow> ('sz \<Rightarrow> ('sf, 'sz) trm)"
+fun singleton :: "('a, 'sz) trm \<Rightarrow> ('sz \<Rightarrow> ('a, 'sz) trm)"
   where "singleton t i = (if i = vid1 then t else (Const 0))"
 
 lemma expand_singleton:"singleton t = (\<lambda>i. (if i = vid1 then t else (Const 0)))"

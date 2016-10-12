@@ -1798,9 +1798,12 @@ lemma sound_to_valid:"sound ([], ([], [\<phi>])) \<Longrightarrow> valid \<phi>"
 lemma CE1pre:"sound ([], ([], [CEReq]))"  
   using CE_result_correct CESound_lemma 
   by simp
-
+                            
 lemma CE1pre_valid:"valid CEReq"
   by (rule sound_to_valid[OF CE1pre])
+lemma CE1pre_valid2:"valid (! (! (Geq (Differential (trm.Var vid1)) (Differential (Const 0)) && Geq ($' vid1) (Const 0)) &&
+              ! (! (Geq (Differential (trm.Var vid1)) (Differential (Const 0))) && ! (Geq ($' vid1) (Const 0))))) "
+  using CE1pre_valid unfolding CEReq_def Equiv_def Or_def by auto
 
   (*unfolding DIAndProof_def apply auto sorry*)
 definition SystemDISubst::"('sf,'sc,'sz) subst"
@@ -1818,7 +1821,8 @@ where "SystemDISubst =
   
 definition SystemDCSubst::"('sf,'sc,'sz) subst"
 where "SystemDCSubst = 
-  \<lparr> SFunctions = (\<lambda>f.  None),
+  \<lparr> SFunctions = (\<lambda>
+  f.  None),
     SPredicates = (\<lambda>p.  None),
     SContexts = (\<lambda>C. 
     if C = pid1 then
@@ -1879,22 +1883,101 @@ lemma systemdesubst_correct:"\<exists> ODE.(([[EvolveODE (OProd (OSing vid1 (f0 
   apply(rule exI[where x="OSing vid2 (trm.Var vid1)"])
   by(auto simp add: f0_def f1_def Box_def Or_def Equiv_def empty_def TT_def P_def p1_def SystemDESubst_def empty_def)
   
+(*[{dx=, dy=x&r>=r&>=r}]r>=r&>=r->[D{x}:=]D{x}>=D{r}->
+  [{dx=, dy=x&r>=r&>=r}]r>=r&>=r->
+  [{dx=, dy=x&r>=r&>=r}][D{x}:=]D{x}>=D{r}
+  ([[$\<alpha> vid1]]((Predicational pid1) \<rightarrow> (Predicational pid2)))
+    \<rightarrow> ([[$\<alpha> vid1]]Predicational pid1) \<rightarrow> ([[$\<alpha> vid1]]Predicational pid2)
+  *)
 definition SystemKSubst::"('sf,'sc,'sz) subst"
 where "SystemKSubst = \<lparr> SFunctions = (\<lambda>f.  None),
+    SPredicates = (\<lambda>_. None),
+    SContexts = (\<lambda>C. if C = pid1 then 
+        (Some (And (Geq (Const 0) (Const 0)) (Geq (Function fid1 empty) (Const 0)))) 
+      else if C = pid2 then 
+        (Some ([[DiffAssign vid1 (Function fid1 empty)]](Geq (Differential (Var vid1)) (Differential (Const 0))))) else None),
+    SPrograms = (\<lambda>c. if c = vid1 then Some (EvolveODE (OProd (OSing vid1 (Function fid1 empty)) (OSing vid2 (Var vid1))) (And (Geq (Const 0) (Const 0)) (Geq (Function fid1 empty) (Const 0)))) else None),
+    SODEs = (\<lambda>_. None)
+  \<rparr>"
+
+lemma subst_imp_simp:"Fsubst (Implies p q) \<sigma> = (Implies (Fsubst p \<sigma>) (Fsubst q \<sigma>))"
+  unfolding Implies_def Or_def by auto
+
+lemma subst_equiv_simp:"Fsubst (Equiv p q) \<sigma> = (Equiv (Fsubst p \<sigma>) (Fsubst q \<sigma>))"
+  unfolding Implies_def Or_def Equiv_def by auto
+
+lemma subst_box_simp:"Fsubst (Box p q) \<sigma> = (Box (Psubst p \<sigma>) (Fsubst q \<sigma>))"
+  unfolding Box_def Or_def by auto
+
+lemma pfsubst_box_simp:"PFsubst (Box p q) \<sigma> = (Box (PPsubst p \<sigma>) (PFsubst q \<sigma>))"
+  unfolding Box_def Or_def by auto
+
+lemma pfsubst_imp_simp:"PFsubst (Implies p q) \<sigma> = (Implies (PFsubst p \<sigma>) (PFsubst q \<sigma>))"
+  unfolding Box_def Implies_def Or_def by auto
+
+  (* |- [{dx=, dy=x&r>=r&>=r}]r>=r&>=r->[D{x}:=]D{x}>=D{r}->[{dx=, dy=x&r>=r&>=r}]r>=r&>=r->[{dx=, dy=x&r>=r&>=r}][D{x}:=]D{x}>=D{r};; *)
+(*lemma system_k_subst_correct:"Fsubst Kaxiom SystemKSubst = undefined"
+  unfolding Kaxiom_def SystemKSubst_def apply (auto simp add: subst_imp_simp subst_box_simp id_simps pfsubst_box_simp)
+  *)
+  
+(*  [{dx=, dy=x&r>=r&>=r}]r>=r&>=r *)
+(* ([[EvolveODE (OVar vid1) (Predicational pid1)]](Predicational pid1)) *)
+definition SystemDWSubst::"('sf,'sc,'sz) subst"
+where "SystemDWSubst = \<lparr> SFunctions = (\<lambda>f.  None),
+    SPredicates = (\<lambda>_. None),
+    SContexts = (\<lambda>C. if C = pid1 then Some (And (Geq (Const 0) (Const 0)) (Geq (Function fid1 empty) (Const 0))) else None),
+    SPrograms = (\<lambda>_. None),
+    SODEs = (\<lambda>c. if c = vid1 then Some (OProd (OSing vid1 (Function fid1 empty)) (OSing vid2 (Var vid1))) else None)
+  \<rparr>"
+  
+(*  Geq (Differential (Var vid1)) (Differential (Const 0))
+
+    Geq (DiffVar vid1) (Const 0)
+C(_) = T&A\<ge>0\<rightarrow>([DA x A()] _)
+r>=r&>=r->[D{x}:=]D{x}>=D{r}<->r>=r&>=r->[D{x}:=]Dv{x}>=r  
+T&A\<ge>0\<rightarrow>[DA x A()]D{x}\<ge>D{r} \<leftrightarrow> T&A\<ge>0\<rightarrow>[DA x A()]Dv x \<ge> r
+*)
+definition SystemCESubst::"('sf,'sc,'sz) subst"
+where "SystemCESubst = \<lparr> SFunctions = (\<lambda>f.  None),
+    SPredicates = (\<lambda>_. None),
+    SContexts = (\<lambda>C. if C = pid1 then Some(Implies(And (Geq (Const 0) (Const 0)) (Geq (Function fid1 empty) (Const 0))) ([[DiffAssign vid1 (Function fid1 empty)]](Predicational (Inr ())))) else None),
+    SPrograms = (\<lambda>_. None),
+    SODEs = (\<lambda>_. None)
+  \<rparr>"
+
+  (* nth SG i = ([], [Fsubst (Equiv (InContext pid1 \<phi>) (InContext pid1 \<psi>)) \<sigma>]) 
+    \<Longrightarrow> valid (Equiv \<phi> \<psi>) 
+    \<Longrightarrow> fsafe \<phi>
+    \<Longrightarrow> fsafe \<psi>
+    \<Longrightarrow> ssafe \<sigma>
+    \<Longrightarrow> Fadmit \<sigma> (Equiv (InContext pid1 \<phi>) (InContext pid1 \<psi>))
+    \<Longrightarrow> *)
+lemma SystemCESubstOK:
+  "step_ok 
+  ([([],[Equiv (Implies(And (Geq (Const 0) (Const 0)) (Geq (Function fid1 empty) (Const 0))) ([[DiffAssign vid1 (Function fid1 empty)]]( SystemCEFml1))) 
+         (Implies(And (Geq (Const 0) (Const 0)) (Geq (Function fid1 empty) (Const 0))) ([[DiffAssign vid1 (Function fid1 empty)]]( (SystemCEFml2))))
+         ])],
+         ([],[]))
+         
+         0 
+         (CE SystemCEFml1 SystemCEFml2 SystemCESubst)"
+  apply(rule Step_CE)
+  subgoal by(auto simp add: subst_equiv_simp subst_imp_simp subst_box_simp SystemCESubst_def SystemCEFml1_def SystemCEFml2_def pfsubst_imp_simp pfsubst_box_simp)
+  subgoal using CE1pre_valid 
+    by (auto simp add: CEReq_def SystemCEFml1_def SystemCEFml2_def CE1pre_valid)
+  subgoal unfolding SystemCEFml1_def by auto
+  subgoal unfolding SystemCEFml2_def by auto
+  subgoal unfolding SystemCESubst_def ssafe_def Implies_def Box_def Or_def empty_def by auto
+  unfolding SystemCESubst_def Equiv_def Or_def SystemCEFml1_def SystemCEFml2_def TUadmit_def apply (auto simp add: TUadmit_def FUadmit_def Box_def Implies_def Or_def)
+  unfolding PFUadmit_def by auto
+  
+definition SystemDiffAssignSubst::"('sf,'sc,'sz) subst"
+where "SystemDiffAssignSubst = \<lparr> SFunctions = (\<lambda>f.  None),
     SPredicates = (\<lambda>_. None),
     SContexts = (\<lambda>_. None),
     SPrograms = (\<lambda>_. None),
     SODEs = (\<lambda>_. None)
   \<rparr>"
-
-definition SystemDWSubst::"('sf,'sc,'sz) subst"
-where "SystemDWSubst = SystemDISubst"
-  
-definition SystemCESubst::"('sf,'sc,'sz) subst"
-where "SystemCESubst = SystemDISubst"
-
-definition SystemDiffAssignSubst::"('sf,'sc,'sz) subst"
-where "SystemDiffAssignSubst = SystemDISubst"
 
 lemma SystemDICutCorrect:"SystemDICut = Fsubst DIGeqaxiom SystemDISubst"
   unfolding SystemDICut_def DIGeqaxiom_def SystemDISubst_def 
@@ -1982,21 +2065,22 @@ lemma system_result_correct:"proof_result SystemProof =
   unfolding SystemProof_def SystemConcl_def Implies_def Or_def f0_def TT_def Equiv_def SystemDICut_def SystemDCCut_def
   proof_result.simps deriv_result.simps start_proof.simps  Box_def SystemDCSubst_def SystemVCut_def SystemDECut_def SystemKCut_def SystemEquivCut_def
   SystemDiffAssignCut_def
-  by (auto simp add:  prover)
+  sorry
+  (*by (auto simp add:  prover)*)
 
-lemma whereami:"last_step SystemProof 36 = undefined"
+lemma whereami:"last_step SystemProof 52 = undefined"
   unfolding SystemProof_def apply auto
   unfolding SystemDISubst_def
   sorry
 
-lemma print_sys_progress:"rule_to_string(proof_result (proof_take 35 SystemProof)) = undefined"
+lemma print_sys_progress:"rule_to_string(proof_result (proof_take 51 SystemProof)) = undefined"
   unfolding SystemProof_def SystemConcl_def Implies_def Or_def f0_def TT_def Equiv_def SystemDICut_def SystemDCCut_def
   proof_result.simps deriv_result.simps start_proof.simps  Box_def SystemDCSubst_def SystemVCut_def SystemDECut_def SystemKCut_def SystemEquivCut_def
   SystemDiffAssignCut_def SystemVCut2_def
   apply (auto simp add: id_simps)
   sorry
 
-lemma SystemSound_lemma:"sound (proof_result (proof_take 36 SystemProof))"
+lemma SystemSound_lemma:"sound (proof_result (proof_take 52 SystemProof))"
   apply(rule proof_sound)
   unfolding SystemProof_def SystemConcl_def CQ1Concl_def CQ2Concl_def Equiv_def CQRightSubst_def diff_const_axiom_valid diff_var_axiom_valid empty_def Or_def expand_singleton 
   diff_var_axiom_def SystemDICut_def
@@ -2004,7 +2088,8 @@ lemma SystemSound_lemma:"sound (proof_result (proof_take 36 SystemProof))"
     CQRightSubst_def diff_const_axiom_valid diff_var_axiom_valid empty_def Or_def expand_singleton 
     TUadmit_def NTUadmit_def almost_diff_const CQLeftSubst_def almost_diff_var f0_def TT_def SystemDISubst_def f1_def p1_def SystemDCCut_def SystemDCSubst_def
     SystemVCut_def SystemDECut_def SystemVSubst_def
-    SystemVCut2_def SystemVSubst2_def  SystemDESubst_def P_def)
+    SystemVCut2_def SystemVSubst2_def  SystemDESubst_def P_def SystemKCut_def  SystemKSubst_def SystemDWSubst_def SystemEquivCut_def
+    SystemCESubst_def SystemCEFml1_def SystemCEFml2_def CE1pre_valid2)
   sledgehammer
   
 

@@ -303,13 +303,13 @@ lemma DE_valid:"valid DEaxiom"
   qed
 qed
 
-lemma ODE_zero:"\<And>i. Inl i \<notin> FVO ODE \<Longrightarrow> Inr i \<notin> FVO ODE \<Longrightarrow> ODE_sem I ODE \<nu> $ i= 0"
+lemma ODE_zero:"\<And>i. Inl i \<notin> BVO ODE \<Longrightarrow> Inr i \<notin> BVO ODE \<Longrightarrow> ODE_sem I ODE \<nu> $ i= 0"
   by(induction ODE, auto)
 
 lemma DE_sys_valid:
-  assumes disj:"{Inl vid1, Inr vid1} \<inter> FVO ODE = {}"
-  shows "valid (([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]] (P pid1)) \<leftrightarrow>
- ([[EvolveODE ((OProd ODE (OSing vid1 (f1 fid1 vid1)))) (p1 vid2 vid1)]]
+  assumes disj:"{Inl vid1, Inr vid1} \<inter> BVO ODE = {}"
+  shows "valid (([[EvolveODE (OProd  (OSing vid1 (f1 fid1 vid1)) ODE) (p1 vid2 vid1)]] (P pid1)) \<leftrightarrow>
+ ([[EvolveODE ((OProd  (OSing vid1 (f1 fid1 vid1))ODE)) (p1 vid2 vid1)]]
     [[DiffAssign vid1 (f1 fid1 vid1)]]P pid1))"
 proof -
   have dsafe:"dsafe ($f fid1 (singleton (trm.Var vid1)))" unfolding singleton_def by(auto intro: dsafe.intros)
@@ -318,8 +318,8 @@ proof -
   have fsafe:"fsafe (p1 vid2 vid1)" unfolding p1_def singleton_def using hpsafe_fsafe.intros(10)
     using dsafe dsafe_Fun_simps image_iff
     by (simp add: dfree_Const)
-  show "valid (([[EvolveODE (OProd ODE (OSing vid1 (f1 fid1 vid1))) (p1 vid2 vid1)]] (P pid1)) \<leftrightarrow>
- ([[EvolveODE ((OProd ODE (OSing vid1 (f1 fid1 vid1)))) (p1 vid2 vid1)]]
+  show "valid (([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1)) ODE) (p1 vid2 vid1)]] (P pid1)) \<leftrightarrow>
+ ([[EvolveODE ((OProd (OSing vid1 (f1 fid1 vid1)) ODE)) (p1 vid2 vid1)]]
     [[DiffAssign vid1 (f1 fid1 vid1)]]P pid1))"
   apply(auto simp only: DEaxiom_def valid_def Let_def iff_sem impl_sem)
   apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq box_sem f1_def p1_def P_def expand_singleton)
@@ -330,32 +330,32 @@ proof -
       and ac bc
      assume good:"is_interp I"
      assume bigAll:"
-     \<forall>\<omega>. (\<exists>\<nu> sol t. ((ab, bb), \<omega>) = (\<nu>, mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) \<nu> (sol t)) \<and>
+     \<forall>\<omega>. (\<exists>\<nu> sol t. ((ab, bb), \<omega>) = (\<nu>, mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) ODE) \<nu> (sol t)) \<and>
                     0 \<le> t \<and>
-                    (sol solves_ode (\<lambda>_. ODE_sem I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))) {0..t}
+                    (sol solves_ode (\<lambda>_. ODE_sem I (OProd(OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) ODE ))) {0..t}
                      {x. Predicates I vid2
                           (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-                                 (mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) \<nu> x))} \<and>
+                                 (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> x))} \<and>
                     sol 0 = fst \<nu>) \<longrightarrow>
           \<omega> \<in> fml_sem I (Pc pid1)"
-     let ?my\<omega> = "mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab,bb) (sol t)"
+     let ?my\<omega> = "mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab,bb) (sol t)"
      assume t:"0 \<le> t"
-     assume aaba:"(aa, ba) = mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab, bb) (sol t)"
-     assume sol:"(sol solves_ode (\<lambda>_. ODE_sem I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))) {0..t}
+     assume aaba:"(aa, ba) = mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)"
+     assume sol:"(sol solves_ode (\<lambda>_. ODE_sem I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE))) {0..t}
       {x. Predicates I vid2
            (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-                  (mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab, bb) x))}"
+                  (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) x))}"
      assume sol0:"sol 0 = fst (ab, bb)"
      assume acbc:"(ac, bc) =
-     repd (mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab, bb) (sol t)) vid1
+     repd (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)) vid1
       (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))
-        (mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab, bb) (sol t)))"
-     have bigEx:"(\<exists>\<nu> sol t. ((ab, bb), ?my\<omega>) = (\<nu>, mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) \<nu> (sol t)) \<and>
+        (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)))"
+     have bigEx:"(\<exists>\<nu> sol t. ((ab, bb), ?my\<omega>) = (\<nu>, mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> (sol t)) \<and>
                     0 \<le> t \<and>
-                    (sol solves_ode (\<lambda>_. ODE_sem I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))) {0..t}
+                    (sol solves_ode (\<lambda>_. ODE_sem I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE))) {0..t}
                      {x. Predicates I vid2
                           (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-                                 (mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) \<nu> x))} \<and>
+                                 (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> x))} \<and>
                     sol 0 = fst \<nu>)"
        apply(rule exI[where x="(ab, bb)"])
        apply(rule exI[where x="sol"])
@@ -368,34 +368,34 @@ proof -
        subgoal using sol by blast
        by (rule sol0)
      have bigRes:"?my\<omega> \<in> fml_sem I (Pc pid1)" using bigAll bigEx by blast
-     have notin1:"Inl vid1 \<notin> FVO ODE" using disj by auto
-     have notin2:"Inr vid1 \<notin> FVO ODE" using disj by auto
+     have notin1:"Inl vid1 \<notin> BVO ODE" using disj by auto
+     have notin2:"Inr vid1 \<notin> BVO ODE" using disj by auto
      have ODE_sem:"ODE_sem I ODE (sol t) $ vid1 = 0"
        using ODE_zero notin1 notin2 
        by blast 
      have vec_eq:"(\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol t)) =
            (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-            (mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab, bb) (sol t)))"
+            (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)))"
        apply(rule vec_extensionality)
        apply simp
-       using mk_v_agree[of I "(OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))))" "(ab, bb)" "(sol t)"]
+       using mk_v_agree[of I "(OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE)" "(ab, bb)" "(sol t)"]
        by(simp add: Vagree_def)
-     have sem_eq:"(?my\<omega> \<in> fml_sem I (Pc pid1)) = ((repd (mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab, bb) (sol t)) vid1
+     have sem_eq:"(?my\<omega> \<in> fml_sem I (Pc pid1)) = ((repd (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)) vid1
      (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))
-       (mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab, bb) (sol t)))) \<in> fml_sem I (Pc pid1))"
+       (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)))) \<in> fml_sem I (Pc pid1))"
        apply(rule coincidence_formula)
        subgoal by simp
        subgoal by (rule Iagree_refl)
-       using mk_v_agree[of "I" "(OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))))" "(ab, bb)" "(sol t)"]
+       using mk_v_agree[of "I" "(OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE)" "(ab, bb)" "(sol t)"]
        unfolding Vagree_def 
        apply simp
        apply(erule conjE)+
        apply(erule allE[where x="vid1"])+
        apply(simp add: ODE_sem)
        using vec_eq by simp
-     show  "repd (mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab, bb) (sol t)) vid1
+     show  "repd (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)) vid1
       (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))
-        (mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab, bb) (sol t)))
+        (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)))
      \<in> fml_sem I (Pc pid1)"
        using bigRes sem_eq by blast
   next
@@ -403,29 +403,29 @@ proof -
     and aa ba ab bb sol 
     and t::real
     assume good_interp:"is_interp I"
-    assume all:"\<forall>\<omega>. (\<exists>\<nu> sol t. ((ab, bb), \<omega>) = (\<nu>, mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) \<nu> (sol t)) \<and>
+    assume all:"\<forall>\<omega>. (\<exists>\<nu> sol t. ((ab, bb), \<omega>) = (\<nu>, mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> (sol t)) \<and>
                       0 \<le> t \<and>
-                      (sol solves_ode (\<lambda>_. ODE_sem I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))) {0..t}
+                      (sol solves_ode (\<lambda>_. ODE_sem I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE))) {0..t}
                        {x. Predicates I vid2
                             (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-                                   (mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) \<nu> x))} \<and>
+                                   (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> x))} \<and>
                       sol 0 = fst \<nu>) \<longrightarrow>
             (\<forall>\<omega>'. \<omega>' = repd \<omega> vid1 (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) \<omega>) \<longrightarrow> \<omega>' \<in> fml_sem I (Pc pid1))"
-     let ?my\<omega> = "mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab, bb) (sol t)" 
+     let ?my\<omega> = "mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)" 
       assume t:"0 \<le> t"
-     assume aaba:"(aa, ba) = mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab, bb) (sol t)"
+     assume aaba:"(aa, ba) = mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)"
      assume sol:"
-       (sol solves_ode (\<lambda>_. ODE_sem I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))) {0..t}
+       (sol solves_ode (\<lambda>_. ODE_sem I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE))) {0..t}
         {x. Predicates I vid2
              (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-                    (mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab, bb) x))}"
+                    (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) x))}"
      assume sol0:"sol 0 = fst (ab, bb)"
-     have bigEx:"(\<exists>\<nu> sol t. ((ab, bb), ?my\<omega>) = (\<nu>, mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) \<nu> (sol t)) \<and>
+     have bigEx:"(\<exists>\<nu> sol t. ((ab, bb), ?my\<omega>) = (\<nu>, mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> (sol t)) \<and>
                       0 \<le> t \<and>
-                      (sol solves_ode (\<lambda>_. ODE_sem I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))) {0..t}
+                      (sol solves_ode (\<lambda>_. ODE_sem I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE))) {0..t}
                        {x. Predicates I vid2
                             (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-                                   (mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) \<nu> x))} \<and>
+                                   (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> x))} \<and>
                       sol 0 = fst \<nu>)"
        apply(rule exI[where x="(ab, bb)"])
        apply(rule exI[where x=sol])
@@ -437,40 +437,40 @@ proof -
        apply(rule conjI)
        subgoal using sol by blast
        using sol0 by blast
-     have rep_sem_eq:"repd (mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab, bb) (sol t)) vid1
+     have rep_sem_eq:"repd (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)) vid1
                 (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))
-                  (mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab, bb) (sol t)))  \<in> fml_sem I (Pc pid1)
+                  (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)))  \<in> fml_sem I (Pc pid1)
         = (repd ?my\<omega> vid1 (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) ?my\<omega>) \<in> fml_sem I (Pc pid1))"
        apply(rule coincidence_formula)
        subgoal by simp
        subgoal by (rule Iagree_refl)
        by(simp add: Vagree_def)
-     have notin1:"Inl vid1 \<notin> FVO ODE" using disj by auto
-     have notin2:"Inr vid1 \<notin> FVO ODE" using disj by auto
+     have notin1:"Inl vid1 \<notin> BVO ODE" using disj by auto
+     have notin2:"Inr vid1 \<notin> BVO ODE" using disj by auto
      have ODE_sem:"ODE_sem I ODE (sol t) $ vid1 = 0"
        using ODE_zero notin1 notin2 
        by blast 
      have vec_eq:"
      (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-            (mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab, bb) (sol t))) =
+            (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t))) =
     (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol t))"
        apply(rule vec_extensionality)
-       using mk_v_agree[of I "(OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))))" "(ab, bb)" "(sol t)"]
+       using mk_v_agree[of I "(OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE)" "(ab, bb)" "(sol t)"]
        by (simp add: Vagree_def)
      have sem_eq:
        "(repd ?my\<omega> vid1 (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) ?my\<omega>) \<in> fml_sem I (Pc pid1)) 
-    = (mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab, bb) (sol t) \<in> fml_sem I (Pc pid1)) "
+    = (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t) \<in> fml_sem I (Pc pid1)) "
        apply(rule coincidence_formula)
        subgoal by simp
        subgoal by (rule Iagree_refl)
-       using mk_v_agree[of I "(OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))))" "(ab, bb)" "(sol t)"]
+       using mk_v_agree[of I "(OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE)" "(ab, bb)" "(sol t)"]
        unfolding Vagree_def apply simp
        apply(erule conjE)+
        apply(erule allE[where x=vid1])+
        by (simp add: ODE_sem vec_eq)
-     have some_sem:"repd (mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab, bb) (sol t)) vid1
+     have some_sem:"repd (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)) vid1
                 (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))
-                  (mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab, bb) (sol t))) \<in> fml_sem I (Pc pid1)"
+                  (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t))) \<in> fml_sem I (Pc pid1)"
        using rep_sem_eq 
        using all bigEx by blast
      have bigImp:"(\<forall>\<omega>'. \<omega>' = repd ?my\<omega> vid1 (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) ?my\<omega>) \<longrightarrow> \<omega>' \<in> fml_sem I (Pc pid1))"
@@ -480,7 +480,7 @@ proof -
        using some_sem by auto
      have fml_sem:"repd ?my\<omega> vid1 (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) ?my\<omega>) \<in> fml_sem I (Pc pid1)"
        using sem_eq bigImp by blast
-    show "mk_v I (OProd ODE (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))) (ab, bb) (sol t) \<in> fml_sem I (Pc pid1)"
+    show "mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t) \<in> fml_sem I (Pc pid1)"
       using fml_sem sem_eq by blast
     qed
   qed

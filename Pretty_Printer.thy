@@ -27,11 +27,14 @@ where "ppid_to_string vid = (if vid = pid1 then ''P'' else if vid = pid2 then ''
 fun hpid_to_string::"'sz \<Rightarrow> char list"
 where "hpid_to_string vid = (if vid = vid1 then ''a'' else if vid = vid2 then ''b'' else if vid = vid3 then ''a1'' else ''b1'')" 
 
+fun fid_to_string::"'sf \<Rightarrow> char list"
+where "fid_to_string vid = (if vid = fid1 then ''f'' else if vid = fid2 then ''g'' else if vid = fid3 then ''h'' else ''j'')" 
+
 primrec trm_to_string::"('sf,'sz) trm \<Rightarrow> char list"
 where  
   "trm_to_string (Var x) = vid_to_string x"
 | "trm_to_string (Const r) = ''r''"
-| "trm_to_string (Function f args) = []"
+| "trm_to_string (Function f args) = fid_to_string f"
 | "trm_to_string (Plus t1 t2) = trm_to_string t1 @ ''+'' @ trm_to_string t2"
 | "trm_to_string (Times t1 t2) = trm_to_string t1 @ ''*'' @ trm_to_string t2"
 | "trm_to_string (DiffVar x) = ''Dv{'' @ vid_to_string x @ ''}''"
