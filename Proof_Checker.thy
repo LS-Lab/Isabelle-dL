@@ -1971,9 +1971,12 @@ lemma SystemCESubstOK:
   unfolding SystemCESubst_def Equiv_def Or_def SystemCEFml1_def SystemCEFml2_def TUadmit_def apply (auto simp add: TUadmit_def FUadmit_def Box_def Implies_def Or_def)
   unfolding PFUadmit_def by auto
   
+(* [D{x}:=f]Dv{x}>=r<->f>=r
+ [[DiffAssign vid1  ($f fid1 empty)]] (Prop vid1 (singleton (DiffVar vid1))))
+      \<leftrightarrow> Prop vid1 (singleton ($f fid1 empty))*)
 definition SystemDiffAssignSubst::"('sf,'sc,'sz) subst"
 where "SystemDiffAssignSubst = \<lparr> SFunctions = (\<lambda>f.  None),
-    SPredicates = (\<lambda>_. None),
+    SPredicates = (\<lambda>p. if p = vid1 then Some (Geq (Function (Inr vid1) empty) (Const 0)) else None),
     SContexts = (\<lambda>_. None),
     SPrograms = (\<lambda>_. None),
     SODEs = (\<lambda>_. None)
@@ -2073,28 +2076,26 @@ lemma whereami:"last_step SystemProof 52 = undefined"
   unfolding SystemDISubst_def
   sorry
 
-lemma print_sys_progress:"rule_to_string(proof_result (proof_take 51 SystemProof)) = undefined"
+lemma print_sys_progress:"(proof_result (proof_take 60 SystemProof)) = ([], SystemConcl)"
   unfolding SystemProof_def SystemConcl_def Implies_def Or_def f0_def TT_def Equiv_def SystemDICut_def SystemDCCut_def
   proof_result.simps deriv_result.simps start_proof.simps  Box_def SystemDCSubst_def SystemVCut_def SystemDECut_def SystemKCut_def SystemEquivCut_def
   SystemDiffAssignCut_def SystemVCut2_def
-  apply (auto simp add: id_simps)
-  sorry
-
-lemma SystemSound_lemma:"sound (proof_result (proof_take 52 SystemProof))"
+  by (auto simp add: id_simps)
+  
+lemma SystemSound_lemma:"sound (proof_result (proof_take 60 SystemProof))"
   apply(rule proof_sound)
   unfolding SystemProof_def SystemConcl_def CQ1Concl_def CQ2Concl_def Equiv_def CQRightSubst_def diff_const_axiom_valid diff_var_axiom_valid empty_def Or_def expand_singleton 
   diff_var_axiom_def SystemDICut_def
-  apply (auto simp add: prover CEProof_def CEReq_def CQ1Concl_def CQ2Concl_def Equiv_def
+  by (auto simp add: prover CEProof_def CEReq_def CQ1Concl_def CQ2Concl_def Equiv_def
     CQRightSubst_def diff_const_axiom_valid diff_var_axiom_valid empty_def Or_def expand_singleton 
     TUadmit_def NTUadmit_def almost_diff_const CQLeftSubst_def almost_diff_var f0_def TT_def SystemDISubst_def f1_def p1_def SystemDCCut_def SystemDCSubst_def
     SystemVCut_def SystemDECut_def SystemVSubst_def
     SystemVCut2_def SystemVSubst2_def  SystemDESubst_def P_def SystemKCut_def  SystemKSubst_def SystemDWSubst_def SystemEquivCut_def
-    SystemCESubst_def SystemCEFml1_def SystemCEFml2_def CE1pre_valid2)
-  sledgehammer
+    SystemCESubst_def SystemCEFml1_def SystemCEFml2_def CE1pre_valid2 SystemDiffAssignCut_def SystemDiffAssignSubst_def)
+
+lemma system_sond:"sound ([], SystemConcl)"
+  using SystemSound_lemma print_sys_progress by auto
   
-
-
-
 lemma example_result_correct:"proof_result (proof_take 61 DIAndProof) = DIAnd"
   unfolding DIAndProof_def DIAndConcl_def Implies_def Or_def 
   proof_result.simps deriv_result.simps start_proof.simps DIAndCutP12_def  DIAndSG1_def DIAndSG2_def DIAndCutP1_def Box_def DIAndCut34Elim1_def DIAndCut12Intro_def DIAndCut34Elim2_def DIAnd_def
