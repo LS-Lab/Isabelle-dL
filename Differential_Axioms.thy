@@ -73,20 +73,20 @@ definition DSaxiom :: "('sf, 'sc, 'sz) formula"
    ([[Assign vid1 (Plus (Var vid1) (Times (f0 fid1) (Var vid2)))]]p1 vid3 vid1)))))"
 
 (* 
-g(x)\<ge> h(x) \<rightarrow> p(x) \<and> [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c & p(x)]g(x) \<ge> h(x)
+g(x)\<ge> h(x) \<rightarrow>  [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c & p(x)]g(x) \<ge> h(x)
 *)
 definition DIGeqaxiom :: "('sf, 'sc, 'sz) formula"
   where [axiom_defs]:"DIGeqaxiom = 
-    (Implies (Geq (f1 fid2 vid1) (f1 fid3 vid1)) (Implies (And (p1 vid1 vid1) ([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (p1 vid1 vid1)]]
+    (Implies (Geq (f1 fid2 vid1) (f1 fid3 vid1)) (Implies ( ([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (p1 vid1 vid1)]]
     (Geq (Differential (f1 fid2  vid1)) (Differential (f1 fid3 vid1)))
     )) ([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (p1 vid1 vid1)]](Geq (f1 fid2 vid1) (f1 fid3 vid1)))))"
 
   (* 
-g(x) > h(x) \<rightarrow> p(x) \<and> [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c & p(x)]g(x) > h(x)
+g(x) > h(x) \<rightarrow> [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c & p(x)]g(x) > h(x)
 *)
 definition DIGraxiom :: "('sf, 'sc, 'sz) formula"
   where [axiom_defs]:"DIGraxiom = 
-    (Implies (Greater (f1 fid2 vid1) (f1 fid3 vid1)) (Implies (And (p1 vid1 vid1) ([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (p1 vid1 vid1)]]
+    (Implies (Greater (f1 fid2 vid1) (f1 fid3 vid1)) (Implies (([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (p1 vid1 vid1)]]
     (Geq (Differential (f1 fid2  vid1)) (Differential (f1 fid3 vid1)))
     )) ([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (p1 vid1 vid1)]](Greater (f1 fid2 vid1) (f1 fid3 vid1)))))"
 
@@ -1161,16 +1161,9 @@ lemma dterm_sterm_dfree:
    "dfree \<theta> \<Longrightarrow> (\<And>\<nu> \<nu>'. sterm_sem I \<theta> \<nu> = dterm_sem I \<theta> (\<nu>, \<nu>'))"
   by(induction rule: dfree.induct, auto)
 
-(*
-lemma continuous_blinfun_vec':
-  fixes g :: "'a::{real_normed_vector,abs} \<Rightarrow> 'b::{finite,linorder} \<Rightarrow> 'a \<Rightarrow>\<^sub>L real"
-  assumes con:"(\<And>i. continuous_on UNIV (\<lambda> x.(g x i)))"
-  shows "continuous_on UNIV (\<lambda>x. blinfun_vec (\<lambda> i. (g x i)))"
-    apply(rule Lib.continuous_blinfun_vec') 
-    using con by auto    *)
 
 (*  
-g(x)\<ge> h(x) \<rightarrow> p(x) \<and> [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c]g(x) \<ge> h(x)
+g(x)\<ge> h(x) \<rightarrow>  [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c]g(x) \<ge> h(x)
 *)
 lemma DIGeq_valid:"valid DIGeqaxiom"
   apply(unfold DIGeqaxiom_def valid_def impl_sem iff_sem)
@@ -1183,7 +1176,6 @@ lemma DIGeq_valid:"valid DIGeqaxiom"
        let ?\<phi> = "(\<lambda>t. mk_v I (?ODE) (sol 0, b) (sol t))"
        assume good_interp:"is_interp I"
        and geq0:"dterm_sem I (f1 fid3 vid1) (sol 0, b) \<le> dterm_sem I (f1 fid2 vid1) (sol 0, b)"
-       and ev0:"(sol 0, b) \<in> fml_sem I (p1 vid1 vid1)"
        and box:"\<forall>a ba. (\<exists>sola. sol 0 = sola 0 \<and>
                       (\<exists>t. (a, ba) = mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sola 0, b) (sola t) \<and>
                            0 \<le> t \<and>
@@ -1340,7 +1332,6 @@ proof -
      let ?\<phi> = "(\<lambda>t. mk_v I (?ODE) (sol 0, b) (sol t))"
      assume good_interp:"is_interp I"
      and geq0:"dterm_sem I (f1 fid3 vid1) (sol 0, b) < dterm_sem I (f1 fid2 vid1) (sol 0, b)"
-     and ev0:"(sol 0, b) \<in> fml_sem I (p1 vid1 vid1)"
      and box:"\<forall>a ba. (\<exists>sola. sol 0 = sola 0 \<and>
                     (\<exists>t. (a, ba) = mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sola 0, b) (sola t) \<and>
                          0 \<le> t \<and>
@@ -2518,6 +2509,5 @@ lemma DG_valid:"valid DGaxiom"
 qed
 done
 qed
-
 end end
 
