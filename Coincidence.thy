@@ -110,7 +110,7 @@ lemma sum_unique_nonzero:
   shows "(\<Sum>j\<in>(UNIV::'sv set). f j) = f i"
 proof -
   have "(\<Sum>j\<in>(UNIV::'sv set). f j) = (\<Sum>j\<in>{i}. f j)"
-    using restZero by (intro setsum.mono_neutral_cong_right) auto
+    using restZero by (intro sum.mono_neutral_cong_right) auto
   then show ?thesis
     by simp
 qed
