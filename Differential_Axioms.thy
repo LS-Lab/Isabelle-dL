@@ -1336,14 +1336,13 @@ next
       by(auto intro: derivative_intros)
     have sol1:"(sol solves_ode (\<lambda>_. ODE_sem I (OVar vid1))) {0..t} {x. mk_v I (OVar vid1) (sol 0, b) x \<in> fml_sem I (Prop vid1 empty)}"
       using sol unfolding p1_def singleton_def empty_def by auto
-    have FVTsub1:"FVT ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) \<subseteq> semBV I ((OVar vid1))"
-      sorry
-(*      apply auto
+    have FVTsub1:"vid1 \<in> ODE_vars I (OVar vid1) \<Longrightarrow> FVT ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) \<subseteq> semBV I ((OVar vid1))"
+      apply auto
       subgoal for x xa
         apply(cases "xa = vid1")
         by auto
-      done*)
-    have FVTsub2:"FVT ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) \<subseteq> semBV I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1))"
+      done
+    have FVTsub2:"vid1 \<in> ODE_vars I (OVar vid1) \<Longrightarrow> FVT ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) \<subseteq> semBV I ((OVar vid1))"
       apply auto
       subgoal for x xa
         apply(cases "xa = vid1")
@@ -1351,14 +1350,13 @@ next
       done
     have osafe:"osafe (OVar vid1)"
       by auto
-    have deriv1:"\<And>s. s \<in> ?int \<Longrightarrow> (?f1 has_derivative (?f1' s)) (at s within {0..t})"
+    have deriv1:"\<And>s. vid1 \<in> ODE_vars I (OVar vid1) \<Longrightarrow> s \<in> ?int \<Longrightarrow> (?f1 has_derivative (?f1' s)) (at s within {0..t})"
       subgoal for s
         using  rift_in_space_time[OF good_interp free1 osafe sol1 FVTsub1, of s]
-(* sol1 FVTsub1, of s] *)
         unfolding f1_def expand_singleton directional_derivative_def
         by blast
       done
-    have deriv2:"\<And>s. s \<in> ?int \<Longrightarrow> (?f2 has_derivative (?f2' s)) (at s within {0..t})"
+    have deriv2:"\<And>s. vid1 \<in> ODE_vars I (OVar vid1) \<Longrightarrow> s \<in> ?int \<Longrightarrow> (?f2 has_derivative (?f2' s)) (at s within {0..t})"
       subgoal for s
         using rift_in_space_time[OF good_interp free2 osafe sol1 FVTsub2, of s] 
         unfolding f1_def expand_singleton directional_derivative_def
@@ -1368,16 +1366,40 @@ next
       subgoal for s using box'[of s] 
         by (simp add: directional_derivative_def)
       done
+    have preserve_agree1:"vid1 \<notin> ODE_vars I (OVar vid1) \<Longrightarrow> VSagree (sol 0) (fst (mk_v I (OVar vid1) (sol 0, b) (sol t))) {vid1}"
+      using mk_v_agree[of I "OVar vid1" "(sol 0, b)" "sol t"]
+      unfolding Vagree_def VSagree_def
+      by auto
+    have preserve_coincide1:
+      "vid1 \<notin> ODE_vars I (OVar vid1) \<Longrightarrow> 
+      sterm_sem I (f1 fid2 vid1) (fst (mk_v I (OVar vid1) (sol 0, b) (sol t)))
+     = sterm_sem I (f1 fid2 vid1) (sol 0)" 
+      using coincidence_sterm[of "(sol 0, b)" "(mk_v I (OVar vid1) (sol 0, b) (sol t))" "f1 fid2 vid1" I]
+      preserve_agree1 unfolding VSagree_def Vagree_def f1_def by auto
+    have preserve_coincide2:
+      "vid1 \<notin> ODE_vars I (OVar vid1) \<Longrightarrow> 
+      sterm_sem I (f1 fid1 vid1) (fst (mk_v I (OVar vid1) (sol 0, b) (sol t)))
+     = sterm_sem I (f1 fid1 vid1) (sol 0)" 
+      using coincidence_sterm[of "(sol 0, b)" "(mk_v I (OVar vid1) (sol 0, b) (sol t))" "f1 fid1 vid1" I]
+      preserve_agree1 unfolding VSagree_def Vagree_def f1_def by auto
     have "?f1 t \<le> ?f2 t"
       apply(cases "t = 0")
       subgoal using geq0' sem_eq1' sem_eq2' by auto  
       subgoal
-        apply (rule MVT'[OF deriv2 deriv1, of t])
-        subgoal by auto
-        subgoal by auto
-        subgoal for s using deriv2[of s] using leq by auto
-        subgoal using geq0' sem_eq1' sem_eq2' by auto
-        using t by auto
+        apply(cases "vid1 \<in> ODE_vars I (OVar vid1)")
+        subgoal
+          apply (rule MVT'[OF deriv2 deriv1, of t])
+          subgoal by auto
+          subgoal by auto
+          subgoal for s using deriv2[of s] using leq by auto
+          using t leq geq0' sem_eq1' sem_eq2' by auto
+        subgoal
+          using geq0 
+         using dterm_sterm_dfree[OF free1, of I "sol 0" "b"]
+          using dterm_sterm_dfree[OF free2, of I "sol 0" "b"]
+          using preserve_coincide1 preserve_coincide2
+          by(simp add: f1_def)
+        done
       done
     then 
     show "       dterm_sem I (f1 fid2 vid1) (mk_v I (OVar vid1) (sol 0, b) (sol t))
