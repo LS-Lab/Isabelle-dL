@@ -1,6 +1,6 @@
 theory "USubst_Lemma"
 imports
-  "../afp/thys/Ordinary_Differential_Equations/ODE_Analysis"
+  "../afp-devel/thys/Ordinary_Differential_Equations/ODE_Analysis"
   "./Ids"
   "./Lib"
   "./Syntax"

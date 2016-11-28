@@ -1,6 +1,6 @@
 theory Lib
 imports
-  "../afp/thys/Ordinary_Differential_Equations/ODE_Analysis"
+  "../afp-devel/thys/Ordinary_Differential_Equations/ODE_Analysis"
 begin
 subsection \<open>Library of assorted things\<close>
 text\<open>General lemmas that don't have anything to do with dL specifically and could be fit for 

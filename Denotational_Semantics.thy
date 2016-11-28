@@ -1,6 +1,6 @@
 theory "Denotational_Semantics" 
 imports
-  "../afp/thys/Ordinary_Differential_Equations/ODE_Analysis"
+  "../afp-devel/thys/Ordinary_Differential_Equations/ODE_Analysis"
   "./Lib"
   "./Syntax"
 begin
