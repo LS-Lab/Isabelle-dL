@@ -95,13 +95,17 @@ where "Sadmit \<sigma> S \<longleftrightarrow> ((\<forall>i. i \<ge> 0 \<longrig
                       \<and>(\<forall>i. i \<ge> 0 \<longrightarrow> i < length (snd S) \<longrightarrow> Fadmit \<sigma> (nth (snd S) i)))"
   
 definition Radmit::"('sf,'sc,'sz) subst \<Rightarrow> ('sf,'sc,'sz) rule \<Rightarrow> bool"
-  where "Radmit \<sigma> R \<longleftrightarrow> ((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst R) \<longrightarrow> Sadmit \<sigma> (nth (fst R) i)) 
-                    \<longrightarrow> Sadmit \<sigma> (snd R))"
+  where "Radmit \<sigma> R \<longleftrightarrow> (((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst R) \<longrightarrow> Sadmit \<sigma> (nth (fst R) i)) 
+                     \<and> Sadmit \<sigma> (snd R)))"
 
 definition Ssafe::"('sf,'sc,'sz) sequent \<Rightarrow> bool"
 where "Ssafe S \<longleftrightarrow>((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst S) \<longrightarrow> fsafe (nth (fst S) i))
                  \<and>(\<forall>i. i \<ge> 0 \<longrightarrow> i < length (snd S) \<longrightarrow> fsafe (nth (snd S) i)))"
 
+definition Rsafe::"('sf,'sc,'sz) rule \<Rightarrow> bool"
+  where "Rsafe R \<longleftrightarrow> ((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst R) \<longrightarrow> Ssafe (nth (fst R) i)) 
+                      \<and> Ssafe (snd R))"
+  
 lemma subst_sequent:
   fixes I::"('sf, 'sc, 'sz) interp" and \<nu>::"'sz state"
   assumes good_interp:"is_interp I"
@@ -246,6 +250,7 @@ theorem subst_rule:
   assumes sound:"sound R"
   assumes Radmit:"Radmit \<sigma> R"
   assumes FVS:"FVS \<sigma> = {}"
+  assumes Rsafe:"Rsafe R"
   assumes ssafe:"ssafe \<sigma>"
   shows "sound (Rsubst R \<sigma>)"
 proof -
@@ -264,15 +269,21 @@ proof -
       using adjoint_safe[OF good_interp ] ssafe[unfolded ssafe_def] by auto
     have sound:"\<And>\<omega>. (\<And>\<phi> \<nu> . List.member SG \<phi> \<Longrightarrow> \<nu> \<in> seq_sem (adjoint I \<sigma> \<omega>) \<phi>) \<Longrightarrow> \<omega> \<in> seq_sem (adjoint I \<sigma> \<omega>) (\<Gamma>C, \<Delta>C)"
       using soundD_memv[of SG C] sound good_interp' Rdef Cdef by auto
-    have SadmitC:"Sadmit \<sigma> (\<Gamma>C, \<Delta>C)" sorry
-    have SsafeC:"Ssafe (\<Gamma>C, \<Delta>C)" sorry
+    have SadmitC:"Sadmit \<sigma> (\<Gamma>C, \<Delta>C)" 
+      using Radmit unfolding Radmit_def Rdef Cdef by auto
+    have SsafeC:"Ssafe (\<Gamma>C, \<Delta>C)" 
+      using Rsafe unfolding Rsafe_def Rdef Cdef by auto
     have seq_sem:"\<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) (\<Gamma>C, \<Delta>C)"
     proof(rule sound)
       fix S :: "('sf,'sc,'sz) sequent" and \<nu>'
       assume mem:"List.member SG S"
       obtain \<Gamma>S \<Delta>S where Sdef:"S = (\<Gamma>S, \<Delta>S)" by (cases S, auto)
-      have SadmitS:"Sadmit \<sigma> (\<Gamma>S, \<Delta>S)" sorry
-      have SsafeS:"Ssafe (\<Gamma>S, \<Delta>S)" sorry
+      from mem obtain di where di:"di < length SG \<and> SG ! di = S"
+      by (meson in_set_conv_nth in_set_member)
+      have SadmitS:"Sadmit \<sigma> (\<Gamma>S, \<Delta>S)"
+        using Rdef Sdef di Radmit Radmit_def by auto
+      have SsafeS:"Ssafe (\<Gamma>S, \<Delta>S)"
+        using Rsafe unfolding Rsafe_def Rdef Cdef using Sdef mem di by auto
       have map_mem:"\<And>f L x. List.member L x \<Longrightarrow> List.member (map f L) (f x)"
         subgoal for f L x 
           by (induction L, auto simp add: member_rec)
