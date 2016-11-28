@@ -1180,20 +1180,38 @@ lemma DIGeq_valid:"valid DIGeqaxiom"
     and t::real
     let ?ODE = "OVar vid1"
     let ?\<phi> = "(\<lambda>t. mk_v I (?ODE) (sol 0, b) (sol t))"
-    assume good_interp:"is_interp I"
-    and aaba:"(aa, ba) = ?\<phi> t"
-    and t:"0 \<le> t"
+    assume t:"0 \<le> t"
     and sol:"(sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
     {x. Predicates I vid1 (\<chi> i. dterm_sem I (empty i) (mk_v I ?ODE (sol 0, b) x))}"
     and notin:" \<not>(Predicates I vid1 (\<chi> i. dterm_sem I (empty i) (sol 0, b)))"
     have fsafe:"fsafe (Prop vid1 empty)" by (auto simp add: empty_def)
-    from sol t have "Predicates I vid1 (\<chi> i. dterm_sem I (empty i) (?\<phi> 0))"
-      using solves_ode_domainD[of sol "(\<lambda>a. ODEs I vid1)" "{0..t}"]  by auto
+    from sol have "Predicates I vid1 (\<chi> i. dterm_sem I (empty i) (?\<phi> 0))"
+      using t solves_ode_domainD[of sol "(\<lambda>a. ODEs I vid1)" "{0..t}"]  by auto
     then have incon:"Predicates I vid1 (\<chi> i. dterm_sem I (empty i) ((sol 0, b)))"
       using coincidence_formula[OF fsafe Iagree_refl[of I], of "(sol 0, b)" "?\<phi> 0"]
       unfolding Vagree_def by (auto simp add: empty_def)
     show "dterm_sem I (f1 fid2 vid1)  (mk_v I (OVar vid1) (sol 0, b) (sol t)) \<le> dterm_sem I (f1 fid1 vid1) (mk_v I (OVar vid1) (sol 0, b) (sol t))"
-      using notin incon by auto      
+      using notin incon by auto
+  next
+    fix I::"('sf,'sc,'sz) interp" and  b aa ba 
+    and sol::"real \<Rightarrow> 'sz simple_state" 
+    and t::real
+    let ?ODE = "OVar vid1"
+    let ?\<phi> = "(\<lambda>t. mk_v I (?ODE) (sol 0, b) (sol t))"
+    assume t:"0 \<le> t"
+    and sol:"(sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
+    {x. Predicates I vid1 (\<chi> i. dterm_sem I (empty i) (mk_v I ?ODE (sol 0, b) x))}"
+    and notin:" \<not>(Predicates I vid1 (\<chi> i. dterm_sem I (empty i) (sol 0, b)))"
+    have fsafe:"fsafe (Prop vid1 empty)" by (auto simp add: empty_def)
+    from sol have "Predicates I vid1 (\<chi> i. dterm_sem I (empty i) (?\<phi> 0))"
+      using t solves_ode_domainD[of sol "(\<lambda>a. ODEs I vid1)" "{0..t}"]  by auto
+    then have incon:"Predicates I vid1 (\<chi> i. dterm_sem I (empty i) ((sol 0, b)))"
+      using coincidence_formula[OF fsafe Iagree_refl[of I], of "(sol 0, b)" "?\<phi> 0"]
+      unfolding Vagree_def by (auto simp add: empty_def)
+    show "dterm_sem I (f1 fid2 vid1)  (mk_v I (OVar vid1) (sol 0, b) (sol t)) \<le> dterm_sem I (f1 fid1 vid1) (mk_v I (OVar vid1) (sol 0, b) (sol t))"
+      using notin incon by auto
+  next
+
 (*    and box:"\<forall>a ba. (\<exists>sola. sol 0 = sola 0 \<and>
                     (\<exists>t. (a, ba) = mk_v I (OProd (OSing vid1 (f1 fid1 vid1)) (OVar vid1)) (sola 0, b) (sola t) \<and>
                         0 \<le> t \<and>
