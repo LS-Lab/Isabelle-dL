@@ -284,10 +284,6 @@ proof -
     apply(rule soundI_memv')
     using Rdef' by auto
 qed
-  
-  
-(*    using subst_sequent sound Radmit FVS sledgehammer
-sorry*)
 
 fun start_proof::"('sf,'sc,'sz) sequent \<Rightarrow> ('sf,'sc,'sz) rule"
 where "start_proof S = ([S], S)"
@@ -2170,11 +2166,13 @@ where "SystemProof =
   ,(0, Lrule ImplyL 0)
   ,(0, Rrule CohideRR 0)
   ,(0, Lrule ImplyL 0)
-  ,(0, CloseId 0 0)
-  ,(0, AxSubst ADIGeq SystemDISubst) (* 8 *)
-  ,(0, CloseId 0 0)        
-  ,(0, Rrule AndR 0)
-  ,(0, Rrule TrueR 0)
+  ,(Suc (Suc 0), CloseId 0 0)
+  ,(Suc 0, AxSubst ADIGeq SystemDISubst) (* 8 *)
+  ,(Suc 0, Rrule ImplyR 0)
+(*  ,(0, CloseId 0 0)        *)
+  ,(Suc 0, CloseId 1 0)        
+(*  ,(0, Rrule AndR 0)*)
+  ,(0, Rrule ImplyR 0)   
   ,(0, Cut SystemDCCut)
   ,(0, Lrule ImplyL 0)
   ,(0, Rrule CohideRR 0)
@@ -2189,7 +2187,7 @@ where "SystemProof =
   ,(0, Cut SystemDECut)
   ,(0, Lrule EquivBackwardL 0)
   ,(0, Rrule CohideRR 0)
-  ,(1, CloseId 1 0)
+  ,(1, CloseId (Suc 1) 0) (* Last step *)
   ,(Suc 1, CloseId 0 0)
   ,(1, AxSubst AV SystemVSubst) (* 28 *)
   ,(0, Cut SystemVCut2)
@@ -2197,7 +2195,7 @@ where "SystemProof =
   ,(0, Lrule ImplyL 0)
   ,(0, Rrule CohideRR 0)
   ,(Suc 1, CloseId 0 0)
-  ,(Suc 1, CloseId 2 0)
+  ,(Suc 1, CloseId (Suc 2) 0)
   
   ,(Suc 1, AxSubst AV SystemVSubst2) (* 34 *)
   ,(0, Rrule CohideRR 0)
@@ -2227,17 +2225,6 @@ where "SystemProof =
   ,(0, CloseId 1 0)
   ,(0, AxSubst Adassign SystemDiffAssignSubst) (* 60 *)
   ])"
-
-
-lemma wherami:"last(snd(proof_take 8 SystemProof)) = undefined"
-  apply (auto simp add: SystemProof_def)
-  sorry
-lemma print_sys_progress:"rule_to_string (proof_result (proof_take 1 SystemProof)) = undefined"
-  unfolding SystemProof_def SystemConcl_def Implies_def Or_def f0_def TT_def Equiv_def SystemDICut_def SystemDCCut_def
-  proof_result.simps deriv_result.simps start_proof.simps  Box_def SystemDCSubst_def SystemVCut_def SystemDECut_def SystemKCut_def SystemEquivCut_def
-  SystemDiffAssignCut_def SystemVCut2_def
-  sorry
-(*  apply (auto simp add:  prover)*)
   
 lemma system_result_correct:"proof_result SystemProof = 
   ([],
@@ -2246,15 +2233,10 @@ lemma system_result_correct:"proof_result SystemProof =
   unfolding SystemProof_def SystemConcl_def Implies_def Or_def f0_def TT_def Equiv_def SystemDICut_def SystemDCCut_def
   proof_result.simps deriv_result.simps start_proof.simps  Box_def SystemDCSubst_def SystemVCut_def SystemDECut_def SystemKCut_def SystemEquivCut_def
   SystemDiffAssignCut_def SystemVCut2_def
-  by (auto simp add:  prover)
-  
-lemma print_sys_progress:"(proof_result (proof_take 60 SystemProof)) = ([], SystemConcl)"
-  unfolding SystemProof_def SystemConcl_def Implies_def Or_def f0_def TT_def Equiv_def SystemDICut_def SystemDCCut_def
-  proof_result.simps deriv_result.simps start_proof.simps  Box_def SystemDCSubst_def SystemVCut_def SystemDECut_def SystemKCut_def SystemEquivCut_def
-  SystemDiffAssignCut_def SystemVCut2_def
-  by (auto simp add: id_simps)
-  
-lemma SystemSound_lemma:"sound (proof_result (proof_take 60 SystemProof))"
+  apply( simp add:  prover)
+  done
+
+lemma SystemSound_lemma:"sound (proof_result SystemProof)"
   apply(rule proof_sound)
   unfolding SystemProof_def SystemConcl_def CQ1Concl_def CQ2Concl_def Equiv_def CQRightSubst_def diff_const_axiom_valid diff_var_axiom_valid empty_def Or_def expand_singleton 
   diff_var_axiom_def SystemDICut_def
@@ -2264,10 +2246,10 @@ lemma SystemSound_lemma:"sound (proof_result (proof_take 60 SystemProof))"
     SystemVCut_def SystemDECut_def SystemVSubst_def
     SystemVCut2_def SystemVSubst2_def  SystemDESubst_def P_def SystemKCut_def  SystemKSubst_def SystemDWSubst_def SystemEquivCut_def
     SystemCESubst_def SystemCEFml1_def SystemCEFml2_def CE1pre_valid2 SystemDiffAssignCut_def SystemDiffAssignSubst_def)
-done
+  done
 
-lemma system_sond:"sound ([], SystemConcl)"
-  using SystemSound_lemma print_sys_progress by auto
+lemma system_sound:"sound ([], SystemConcl)"
+  using SystemSound_lemma system_result_correct unfolding SystemConcl_def by auto
   
 lemma DIAnd_result_correct:"proof_result (proof_take 61 DIAndProof) = DIAnd"
   unfolding DIAndProof_def DIAndConcl_def Implies_def Or_def 
