@@ -32,7 +32,8 @@ where "seq_valid S \<equiv> \<forall>I. is_interp I \<longrightarrow> seq_sem I 
 
 (* Rule: assumptions, then conclusion *)
 type_synonym ('a,'b,'c) rule = "('a,'b,'c) sequent list * ('a,'b,'c) sequent"
-  
+
+(* *Local* soundness *)
 definition sound :: "('sf, 'sc, 'sz) rule \<Rightarrow> bool"
 where "sound R \<longleftrightarrow> (\<forall>I. is_interp I \<longrightarrow> (\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst R) \<longrightarrow> seq_sem I (nth (fst R) i) = UNIV) \<longrightarrow> seq_sem I (snd R) = UNIV)"
 (* END SOUNDNESS-CRITICAL *)
@@ -42,6 +43,45 @@ lemma soundI:"(\<And>I. is_interp I \<Longrightarrow> (\<And>i. i \<ge> 0 \<Long
 
 lemma soundI':"(\<And>I \<nu>. is_interp I \<Longrightarrow> (\<And>i . i \<ge> 0 \<Longrightarrow> i < length SG \<Longrightarrow> \<nu> \<in> seq_sem I (nth SG i)) \<Longrightarrow> \<nu> \<in> seq_sem I G) \<Longrightarrow> sound (SG,G)"
   unfolding sound_def by auto
+
+fun Ssubst::"('sf, 'sc, 'sz) sequent \<Rightarrow> ('sf,'sc,'sz) subst \<Rightarrow> ('sf,'sc,'sz) sequent"
+  where "Ssubst (\<Gamma>,\<Delta>) \<sigma> = (map (\<lambda> \<phi>. Fsubst \<phi> \<sigma>) \<Gamma>, map (\<lambda> \<phi>. Fsubst \<phi> \<sigma>) \<Delta>)"
+  
+fun Rsubst::"('sf, 'sc, 'sz) rule \<Rightarrow> ('sf,'sc,'sz) subst \<Rightarrow> ('sf,'sc,'sz) rule"
+  where "Rsubst (SG,C) \<sigma> = (map (\<lambda> \<phi>. Ssubst \<phi> \<sigma>) SG, Ssubst C \<sigma>)"
+
+definition Sadmit::"('sf,'sc,'sz) subst \<Rightarrow> ('sf,'sc,'sz) sequent \<Rightarrow> bool"
+where "Sadmit \<sigma> S \<longleftrightarrow> ((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst S) \<longrightarrow> Fadmit \<sigma> (nth (fst S) i))
+                      \<and>(\<forall>i. i \<ge> 0 \<longrightarrow> i < length (snd S) \<longrightarrow> Fadmit \<sigma> (nth (snd S) i)))"
+  
+definition Radmit::"('sf,'sc,'sz) subst \<Rightarrow> ('sf,'sc,'sz) rule \<Rightarrow> bool"
+  where "Radmit \<sigma> R \<longleftrightarrow> ((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst R) \<longrightarrow> Sadmit \<sigma> (nth (fst R) i)) 
+                    \<longrightarrow> Sadmit \<sigma> (snd R))"
+
+definition Ssafe::"('sf,'sc,'sz) sequent \<Rightarrow> bool"
+where "Ssafe S \<longleftrightarrow>((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst S) \<longrightarrow> fsafe (nth (fst S) i))
+                 \<and>(\<forall>i. i \<ge> 0 \<longrightarrow> i < length (snd S) \<longrightarrow> fsafe (nth (snd S) i)))"
+
+lemma subst_sequent:
+  fixes I::"('sf, 'sc, 'sz) interp" and \<nu>::"'sz state"
+  assumes good_interp:"is_interp I"
+  assumes Fadmit:"Sadmit \<sigma> (\<Gamma>,\<Delta>)"
+  assumes fsafe:"Ssafe (\<Gamma>,\<Delta>)"
+  assumes ssafe:"ssafe \<sigma>"
+  shows "(\<nu> \<in> seq_sem I (Ssubst (\<Gamma>,\<Delta>) \<sigma>)) = (\<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) (\<Gamma>,\<Delta>))"
+proof -
+  have "seq_sem I (Ssubst (\<Gamma>,\<Delta>) \<sigma>) = undefined" unfolding seq_sem.simps Ssubst.simps seq2fml.simps
+  have 
+    using subst_fml_hp[OF good_interp] Fadmit fsafe ssafe by blast
+
+
+(* TODO: This should be put somewhere more logical *)
+theorem subst_rule:
+  assumes "sound R"
+  assumes "Radmit \<sigma> R"
+  assumes "FVS \<sigma> = {}"
+  shows "sound (Rsubst R \<sigma>)"
+sorry
 
 fun start_proof::"('sf,'sc,'sz) sequent \<Rightarrow> ('sf,'sc,'sz) rule"
 where "start_proof S = ([S], S)"
