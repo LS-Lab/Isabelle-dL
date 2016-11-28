@@ -114,65 +114,38 @@ lemma subst_sequent:
   assumes ssafe:"ssafe \<sigma>"
   shows "(\<nu> \<in> seq_sem I (Ssubst (\<Gamma>,\<Delta>) \<sigma>)) = (\<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) (\<Gamma>,\<Delta>))"
 proof -
-  have dir1:"(\<nu> \<in> seq_sem I (Ssubst (\<Gamma>,\<Delta>) \<sigma>)) \<Longrightarrow> (\<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) (\<Gamma>,\<Delta>))"
-  proof -
-    let ?S = "(Ssubst (\<Gamma>,\<Delta>) \<sigma>)"
-    assume a:"(\<nu> \<in> seq_sem I (Ssubst (\<Gamma>,\<Delta>) \<sigma>))"
-    from a have b:"\<nu> \<in> seq_sem I (fst ?S, snd ?S)" by auto
-    from a have c: "(\<And>\<phi>. List.member (fst ?S) \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>)" sorry
-    obtain \<phi> where d:"(List.member (snd ?S) (Fsubst \<phi> \<sigma>))" and e:"\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)"
-      using seq_semD[OF b c] sorry
-    have fsafe:"fsafe \<phi>" using d Ssafe 
-      apply (auto simp add: Ssafe_def)
-      sorry
-    have Fadmit:"Fadmit \<sigma> \<phi>" using Sadmit unfolding Sadmit_def sorry
-    from d have d':"(List.member \<Delta> \<phi>)" 
-      sorry
-(*      apply(induction \<Delta>)
-      subgoal by (simp add: member_rec(2))
-      apply(simp add: member_rec)
-      apply(erule disjE)
-      subgoal for a \<Delta> 
-        using member_rec sledgehammer
-        apply (auto simp add: member_rec) sorry
-      subgoal for a \<Delta> by (auto simp add: member_rec)
-      using member_rec sorry
-      apply(auto simp add: member_rec)*)
-
-    from e have e':"\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>" 
-      using subst_fml[OF good_interp Fadmit fsafe ssafe]  by auto
-    show "(\<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) (\<Gamma>,\<Delta>))"
-      using seq_semI[OF d' e'] by auto
+  let ?f = "(seq2fml (\<Gamma>, \<Delta>))"
+  have subst_eqG:"Fsubst (foldr op && \<Gamma> TT) \<sigma> = foldr op && (map (\<lambda>\<phi>. Fsubst \<phi> \<sigma>) \<Gamma>) TT"
+    by(induction \<Gamma>, auto simp add: TT_def)
+  have subst_eqD:"Fsubst (foldr op || \<Delta> FF) \<sigma> = foldr op || (map (\<lambda>\<phi>. Fsubst \<phi> \<sigma>) \<Delta>) FF"
+    by(induction \<Delta>, auto simp add: FF_def Or_def)
+  have subst_eq:"Fsubst ?f \<sigma> = (seq2fml (Ssubst (\<Gamma>, \<Delta>) \<sigma>))"
+    using subst_eqG subst_eqD 
+    by (auto simp add: Implies_def Or_def)
+  have fsafeG:"fsafe (foldr op && \<Gamma> TT)" 
+    using Ssafe apply(induction \<Gamma>, auto simp add: Ssafe_def TT_def)
+    by fastforce
+  have fsafeD:"fsafe (foldr op || \<Delta> FF)" 
+    using Ssafe Or_def apply(induction \<Delta>, auto simp add: Ssafe_def FF_def Or_def)
+    by fastforce
+  have fsafe:"fsafe ?f" 
+    using fsafeD fsafeG by (auto simp add: Implies_def Or_def)
+  have FadmitG:"Fadmit \<sigma> (foldr op && \<Gamma> TT)"
+    using Sadmit Or_def apply(induction \<Gamma>, auto simp add: Sadmit_def TT_def Or_def)
+    by fastforce
+  have FadmitD:"Fadmit \<sigma> (foldr op || \<Delta> FF)"
+    using Sadmit Or_def apply(induction \<Delta>, auto simp add: Sadmit_def FF_def Or_def)
+    by fastforce
+  have Fadmit:"Fadmit \<sigma> ?f" 
+    using FadmitG FadmitD unfolding Implies_def
+    by (simp add: Implies_def Or_def)
+  have "(\<nu> \<in> fml_sem I (Fsubst ?f \<sigma>)) 
+       =(\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) (seq2fml (\<Gamma>, \<Delta>)))"
+    using subst_fml[OF good_interp Fadmit fsafe ssafe]
+    by auto
+  then show ?thesis
+    using subst_eq by auto
   qed
-  have dir2:"(\<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) (\<Gamma>,\<Delta>)) \<Longrightarrow> (\<nu> \<in> seq_sem I (Ssubst (\<Gamma>,\<Delta>) \<sigma>))"
-      proof -
-    let ?S = "(Ssubst (\<Gamma>,\<Delta>) \<sigma>)"
-    assume a:"(\<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) (\<Gamma>,\<Delta>))"
-    have nice_impl:"((\<And>\<phi>. List.member (fst ?S) \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>) \<Longrightarrow> (\<exists>\<psi>. List.member (snd ?S) \<psi> \<and> \<nu> \<in> fml_sem I \<psi>))"
-      sorry
-    from a have b:"\<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) (\<Gamma>, \<Delta>)" by auto
-    from a have c: "(\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>)" 
-      using seq_semD'[OF a] apply auto
-      sorry
-    obtain \<phi> where d:"(List.member \<Delta>  \<phi>)" and e:"\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>"
-      using seq_semD[OF b c] by auto
-    from d obtain di where di:"di < length \<Delta> \<and> \<Delta> ! di = \<phi>"
-      by (meson in_set_conv_nth in_set_member)
-    have fsafe:"fsafe \<phi>" using d Ssafe 
-      using di by (auto simp add: Ssafe_def)
-    have Fadmit:"Fadmit \<sigma> \<phi>" using di Sadmit unfolding Sadmit_def by auto
-    from d have d':"(List.member (snd ?S) (Fsubst \<phi> \<sigma>))" 
-      by(induction \<Delta>, auto simp add: member_rec)
-    from e have e':"\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>" 
-      using subst_fml[OF good_interp Fadmit fsafe ssafe]  by auto
-    show "(\<nu> \<in> seq_sem I (Ssubst (\<Gamma>,\<Delta>) \<sigma>))"
-      using seq_semI  d' e'
-      by (simp add: Fadmit fsafe good_interp ssafe subst_fml)
-    qed
-  show ?thesis
-    using dir1 dir2 by auto
-qed
-
 
 lemma soundI_mem:"(\<And>I. is_interp I \<Longrightarrow> (\<And>\<phi>. List.member SG \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV) \<Longrightarrow> seq_sem I C = UNIV) \<Longrightarrow> sound (SG,C)"
   apply (auto simp add: sound_def)
