@@ -26,7 +26,47 @@ where
   
 fun seq_sem ::"('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sc, 'sz) sequent \<Rightarrow> 'sz state set"
 where "seq_sem I S = fml_sem I (seq2fml S)"
- 
+
+lemma and_foldl_sem:"\<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> (\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>)"
+  by(induction \<Gamma>, auto simp add: member_rec)
+
+lemma and_foldl_sem_conv:"(\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr And \<Gamma> TT)"
+  by(induction \<Gamma>, auto simp add: member_rec)
+
+lemma or_foldl_sem:"List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I (foldr Or \<Gamma> FF)"
+  by(induction \<Gamma>, auto simp add: member_rec)
+
+lemma or_foldl_sem_conv:"\<nu> \<in> fml_sem I (foldr Or \<Gamma> FF) \<Longrightarrow> \<exists> \<phi>. \<nu> \<in> fml_sem I \<phi> \<and> List.member \<Gamma> \<phi>"
+  by(induction \<Gamma>, auto simp add: member_rec)
+
+lemma seq_semI':"(\<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr Or \<Delta> FF)) \<Longrightarrow> \<nu> \<in> seq_sem I (\<Gamma>,\<Delta>)"
+  by auto 
+
+lemma seq_semD':"\<And>P. \<nu> \<in> seq_sem I (\<Gamma>,\<Delta>) \<Longrightarrow> ((\<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr Or \<Delta> FF)) \<Longrightarrow> P) \<Longrightarrow> P"
+  by simp
+
+definition sublist::"'a list \<Rightarrow> 'a list \<Rightarrow> bool"
+where "sublist A B \<equiv> (\<forall>x. List.member A x \<longrightarrow> List.member B x)"
+
+lemma sublistI:"(\<And>x. List.member A x \<Longrightarrow> List.member B x) \<Longrightarrow> sublist A B"
+  unfolding sublist_def by auto
+
+lemma \<Gamma>_sub_sem:"sublist \<Gamma>1 \<Gamma>2 \<Longrightarrow> \<nu> \<in> fml_sem I (foldr And \<Gamma>2 TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr And \<Gamma>1 TT)"
+  unfolding sublist_def 
+  by (smt and_foldl_sem and_foldl_sem_conv)
+
+lemma seq_semI:"List.member \<Delta> \<psi> \<Longrightarrow>((\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>) \<Longrightarrow> \<nu> \<in> fml_sem I \<psi>) \<Longrightarrow> \<nu> \<in> seq_sem I (\<Gamma>,\<Delta>)"
+  apply(rule seq_semI')
+  using and_foldl_sem[of \<nu> I \<Gamma>] or_foldl_sem by blast
+
+lemma seq_semD:"\<nu> \<in> seq_sem I (\<Gamma>,\<Delta>) \<Longrightarrow> (\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>) \<Longrightarrow> \<exists>\<phi>. (List.member \<Delta> \<phi>) \<and>\<nu> \<in> fml_sem I \<phi> "
+  apply(rule seq_semD')
+  using and_foldl_sem_conv or_foldl_sem_conv
+  by blast+
+
+lemma seq_MP:"\<nu> \<in> seq_sem I (\<Gamma>,\<Delta>) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr Or \<Delta> FF)"
+  by(induction \<Delta>, auto)
+
 definition seq_valid
 where "seq_valid S \<equiv> \<forall>I. is_interp I \<longrightarrow> seq_sem I S = UNIV"  
 
@@ -65,23 +105,205 @@ where "Ssafe S \<longleftrightarrow>((\<forall>i. i \<ge> 0 \<longrightarrow> i 
 lemma subst_sequent:
   fixes I::"('sf, 'sc, 'sz) interp" and \<nu>::"'sz state"
   assumes good_interp:"is_interp I"
-  assumes Fadmit:"Sadmit \<sigma> (\<Gamma>,\<Delta>)"
-  assumes fsafe:"Ssafe (\<Gamma>,\<Delta>)"
+  assumes Sadmit:"Sadmit \<sigma> (\<Gamma>,\<Delta>)"
+  assumes Ssafe:"Ssafe (\<Gamma>,\<Delta>)"
   assumes ssafe:"ssafe \<sigma>"
   shows "(\<nu> \<in> seq_sem I (Ssubst (\<Gamma>,\<Delta>) \<sigma>)) = (\<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) (\<Gamma>,\<Delta>))"
 proof -
-  have "seq_sem I (Ssubst (\<Gamma>,\<Delta>) \<sigma>) = undefined" unfolding seq_sem.simps Ssubst.simps seq2fml.simps
-  have 
-    using subst_fml_hp[OF good_interp] Fadmit fsafe ssafe by blast
+  have dir1:"(\<nu> \<in> seq_sem I (Ssubst (\<Gamma>,\<Delta>) \<sigma>)) \<Longrightarrow> (\<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) (\<Gamma>,\<Delta>))"
+  proof -
+    let ?S = "(Ssubst (\<Gamma>,\<Delta>) \<sigma>)"
+    assume a:"(\<nu> \<in> seq_sem I (Ssubst (\<Gamma>,\<Delta>) \<sigma>))"
+    from a have b:"\<nu> \<in> seq_sem I (fst ?S, snd ?S)" by auto
+    from a have c: "(\<And>\<phi>. List.member (fst ?S) \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>)" sorry
+    obtain \<phi> where d:"(List.member (snd ?S) (Fsubst \<phi> \<sigma>))" and e:"\<nu> \<in> fml_sem I (Fsubst \<phi> \<sigma>)"
+      using seq_semD[OF b c] sorry
+    have fsafe:"fsafe \<phi>" using d Ssafe 
+      apply (auto simp add: Ssafe_def)
+      sorry
+    have Fadmit:"Fadmit \<sigma> \<phi>" using Sadmit unfolding Sadmit_def sorry
+    from d have d':"(List.member \<Delta> \<phi>)" 
+      sorry
+(*      apply(induction \<Delta>)
+      subgoal by (simp add: member_rec(2))
+      apply(simp add: member_rec)
+      apply(erule disjE)
+      subgoal for a \<Delta> 
+        using member_rec sledgehammer
+        apply (auto simp add: member_rec) sorry
+      subgoal for a \<Delta> by (auto simp add: member_rec)
+      using member_rec sorry
+      apply(auto simp add: member_rec)*)
 
+    from e have e':"\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>" 
+      using subst_fml[OF good_interp Fadmit fsafe ssafe]  by auto
+    show "(\<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) (\<Gamma>,\<Delta>))"
+      using seq_semI[OF d' e'] by auto
+  qed
+  have dir2:"(\<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) (\<Gamma>,\<Delta>)) \<Longrightarrow> (\<nu> \<in> seq_sem I (Ssubst (\<Gamma>,\<Delta>) \<sigma>))"
+      proof -
+    let ?S = "(Ssubst (\<Gamma>,\<Delta>) \<sigma>)"
+    assume a:"(\<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) (\<Gamma>,\<Delta>))"
+    have nice_impl:"((\<And>\<phi>. List.member (fst ?S) \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>) \<Longrightarrow> (\<exists>\<psi>. List.member (snd ?S) \<psi> \<and> \<nu> \<in> fml_sem I \<psi>))"
+      sorry
+    from a have b:"\<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) (\<Gamma>, \<Delta>)" by auto
+    from a have c: "(\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>)" 
+      using seq_semD'[OF a] apply auto
+      sorry
+    obtain \<phi> where d:"(List.member \<Delta>  \<phi>)" and e:"\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>"
+      using seq_semD[OF b c] by auto
+    from d obtain di where di:"di < length \<Delta> \<and> \<Delta> ! di = \<phi>"
+      by (meson in_set_conv_nth in_set_member)
+    have fsafe:"fsafe \<phi>" using d Ssafe 
+      using di by (auto simp add: Ssafe_def)
+    have Fadmit:"Fadmit \<sigma> \<phi>" using di Sadmit unfolding Sadmit_def by auto
+    from d have d':"(List.member (snd ?S) (Fsubst \<phi> \<sigma>))" 
+      by(induction \<Delta>, auto simp add: member_rec)
+    from e have e':"\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) \<phi>" 
+      using subst_fml[OF good_interp Fadmit fsafe ssafe]  by auto
+    show "(\<nu> \<in> seq_sem I (Ssubst (\<Gamma>,\<Delta>) \<sigma>))"
+      using seq_semI  d' e'
+      by (simp add: Fadmit fsafe good_interp ssafe subst_fml)
+    qed
+  show ?thesis
+    using dir1 dir2 by auto
+qed
+
+
+lemma soundI_mem:"(\<And>I. is_interp I \<Longrightarrow> (\<And>\<phi>. List.member SG \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV) \<Longrightarrow> seq_sem I C = UNIV) \<Longrightarrow> sound (SG,C)"
+  apply (auto simp add: sound_def)
+  by (metis in_set_conv_nth in_set_member iso_tuple_UNIV_I seq2fml.simps)
+
+lemma soundI_memv:"(\<And>I. is_interp I \<Longrightarrow> (\<And>\<phi> \<nu>. List.member SG \<phi> \<Longrightarrow> \<nu> \<in> seq_sem I \<phi>) \<Longrightarrow> (\<And>\<nu>. \<nu> \<in> seq_sem I C)) \<Longrightarrow> sound (SG,C)"
+  apply(rule soundI_mem)
+  using impl_sem by blast
+
+lemma soundI_memv':"(\<And>I. is_interp I \<Longrightarrow> (\<And>\<phi> \<nu>. List.member SG \<phi> \<Longrightarrow> \<nu> \<in> seq_sem I \<phi>) \<Longrightarrow> (\<And>\<nu>. \<nu> \<in> seq_sem I C)) \<Longrightarrow> R = (SG,C) \<Longrightarrow> sound R"
+  using  soundI_mem
+  using impl_sem by blast
+
+lemma soundD_mem:"sound (SG,C) \<Longrightarrow> (\<And>I. is_interp I \<Longrightarrow> (\<And>\<phi>. List.member SG \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV) \<Longrightarrow> seq_sem I C = UNIV)"
+  apply (auto simp add: sound_def)
+  using in_set_conv_nth in_set_member iso_tuple_UNIV_I seq2fml.simps
+  by (metis seq2fml.elims)
+
+lemma soundD_memv:"sound (SG,C) \<Longrightarrow> (\<And>I. is_interp I \<Longrightarrow> (\<And>\<phi> \<nu>. List.member SG \<phi> \<Longrightarrow> \<nu> \<in> seq_sem I \<phi>) \<Longrightarrow> (\<And>\<nu>. \<nu> \<in> seq_sem I C))"
+  using soundD_mem
+  by (metis UNIV_I UNIV_eq_I)
+
+    
+lemma sound_weaken_gen:"\<And>A B C. sublist A B \<Longrightarrow> sound (A, C) \<Longrightarrow> sound (B,C)"
+  proof (rule soundI_mem)
+    fix A B::"('sf,'sc,'sz) sequent list" 
+      and C::"('sf,'sc,'sz) sequent" 
+      and I::"('sf,'sc,'sz) interp"
+    assume sub:"sublist A B"
+    assume good:"is_interp I"
+    assume "sound (A, C)"
+    then have soundC:"(\<And>\<phi>. List.member A \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV) \<Longrightarrow> seq_sem I C = UNIV"
+      apply simp
+      apply(drule soundD_mem)
+      by (auto simp add: good)
+    assume SG:"(\<And>\<phi>. List.member B \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV)"
+    show "seq_sem I C = UNIV"
+      using soundC SG sub unfolding sublist_def by auto
+  qed
+  
+lemma sound_weaken:"\<And>SG SGS C. sound (SGS, C) \<Longrightarrow> sound (SG # SGS, C)"
+  subgoal for SG SGS C
+    apply(induction SGS)
+    subgoal unfolding sound_def by auto
+    subgoal for SG2 SGS
+      unfolding sound_def 
+      by (metis fst_conv le0 length_Cons not_less_eq nth_Cons_Suc snd_conv)
+    done
+  done
+
+lemma member_filter:"\<And>P. List.member (filter P L) x \<Longrightarrow> List.member L x"
+  apply(induction L, auto)
+  by(metis (full_types) member_rec(1))
+
+lemma nth_member:"n < List.length L \<Longrightarrow> List.member L (List.nth L n)"
+  apply(induction L, auto simp add: member_rec)
+  by (metis in_set_member length_Cons nth_mem set_ConsD)
+
+
+lemma mem_appL:"List.member A x \<Longrightarrow> List.member (A @ B) x"
+  by(induction A, auto simp add: member_rec)
+
+lemma sound_weaken_appR:"\<And>SG SGS C. sound (SG, C) \<Longrightarrow> sound (SG @ SGS, C)"
+  subgoal for SG SGS C
+    apply(rule sound_weaken_gen)
+    apply(auto)
+    unfolding sublist_def apply(rule allI)
+    subgoal for x
+      using mem_appL[of SG x SGS] by auto 
+    done
+  done
 
 (* TODO: This should be put somewhere more logical *)
 theorem subst_rule:
-  assumes "sound R"
-  assumes "Radmit \<sigma> R"
-  assumes "FVS \<sigma> = {}"
+  assumes sound:"sound R"
+  assumes Radmit:"Radmit \<sigma> R"
+  assumes FVS:"FVS \<sigma> = {}"
+  assumes ssafe:"ssafe \<sigma>"
   shows "sound (Rsubst R \<sigma>)"
-sorry
+proof -
+  obtain SG and C where Rdef:"R = (SG,C)" by (cases R, auto)
+  obtain SG' and C' where Rdef':"Rsubst R \<sigma> = (SG',C')" by (cases R, auto)
+  obtain \<Gamma>C and \<Delta>C where Cdef:"C = (\<Gamma>C, \<Delta>C)" by (cases C, auto)
+  obtain \<Gamma>C' and \<Delta>C' where C'def:"C' = (\<Gamma>C', \<Delta>C')" by (cases C', auto)
+  have CC':"(Ssubst (\<Gamma>C, \<Delta>C) \<sigma>) = (\<Gamma>C', \<Delta>C')"
+    using Rdef Rdef' Cdef C'def by auto
+  have "\<And>I \<nu>. is_interp I \<Longrightarrow> (\<And>\<Gamma> \<Delta> \<omega>  . List.member SG' (\<Gamma>, \<Delta>) \<Longrightarrow> \<omega> \<in> seq_sem I (\<Gamma>, \<Delta>)) \<Longrightarrow> \<nu> \<in> seq_sem I C'"
+  proof -
+    fix I::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    assume good_interp:"is_interp I"
+    assume prems:"(\<And>\<Gamma> \<Delta> \<omega>. List.member SG' (\<Gamma>, \<Delta>) \<Longrightarrow> \<omega> \<in> seq_sem I (\<Gamma>, \<Delta>))"
+    have good_interp':"\<And>\<omega>. is_interp (adjoint I \<sigma> \<omega>)"
+      using adjoint_safe[OF good_interp ] ssafe[unfolded ssafe_def] by auto
+    have sound:"\<And>\<omega>. (\<And>\<phi> \<nu> . List.member SG \<phi> \<Longrightarrow> \<nu> \<in> seq_sem (adjoint I \<sigma> \<omega>) \<phi>) \<Longrightarrow> \<omega> \<in> seq_sem (adjoint I \<sigma> \<omega>) (\<Gamma>C, \<Delta>C)"
+      using soundD_memv[of SG C] sound good_interp' Rdef Cdef by auto
+    have SadmitC:"Sadmit \<sigma> (\<Gamma>C, \<Delta>C)" sorry
+    have SsafeC:"Ssafe (\<Gamma>C, \<Delta>C)" sorry
+    have seq_sem:"\<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) (\<Gamma>C, \<Delta>C)"
+    proof(rule sound)
+      fix S :: "('sf,'sc,'sz) sequent" and \<nu>'
+      assume mem:"List.member SG S"
+      obtain \<Gamma>S \<Delta>S where Sdef:"S = (\<Gamma>S, \<Delta>S)" by (cases S, auto)
+      have SadmitS:"Sadmit \<sigma> (\<Gamma>S, \<Delta>S)" sorry
+      have SsafeS:"Ssafe (\<Gamma>S, \<Delta>S)" sorry
+      have map_mem:"\<And>f L x. List.member L x \<Longrightarrow> List.member (map f L) (f x)"
+        subgoal for f L x 
+          by (induction L, auto simp add: member_rec)
+        done
+      let ?S' = "(Ssubst (\<Gamma>S, \<Delta>S) \<sigma>)"
+      have eq:"Ssubst S \<sigma> = (map (\<lambda>\<phi>. Fsubst \<phi> \<sigma>) \<Gamma>S, map (\<lambda>\<phi>. Fsubst \<phi> \<sigma>) \<Delta>S)" 
+        using Sdef by auto
+      from Sdef have mem':"List.member SG' (fst ?S', snd ?S')"
+        using mem Rdef Rdef' eq map_mem[of SG S "(\<lambda>x. Ssubst x \<sigma>)"] by auto
+      have "\<nu>' \<in> seq_sem I (fst ?S', snd ?S')" by (rule prems[OF mem', of \<nu>'])
+      then have "\<nu>' \<in> seq_sem (adjoint I \<sigma> \<nu>') S"
+        using subst_sequent[OF good_interp SadmitS SsafeS ssafe, of \<nu>']
+        Sdef by auto
+      have VA:"Vagree \<nu> \<nu>' (FVS \<sigma>)" using FVS unfolding Vagree_def by auto
+      show "\<nu>' \<in> seq_sem (local.adjoint I \<sigma> \<nu>) S"
+        using adjoint_consequence VA ssafe[unfolded ssafe_def]
+        by (metis \<open>\<nu>' \<in> seq_sem (local.adjoint I \<sigma> \<nu>') S\<close> dfree_is_dsafe)
+      qed
+    have "\<nu> \<in> seq_sem I (\<Gamma>C', \<Delta>C')"
+      using subst_sequent[OF good_interp SadmitC SsafeC ssafe, of \<nu>] seq_sem Cdef C'def CC'
+      by auto
+    then show  "\<nu> \<in> seq_sem I C'" using C'def by auto
+    qed
+  then show ?thesis
+    apply(rule soundI_memv')
+    using Rdef' by auto
+qed
+  
+  
+(*    using subst_sequent sound Radmit FVS sledgehammer
+sorry*)
 
 fun start_proof::"('sf,'sc,'sz) sequent \<Rightarrow> ('sf,'sc,'sz) rule"
 where "start_proof S = ([S], S)"
@@ -224,7 +446,43 @@ where "close L x = filter (\<lambda>y. y \<noteq> x) L"
 
 fun closeI ::"'a list \<Rightarrow> nat \<Rightarrow>'a list"
 where "closeI L i = close L (nth L i)"
-  
+
+lemma close_sub:"sublist (close \<Gamma> \<phi>) \<Gamma>"
+  apply (auto simp add: sublist_def)
+  using member_filter by fastforce
+
+lemma close_app_comm:"close (A @ B) x  = close A x @ close B x"
+  by auto
+
+lemma close_provable_sound:"sound (SG, C) \<Longrightarrow> sound (close SG \<phi>, \<phi>) \<Longrightarrow> sound (close SG \<phi>, C)"
+  proof (rule soundI_mem)
+    fix I::"('sf,'sc,'sz) interp"
+    assume S1:"sound (SG, C)"
+    assume S2:"sound (close SG \<phi>, \<phi>)"
+    assume good:"is_interp I"
+    assume SGCs:"(\<And>\<phi>'. List.member (close SG \<phi>) \<phi>' \<Longrightarrow> seq_sem I \<phi>' = UNIV)"
+    have S\<phi>:"seq_sem I \<phi> = UNIV"
+      using S2 apply simp
+      apply(drule soundD_mem)
+      using good apply auto
+      using SGCs UNIV_I by fastforce
+    have mem_close:"\<And>P. List.member SG P \<Longrightarrow> P \<noteq> \<phi> \<Longrightarrow> List.member (close SG \<phi>) P"
+      by(induction SG, auto simp add: member_rec)
+    have SGs:"\<And>P. List.member SG P \<Longrightarrow> seq_sem I P = UNIV"
+      subgoal for P
+        apply(cases "P = \<phi>")
+        subgoal using S\<phi> by auto
+        subgoal using mem_close[of P] SGCs by auto
+        done
+      done
+    show "seq_sem I C = UNIV"
+      using S1 apply simp
+      apply(drule soundD_mem)
+      using good apply auto
+      using SGs apply auto
+      using impl_sem by blast
+    qed
+
 fun Lrule_result :: "lrule \<Rightarrow> nat \<Rightarrow> ('sf, 'sc, 'sz) sequent \<Rightarrow> ('sf, 'sc, 'sz) sequent list"
 where "Lrule_result AndL j (A,S) = (case (nth A j) of And p q \<Rightarrow> [(close ([p, q] @ A) (nth A j), S)])"
   | "Lrule_result ImplyL j (A,S) = (case (nth A j) of Not (And (Not q) (Not (Not p))) \<Rightarrow> 
@@ -369,116 +627,6 @@ where
 
 inductive_simps Proof_ok_simps[prover]: "proof_ok (D,S)"
 
-definition sublist::"'a list \<Rightarrow> 'a list \<Rightarrow> bool"
-where "sublist A B \<equiv> (\<forall>x. List.member A x \<longrightarrow> List.member B x)"
-
-lemma sublistI:"(\<And>x. List.member A x \<Longrightarrow> List.member B x) \<Longrightarrow> sublist A B"
-  unfolding sublist_def by auto
-
-lemma soundI_mem:"(\<And>I. is_interp I \<Longrightarrow> (\<And>\<phi>. List.member SG \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV) \<Longrightarrow> seq_sem I C = UNIV) \<Longrightarrow> sound (SG,C)"
-  apply (auto simp add: sound_def)
-  by (metis in_set_conv_nth in_set_member iso_tuple_UNIV_I seq2fml.simps)
-
-lemma soundI_memv:"(\<And>I. is_interp I \<Longrightarrow> (\<And>\<phi> \<nu>. List.member SG \<phi> \<Longrightarrow> \<nu> \<in> seq_sem I \<phi>) \<Longrightarrow> (\<And>\<nu>. \<nu> \<in> seq_sem I C)) \<Longrightarrow> sound (SG,C)"
-  apply(rule soundI_mem)
-  using impl_sem by blast
-
-lemma soundD_mem:"sound (SG,C) \<Longrightarrow> (\<And>I. is_interp I \<Longrightarrow> (\<And>\<phi>. List.member SG \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV) \<Longrightarrow> seq_sem I C = UNIV)"
-  apply (auto simp add: sound_def)
-  using in_set_conv_nth in_set_member iso_tuple_UNIV_I seq2fml.simps
-  by (metis seq2fml.elims)
-
-lemma soundD_memv:"sound (SG,C) \<Longrightarrow> (\<And>I. is_interp I \<Longrightarrow> (\<And>\<phi> \<nu>. List.member SG \<phi> \<Longrightarrow> \<nu> \<in> seq_sem I \<phi>) \<Longrightarrow> (\<And>\<nu>. \<nu> \<in> seq_sem I C))"
-  using soundD_mem
-  by (metis UNIV_I UNIV_eq_I)
-
-lemma close_provable_sound:"sound (SG, C) \<Longrightarrow> sound (close SG \<phi>, \<phi>) \<Longrightarrow> sound (close SG \<phi>, C)"
-  proof (rule soundI_mem)
-    fix I::"('sf,'sc,'sz) interp"
-    assume S1:"sound (SG, C)"
-    assume S2:"sound (close SG \<phi>, \<phi>)"
-    assume good:"is_interp I"
-    assume SGCs:"(\<And>\<phi>'. List.member (close SG \<phi>) \<phi>' \<Longrightarrow> seq_sem I \<phi>' = UNIV)"
-    have S\<phi>:"seq_sem I \<phi> = UNIV"
-      using S2 apply simp
-      apply(drule soundD_mem)
-      using good apply auto
-      using SGCs UNIV_I by fastforce
-    have mem_close:"\<And>P. List.member SG P \<Longrightarrow> P \<noteq> \<phi> \<Longrightarrow> List.member (close SG \<phi>) P"
-      by(induction SG, auto simp add: member_rec)
-    have SGs:"\<And>P. List.member SG P \<Longrightarrow> seq_sem I P = UNIV"
-      subgoal for P
-        apply(cases "P = \<phi>")
-        subgoal using S\<phi> by auto
-        subgoal using mem_close[of P] SGCs by auto
-        done
-      done
-    show "seq_sem I C = UNIV"
-      using S1 apply simp
-      apply(drule soundD_mem)
-      using good apply auto
-      using SGs apply auto
-      using impl_sem by blast
-    qed
-    
-lemma sound_weaken_gen:"\<And>A B C. sublist A B \<Longrightarrow> sound (A, C) \<Longrightarrow> sound (B,C)"
-  proof (rule soundI_mem)
-    fix A B::"('sf,'sc,'sz) sequent list" 
-      and C::"('sf,'sc,'sz) sequent" 
-      and I::"('sf,'sc,'sz) interp"
-    assume sub:"sublist A B"
-    assume good:"is_interp I"
-    assume "sound (A, C)"
-    then have soundC:"(\<And>\<phi>. List.member A \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV) \<Longrightarrow> seq_sem I C = UNIV"
-      apply simp
-      apply(drule soundD_mem)
-      by (auto simp add: good)
-    assume SG:"(\<And>\<phi>. List.member B \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV)"
-    show "seq_sem I C = UNIV"
-      using soundC SG sub unfolding sublist_def by auto
-  qed
-  
-lemma sound_weaken:"\<And>SG SGS C. sound (SGS, C) \<Longrightarrow> sound (SG # SGS, C)"
-  subgoal for SG SGS C
-    apply(induction SGS)
-    subgoal unfolding sound_def by auto
-    subgoal for SG2 SGS
-      unfolding sound_def 
-      by (metis fst_conv le0 length_Cons not_less_eq nth_Cons_Suc snd_conv)
-    done
-  done
-
-lemma member_filter:"\<And>P. List.member (filter P L) x \<Longrightarrow> List.member L x"
-  apply(induction L, auto)
-  by(metis (full_types) member_rec(1))
-
-lemma close_sub:"sublist (close \<Gamma> \<phi>) \<Gamma>"
-  apply (auto simp add: sublist_def)
-  using member_filter by fastforce
-
-lemma close_app_comm:"close (A @ B) x  = close A x @ close B x"
-  by auto
-
-lemma nth_member:"n < List.length L \<Longrightarrow> List.member L (List.nth L n)"
-  apply(induction L, auto simp add: member_rec)
-  by (metis in_set_member length_Cons nth_mem set_ConsD)
-
-lemma seq_semI':"(\<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr Or \<Delta> FF)) \<Longrightarrow> \<nu> \<in> seq_sem I (\<Gamma>,\<Delta>)"
-  by auto 
-
-lemma mem_appL:"List.member A x \<Longrightarrow> List.member (A @ B) x"
-  by(induction A, auto simp add: member_rec)
-
-lemma sound_weaken_appR:"\<And>SG SGS C. sound (SG, C) \<Longrightarrow> sound (SG @ SGS, C)"
-  subgoal for SG SGS C
-    apply(rule sound_weaken_gen)
-    apply(auto)
-    unfolding sublist_def apply(rule allI)
-    subgoal for x
-      using mem_appL[of SG x SGS] by auto 
-    done
-  done
-
 named_theorems member_intros "Prove that stuff is in lists"
 
 lemma mem_sing[member_intros]:"\<And>x. List.member [x] x"
@@ -529,29 +677,6 @@ lemma member_singD:"\<And>x P. P x \<Longrightarrow> (\<And>y. List.member [x] y
 
 lemma fst_neq:"A \<noteq> B \<Longrightarrow> (A,C) \<noteq> (B,D)"
   by auto
-
-lemma and_foldl_sem:"\<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> (\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>)"
-  by(induction \<Gamma>, auto simp add: member_rec)
-
-lemma and_foldl_sem_conv:"(\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr And \<Gamma> TT)"
-  by(induction \<Gamma>, auto simp add: member_rec)
-
-lemma or_foldl_sem:"List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I (foldr Or \<Gamma> FF)"
-  by(induction \<Gamma>, auto simp add: member_rec)
-
-lemma or_foldl_sem_conv:"\<nu> \<in> fml_sem I (foldr Or \<Gamma> FF) \<Longrightarrow> \<exists> \<phi>. \<nu> \<in> fml_sem I \<phi> \<and> List.member \<Gamma> \<phi>"
-  by(induction \<Gamma>, auto simp add: member_rec)
-
-lemma \<Gamma>_sub_sem:"sublist \<Gamma>1 \<Gamma>2 \<Longrightarrow> \<nu> \<in> fml_sem I (foldr And \<Gamma>2 TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr And \<Gamma>1 TT)"
-  unfolding sublist_def 
-  by (smt and_foldl_sem and_foldl_sem_conv)
-
-lemma seq_semI:"List.member \<Delta> \<psi> \<Longrightarrow>((\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>) \<Longrightarrow> \<nu> \<in> fml_sem I \<psi>) \<Longrightarrow> \<nu> \<in> seq_sem I (\<Gamma>,\<Delta>)"
-  apply(rule seq_semI')
-  using and_foldl_sem[of \<nu> I \<Gamma>] or_foldl_sem by blast
-  
-lemma seq_MP:"\<nu> \<in> seq_sem I (\<Gamma>,\<Delta>) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr Or \<Delta> FF)"
-  by(induction \<Delta>, auto)
   
 lemma lrule_sound: "lrule_ok SG C i j L \<Longrightarrow> i < length SG \<Longrightarrow> j < length (fst (SG ! i)) \<Longrightarrow> sound (SG,C) \<Longrightarrow> sound (close (append SG (Lrule_result L j (nth SG i))) (nth SG i), C)"
 proof(induction rule: lrule_ok.induct)
