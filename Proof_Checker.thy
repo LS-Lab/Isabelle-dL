@@ -1657,12 +1657,19 @@ where "SystemConcl =
   ])"
 
 definition SystemDICut :: "('sf,'sc,'sz) formula"
-where "SystemDICut = 
+  where "SystemDICut =
+  Implies
+  (Implies TT ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]]
+     (Geq (Differential (Var vid1)) (Differential (Const 0)))))
+  (Implies
+     (Implies TT (Geq (Var vid1) (Const 0)))
+     ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]](Geq (Var vid1) (Const 0))))"
+(*
     (Implies (Geq (Var vid1) (Const 0)) 
-    (Implies (And TT ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]]
-    (Geq (Differential (Var vid1)) (Differential (Const 0)))
-    )) ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]](Geq (Var vid1) (Const 0)))))"
-  
+      (Implies (And TT ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]]
+                  (Geq (Differential (Var vid1)) (Differential (Const 0)))
+   )) ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]](Geq (Var vid1) (Const 0)))))"
+*)  
 definition SystemDCCut::"('sf,'sc,'sz) formula"
 where "SystemDCCut =
 (([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]](Geq (f0 fid1) (Const 0))) \<rightarrow>
@@ -1833,16 +1840,31 @@ lemma CE1pre_valid2:"valid (! (! (Geq (Differential (trm.Var vid1)) (Differentia
 definition SystemDISubst::"('sf,'sc,'sz) subst"
 where "SystemDISubst = 
   \<lparr> SFunctions = (\<lambda>f. 
-    (if      f = fid1 then Some(Function (Inl fid1) empty) 
-     else if f = fid2 then Some(Function (Inr vid1) empty)
-     else if f = fid3 then Some(Const 0)
+    (     if f = fid1 then Some(Function (Inr vid1) empty)
+     else if f = fid2 then Some(Const 0)
      else None)),
     SPredicates = (\<lambda>p. if p = vid1 then Some TT else None),
     SContexts = (\<lambda>_. None),
     SPrograms = (\<lambda>_. None),
-    SODEs = (\<lambda>c. if c = vid1 then Some (OSing vid2 (trm.Var vid1)) else None)
+    SODEs = (\<lambda>c. if c = vid1 then Some (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (trm.Var vid1))) else None)
   \<rparr>"
   
+  (*
+  Implies 
+  (Implies (Prop vid1 empty) ([[EvolveODE (OVar vid1) (Prop vid1 empty)]](Geq (Differential (f1 fid1 vid1)) (Differential (f1 fid2 vid1)))))
+  (Implies
+     (Implies(Prop vid1 empty) (Geq (f1 fid1 vid1) (f1 fid2 vid1)))
+     ([[EvolveODE (OVar vid1) (Prop vid1 empty)]](Geq (f1 fid1 vid1) (f1 fid2 vid1))))"
+*)
+(*
+Implies
+  (Implies TT ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]]
+     (Geq (Differential (Var vid1)) (Differential (Const 0)))))
+  (Implies
+     (Implies TT (Geq (Var vid1) (Const 0)))
+     ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]](Geq (Var vid1) (Const 0))))
+*)
+
 definition SystemDCSubst::"('sf,'sc,'sz) subst"
 where "SystemDCSubst = 
   \<lparr> SFunctions = (\<lambda>
@@ -2057,6 +2079,17 @@ where "SystemProof =
   ,(0, AxSubst Adassign SystemDiffAssignSubst) (* 60 *)
   ])"
 
+
+lemma wherami:"last(snd(proof_take 8 SystemProof)) = undefined"
+  apply (auto simp add: SystemProof_def)
+  sorry
+lemma print_sys_progress:"rule_to_string (proof_result (proof_take 1 SystemProof)) = undefined"
+  unfolding SystemProof_def SystemConcl_def Implies_def Or_def f0_def TT_def Equiv_def SystemDICut_def SystemDCCut_def
+  proof_result.simps deriv_result.simps start_proof.simps  Box_def SystemDCSubst_def SystemVCut_def SystemDECut_def SystemKCut_def SystemEquivCut_def
+  SystemDiffAssignCut_def SystemVCut2_def
+  sorry
+(*  apply (auto simp add:  prover)*)
+  
 lemma system_result_correct:"proof_result SystemProof = 
   ([],
   ([],[Implies (And (Geq (Var vid1) (Const 0)) (Geq (f0 fid1) (Const 0)))
