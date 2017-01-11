@@ -75,7 +75,7 @@ definition DSaxiom :: "('sf, 'sc, 'sz) formula"
 (* 
 (Q \<rightarrow> [c&Q](f(x)' \<ge> g(x)')) 
 \<rightarrow>
-([c&Q](f(x) \<ge> g(x))) <-> (Q \<rightarrow> (f(x) \<ge> g(x))
+([c&Q](f(x) \<ge> g(x))) --> (Q \<rightarrow> (f(x) \<ge> g(x))
 *)
 definition DIGeqaxiom :: "('sf, 'sc, 'sz) formula"
   where [axiom_defs]:"DIGeqaxiom = 
