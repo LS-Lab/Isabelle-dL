@@ -27,15 +27,15 @@ locale ids =
   assumes pne24:"pid2 \<noteq> pid4"
   assumes pne34:"pid3 \<noteq> pid4"
 context ids begin
-  lemma id_simps:
-    "(vid1 = vid2) = False" "(vid2 = vid3) = False" "(vid1 = vid3) = False"
-    "(fid1 = fid2) = False" "(fid2 = fid3) = False" "(fid1 = fid3) = False"
-    "(pid1 = pid2) = False" "(pid2 = pid3) = False" "(pid1 = pid3) = False" 
-    "(pid1 = pid4) = False" "(pid2 = pid4) = False" "(pid3 = pid4) = False"
-    "(vid2 = vid1) = False" "(vid3 = vid2) = False" "(vid3 = vid1) = False"
-    "(fid2 = fid1) = False" "(fid3 = fid2) = False" "(fid3 = fid1) = False"
-    "(pid2 = pid1) = False" "(pid3 = pid2) = False" "(pid3 = pid1) = False" 
-    "(pid4 = pid1) = False" "(pid4 = pid2) = False" "(pid4 = pid3) = False"
-    using vne12 vne23 vne13 fne12 fne23 fne13 pne12 pne23 pne13 pne14 pne24 pne34 by auto
-  end
+lemma id_simps:
+  "(vid1 = vid2) = False" "(vid2 = vid3) = False" "(vid1 = vid3) = False"
+  "(fid1 = fid2) = False" "(fid2 = fid3) = False" "(fid1 = fid3) = False"
+  "(pid1 = pid2) = False" "(pid2 = pid3) = False" "(pid1 = pid3) = False" 
+  "(pid1 = pid4) = False" "(pid2 = pid4) = False" "(pid3 = pid4) = False"
+  "(vid2 = vid1) = False" "(vid3 = vid2) = False" "(vid3 = vid1) = False"
+  "(fid2 = fid1) = False" "(fid3 = fid2) = False" "(fid3 = fid1) = False"
+  "(pid2 = pid1) = False" "(pid3 = pid2) = False" "(pid3 = pid1) = False" 
+  "(pid4 = pid1) = False" "(pid4 = pid2) = False" "(pid4 = pid3) = False"
+  using vne12 vne23 vne13 fne12 fne23 fne13 pne12 pne23 pne13 pne14 pne24 pne34 by auto
+end
 end

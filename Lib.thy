@@ -81,7 +81,8 @@ qed
 
 lift_definition blinfun_vec::"('a::finite \<Rightarrow> 'b::real_normed_vector \<Rightarrow>\<^sub>L real) \<Rightarrow> 'b \<Rightarrow>\<^sub>L (real ^ 'a)" is "(\<lambda>(f::('a \<Rightarrow> 'b \<Rightarrow> real)) (x::'b). \<chi> (i::'a). f i x)"
   by(rule bounded_linear_vec, simp)  
-lemmas [simp] = blinfun_vec.rep_eq
+    
+lemmas blinfun_vec_simps[simp] = blinfun_vec.rep_eq
 
 lemma continuous_blinfun_vec:"(\<And>i. continuous_on UNIV (blinfun_apply (g i))) \<Longrightarrow> continuous_on UNIV (blinfun_vec g)"
   by (simp add: continuous_on_vec_lambda)  
@@ -112,7 +113,7 @@ proof -
     by (simp add: cSUP_upper)
   have "(\<forall>x\<in>R. (f x + g x) \<le> (SUP x:R. f x) + (SUP x:R. g x))"
     apply auto                    
-      subgoal for x using fs[of x] gs[of x] by auto
+    subgoal for x using fs[of x] gs[of x] by auto
     done
   then show ?thesis by (auto simp add: eq)
 qed
@@ -154,88 +155,79 @@ proof (auto simp add:  LIM_def continuous_on_def)
       using conts''[of i] apply auto
       subgoal for \<delta>
         apply(erule allE[where x=x2])
-          using P\<delta>i  \<delta>s[of i] apply (auto simp add: \<delta>s[of i])
-          done
+        using P\<delta>i  \<delta>s[of i] apply (auto simp add: \<delta>s[of i])
         done
       done
+    done
   have "\<And>x2. x2 \<noteq> x1 \<and> dist x2 x1 < ?\<delta> \<Longrightarrow> dist (blinfun_vec (\<lambda>i. f i x2)) (blinfun_vec (\<lambda>i. f i x1)) < \<epsilon>"
-    proof (auto)
-      fix x2
-      assume ne:"x2 \<noteq> x1"
-      assume dist:"\<forall>i. dist x2 x1 < ?\<delta>i i"
-      have dists:"\<And>i. dist x2 x1 < ?\<delta>i i"
-        subgoal for i using dist \<delta>s[of i] by auto done
-      have euclid:"\<And>y. norm(?f x1 y - ?f x2 y) = (setL2 (\<lambda>i. norm(f i x1 y - f i x2 y)) UNIV)"
-        by (simp add: norm_vec_def)
-      have finite:"finite (UNIV::'a set)" by auto
-      have nonempty: "(UNIV::'a set) \<noteq> {}" by auto
-      have nonemptyB: "(UNIV::'b set) \<noteq> {}" by auto
-      have nonemptyR: "(UNIV::real set) \<noteq> {}" by auto
-      have SUP_leq:"\<And>f::('b \<Rightarrow> real). \<And> g::('b \<Rightarrow> real). \<And> S::'b set. S \<noteq> {} \<Longrightarrow> bdd_above (g ` S) \<Longrightarrow> (\<And>x. x \<in> (S::'b set) \<Longrightarrow> ((f x)::real) \<le> ((g x)::real)) \<Longrightarrow> (SUP x:S. f x) \<le> (SUP x:S. g x)"
-        subgoal for f g S
-          apply(rule cSup_mono)
-          apply auto
+  proof (auto)
+    fix x2
+    assume ne:"x2 \<noteq> x1"
+    assume dist:"\<forall>i. dist x2 x1 < ?\<delta>i i"
+    have dists:"\<And>i. dist x2 x1 < ?\<delta>i i"
+      subgoal for i using dist \<delta>s[of i] by auto done
+    have euclid:"\<And>y. norm(?f x1 y - ?f x2 y) = (setL2 (\<lambda>i. norm(f i x1 y - f i x2 y)) UNIV)"
+      by (simp add: norm_vec_def)
+    have finite:"finite (UNIV::'a set)" by auto
+    have nonempty: "(UNIV::'a set) \<noteq> {}" by auto
+    have nonemptyB: "(UNIV::'b set) \<noteq> {}" by auto
+    have nonemptyR: "(UNIV::real set) \<noteq> {}" by auto
+    have SUP_leq:"\<And>f::('b \<Rightarrow> real). \<And> g::('b \<Rightarrow> real). \<And> S::'b set. S \<noteq> {} \<Longrightarrow> bdd_above (g ` S) \<Longrightarrow> (\<And>x. x \<in> (S::'b set) \<Longrightarrow> ((f x)::real) \<le> ((g x)::real)) \<Longrightarrow> (SUP x:S. f x) \<le> (SUP x:S. g x)"
+      by(rule cSup_mono, auto)
+    have SUP_sum_comm':"\<And>R S f . finite (S::'a set) \<Longrightarrow> (R::'d::metric_space set) \<noteq> {} \<Longrightarrow>
+      (\<And>i x. ((f i x)::real) \<ge> 0) \<Longrightarrow>
+      (\<And>i. bdd_above (f i ` R)) \<Longrightarrow>
+      (SUP x:R . (\<Sum>i \<in> S. f i x)) \<le> (\<Sum>i \<in> S. (SUP x:R. f i x))"
+    proof -
+      fix  R::"'d set" and S ::"('a)set"  and f  ::"'a \<Rightarrow> 'd \<Rightarrow> real"
+      assume non:"R \<noteq> {} "
+      assume fin:"finite S"
+      assume every:"(\<And>i x. 0 \<le> f i x)"
+      assume bddF:"\<And>i. bdd_above (f i ` R)"
+      then have bddF':"\<And>i. \<exists>M. \<forall>x \<in>R. f i x \<le> M "
+        unfolding bdd_above_def by auto
+      let ?boundP = "(\<lambda>i M. \<forall>x \<in>R. f i x \<le> M)"
+      let ?bound = "(\<lambda>i::'a. SOME M. \<forall>x \<in>R. f i x \<le> M)"
+      have "\<And>i. \<exists>M. ?boundP i M" using bddF' by auto
+      then have each_bound:"\<And>i. ?boundP i (?bound i)" 
+        subgoal for i using someI[of "?boundP i"] by blast done
+      let ?bigBound = "(\<lambda>F. \<Sum>i\<in>F. (?bound i))"
+      have bddG:"\<And>i::'a. \<And>F. bdd_above ((\<lambda>x. \<Sum>i\<in>F. f i x) ` R)" 
+        subgoal for i F
+          using bddF[of i] unfolding bdd_above_def apply auto
+          apply(rule exI[where x="?bigBound F"])
+          subgoal for M
+            apply auto
+            subgoal for x
+              using each_bound by (simp add: sum_mono)
+            done
           done
         done
-      have SUP_sum_comm':"\<And>R S f . finite (S::'a set) \<Longrightarrow> (R::'d::metric_space set) \<noteq> {} \<Longrightarrow>
-        (\<And>i x. ((f i x)::real) \<ge> 0) \<Longrightarrow>
-        (\<And>i. bdd_above (f i ` R)) \<Longrightarrow>
-        (SUP x:R . (\<Sum>i \<in> S. f i x)) \<le> (\<Sum>i \<in> S. (SUP x:R. f i x))"
-        proof -
-          fix  R::"'d set" and S ::"('a)set"  and f  ::"'a \<Rightarrow> 'd \<Rightarrow> real"
-          assume non:"R \<noteq> {} "
-          assume fin:"finite S"
-          assume every:"(\<And>i x. 0 \<le> f i x)"
-          assume bddF:"\<And>i. bdd_above (f i ` R)"
-          then have bddF':"\<And>i. \<exists>M. \<forall>x \<in>R. f i x \<le> M "
-            unfolding bdd_above_def by auto
-          let ?boundP = "(\<lambda>i M. \<forall>x \<in>R. f i x \<le> M)"
-          let ?bound = "(\<lambda>i::'a. SOME M. \<forall>x \<in>R. f i x \<le> M)"
-          have "\<And>i. \<exists>M. ?boundP i M" using bddF' by auto
-          then have each_bound:"\<And>i. ?boundP i (?bound i)" 
-            subgoal for i using someI[of "?boundP i"] by blast done
-          let ?bigBound = "(\<lambda>F. \<Sum>i\<in>F. (?bound i))"
-          have bddG:"\<And>i::'a. \<And>F. bdd_above ((\<lambda>x. \<Sum>i\<in>F. f i x) ` R)" 
-            subgoal for i F
-              using bddF[of i] unfolding bdd_above_def apply auto
-              apply(rule exI[where x="?bigBound F"])
-              subgoal for M
-                apply auto
-                subgoal for x
-                  using each_bound by (simp add: sum_mono)
-                done
-              done
-            done
-          show "?thesis R S f" using fin assms
-          proof (induct)
-            case empty
-            have "((SUP x:R. \<Sum>i\<in>{}. f i x)::real) \<le> (\<Sum>i\<in>{}. SUP a:R. f i a)"   by (simp add: non)
-            then show ?case by auto
-          next
-            case (insert x F)
-              have "((SUP xa:R. \<Sum>i\<in>insert x F. f i xa)::real) \<le> (SUP xa:R. f x xa +  (\<Sum>i\<in>F. f i xa))"
-                using insert.hyps(2) by auto
-              moreover have "...  \<le> (SUP xa: R. f x xa) + (SUP xa:R. (\<Sum>i\<in>F. f i xa))"
-                apply(rule sup_plus)
-                subgoal by (rule non)
-                subgoal by (rule bddF)
-                subgoal by (rule bddG)
-                done
-              moreover have "... \<le> (SUP xa: R. f x xa) + (\<Sum>i\<in>F. SUP a:R. f i a)"
-                using add_le_cancel_left conts insert.hyps(3) by blast
-              moreover have "... \<le> (\<Sum>i\<in>(insert x F). SUP a:R. f i a)"
-                by (simp add: insert.hyps(2))
-              ultimately have "((SUP xa:R. \<Sum>i\<in>insert x F. f i xa)::real) \<le> (\<Sum>i\<in>(insert x F). SUP a:R. f i a)"
-                by linarith
-            then show ?case by auto
-          qed
-        qed
-      have SUP_sum_comm:"\<And>R S y1 y2 . finite (S::'a set) \<Longrightarrow> (R::'b set) \<noteq> {} \<Longrightarrow> (SUP x:R . (\<Sum>i \<in> S. norm(f i y1 x - f i y2 x)/norm(x))) \<le> (\<Sum>i \<in> S. (SUP x:R. norm(f i y1 x - f i y2 x)/norm(x)))"
-        apply(rule SUP_sum_comm')
-        prefer 4
-        subgoal for R S y1 y2 i
-          unfolding bdd_above_def
-        proof -
+      show "?thesis R S f" using fin assms
+      proof (induct)
+        case empty
+        have "((SUP x:R. \<Sum>i\<in>{}. f i x)::real) \<le> (\<Sum>i\<in>{}. SUP a:R. f i a)"   by (simp add: non)
+        then show ?case by auto
+      next
+        case (insert x F)
+        have "((SUP xa:R. \<Sum>i\<in>insert x F. f i xa)::real) \<le> (SUP xa:R. f x xa +  (\<Sum>i\<in>F. f i xa))"
+          using insert.hyps(2) by auto
+        moreover have "...  \<le> (SUP xa: R. f x xa) + (SUP xa:R. (\<Sum>i\<in>F. f i xa))"
+          by(rule sup_plus, rule non, rule bddF, rule bddG)
+        moreover have "... \<le> (SUP xa: R. f x xa) + (\<Sum>i\<in>F. SUP a:R. f i a)"
+          using add_le_cancel_left conts insert.hyps(3) by blast
+        moreover have "... \<le> (\<Sum>i\<in>(insert x F). SUP a:R. f i a)"
+          by (simp add: insert.hyps(2))
+        ultimately have "((SUP xa:R. \<Sum>i\<in>insert x F. f i xa)::real) \<le> (\<Sum>i\<in>(insert x F). SUP a:R. f i a)"
+          by linarith
+        then show ?case by auto
+      qed
+    qed
+    have SUP_sum_comm:"\<And>R S y1 y2 . finite (S::'a set) \<Longrightarrow> (R::'b set) \<noteq> {} \<Longrightarrow> (SUP x:R . (\<Sum>i \<in> S. norm(f i y1 x - f i y2 x)/norm(x))) \<le> (\<Sum>i \<in> S. (SUP x:R. norm(f i y1 x - f i y2 x)/norm(x)))"
+      apply(rule SUP_sum_comm')
+         apply(auto)[3]
+      proof (unfold bdd_above_def)
+        fix R S y1 y2 i
           { fix rr :: "real \<Rightarrow> real"
             obtain bb :: "real \<Rightarrow> ('b \<Rightarrow> real) \<Rightarrow> 'b set \<Rightarrow> 'b" where
               ff1: "\<And>r f B. r \<notin> f ` B \<or> f (bb r f B) = r"
@@ -245,95 +237,93 @@ proof (auto simp add:  LIM_def continuous_on_def)
                 by (metis (no_types) le_norm_blinfun minus_blinfun.rep_eq)
               then have "\<exists>r. rr r \<le> r \<or> rr r \<notin> (\<lambda>b. norm (blinfun_apply (f i y1) b - blinfun_apply (f i y2) b) / norm b) ` R"
                 using ff1 by meson }
-            then have "\<exists>r. rr r \<le> r \<or> rr r \<notin> (\<lambda>b. norm (blinfun_apply (f i y1) b - blinfun_apply (f i y2) b) / norm b) ` R"
-              by blast }
-          then show "\<exists>r. \<forall>ra\<in>(\<lambda>b. norm (blinfun_apply (f i y1) b - blinfun_apply (f i y2) b) / norm b) ` R. ra \<le> r"
-            by meson
-        qed
-        by auto
-      have SUM_leq:"\<And>S::('a) set. \<And> f g ::('a \<Rightarrow> real). S \<noteq> {} \<Longrightarrow> finite S \<Longrightarrow> (\<And>x. x \<in> S \<Longrightarrow> f x < g x) \<Longrightarrow> (\<Sum>x\<in>S. f x) < (\<Sum>x\<in>S. g x)"
-        by(rule sum_strict_mono, auto)
-      have L2:"\<And>f S. setL2 (\<lambda>x. norm(f x)) S \<le> (\<Sum>x \<in> S. norm(f x))"
-        using setL2_le_sum norm_ge_zero by metis
-      have L2':"\<And>y. (setL2 (\<lambda>i. norm(f i x1 y - f i x2 y)) UNIV)/norm(y) \<le> (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y))/norm(y)"
-        subgoal for y
-          using L2[of "(\<lambda> x. f x x1 y - f x x2 y)" UNIV]
-          by (auto simp add: divide_right_mono)
-        done
-      have "\<And>i. (SUP y:UNIV.  norm((f i x1 - f i x2) y)/norm(y)) = norm(f i x1 - f i x2)"
-        by (simp add: onorm_def norm_blinfun.rep_eq)
-      then have each_norm:"\<And>i. (SUP y:UNIV.  norm(f i x1 y - f i x2 y)/norm(y)) = norm(f i x1 - f i x2)"
-        by (metis (no_types, lifting) SUP_cong blinfun.diff_left)
-      have bounded_linear:"\<And>i. bounded_linear (\<lambda>y. f i x1 y - f i x2 y)" 
-        by (simp add: blinfun.bounded_linear_right bounded_linear_sub)
-      have each_bound:"\<And>i. bdd_above ((\<lambda>y. norm(f i x1 y - f i x2 y)/norm(y)) ` UNIV)"
-        using bounded_linear unfolding bdd_above_def
-        proof -
-          fix i :: 'a
-          { fix rr :: "real \<Rightarrow> real"
-            have "\<And>a r. norm (blinfun_apply (f a x1) r - blinfun_apply (f a x2) r) / norm r \<le> norm (f a x1 - f a x2)"
-              by (metis le_norm_blinfun minus_blinfun.rep_eq)
-            then have "\<And>r R. r \<notin> (\<lambda>r. norm (blinfun_apply (f i x1) r - blinfun_apply (f i x2) r) / norm r) ` R \<or> r \<le> norm (f i x1 - f i x2)"
-              by blast
-            then have "\<exists>r. rr r \<le> r \<or> rr r \<notin> range (\<lambda>r. norm (blinfun_apply (f i x1) r - blinfun_apply (f i x2) r) / norm r)"
-              by blast }
-          then show "\<exists>r. \<forall>ra\<in>range (\<lambda>r. norm (blinfun_apply (f i x1) r - blinfun_apply (f i x2) r) / norm r). ra \<le> r"
-            by meson
-        qed
-      have bdd_above:"(bdd_above ((\<lambda>y. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y)/norm(y))) ` UNIV))"
-        using each_bound unfolding bdd_above_def apply auto
-        proof -
-          assume each:"(\<And>i. \<exists>M. \<forall>x. \<bar>blinfun_apply (f i x1) x - blinfun_apply (f i x2) x\<bar> / norm x \<le> M)"
-          let ?boundP = "(\<lambda>i M. \<forall>x. \<bar>blinfun_apply (f i x1) x - blinfun_apply (f i x2) x\<bar> / norm x \<le> M)"
-          let ?bound = "(\<lambda>i. SOME x. ?boundP i x)"
-          have bounds:"\<And>i. ?boundP i (?bound i)"
-            subgoal for i using each someI[of "?boundP i"] by blast done
-          let ?bigBound = "\<Sum>i\<in>(UNIV::'a set). ?bound i"
-          show "\<exists>M. \<forall>x. (\<Sum>i\<in>UNIV. \<bar>blinfun_apply (f i x1) x - blinfun_apply (f i x2) x\<bar> / norm x) \<le> M"
-            apply(rule exI[where x= ?bigBound])
-            apply auto
-            subgoal for x using bounds by (simp add: sum_mono) done 
-        qed
-      have bdd_above:"(bdd_above ((\<lambda>y. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y))/norm(y)) ` UNIV))"
-        using bdd_above unfolding bdd_above_def apply auto
-      proof -
-        fix M :: real
-        assume a1: "\<forall>x. (\<Sum>i\<in>UNIV. \<bar>blinfun_apply (f i x1) x - blinfun_apply (f i x2) x\<bar> / norm x) \<le> M"
-        { fix bb :: "real \<Rightarrow> 'b"
-          have "\<And>b. (\<Sum>a\<in>UNIV. \<bar>blinfun_apply (f a x1) b - blinfun_apply (f a x2) b\<bar>) / norm b \<le> M"
-            using a1 by (simp add: sum_divide_distrib)
-          then have "\<exists>r. (\<Sum>a\<in>UNIV. \<bar>blinfun_apply (f a x1) (bb r) - blinfun_apply (f a x2) (bb r)\<bar>) / norm (bb r) \<le> r"
-            by blast }
-        then show "\<exists>r. \<forall>b. (\<Sum>a\<in>UNIV. \<bar>blinfun_apply (f a x1) b - blinfun_apply (f a x2) b\<bar>) / norm b \<le> r"
+              then have "\<exists>r. rr r \<le> r \<or> rr r \<notin> (\<lambda>b. norm (blinfun_apply (f i y1) b - blinfun_apply (f i y2) b) / norm b) ` R"
+                by blast }
+        then show "\<exists>r. \<forall>ra\<in>(\<lambda>b. norm (blinfun_apply (f i y1) b - blinfun_apply (f i y2) b) / norm b) ` R. ra \<le> r"
           by meson
-      qed 
-      have "dist (?f x2) (?f x1) = norm((?f x2) - (?f x1))"
-        by (simp add: dist_blinfun_def)
-      moreover have "... = (SUP y:UNIV. norm(?f x1 y - ?f x2 y)/norm(y))"
-        by (metis (no_types, lifting) SUP_cong blinfun.diff_left norm_blinfun.rep_eq norm_minus_commute onorm_def)
-      moreover have "... = (SUP y:UNIV. (setL2 (\<lambda>i. norm(f i x1 y - f i x2 y)) UNIV)/norm(y))"
-        using  euclid by auto
-      moreover have "... \<le> (SUP y:UNIV. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y))/norm(y))"
-        using L2' SUP_cong SUP_leq bdd_above by auto
-      moreover have "... = (SUP y:UNIV. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y)/norm(y)))"
-        by (simp add: sum_divide_distrib)
-      moreover have "... \<le> (\<Sum>i\<in>UNIV. (SUP y:UNIV.  norm(f i x1 y - f i x2 y)/norm(y)))"
-        by(rule SUP_sum_comm[OF finite  nonemptyB, of x1 x2]) 
-      moreover have "... = (\<Sum>i\<in>UNIV. norm(f i x1 - f i x2))"
-        using each_norm by simp
-      moreover have "... = (\<Sum>i\<in>UNIV. dist(f i x1) (f i x2))"
-          by (simp add: dist_blinfun_def)
-      moreover have "... < (\<Sum>i\<in>(UNIV::'a set). \<epsilon> / ?n)"
-        using conts'''[OF ne dists] using SUM_leq[OF nonempty, of "(\<lambda>i.  dist (f i x1) (f i x2))" "(\<lambda>i.  \<epsilon> / ?n)"]
-        by (simp add: dist_commute)
-      moreover have "... = \<epsilon>"
-        by(auto)
-      ultimately show "dist (?f x2) (?f x1) < \<epsilon>"
-        by linarith
+      qed
+    have SUM_leq:"\<And>S::('a) set. \<And> f g ::('a \<Rightarrow> real). S \<noteq> {} \<Longrightarrow> finite S \<Longrightarrow> (\<And>x. x \<in> S \<Longrightarrow> f x < g x) \<Longrightarrow> (\<Sum>x\<in>S. f x) < (\<Sum>x\<in>S. g x)"
+      by(rule sum_strict_mono, auto)
+    have L2:"\<And>f S. setL2 (\<lambda>x. norm(f x)) S \<le> (\<Sum>x \<in> S. norm(f x))"
+      using setL2_le_sum norm_ge_zero by metis
+    have L2':"\<And>y. (setL2 (\<lambda>i. norm(f i x1 y - f i x2 y)) UNIV)/norm(y) \<le> (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y))/norm(y)"
+      subgoal for y
+        using L2[of "(\<lambda> x. f x x1 y - f x x2 y)" UNIV]
+        by (auto simp add: divide_right_mono)
+      done
+    have "\<And>i. (SUP y:UNIV.  norm((f i x1 - f i x2) y)/norm(y)) = norm(f i x1 - f i x2)"
+      by (simp add: onorm_def norm_blinfun.rep_eq)
+    then have each_norm:"\<And>i. (SUP y:UNIV.  norm(f i x1 y - f i x2 y)/norm(y)) = norm(f i x1 - f i x2)"
+      by (metis (no_types, lifting) SUP_cong blinfun.diff_left)
+    have bounded_linear:"\<And>i. bounded_linear (\<lambda>y. f i x1 y - f i x2 y)" 
+      by (simp add: blinfun.bounded_linear_right bounded_linear_sub)
+    have each_bound:"\<And>i. bdd_above ((\<lambda>y. norm(f i x1 y - f i x2 y)/norm(y)) ` UNIV)"
+      using bounded_linear unfolding bdd_above_def
+    proof -
+      fix i :: 'a
+      { fix rr :: "real \<Rightarrow> real"
+        have "\<And>a r. norm (blinfun_apply (f a x1) r - blinfun_apply (f a x2) r) / norm r \<le> norm (f a x1 - f a x2)"
+          by (metis le_norm_blinfun minus_blinfun.rep_eq)
+        then have "\<And>r R. r \<notin> (\<lambda>r. norm (blinfun_apply (f i x1) r - blinfun_apply (f i x2) r) / norm r) ` R \<or> r \<le> norm (f i x1 - f i x2)"
+          by blast
+        then have "\<exists>r. rr r \<le> r \<or> rr r \<notin> range (\<lambda>r. norm (blinfun_apply (f i x1) r - blinfun_apply (f i x2) r) / norm r)"
+          by blast }
+      then show "\<exists>r. \<forall>ra\<in>range (\<lambda>r. norm (blinfun_apply (f i x1) r - blinfun_apply (f i x2) r) / norm r). ra \<le> r"
+        by meson
     qed
+    have bdd_above:"(bdd_above ((\<lambda>y. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y)/norm(y))) ` UNIV))"
+      using each_bound unfolding bdd_above_def apply auto
+    proof -
+      assume each:"(\<And>i. \<exists>M. \<forall>x. \<bar>blinfun_apply (f i x1) x - blinfun_apply (f i x2) x\<bar> / norm x \<le> M)"
+      let ?boundP = "(\<lambda>i M. \<forall>x. \<bar>blinfun_apply (f i x1) x - blinfun_apply (f i x2) x\<bar> / norm x \<le> M)"
+      let ?bound = "(\<lambda>i. SOME x. ?boundP i x)"
+      have bounds:"\<And>i. ?boundP i (?bound i)"
+        subgoal for i using each someI[of "?boundP i"] by blast done
+      let ?bigBound = "\<Sum>i\<in>(UNIV::'a set). ?bound i"
+      show "\<exists>M. \<forall>x. (\<Sum>i\<in>UNIV. \<bar>blinfun_apply (f i x1) x - blinfun_apply (f i x2) x\<bar> / norm x) \<le> M"
+        apply(rule exI[where x= ?bigBound])
+        by(auto simp add: bounds sum_mono) 
+    qed
+    have bdd_above:"(bdd_above ((\<lambda>y. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y))/norm(y)) ` UNIV))"
+      using bdd_above unfolding bdd_above_def apply auto
+    proof -
+      fix M :: real
+      assume a1: "\<forall>x. (\<Sum>i\<in>UNIV. \<bar>blinfun_apply (f i x1) x - blinfun_apply (f i x2) x\<bar> / norm x) \<le> M"
+      { fix bb :: "real \<Rightarrow> 'b"
+        have "\<And>b. (\<Sum>a\<in>UNIV. \<bar>blinfun_apply (f a x1) b - blinfun_apply (f a x2) b\<bar>) / norm b \<le> M"
+          using a1 by (simp add: sum_divide_distrib)
+        then have "\<exists>r. (\<Sum>a\<in>UNIV. \<bar>blinfun_apply (f a x1) (bb r) - blinfun_apply (f a x2) (bb r)\<bar>) / norm (bb r) \<le> r"
+          by blast }
+      then show "\<exists>r. \<forall>b. (\<Sum>a\<in>UNIV. \<bar>blinfun_apply (f a x1) b - blinfun_apply (f a x2) b\<bar>) / norm b \<le> r"
+        by meson
+    qed 
+    have "dist (?f x2) (?f x1) = norm((?f x2) - (?f x1))"
+      by (simp add: dist_blinfun_def)
+    moreover have "... = (SUP y:UNIV. norm(?f x1 y - ?f x2 y)/norm(y))"
+      by (metis (no_types, lifting) SUP_cong blinfun.diff_left norm_blinfun.rep_eq norm_minus_commute onorm_def)
+    moreover have "... = (SUP y:UNIV. (setL2 (\<lambda>i. norm(f i x1 y - f i x2 y)) UNIV)/norm(y))"
+      using  euclid by auto
+    moreover have "... \<le> (SUP y:UNIV. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y))/norm(y))"
+      using L2' SUP_cong SUP_leq bdd_above by auto
+    moreover have "... = (SUP y:UNIV. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y)/norm(y)))"
+      by (simp add: sum_divide_distrib)
+    moreover have "... \<le> (\<Sum>i\<in>UNIV. (SUP y:UNIV.  norm(f i x1 y - f i x2 y)/norm(y)))"
+      by(rule SUP_sum_comm[OF finite  nonemptyB, of x1 x2]) 
+    moreover have "... = (\<Sum>i\<in>UNIV. norm(f i x1 - f i x2))"
+      using each_norm by simp
+    moreover have "... = (\<Sum>i\<in>UNIV. dist(f i x1) (f i x2))"
+      by (simp add: dist_blinfun_def)
+    moreover have "... < (\<Sum>i\<in>(UNIV::'a set). \<epsilon> / ?n)"
+      using conts'''[OF ne dists] using SUM_leq[OF nonempty, of "(\<lambda>i.  dist (f i x1) (f i x2))" "(\<lambda>i.  \<epsilon> / ?n)"]
+      by (simp add: dist_commute)
+    moreover have "... = \<epsilon>"
+      by(auto)
+    ultimately show "dist (?f x2) (?f x1) < \<epsilon>"
+      by linarith
+  qed
   then show "\<exists>s>0. \<forall>x2. x2 \<noteq> x1 \<and> dist x2 x1 < s \<longrightarrow> dist (blinfun_vec (\<lambda>i. f i x2)) (blinfun_vec (\<lambda>i. f i x1)) < \<epsilon>"
     using \<delta> by blast
-  qed
+qed
 
 lemma has_derivative_vec[derivative_intros]:
   assumes "\<And>i. ((\<lambda>x. f i x) has_derivative (\<lambda>h. f' i h)) F"
@@ -351,23 +341,23 @@ lemma has_derivative_proj:
   fixes f::"'a \<Rightarrow> real \<Rightarrow> real"
   assumes assm:"((\<lambda>x. \<chi> i. f i x) has_derivative (\<lambda>h. \<chi> i. f' i h)) F"
   shows "((\<lambda>x. f j x) has_derivative (\<lambda>h. f' j h)) F"
-  proof -
-    have bounded_proj:"bounded_linear (\<lambda> x::(real^'a). x $ j)"
-      by (simp add: bounded_linear_component_cart)
-    show "?thesis"
-      using bounded_linear.has_derivative[OF bounded_proj, of "(\<lambda>x. \<chi> i. f i x)" "(\<lambda>h. \<chi> i. f' i h)", OF assm]
-      by auto
-  qed
+proof -
+  have bounded_proj:"bounded_linear (\<lambda> x::(real^'a). x $ j)"
+    by (simp add: bounded_linear_component_cart)
+  show "?thesis"
+    using bounded_linear.has_derivative[OF bounded_proj, of "(\<lambda>x. \<chi> i. f i x)" "(\<lambda>h. \<chi> i. f' i h)", OF assm]
+    by auto
+qed
 
 lemma has_derivative_proj':
   fixes i::"'a::finite"
   shows "\<forall>x. ((\<lambda> x. x $ i) has_derivative (\<lambda>x::(real^'a). x $ i)) (at x)"
-  proof -
-    have bounded_proj:"bounded_linear (\<lambda> x::(real^'a). x $ i)"
-      by (simp add: bounded_linear_component_cart)
-    show "?thesis"
-      using bounded_proj unfolding has_derivative_def by auto
-  qed
+proof -
+  have bounded_proj:"bounded_linear (\<lambda> x::(real^'a). x $ i)"
+    by (simp add: bounded_linear_component_cart)
+  show "?thesis"
+    using bounded_proj unfolding has_derivative_def by auto
+qed
   
 lemma has_vector_derivative_zero_constant:
   assumes "convex s"
@@ -409,7 +399,7 @@ lemma
   assumes s: "S \<subseteq> T"
   shows "(x solves_ode f) S X"
   apply(rule solves_odeI)
-  using has_vderiv_on_subset s solves_ode_vderivD x apply force
+   using has_vderiv_on_subset s solves_ode_vderivD x apply force
   using assms by (auto intro!: solves_odeI dest!: solves_ode_domainD)
 
 lemma
@@ -418,7 +408,7 @@ lemma
   assumes y: "X \<subseteq> Y"
   shows "(x solves_ode f) T Y"
   apply(rule solves_odeI)
-  using has_vderiv_on_subset y solves_ode_vderivD x apply force
+   using has_vderiv_on_subset y solves_ode_vderivD x apply force
   using assms by (auto intro!: solves_odeI dest!: solves_ode_domainD)
 
 lemma
@@ -428,7 +418,7 @@ lemma
   assumes t0: "t0 \<in> S"
   assumes S: "is_interval S"
   shows "(x usolves_ode f from t0) S X"
-    proof (rule usolves_odeI)
+proof (rule usolves_odeI)
   note usolves_odeD[OF x]
   show "(x solves_ode f) S X" by (rule solves_ode_subset; fact)
   show "t0 \<in> S" "is_interval S" by(fact+)
@@ -460,8 +450,8 @@ proof -
   let ?x0.0 = "\<chi> i::('sz::finite). x"
   interpret ll: ll_on_open "UNIV" "(\<lambda>t x. \<chi> i::('sz::finite). 0)" UNIV
     apply unfold_locales
-    using gt_ex lipschitz_constI
-    by (force simp: interval_def continuous_on_def local_lipschitz_def)+
+        using gt_ex lipschitz_constI
+        by (force simp: interval_def continuous_on_def local_lipschitz_def)+
   have foo1:"?t0.0 \<in> ?T" by auto
   have foo2:"?x0.0 \<in> ?X" by auto
   let ?v = "ll.flow  ?t0.0 ?x0.0"
@@ -472,7 +462,7 @@ proof -
   have sol_help: "(?v solves_ode ?f) (ll.existence_ivl  ?t0.0 ?x0.0) ?X" using solves by auto
   have ivl:"ll.existence_ivl ?t0.0 ?x0.0 = UNIV"
     by (rule ll.existence_ivl_eq_domain)
-     (auto intro!: exI[where x=0] simp: vec_eq_iff)
+       (auto intro!: exI[where x=0] simp: vec_eq_iff)
   have sol: "(?v solves_ode ?f) UNIV ?X" using solves ivl by auto
   have thef0: "\<And>t x. ?f t x $ i = 0" by auto
   have gre:"0 \<le> t" using \<open>0 < t\<close> by auto
@@ -480,7 +470,6 @@ proof -
     by auto
   thus ?thesis by auto
  qed
-
  
 lemma MVT_ivl:
   fixes f::"'a::ordered_euclidean_space\<Rightarrow>'b::ordered_euclidean_space"
@@ -515,8 +504,8 @@ lemma MVT_ivl':
 proof -
   have "f (b + (a - b)) - f b \<ge> J0"
     apply (rule MVT_ivl[OF fderiv ])
-    apply assumption
-    apply (rule J_ivl) apply assumption
+      apply assumption
+     apply (rule J_ivl) apply assumption
     using line_in
     apply (auto simp: diff_le_eq le_diff_eq ac_simps)
     done

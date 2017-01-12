@@ -50,7 +50,10 @@ proof -
     using bounds unfolding bounded_linear_def bounded_linear_axioms_def by auto
   let ?Ki = "(\<lambda>i. SOME K. \<forall>x. norm (f i x) \<le> norm x * K)"
   have each_norm:"\<And>i.  \<forall>x. norm (f i x) \<le> norm x * (?Ki i)"
-    using norms by (smt someI_ex)
+    subgoal for i
+      using norms someI_ex[of "(\<lambda>K.  \<forall>x. norm (f i x) \<le> norm x * K)"]
+      by auto
+      done
   let ?TheK = "(\<Sum> i \<in> (UNIV::'a set).?Ki i)"
   have axes:"\<And>x. (?g x) = (\<Sum> i\<in>(UNIV::'a set). (axis i (f i x)))"
     unfolding axis_def apply(rule vec_extensionality, auto)
