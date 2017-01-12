@@ -116,8 +116,11 @@ lemma constant_deriv_inner:
  shows "FunctionFrechet I id1 (vec_lambda (\<lambda>i. sterm_sem I (empty i) (fst \<nu>))) (vec_lambda(\<lambda>i. frechet I (empty i) (fst \<nu>) (snd \<nu>)))= 0"
   proof -
     have empty_zero:"(vec_lambda(\<lambda>i. frechet I (empty i) (fst \<nu>) (snd \<nu>))) = 0"
-    using local.empty_def Cart_lambda_cong frechet.simps(5) zero_vec_def
-      by smt
+      using local.empty_def Cart_lambda_cong frechet.simps(5) zero_vec_def
+      apply auto
+      apply(rule vec_extensionality)
+      using local.empty_def Cart_lambda_cong frechet.simps(5) zero_vec_def
+      by (simp add: local.empty_def)
     let ?x = "(vec_lambda (\<lambda>i. sterm_sem I (empty i) (fst \<nu>)))"
     from interp
     have has_deriv:"(Functions I id1 has_derivative FunctionFrechet I id1 ?x) (at ?x)"
