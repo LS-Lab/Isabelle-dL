@@ -1,6 +1,6 @@
 theory Lib
 imports
-  "../afp/thys/Ordinary_Differential_Equations/ODE_Analysis"
+  "../afp-devel/thys/Ordinary_Differential_Equations/ODE_Analysis"
 begin
 subsection \<open>Library of assorted things\<close>
 text\<open>General lemmas that don't have anything to do with dL specifically and could be fit for 
@@ -11,7 +11,8 @@ lemma vec_extensionality:"(\<And>i. v$i = w$i) \<Longrightarrow> (v = w)"
 
 lemma norm_axis: "norm (axis i x) = norm x"
   unfolding axis_def norm_vec_def
-  by (simp add: if_distrib[where f=norm] setL2_def if_distrib[where f="\<lambda>x. x\<^sup>2"] setsum.If_cases)
+  unfolding setL2_def
+  by(clarsimp simp add: if_distrib[where f=norm] if_distrib[where f="\<lambda>x. x\<^sup>2"] sum.If_cases)
 
 lemma bounded_linear_axis: "bounded_linear (axis i)"
 proof
@@ -27,10 +28,10 @@ lemma bounded_linear_vec:
   shows "bounded_linear (\<lambda>x. \<chi> i. f i x)"
 proof -
   let ?g = "(\<lambda>x. \<chi> i. f i x)"
-  have additives:"\<And>i. additive (f i)"
+  have additives:"\<And>i. Real_Vector_Spaces.additive (f i)"
     using bounds unfolding bounded_linear_def bounded_linear_axioms_def linear_def by auto
-  have additive:"additive (\<lambda>x. \<chi> i. f i x)"
-    using additives unfolding additive_def apply auto 
+  have additive:"Real_Vector_Spaces.additive (\<lambda>x. \<chi> i. f i x)"
+    using additives unfolding Real_Vector_Spaces.additive_def apply auto 
     by (metis (mono_tags, lifting) Cart_lambda_cong plus_vec_def vec_lambda_beta)
   have scales:"\<And>i. (\<forall>r x. f i (r *\<^sub>R x) = r *\<^sub>R f i x)"
     using bounds unfolding bounded_linear_def bounded_linear_axioms_def linear_def linear_axioms_def by auto
@@ -53,15 +54,15 @@ proof -
   let ?TheK = "(\<Sum> i \<in> (UNIV::'a set).?Ki i)"
   have axes:"\<And>x. (?g x) = (\<Sum> i\<in>(UNIV::'a set). (axis i (f i x)))"
     unfolding axis_def apply(rule vec_extensionality, auto)
-    by (simp add: setsum.delta')
+    by (simp add: sum.delta')
   have triangle:"\<And>x. (\<Sum> i \<in> (UNIV::'a set). norm (axis i (f i x))) \<ge> norm (\<Sum> i \<in> (UNIV::('a::finite) set). axis i (f i x))"
-    using norm_setsum by blast
+    using norm_sum by blast
   have triangle':"\<And>x. (\<Sum> i \<in> (UNIV::'a set). norm (f i x)) \<ge> norm (\<Sum> i \<in> (UNIV::('a::finite) set). axis i (f i x))"
     using norm_axis
-    by (simp add: norm_axis Real_Vector_Spaces.setsum_norm_le)
+    by (simp add: norm_axis Real_Vector_Spaces.sum_norm_le)
   have norms':"\<And>x. (\<Sum> i\<in> (UNIV::'a set). norm (f i x)) \<le> norm x * ?TheK"
     using norms  each_norm axes triangle'
-    by (simp add: setsum_mono setsum_right_distrib)
+    by (simp add: sum_mono sum_distrib_right sum_distrib_left)
   have leq:"\<And>x. norm(?g x) \<le> norm x * ?TheK" using axes triangle' norms' 
     using dual_order.trans by fastforce
   have norm:"(\<exists>K. \<forall>x. norm (\<chi> i. f i x) \<le> norm x * K)"
@@ -69,7 +70,7 @@ proof -
   have linears:"\<And>i. linear (f i)"
     using bounds unfolding bounded_linear_def bounded_linear_axioms_def by auto
   have linear:"linear (\<lambda>x. \<chi> i. f i x)"
-    using linears unfolding linear_def linear_axioms_def using additive scale by  auto
+    using linears unfolding linear_def linear_axioms_def using scale additive by auto
   show ?thesis
     unfolding bounded_linear_def bounded_linear_axioms_def
     using linear norm by auto
@@ -198,7 +199,7 @@ proof (auto simp add:  LIM_def continuous_on_def)
               subgoal for M
                 apply auto
                 subgoal for x
-                  using each_bound by (simp add: setsum_mono)
+                  using each_bound by (simp add: sum_mono)
                 done
               done
             done
@@ -248,9 +249,9 @@ proof (auto simp add:  LIM_def continuous_on_def)
         qed
         by auto
       have SUM_leq:"\<And>S::('a) set. \<And> f g ::('a \<Rightarrow> real). S \<noteq> {} \<Longrightarrow> finite S \<Longrightarrow> (\<And>x. x \<in> S \<Longrightarrow> f x < g x) \<Longrightarrow> (\<Sum>x\<in>S. f x) < (\<Sum>x\<in>S. g x)"
-        by(rule setsum_strict_mono, auto)
+        by(rule sum_strict_mono, auto)
       have L2:"\<And>f S. setL2 (\<lambda>x. norm(f x)) S \<le> (\<Sum>x \<in> S. norm(f x))"
-        using setL2_le_setsum norm_ge_zero by metis
+        using setL2_le_sum norm_ge_zero by metis
       have L2':"\<And>y. (setL2 (\<lambda>i. norm(f i x1 y - f i x2 y)) UNIV)/norm(y) \<le> (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y))/norm(y)"
         subgoal for y
           using L2[of "(\<lambda> x. f x x1 y - f x x2 y)" UNIV]
@@ -288,7 +289,7 @@ proof (auto simp add:  LIM_def continuous_on_def)
           show "\<exists>M. \<forall>x. (\<Sum>i\<in>UNIV. \<bar>blinfun_apply (f i x1) x - blinfun_apply (f i x2) x\<bar> / norm x) \<le> M"
             apply(rule exI[where x= ?bigBound])
             apply auto
-            subgoal for x using bounds by (simp add: setsum_mono) done 
+            subgoal for x using bounds by (simp add: sum_mono) done 
         qed
       have bdd_above:"(bdd_above ((\<lambda>y. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y))/norm(y)) ` UNIV))"
         using bdd_above unfolding bdd_above_def apply auto
@@ -297,7 +298,7 @@ proof (auto simp add:  LIM_def continuous_on_def)
         assume a1: "\<forall>x. (\<Sum>i\<in>UNIV. \<bar>blinfun_apply (f i x1) x - blinfun_apply (f i x2) x\<bar> / norm x) \<le> M"
         { fix bb :: "real \<Rightarrow> 'b"
           have "\<And>b. (\<Sum>a\<in>UNIV. \<bar>blinfun_apply (f a x1) b - blinfun_apply (f a x2) b\<bar>) / norm b \<le> M"
-            using a1 by (simp add: setsum_divide_distrib)
+            using a1 by (simp add: sum_divide_distrib)
           then have "\<exists>r. (\<Sum>a\<in>UNIV. \<bar>blinfun_apply (f a x1) (bb r) - blinfun_apply (f a x2) (bb r)\<bar>) / norm (bb r) \<le> r"
             by blast }
         then show "\<exists>r. \<forall>b. (\<Sum>a\<in>UNIV. \<bar>blinfun_apply (f a x1) b - blinfun_apply (f a x2) b\<bar>) / norm b \<le> r"
@@ -312,7 +313,7 @@ proof (auto simp add:  LIM_def continuous_on_def)
       moreover have "... \<le> (SUP y:UNIV. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y))/norm(y))"
         using L2' SUP_cong SUP_leq bdd_above by auto
       moreover have "... = (SUP y:UNIV. (\<Sum>i\<in>UNIV. norm(f i x1 y - f i x2 y)/norm(y)))"
-        by (simp add: setsum_divide_distrib)
+        by (simp add: sum_divide_distrib)
       moreover have "... \<le> (\<Sum>i\<in>UNIV. (SUP y:UNIV.  norm(f i x1 y - f i x2 y)/norm(y)))"
         by(rule SUP_sum_comm[OF finite  nonemptyB, of x1 x2]) 
       moreover have "... = (\<Sum>i\<in>UNIV. norm(f i x1 - f i x2))"
@@ -336,10 +337,10 @@ lemma has_derivative_vec[derivative_intros]:
   shows "((\<lambda>x. \<chi> i. f i x) has_derivative (\<lambda>h. \<chi> i. f' i h)) F"
 proof -
   have *: "(\<chi> i. f i x) = (\<Sum>i\<in>UNIV. axis i (f i x))" "(\<chi> i. f' i x) = (\<Sum>i\<in>UNIV. axis i (f' i x))" for x
-    by (simp_all add: axis_def setsum.If_cases vec_eq_iff)
+    by (simp_all add: axis_def sum.If_cases vec_eq_iff)
   show ?thesis
     unfolding *
-    by (intro has_derivative_setsum bounded_linear.has_derivative[OF bounded_linear_axis] assms)
+    by (intro has_derivative_sum bounded_linear.has_derivative[OF bounded_linear_axis] assms)
 qed
 
 lemma has_derivative_proj:
