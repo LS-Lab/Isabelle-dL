@@ -25,7 +25,6 @@ text \<open>
   The types of terms and ODE systems follow the same approach, but have only two type 
   variables because they cannot contain contexts.
 \<close>
-(* BEGIN SOUNDNESS-CRITICAL *)
 datatype ('a, 'c) trm =
 (* Real-valued variables given meaning by the state and modified by programs. *)
   Var 'c
@@ -88,36 +87,35 @@ and ('a, 'b, 'c) formula =
     
 (* Derived forms *)
 definition Or :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" (infixl "||" 7)
-  where "Or P Q = Not (And (Not P) (Not Q))"
+where "Or P Q = Not (And (Not P) (Not Q))"
 
 definition Implies :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" (infixr "\<rightarrow>" 10)
-  where "Implies P Q = Or Q (Not P)"
+where "Implies P Q = Or Q (Not P)"
 
 definition Equiv :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" (infixl "\<leftrightarrow>" 10)
-  where "Equiv P Q = Or (And P Q) (And (Not P) (Not Q))"
+where "Equiv P Q = Or (And P Q) (And (Not P) (Not Q))"
 
 definition Forall :: "'c \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula"
-  where "Forall x P = Not (Exists x (Not P))"
+where "Forall x P = Not (Exists x (Not P))"
 
 definition Equals :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) formula"
-  where "Equals \<theta> \<theta>' = ((Geq \<theta> \<theta>') && (Geq \<theta>' \<theta>))"
+where "Equals \<theta> \<theta>' = ((Geq \<theta> \<theta>') && (Geq \<theta>' \<theta>))"
 
 definition Greater :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) formula"
-  where "Greater \<theta> \<theta>' = ((Geq \<theta> \<theta>') && (Not (Geq \<theta>' \<theta>)))"
+where "Greater \<theta> \<theta>' = ((Geq \<theta> \<theta>') && (Not (Geq \<theta>' \<theta>)))"
   
 definition Box :: "('a, 'b, 'c) hp \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" ("([[_]]_)" 10)
-  where "Box \<alpha> P = Not (Diamond \<alpha> (Not P))"
+where "Box \<alpha> P = Not (Diamond \<alpha> (Not P))"
   
 definition TT ::"('a,'b,'c) formula" 
-  where "TT = Geq (Const 0) (Const 0)"
+where "TT = Geq (Const 0) (Const 0)"
 
 definition FF ::"('a,'b,'c) formula" 
-  where "FF = Geq (Const 0) (Const 1)"
-(* END SOUNDNESS-CRITICAL *)
+where "FF = Geq (Const 0) (Const 1)"
 
 (* silliness to enable proving disequality lemmas *)
 primrec sizeF::"('sf,'sc, 'sz) formula \<Rightarrow> nat"
-and sizeP::"('sf,'sc, 'sz) hp \<Rightarrow> nat"
+  and   sizeP::"('sf,'sc, 'sz) hp \<Rightarrow> nat"
 where 
   "sizeP (Pvar a) = 1"
 | "sizeP (Assign x \<theta>) = 1"
@@ -157,37 +155,37 @@ lemma [expr_diseq]:"p \<noteq> InContext C p" by(induction p, auto)
  * We encode a predicational as a context applied to a formula whose truth value is constant with
  * respect to the state (specifically, always true)*)
 fun Predicational :: "'b \<Rightarrow> ('a, 'b, 'c) formula" ("Pc")
-  where "Predicational P = InContext P (Geq (Const 0) (Const 0))"
+where "Predicational P = InContext P (Geq (Const 0) (Const 0))"
 
 (* Abbreviations for common syntactic constructs in order to make axiom definitions, etc. more
  * readable. *)
 context ids begin
 (* "Empty" function argument tuple, encoded as tuple where all arguments assume a constant value. *)
 definition empty::" 'b \<Rightarrow> ('a, 'b) trm"
-  where "empty \<equiv> \<lambda>i.(Const 0)"
+where "empty \<equiv> \<lambda>i.(Const 0)"
 
 (* Function argument tuple with (effectively) one argument, where all others have a constant value. *)
 fun singleton :: "('a, 'sz) trm \<Rightarrow> ('sz \<Rightarrow> ('a, 'sz) trm)"
-  where "singleton t i = (if i = vid1 then t else (Const 0))"
+where "singleton t i = (if i = vid1 then t else (Const 0))"
 
 lemma expand_singleton:"singleton t = (\<lambda>i. (if i = vid1 then t else (Const 0)))"
   by auto
 
 (* Function applied to one argument *)
 definition f1::"'sf \<Rightarrow> 'sz \<Rightarrow> ('sf,'sz) trm"
-  where "f1 f x = Function f (singleton (Var x))"
+where "f1 f x = Function f (singleton (Var x))"
 
 (* Function applied to zero arguments (simulates a constant symbol given meaning by the interpretation) *)
 definition f0::"'sf \<Rightarrow> ('sf,'sz) trm"
-  where "f0 f = Function f empty"
+where "f0 f = Function f empty"
 
 (* Predicate applied to one argument *)
 definition p1::"'sz \<Rightarrow> 'sz \<Rightarrow> ('sf, 'sc, 'sz) formula"
-  where "p1 p x = Prop p (singleton (Var x))"
+where "p1 p x = Prop p (singleton (Var x))"
 
 (* Predicational *)
 definition P::"'sc \<Rightarrow> ('sf, 'sc, 'sz) formula"
-  where "P p = Predicational p"
+where "P p = Predicational p"
 end
 
 subsection \<open>Well-Formedness predicates\<close>
@@ -211,7 +209,6 @@ where
 
 (* Explictly-written variables that are bound by the ODE. Needed to compute whether
  * ODE's are valid (e.g. whether they bind the same variable twice) *)
-(* BEGIN SOUNDNESS-CRITICAL *)
 fun ODE_dom::"('a, 'c) ODE \<Rightarrow> 'c set"
 where 
   "ODE_dom (OVar c) =  {}"
@@ -223,17 +220,18 @@ where
   osafe_Var:"osafe (OVar c)"
 | osafe_Sing:"dfree \<theta> \<Longrightarrow> osafe (OSing x \<theta>)"
 | osafe_Prod:"osafe ODE1 \<Longrightarrow> osafe ODE2 \<Longrightarrow> ODE_dom ODE1 \<inter> ODE_dom ODE2 = {} \<Longrightarrow> osafe (OProd ODE1 ODE2)"
-(* END SOUNDNESS-CRITICAL *)
 
+(* Programs/formulas without any differential terms. This definition not currently used but may
+ * be useful in the future. *)
 inductive hpfree:: "('a, 'b, 'c) hp \<Rightarrow> bool"
-and ffree::        "('a, 'b, 'c) formula \<Rightarrow> bool"
+  and     ffree::  "('a, 'b, 'c) formula \<Rightarrow> bool"
 where
- "hpfree (Pvar x)"
+  "hpfree (Pvar x)"
 | "dfree e \<Longrightarrow> hpfree (Assign x e)"
-(* TODO: Not sure whether this should be allowed  *)
+(* Differential programs allowed but not differential terms  *)
 | "dfree e \<Longrightarrow> hpfree (DiffAssign x e)"
 | "ffree P \<Longrightarrow> hpfree (Test P)" 
-(* TODO: Not sure whether this should be allowed  *)
+(* Differential programs allowed but not differential terms  *)
 | "osafe ODE \<Longrightarrow> ffree P \<Longrightarrow> hpfree (EvolveODE ODE P)"
 | "hpfree a \<Longrightarrow> hpfree b \<Longrightarrow> hpfree (Choice a b )"
 | "hpfree a \<Longrightarrow> hpfree b \<Longrightarrow> hpfree (Sequence a b)"
@@ -248,7 +246,7 @@ where
 | "dfree t1 \<Longrightarrow> dfree t2 \<Longrightarrow> ffree (Geq t1 t2)"
 
 inductive hpsafe:: "('a, 'b, 'c) hp \<Rightarrow> bool"
-and fsafe:: "('a, 'b, 'c) formula \<Rightarrow> bool"
+  and     fsafe::  "('a, 'b, 'c) formula \<Rightarrow> bool"
 where
    hpsafe_Pvar:"hpsafe (Pvar x)"
  | hpsafe_Assign:"dsafe e \<Longrightarrow> hpsafe (Assign x e)"
@@ -325,14 +323,14 @@ lemma hp_induct [case_names Var Assign DiffAssign Test Evolve Choice Compose Sta
   by(induction rule: hp.induct) (auto)
 
 lemma fml_induct:
-"(\<And>t1 t2. P (Geq t1 t2))
-\<Longrightarrow> (\<And>p args. P (Prop p args))
-\<Longrightarrow> (\<And>p. P p \<Longrightarrow> P (Not p))
-\<Longrightarrow> (\<And>p q. P p \<Longrightarrow> P q \<Longrightarrow> P (And p q))
-\<Longrightarrow> (\<And>x p. P p \<Longrightarrow> P (Exists x p))
-\<Longrightarrow> (\<And>a p. P p \<Longrightarrow> P (Diamond a p))
-\<Longrightarrow> (\<And>C p. P p \<Longrightarrow> P (InContext C p))
-\<Longrightarrow> P \<phi>"
+  "(\<And>t1 t2. P (Geq t1 t2))
+  \<Longrightarrow> (\<And>p args. P (Prop p args))
+  \<Longrightarrow> (\<And>p. P p \<Longrightarrow> P (Not p))
+  \<Longrightarrow> (\<And>p q. P p \<Longrightarrow> P q \<Longrightarrow> P (And p q))
+  \<Longrightarrow> (\<And>x p. P p \<Longrightarrow> P (Exists x p))
+  \<Longrightarrow> (\<And>a p. P p \<Longrightarrow> P (Diamond a p))
+  \<Longrightarrow> (\<And>C p. P p \<Longrightarrow> P (InContext C p))
+  \<Longrightarrow> P \<phi>"
   by (induction rule: formula.induct) (auto)
 
 context ids begin
