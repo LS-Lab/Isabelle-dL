@@ -187,31 +187,30 @@ typedef ('a, 'b, 'c) good_interp = "{I::('a::finite,'b::finite,'c::finite) inter
   morphisms raw_interp good_interp
   apply(rule exI[where x="\<lparr> Functions = (\<lambda>f x. 0), Predicates = (\<lambda>p x. True), Contexts = (\<lambda>C S. S), Programs = (\<lambda>a. {}), ODEs = (\<lambda>c v. (\<chi> i. 0)), ODEBV = \<lambda>c. {}\<rparr>"])
   apply(auto simp add: is_interp_def)
-  proof -
-    fix x ::real
-    have eq:"(THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) = (\<lambda>_ _. 0)"
-      by(rule the_all_deriv, auto)
-    have eq':"(THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x = (\<lambda>_. 0)"
-      by (simp add: eq)
-    have deriv:"((\<lambda>x.0) has_derivative (\<lambda>x. 0)) (at x)"
-      by auto
-    then show "\<And>x. ((\<lambda>x. 0) has_derivative (THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x) (at x)" 
-      by (auto simp add: eq eq' deriv)
-    next
-      have eq:"(THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) = (\<lambda>_ _. 0)"
-        by(rule the_all_deriv, auto)
-      have eq':"\<forall>x. (THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x = (\<lambda>_. 0)"
-        by (simp add: eq)
-      have deriv:"\<And>x. ((\<lambda>x.0) has_derivative (\<lambda>x. 0)) (at x)"
-        by auto
-      have "\<And>x. bounded_linear ((THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x)"
-        by (simp add: eq')
-      then show " continuous_on UNIV (\<lambda>x. Blinfun ((THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x))"
-        using continuous_on_topological[of UNIV "(\<lambda>x. Blinfun ((THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x))"]
-          eq' open_UNIV
-          by smt
-        
-  qed  
+   proof -
+     fix x ::real
+     have eq:"(THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) = (\<lambda>_ _. 0)"
+       by(rule the_all_deriv, auto)
+     have eq':"(THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x = (\<lambda>_. 0)"
+       by (simp add: eq)
+     have deriv:"((\<lambda>x.0) has_derivative (\<lambda>x. 0)) (at x)"
+       by auto
+     then show "\<And>x. ((\<lambda>x. 0) has_derivative (THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x) (at x)" 
+       by (auto simp add: eq eq' deriv)
+   next
+     have eq:"(THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) = (\<lambda>_ _. 0)"
+       by(rule the_all_deriv, auto)
+     have eq':"\<forall>x. (THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x = (\<lambda>_. 0)"
+       by (simp add: eq)
+     have deriv:"\<And>x. ((\<lambda>x.0) has_derivative (\<lambda>x. 0)) (at x)"
+       by auto
+     have blin:"\<And>x. bounded_linear ((THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x)"
+       by (simp add: eq')
+     show " continuous_on UNIV (\<lambda>x. Blinfun ((THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x))"
+       apply(clarsimp simp add: continuous_on_topological[of UNIV "(\<lambda>x. Blinfun ((THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x))"])
+       apply(rule exI[where x = UNIV])
+       by(auto simp add: eq' blin)
+   qed
   
 lemma frechet_linear: 
   assumes good_interp:"is_interp I"

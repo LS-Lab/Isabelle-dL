@@ -102,7 +102,7 @@ proof -
     using add_mono_thms_linordered_semiring(1) by blast
   have eq:"(SUPREMUM R (\<lambda>x. f x + g x) \<le> (SUP x:R. f x) + (SUP x:R. g x)) = (\<forall>x\<in>R. (f x + g x) \<le> (SUP x:R. f x) + (SUP x:R. g x))"
     apply(rule cSUP_le_iff)
-    subgoal by (rule nonempty)
+     subgoal by (rule nonempty)
     subgoal by (rule bddfg)
     done
   have fs:"\<And>x. x \<in> R \<Longrightarrow> f x \<le> (SUP x:R. f x)"
