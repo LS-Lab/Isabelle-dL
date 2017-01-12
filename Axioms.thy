@@ -21,33 +21,33 @@ text \<open>
 named_theorems axiom_defs "Axiom definitions"
 
 definition assign_axiom :: "('sf, 'sc, 'sz) formula"
-  where [axiom_defs]:"assign_axiom \<equiv>
-    ([[vid1 := ($f fid1 empty)]] (Prop vid1 (singleton (Var vid1))))
-      \<leftrightarrow> Prop vid1 (singleton ($f fid1 empty))"
+where [axiom_defs]:"assign_axiom \<equiv>
+  ([[vid1 := ($f fid1 empty)]] (Prop vid1 (singleton (Var vid1))))
+    \<leftrightarrow> Prop vid1 (singleton ($f fid1 empty))"
 
 definition diff_assign_axiom :: "('sf, 'sc, 'sz) formula"
-  where [axiom_defs]:"diff_assign_axiom \<equiv>
-    ([[DiffAssign vid1  ($f fid1 empty)]] (Prop vid1 (singleton (DiffVar vid1))))
-      \<leftrightarrow> Prop vid1 (singleton ($f fid1 empty))"
+where [axiom_defs]:"diff_assign_axiom \<equiv>
+  ([[DiffAssign vid1  ($f fid1 empty)]] (Prop vid1 (singleton (DiffVar vid1))))
+    \<leftrightarrow> Prop vid1 (singleton ($f fid1 empty))"
 
 definition loop_iterate_axiom :: "('sf, 'sc, 'sz) formula"
-  where [axiom_defs]:"loop_iterate_axiom \<equiv> ([[$\<alpha> vid1**]]Predicational pid1)
-    \<leftrightarrow> ((Predicational pid1) && ([[$\<alpha> vid1]][[$\<alpha> vid1**]]Predicational pid1))"
+where [axiom_defs]:"loop_iterate_axiom \<equiv> ([[$\<alpha> vid1**]]Predicational pid1)
+  \<leftrightarrow> ((Predicational pid1) && ([[$\<alpha> vid1]][[$\<alpha> vid1**]]Predicational pid1))"
 
 definition test_axiom :: "('sf, 'sc, 'sz) formula"
-  where [axiom_defs]:"test_axiom \<equiv>
-    ([[?($\<phi> vid2 empty)]]$\<phi> vid1 empty) \<leftrightarrow> (($\<phi> vid2 empty) \<rightarrow> ($\<phi> vid1 empty))"
+where [axiom_defs]:"test_axiom \<equiv>
+  ([[?($\<phi> vid2 empty)]]$\<phi> vid1 empty) \<leftrightarrow> (($\<phi> vid2 empty) \<rightarrow> ($\<phi> vid1 empty))"
 
 definition box_axiom :: "('sf, 'sc, 'sz) formula"
-  where [axiom_defs]:"box_axiom \<equiv> (\<langle>$\<alpha> vid1\<rangle>Predicational pid1) \<leftrightarrow> !([[$\<alpha> vid1]]!(Predicational pid1))"
+where [axiom_defs]:"box_axiom \<equiv> (\<langle>$\<alpha> vid1\<rangle>Predicational pid1) \<leftrightarrow> !([[$\<alpha> vid1]]!(Predicational pid1))"
 
 definition choice_axiom :: "('sf, 'sc, 'sz) formula"
-  where [axiom_defs]:"choice_axiom \<equiv> ([[$\<alpha> vid1 \<union>\<union> $\<alpha> vid2]]Predicational pid1)
-    \<leftrightarrow> (([[$\<alpha> vid1]]Predicational pid1) && ([[$\<alpha> vid2]]Predicational pid1))"
+where [axiom_defs]:"choice_axiom \<equiv> ([[$\<alpha> vid1 \<union>\<union> $\<alpha> vid2]]Predicational pid1)
+  \<leftrightarrow> (([[$\<alpha> vid1]]Predicational pid1) && ([[$\<alpha> vid2]]Predicational pid1))"
 
 definition Kaxiom :: "('sf, 'sc, 'sz) formula"
-  where [axiom_defs]:"Kaxiom \<equiv> ([[$\<alpha> vid1]]((Predicational pid1) \<rightarrow> (Predicational pid2)))
-    \<rightarrow> ([[$\<alpha> vid1]]Predicational pid1) \<rightarrow> ([[$\<alpha> vid1]]Predicational pid2)"
+where [axiom_defs]:"Kaxiom \<equiv> ([[$\<alpha> vid1]]((Predicational pid1) \<rightarrow> (Predicational pid2)))
+  \<rightarrow> ([[$\<alpha> vid1]]Predicational pid1) \<rightarrow> ([[$\<alpha> vid1]]Predicational pid2)"
 
 (* Here is an example of an old version of the induction axiom that was too weak
  * and thus very easy to prove: it used predicates when it should have used predicationals.
@@ -58,12 +58,12 @@ definition Ibroken :: "('sf, 'sc, 'sz) formula"
     \<rightarrow> ($P [] \<rightarrow> ([[($$a)**]]$P [])))"*)
 
 definition Iaxiom :: "('sf, 'sc, 'sz) formula"
-  where [axiom_defs]:"Iaxiom \<equiv> 
-  ([[($\<alpha> vid1)**]](Predicational pid1 \<rightarrow> ([[$\<alpha> vid1]]Predicational pid1)))
-    \<rightarrow>((Predicational pid1 \<rightarrow> ([[($\<alpha> vid1)**]]Predicational pid1)))"
+where [axiom_defs]:"Iaxiom \<equiv> 
+([[($\<alpha> vid1)**]](Predicational pid1 \<rightarrow> ([[$\<alpha> vid1]]Predicational pid1)))
+  \<rightarrow>((Predicational pid1 \<rightarrow> ([[($\<alpha> vid1)**]]Predicational pid1)))"
 
 definition Vaxiom :: "('sf, 'sc, 'sz) formula"
-  where [axiom_defs]:"Vaxiom \<equiv> ($\<phi> vid1 empty) \<rightarrow> ([[$\<alpha> vid1]]($\<phi> vid1 empty))"
+where [axiom_defs]:"Vaxiom \<equiv> ($\<phi> vid1 empty) \<rightarrow> ([[$\<alpha> vid1]]($\<phi> vid1 empty))"
 
 subsection \<open>Validity/Soundness proofs for axioms and rules\<close>
 theorem test_valid: "valid test_axiom"
@@ -74,9 +74,8 @@ lemma assign_lem1:
                    (vec_lambda (\<lambda>y. if vid1 = y then Functions I fid1
   (vec_lambda (\<lambda>i. dterm_sem I (empty i) \<nu>)) else  vec_nth (fst \<nu>) y), snd \<nu>)
 =
- dterm_sem I (if i = vid1 then $f fid1 empty else (Const 0)) \<nu>
-"
- by (cases "i = vid1") (auto simp: proj_sing1)
+ dterm_sem I (if i = vid1 then $f fid1 empty else (Const 0)) \<nu>"
+  by (cases "i = vid1") (auto simp: proj_sing1)
 
 lemma diff_assign_lem1:
 "dterm_sem I (if i = vid1 then DiffVar vid1 else (Const 0))
@@ -84,7 +83,7 @@ lemma diff_assign_lem1:
 =
  dterm_sem I (if i = vid1 then $f fid1 empty else (Const 0)) \<nu>
 "
- by (cases "i = vid1") (auto simp: proj_sing1)
+  by (cases "i = vid1") (auto simp: proj_sing1)
 
 theorem assign_valid: "valid assign_axiom"
   unfolding  valid_def assign_axiom_def
@@ -101,6 +100,7 @@ lemma loop_forward: "\<nu> \<in> fml_sem I ([[$\<alpha> id1**]]Predicational pid
   \<longrightarrow> \<nu> \<in> fml_sem I (Predicational pid1&&[[$\<alpha> id1]][[$\<alpha> id1**]]Predicational pid1)"
   by (cases \<nu>) (auto intro: converse_rtrancl_into_rtrancl simp add: box_sem)
 
+(* TODO: Use nchotomy instead*)
 lemma nat_case: "\<forall>n::nat. (n = 0) \<or> (\<exists>m. n = Suc m)"
   by (rule Nat.nat.nchotomy)
 
@@ -129,12 +129,12 @@ theorem K_valid: "valid Kaxiom"
   unfolding valid_def Kaxiom_def by (auto)
 
 lemma I_axiom_lemma:
-fixes I::"('sf,'sc,'sz) interp" and \<nu>
-assumes "is_interp I"
-assumes IS:"\<nu> \<in> fml_sem I ([[$\<alpha> vid1**]](Predicational pid1 \<rightarrow>
-                          [[$\<alpha> vid1]]Predicational pid1))"
-assumes BC:"\<nu> \<in> fml_sem I (Predicational pid1)"
-shows "\<nu> \<in> fml_sem I ([[$\<alpha> vid1**]](Predicational pid1))"
+  fixes I::"('sf,'sc,'sz) interp" and \<nu>
+  assumes "is_interp I"
+  assumes IS:"\<nu> \<in> fml_sem I ([[$\<alpha> vid1**]](Predicational pid1 \<rightarrow>
+                            [[$\<alpha> vid1]]Predicational pid1))"
+  assumes BC:"\<nu> \<in> fml_sem I (Predicational pid1)"
+  shows "\<nu> \<in> fml_sem I ([[$\<alpha> vid1**]](Predicational pid1))"
 proof -
   have IS':"\<And>\<nu>2. (\<nu>, \<nu>2) \<in> (prog_sem I ($\<alpha> vid1))\<^sup>* \<Longrightarrow> \<nu>2 \<in> fml_sem I (Predicational pid1 \<rightarrow> [[$\<alpha> vid1]](Predicational pid1))"
     using IS by (auto simp add: box_sem)
@@ -142,8 +142,8 @@ proof -
   proof -
     fix \<nu>3 
     show "((\<nu>, \<nu>3) \<in> (prog_sem I ($\<alpha> vid1))\<^sup>*) \<Longrightarrow> \<nu>3 \<in> fml_sem I (Predicational pid1)"
-    apply(induction rule:rtrancl_induct)
-    apply(rule BC)
+      apply(induction rule:rtrancl_induct)
+       apply(rule BC)
     proof -
       fix y z
       assume vy:"(\<nu>, y) \<in> (prog_sem I ($\<alpha> vid1))\<^sup>*"
@@ -180,26 +180,26 @@ done
 
   
 definition G_holds :: "('sf, 'sc, 'sz) formula \<Rightarrow> ('sf, 'sc, 'sz) hp \<Rightarrow> bool"
-  where "G_holds \<phi> \<alpha> \<equiv> valid \<phi> \<longrightarrow> valid ([[\<alpha>]]\<phi>)"
+where "G_holds \<phi> \<alpha> \<equiv> valid \<phi> \<longrightarrow> valid ([[\<alpha>]]\<phi>)"
 
 definition Skolem_holds :: "('sf, 'sc, 'sz) formula \<Rightarrow> 'sz \<Rightarrow> bool"
-  where "Skolem_holds \<phi> var \<equiv> valid \<phi> \<longrightarrow> valid (Forall var \<phi>)"
+where "Skolem_holds \<phi> var \<equiv> valid \<phi> \<longrightarrow> valid (Forall var \<phi>)"
 
 definition MP_holds :: "('sf, 'sc, 'sz) formula \<Rightarrow> ('sf, 'sc, 'sz) formula \<Rightarrow> bool"
-  where "MP_holds \<phi> \<psi> \<equiv> valid (\<phi> \<rightarrow> \<psi>) \<longrightarrow> valid \<phi> \<longrightarrow> valid \<psi>"
+where "MP_holds \<phi> \<psi> \<equiv> valid (\<phi> \<rightarrow> \<psi>) \<longrightarrow> valid \<phi> \<longrightarrow> valid \<psi>"
 
 (* TODO: Should I do a version that allows all the variables?*)
 definition CT_holds :: "'sf \<Rightarrow> ('sf, 'sz) trm \<Rightarrow> ('sf, 'sz) trm \<Rightarrow> bool"
-  where "CT_holds g \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>')
-    \<longrightarrow> valid (Equals (Function g (singleton \<theta>)) (Function g (singleton \<theta>')))"
+where "CT_holds g \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>')
+  \<longrightarrow> valid (Equals (Function g (singleton \<theta>)) (Function g (singleton \<theta>')))"
 
 definition CQ_holds :: "'sz \<Rightarrow> ('sf, 'sz) trm \<Rightarrow> ('sf, 'sz) trm \<Rightarrow> bool"
-  where "CQ_holds p \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>')
-    \<longrightarrow> valid ((Prop p (singleton \<theta>)) \<leftrightarrow> (Prop p (singleton \<theta>')))"
+where "CQ_holds p \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>')
+  \<longrightarrow> valid ((Prop p (singleton \<theta>)) \<leftrightarrow> (Prop p (singleton \<theta>')))"
 
 definition CE_holds :: "'sc \<Rightarrow> ('sf, 'sc, 'sz) formula \<Rightarrow> ('sf, 'sc, 'sz) formula \<Rightarrow> bool"
-  where "CE_holds var \<phi> \<psi> \<equiv> valid (\<phi> \<leftrightarrow> \<psi>)
-    \<longrightarrow> valid (InContext var \<phi> \<leftrightarrow> InContext var \<psi>)"
+where "CE_holds var \<phi> \<psi> \<equiv> valid (\<phi> \<leftrightarrow> \<psi>)
+  \<longrightarrow> valid (InContext var \<phi> \<leftrightarrow> InContext var \<psi>)"
 
   
 subsection \<open>Soundness for rules\<close>
@@ -219,7 +219,6 @@ lemma CT_lemma:"\<And>I::('sf::finite, 'sc::finite, 'sz::{finite,linorder}) inte
 proof -
   fix I :: "('sf::finite, 'sc::finite, 'sz::{finite,linorder}) interp" and a :: "(real, 'sz) vec" and b :: "(real, 'sz) vec"
   assume a1: "is_interp I"
-  (* NOTE: example of type annotation sadness here *)
   assume "\<forall>I::('sf,'sc,'sz) interp. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b))"
   then have "\<forall>i. dterm_sem I (if i = vid1 then \<theta>' else (Const 0)) (a, b) = dterm_sem I (if i = vid1 then \<theta> else (Const 0)) (a, b)"
     using a1 by presburger
