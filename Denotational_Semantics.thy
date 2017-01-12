@@ -35,16 +35,16 @@ where "VSagree \<nu> \<nu>' V \<longleftrightarrow> (\<forall>i \<in> V. (\<nu> 
 
 (* Agreement lemmas *)
 lemma agree_nil:"Vagree \<nu> \<omega> {}"
-by (auto simp add: Vagree_def)
+  by (auto simp add: Vagree_def)
 
 lemma agree_supset:"A \<supseteq> B \<Longrightarrow> Vagree \<nu> \<nu>' A \<Longrightarrow> Vagree \<nu> \<nu>' B"
-by (auto simp add: Vagree_def)
+  by (auto simp add: Vagree_def)
 
 lemma VSagree_nil:"VSagree \<nu> \<omega> {}"
-by (auto simp add: VSagree_def)
+  by (auto simp add: VSagree_def)
 
 lemma VSagree_supset:"A \<supseteq> B \<Longrightarrow> VSagree \<nu> \<nu>' A \<Longrightarrow> VSagree \<nu> \<nu>' B"
-by (auto simp add: VSagree_def)
+  by (auto simp add: VSagree_def)
 
 lemma VSagree_UNIV_eq:"VSagree A B UNIV \<Longrightarrow> A = B"
   unfolding VSagree_def by (auto simp add: vec_eq_iff)
@@ -70,10 +70,10 @@ lemma agree_union:"\<And>\<nu> \<omega> A B. Vagree \<nu> \<omega> A \<Longright
   unfolding Vagree_def by (auto simp add: vec_eq_iff)
 
 lemma agree_trans:"Vagree \<nu> \<mu> A \<Longrightarrow> Vagree \<mu> \<omega> B \<Longrightarrow> Vagree \<nu> \<omega> (A \<inter> B)"
-by (auto simp add: Vagree_def)
+  by (auto simp add: Vagree_def)
 
 lemma agree_refl:"Vagree \<nu> \<nu> A"
-by (auto simp add: Vagree_def)
+  by (auto simp add: Vagree_def)
 
 lemma VSagree_sub:"\<And>\<nu> \<omega> A B . A \<subseteq> B \<Longrightarrow> VSagree \<nu> \<omega> B \<Longrightarrow> VSagree \<nu> \<omega> A"
   unfolding VSagree_def by auto
@@ -99,7 +99,6 @@ text \<open>
   types whose cardinalities indicate the maximum number of functions, contexts and 
   <everything else> defined by the interpretation.
   \<close>
-(* BEGIN SOUNDNESS-CRITICAL *)
 record ('a, 'b, 'c) interp =
   Functions       :: "'a \<Rightarrow> 'c Rvec \<Rightarrow> real"
   Predicates      :: "'c \<Rightarrow> 'c Rvec \<Rightarrow> bool"
@@ -115,7 +114,6 @@ fun FunctionFrechet :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow
 definition is_interp :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> bool"
   where "is_interp I \<equiv>
    \<forall>x. \<forall>i. ((FDERIV (Functions I i) x :> (FunctionFrechet I i x)) \<and> continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I i x)))"
-(* END SOUNDNESS-CRITICAL *)
 
 lemma is_interpD:"is_interp I \<Longrightarrow> \<forall>x. \<forall>i. (FDERIV (Functions I i) x :> (FunctionFrechet I i x))"
   unfolding is_interp_def by auto
@@ -157,7 +155,6 @@ lemma Iagree_refl:"Iagree I I A"
 
 (* Semantics for differential-free terms. Because there are no differentials, depends only on the "x" variables
  * and not the "x'" variables. *)
-(* BEGIN SOUNDNESS-CRITICAL *)
 primrec sterm_sem :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'c) trm \<Rightarrow> 'c simple_state \<Rightarrow> real"
 where
   "sterm_sem I (Var x) v = v $ x"
@@ -167,7 +164,6 @@ where
 | "sterm_sem I (Const r) v = r"
 | "sterm_sem I ($' c) v = undefined"
 | "sterm_sem I (Differential d) v = undefined"
-(* END SOUNDNESS-CRITICAL *)
   
 (* TODO: Believe this is equivalent to built-in function "axis" *)
 (* basis_vector i is the i'th basis vector for the standard Euclidean basis. *)
@@ -175,10 +171,9 @@ fun basis_vector :: "'a::finite \<Rightarrow> 'a Rvec"
 where "basis_vector x = (\<chi> i. if x = i then 1 else 0)"
 
 (* frechet I \<theta> \<nu> syntactically computes the frechet derivative of the term \<theta> in the interpretation
- I at state \<nu> (containing only the unprimed variables). The frechet derivative is a
- linear map from the differential state \<nu> to reals.
+ * I at state \<nu> (containing only the unprimed variables). The frechet derivative is a
+ * linear map from the differential state \<nu> to reals.
  *)
-(* BEGIN SOUNDNESS-CRITICAL *)
 primrec frechet :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'c) trm \<Rightarrow> 'c simple_state \<Rightarrow> 'c simple_state \<Rightarrow> real"
 where
   "frechet I (Var x) v = (\<lambda>v'. v' \<bullet> basis_vector x)"
@@ -195,7 +190,7 @@ definition directional_derivative :: "('a::finite, 'b::finite, 'c::finite) inter
 where "directional_derivative I t = (\<lambda>v. frechet I t (fst v) (snd v))"
 
 (* Sem for terms that are allowed to contain differentials.
-   Note there is some duplication with sterm_sem.*)
+ * Note there is some duplication with sterm_sem.*)
 primrec dterm_sem :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'c) trm \<Rightarrow> 'c state \<Rightarrow> real"
 where
   "dterm_sem I (Var x) = (\<lambda>v. fst v $ x)"
@@ -228,16 +223,14 @@ fun ODE_vars :: "('a,'b,'c) interp \<Rightarrow> ('a, 'c) ODE \<Rightarrow> 'c s
 
 fun semBV ::"('a, 'b,'c) interp \<Rightarrow> ('a, 'c) ODE \<Rightarrow> ('c + 'c) set"
   where "semBV I ODE = Inl ` (ODE_vars I ODE) \<union> Inr ` (ODE_vars I ODE)"
-(* END SOUNDNESS-CRITICAL *)
 
 lemma ODE_vars_lr:
   fixes x::"'sz" and ODE::"('sf,'sz) ODE" and I::"('sf,'sc,'sz) interp"
   shows "Inl x \<in> semBV I ODE \<longleftrightarrow> Inr x \<in> semBV I ODE"
-    by (induction "ODE", auto)
+  by (induction "ODE", auto)
 
-(* BEGIN SOUNDNESS-CRITICAL *)
 fun mk_xode::"('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'c::finite) ODE \<Rightarrow> 'c::finite simple_state \<Rightarrow> 'c::finite state"
-  where "mk_xode I ODE sol = (sol, ODE_sem I ODE sol)"
+where "mk_xode I ODE sol = (sol, ODE_sem I ODE sol)"
  
 (* Given an initial state \<nu> and solution to an ODE at some point, construct the resulting state \<omega>.
  * This is defined using the SOME operator because the concrete definition is unwieldy. *)
@@ -255,11 +248,11 @@ fun repd :: "'c::finite state \<Rightarrow> 'c \<Rightarrow> real \<Rightarrow> 
 where "repd v x r = (fst v, (\<chi> y. if x = y then r else vec_nth (snd v) y))"  
   
 (* Semantics for formulas, differential formulas, programs.
-   Differential formulas do actually have to have their own notion of semantics, because
-   the meaning of a differential formula (\<phi>)' depends on the syntax of the formula \<phi>:
-   we can have two formulas \<phi> and \<psi> that have the exact same semantics, but where
-   the semantics of (\<phi>)' and (\<psi>)' differ because \<phi> and \<psi> differ syntactically.
-*)
+ * Differential formulas do actually have to have their own notion of semantics, because
+ * the meaning of a differential formula (\<phi>)' depends on the syntax of the formula \<phi>:
+ * we can have two formulas \<phi> and \<psi> that have the exact same semantics, but where
+ * the semantics of (\<phi>)' and (\<psi>)' differ because \<phi> and \<psi> differ syntactically.
+ *)
 fun fml_sem  :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) formula \<Rightarrow> 'c::finite state set" and
   diff_formula_sem  :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) formula \<Rightarrow> 'c::finite state set" and
   prog_sem :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) hp \<Rightarrow> ('c::finite state * 'c::finite state) set"
@@ -293,14 +286,13 @@ where
 
 context ids begin
 definition valid :: "('sf, 'sc, 'sz) formula \<Rightarrow> bool"
-  where "valid \<phi> \<equiv> (\<forall> I. \<forall> \<nu>. is_interp I \<longrightarrow> \<nu> \<in> fml_sem I \<phi>)"
+where "valid \<phi> \<equiv> (\<forall> I. \<forall> \<nu>. is_interp I \<longrightarrow> \<nu> \<in> fml_sem I \<phi>)"
 end
-(* END SOUNDNESS-CRITICAL *)
 
 (* Because mk_v is defined with the SOME operator, need to construct a state that satisfies
-   Vagree \<omega> \<nu> (- ODE_vars ODE) 
- \<and> Vagree \<omega> (mk_xode I ODE sol) (ODE_vars ODE))"
- to do anything useful *)
+ *   Vagree \<omega> \<nu> (- ODE_vars ODE) 
+ * \<and> Vagree \<omega> (mk_xode I ODE sol) (ODE_vars ODE))"
+ * to do anything useful *)
 fun concrete_v::"('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'c::finite) ODE \<Rightarrow> 'c::finite state \<Rightarrow> 'c::finite simple_state \<Rightarrow> 'c::finite state"
 where "concrete_v I ODE \<nu> sol =
 ((\<chi> i. (if Inl i \<in> semBV I ODE then sol else (fst \<nu>)) $ i),
@@ -389,5 +381,5 @@ lemma ff_sem [simp]:"fml_sem I FF = {}" unfolding FF_def by auto
 lemma iff_to_impl: "((\<nu> \<in> fml_sem I A) \<longleftrightarrow> (\<nu> \<in> fml_sem I B))
   \<longleftrightarrow> (((\<nu> \<in> fml_sem I A) \<longrightarrow> (\<nu> \<in> fml_sem I B))
      \<and> ((\<nu> \<in> fml_sem I B) \<longrightarrow> (\<nu> \<in> fml_sem I A)))"
-by (auto)  
+  by (auto)  
 end
