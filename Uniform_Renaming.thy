@@ -952,7 +952,7 @@ next
            using mkv_lemma[OF ORA] by blast
         have mkv2:"\<And>t sol b.  Radj x y \<omega> = mk_v I ODE (sol 0, b) (sol t) \<Longrightarrow>
           \<omega> = mk_v I (OUrename x y ODE) (RSadj x y (sol 0), RSadj x y b) (RSadj x y (sol t))"
-          using mkv_lemma[OF ORA] by (smt RSadj_cancel Radj_cancel)
+          using mkv_lemma[OF ORA] by (metis RSadj_cancel Radj_cancel)
         have sol:"\<And>t sol b. 0 \<le> t \<Longrightarrow>
           (sol solves_ode (\<lambda>a. ODE_sem I (OUrename x y ODE))) {0..t} {xa. mk_v I (OUrename x y ODE) (sol 0, b) xa \<in> fml_sem I (FUrename x y \<phi>)} \<Longrightarrow>
           ((\<lambda>t. RSadj x y (sol t)) solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {xa. mk_v I ODE (RSadj x y (sol 0), RSadj x y b) xa \<in> fml_sem I \<phi>}"
