@@ -244,10 +244,8 @@ where "PUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> (SDo
 definition FUadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
 where "FUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> (SDom \<sigma> \<inter> SIGF \<theta>).  SFV \<sigma> i) \<inter> U) = {}"
 
-(* TODO: No idea if this is right. *)
 definition OUadmitFO :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd,  'c) ODE \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
 where "OUadmitFO \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> {i. Inl (Inr i) \<in> SIGO \<theta>}. FVT (\<sigma> i)) \<inter> U) = {}"
-(* *)
  
 inductive OadmitFO :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd,  'c) ODE \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
 where 
@@ -304,9 +302,6 @@ inductive_simps
   and NFadmit_Diamond_simps[simp]: "NFadmit \<sigma> (Diamond a p)"
   and NFadmit_Context_simps[simp]: "NFadmit \<sigma> (InContext C p)"
 
-(*definition PFUadmit :: "('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b + 'd, 'c) formula \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
-where "PFUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i. FVF (\<sigma> i)) \<inter> U) = {}"*)
-
 definition PFUadmit :: "('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b + 'd, 'c) formula \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
 where "PFUadmit \<sigma> \<theta> U \<longleftrightarrow> True"
 
@@ -350,7 +345,6 @@ inductive_simps
   and PFadmit_Exists_simps[simp]: "PFadmit \<sigma> (Exists x p)"
   and PFadmit_Diamond_simps[simp]: "PFadmit \<sigma> (Diamond a p)"
   and PFadmit_Context_simps[simp]: "PFadmit \<sigma> (InContext C p)"
-
   
 inductive Padmit:: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) hp \<Rightarrow> bool"
 and Fadmit:: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> bool"
@@ -434,7 +428,6 @@ where "adjointFO I \<sigma> \<nu> =
  ODEBV = ODEBV I
  \<rparr>"
 
-(* TODO: simplify*)
 lemma adjoint_free:
   assumes sfree:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
   shows "adjoint I \<sigma> \<nu> =
