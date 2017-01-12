@@ -1,6 +1,6 @@
 theory "Frechet_Correctness"
 imports
-  "../afp/thys/Ordinary_Differential_Equations/ODE_Analysis"
+  "../afp-devel/thys/Ordinary_Differential_Equations/ODE_Analysis"
   "./Lib"
   "./Syntax"
   "./Denotational_Semantics"
@@ -290,7 +290,7 @@ proof (induction rule: dfree.induct)
   case (dfree_Var i)
   have free:"dfree (Var i)" by (rule dfree_Var)
   have bounded_linear:"bounded_linear (\<lambda> \<nu>'. \<nu>' \<bullet> basis_vector i )"
-    by (simp add: bounded_linear_component)
+    by (auto simp add: bounded_linear_component_cart)
   have cont:"continuous_on UNIV (\<lambda>\<nu>. Blinfun(\<lambda> \<nu>'. \<nu>' \<bullet> basis_vector i ))"
     using continuous_on_const by blast
   have eq:"\<And>\<nu> \<nu>'. (\<lambda>\<nu>. Blinfun(\<lambda> \<nu>'. \<nu>' \<bullet> basis_vector i)) \<nu> \<nu>' = (blin_frechet (good_interp I) (simple_term (Var i))) \<nu> \<nu>'"
@@ -353,8 +353,10 @@ next
   have cont_frech_vec:"continuous_on UNIV (\<lambda>x. blinfun_vec (\<lambda> i. blin_frechet (good_interp I) (simple_term (args i)) x))"
     apply(rule continuous_blinfun_vec')
     using IH by blast
+  have cont_intro:"\<And> s f g. continuous_on s f \<Longrightarrow> continuous_on s g \<Longrightarrow> continuous_on s (\<lambda>x. f x o\<^sub>L g x)"
+    by (auto intro: continuous_intros)
   have cont:"continuous_on UNIV (\<lambda>v. blinfun_compose (Blinfun (FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v))) (Blinfun(\<lambda>v'.  (\<chi> i. frechet I (args i) v v'))))"
-    apply(rule continuous_intros(146))
+    apply(rule cont_intro)
     subgoal using  sub_cont by simp
     using frech_vec_eq cont_frech_vec by presburger
   have best_eq:"(blin_frechet (good_interp I) (simple_term ($f f args))) = (\<lambda>v. blinfun_compose (Blinfun (FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v))) (Blinfun(\<lambda>v'.  (\<chi> i. frechet I (args i) v v')))) "

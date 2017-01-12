@@ -131,12 +131,15 @@ next
   have frees:"(\<And>i. dfree (args i))" using free by (auto simp add: rangeI)
   assume agree:"Vagree \<nu> \<nu>' (FVDiff ($f var args))"
   have agrees:"\<And>i. Vagree \<nu> \<nu>' (FVDiff (args i))" using agree agree_func by metis
-  have sterms:"\<And>i. sterm_sem I (args i) (fst \<nu>) = sterm_sem I (args i) (fst \<nu>')" using frees agrees coincidence_sterm by (smt FVDiff_sub Vagree_def mem_Collect_eq subset_eq)
+  have agrees':"\<And>i. Vagree \<nu> \<nu>' (FVT (args i))"
+    subgoal for i
+      using agrees[of i] FVDiff_sub[of "args i"] unfolding Vagree_def by blast
+    done
+  have sterms:"\<And>i. sterm_sem I (args i) (fst \<nu>) = sterm_sem I (args i) (fst \<nu>')" 
+    by (rule coincidence_sterm[of "\<nu>"  "\<nu>'", OF agrees'])
   have frechets:"\<And>i. frechet I (args i) (fst \<nu>) (snd \<nu>) = frechet I (args i) (fst \<nu>') (snd \<nu>')"  using IH agrees frees rangeI by blast
   show  "?case"
   using agrees sterms frechets by (auto)
-
-(* smt chokes on the full IH, so simplify things a bit first *)
 next
   case (dfree_Plus t1 t2) 
   assume dfree1:"dfree t1"
@@ -151,9 +154,7 @@ next
   have IH2':"(frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
   using IH2 agree2 by (auto)
   show "?case"
-  by (smt FVT.simps(4) IH1' IH2' UnCI Vagree_def coincidence_sterm frechet.simps(3) mem_Collect_eq)
-
-(* smt chokes on the full IH, so simplify things a bit first *)
+    by (metis FVT.simps(4) IH1' IH2' UnCI Vagree_def coincidence_sterm frechet.simps(3) mem_Collect_eq)
 next
   case (dfree_Times t1 t2) 
   assume dfree1:"dfree t1"
@@ -163,12 +164,18 @@ next
   assume agree:"Vagree \<nu> \<nu>' (FVDiff (Times t1 t2))"
   have agree1:"Vagree \<nu> \<nu>' (FVDiff t1)" using agree agree_times1 by blast
   have agree2:"Vagree \<nu> \<nu>' (FVDiff t2)" using agree agree_times2 by blast
+  have agree1':"Vagree \<nu> \<nu>' (FVT t1)"
+    using agree1 apply(auto simp add: Vagree_def)
+     using primify_contains by blast+
+  have agree2':"Vagree \<nu> \<nu>' (FVT t2)"
+    using agree2 apply(auto simp add: Vagree_def)
+     using primify_contains by blast+
   have IH1':"(frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
-  using IH1 agree1 by (auto)
+    using IH1 agree1 by (auto)
   have IH2':"(frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
-  using IH2 agree2 by (auto)
+    using IH2 agree2 by (auto)
   have almost:"Vagree \<nu> \<nu>' (FVT (Times t1 t2)) \<Longrightarrow> frechet I (Times t1 t2) (fst \<nu>) (snd \<nu>) = frechet I (Times t1 t2) (fst \<nu>') (snd \<nu>')"
-  by (smt FVT.simps(5) IH1' IH2' UnCI Vagree_def coincidence_sterm frechet.simps(4)  mem_Collect_eq agree)
+    by (auto simp add: UnCI Vagree_def agree IH1' IH2' coincidence_sterm[OF agree1', of I] coincidence_sterm[OF agree2', of I])
   show "?case"
     using agree FVDiff_sub almost
     by (metis agree_supset)
@@ -192,7 +199,8 @@ next
   assume IA:"Iagree I J {Inl x |x. x \<in> SIGT ($f var args)}"
   have agrees:"\<And>i. Vagree \<nu> \<nu>' (FVDiff (args i))" using agree agree_func by metis
   then have agrees':"\<And>i. Vagree \<nu> \<nu>' (FVT (args i))"
-    using FVDiff_sub Vagree_def mem_Collect_eq subset_eq by smt
+    using agrees  FVDiff_sub 
+    by (metis agree_sub)
   from Iagree_Func [OF IA ]have fEq:"Functions I var = Functions J var" by auto 
   have subs:"\<And>i.{Inl x |x. x \<in> SIGT (args i)} \<subseteq> {Inl x |x. x \<in> SIGT ($f var args)}"
     by auto
@@ -208,7 +216,6 @@ next
   show  "?case"
     using agrees agrees' sterms frechets fEq by auto
 
-(* smt chokes on the full IH, so simplify things a bit first *)
 next
   case (dfree_Plus t1 t2) 
   assume dfree1:"dfree t1"
@@ -225,14 +232,16 @@ next
     using Iagree_sub[OF subs(1)] Iagree_sub[OF subs(2)] by auto
   have agree1:"Vagree \<nu> \<nu>' (FVDiff t1)" using agree agree_plus1 by (blast)
   have agree2:"Vagree \<nu> \<nu>' (FVDiff t2)" using agree agree_plus2 by (blast)
+  have agree1':"Vagree \<nu> \<nu>' (FVT t1)" using agree1 primify_contains by (auto simp add: Vagree_def, metis)
+  have agree2':"Vagree \<nu> \<nu>' (FVT t2)" using agree2 primify_contains by (auto simp add: Vagree_def, metis)
   have IH1':"(frechet I t1 (fst \<nu>) (snd \<nu>) = frechet J t1 (fst \<nu>') (snd \<nu>'))"
   using IH1 agree1 IA1 by (auto)
   have IH2':"(frechet I t2 (fst \<nu>) (snd \<nu>) = frechet J t2 (fst \<nu>') (snd \<nu>'))"
   using IH2 agree2 IA2 by (auto)
   show "?case"
-  by (smt FVT.simps(4) IH1' IH2' UnCI Vagree_def coincidence_sterm frechet.simps(3) mem_Collect_eq)
+    using coincidence_sterm[OF agree1'] coincidence_sterm[OF agree1'] coincidence_sterm[OF agree2']
+    by (auto simp add: IH1' IH2' UnCI Vagree_def)
 
-(* smt chokes on the full IH, so simplify things a bit first *)
 next
   case (dfree_Times t1 t2) 
   assume dfree1:"dfree t1"
@@ -249,10 +258,10 @@ next
     using Iagree_sub[OF subs(1)] Iagree_sub[OF subs(2)] by auto
   have agree1:"Vagree \<nu> \<nu>' (FVDiff t1)" using agree agree_times1 by (blast) 
   then have agree1':"Vagree \<nu> \<nu>' (FVT t1)"
-    using FVDiff_sub Vagree_def mem_Collect_eq subset_eq by smt
+    using agree1 primify_contains by (auto simp add: Vagree_def, metis)
   have agree2:"Vagree \<nu> \<nu>' (FVDiff t2)" using agree agree_times2 by (blast)
   then have agree2':"Vagree \<nu> \<nu>' (FVT t2)"
-    using FVDiff_sub Vagree_def mem_Collect_eq subset_eq by smt
+    using agree2 primify_contains by (auto simp add: Vagree_def, metis)
   have IH1':"(frechet I t1 (fst \<nu>) (snd \<nu>) = frechet J t1 (fst \<nu>') (snd \<nu>'))"
   using IH1 agree1 IA1 by (auto)
   have IH2':"(frechet I t2 (fst \<nu>) (snd \<nu>) = frechet J t2 (fst \<nu>') (snd \<nu>'))"
@@ -585,10 +594,34 @@ next
       apply(auto)
       subgoal for i
         apply(cases "Inl i \<in> BVO ODE")
-        using bvo_to_fvo[of i ODE] 
-        apply (metis (no_types, lifting))
+         using bvo_to_fvo[of i ODE] apply (metis (no_types, lifting))
         apply(erule allE[where x=i])+
-        by (smt Inl_Inr_False imageE ode_to_fvo)
+        using Inl_Inr_False imageE ode_to_fvo 
+      proof -
+        assume a1: "(aa, ba) = mk_v I ODE (ab, bb) (sol t)"
+        assume a2: "(Inl i \<in> BVO ODE \<longrightarrow> sol 0 $ i = ab $ i) \<and> (Inl i \<in> FVO ODE \<longrightarrow> sol 0 $ i = ab $ i) \<and> (Inl i \<in> FVF \<phi> \<longrightarrow> sol 0 $ i = ab $ i)"
+        assume a3: "(Inl i::'c + 'c) \<notin> Inl ` ODE_vars I ODE \<and> Inl i \<notin> Inr ` ODE_vars I ODE \<longrightarrow> fst (mk_v I ODE (ab, bb) (sol t)) $ i = ab $ i"
+        assume a4: "(Inl i::'c + 'c) \<notin> Inl ` ODE_vars I ODE \<and> Inl i \<notin> Inr ` ODE_vars I ODE \<longrightarrow> fst (mk_v I ODE (\<chi> i. if Inl i \<in> FVO ODE then sol 0 $ i else ab $ i, bb) (\<chi> i. if Inl i \<in> FVO ODE then sol t $ i else ab $ i)) $ i = (if Inl i \<in> FVO ODE then sol 0 $ i else ab $ i)"
+        assume a5: "((Inl i::'c + 'c) \<in> Inl ` ODE_vars I ODE \<longrightarrow> fst (mk_v I ODE (ab, bb) (sol t)) $ i = sol t $ i) \<and> (Inl i \<in> Inr ` ODE_vars I ODE \<longrightarrow> fst (mk_v I ODE (ab, bb) (sol t)) $ i = sol t $ i)"
+        assume a6: "((Inl i::'c + 'c) \<in> Inl ` ODE_vars I ODE \<longrightarrow> fst (mk_v I ODE (\<chi> i. if Inl i \<in> FVO ODE then sol 0 $ i else ab $ i, bb) (\<chi> i. if Inl i \<in> FVO ODE then sol t $ i else ab $ i)) $ i = (if Inl i \<in> FVO ODE then sol t $ i else ab $ i)) \<and> (Inl i \<in> Inr ` ODE_vars I ODE \<longrightarrow> fst (mk_v I ODE (\<chi> i. if Inl i \<in> FVO ODE then sol 0 $ i else ab $ i, bb) (\<chi> i. if Inl i \<in> FVO ODE then sol t $ i else ab $ i)) $ i = (if Inl i \<in> FVO ODE then sol t $ i else ab $ i))"
+        have f7: "fst (aa, ba) $ i = sol t $ i \<or> (Inl i::'c + 'c) \<notin> Inl ` ODE_vars I ODE"
+          using a5 a1 by auto
+        have f8: "fst (aa, ba) $ i = ab $ i \<or> (Inl i::'c + 'c) \<in> Inl ` ODE_vars I ODE"
+          using a3 a1 by fastforce
+        moreover
+        { assume "fst (mk_v I ODE (\<chi> c. if Inl c \<in> FVO ODE then sol 0 $ c else ab $ c, bb) (\<chi> c. if Inl c \<in> FVO ODE then sol t $ c else ab $ c)) $ i \<noteq> ab $ i"
+          { assume "fst (mk_v I ODE (\<chi> c. if Inl c \<in> FVO ODE then sol 0 $ c else ab $ c, bb) (\<chi> c. if Inl c \<in> FVO ODE then sol t $ c else ab $ c)) $ i \<noteq> ab $ i \<and> Inl i \<notin> Inr ` ODE_vars I ODE"
+            have "Inl i \<in> FVO ODE \<and> fst (aa, ba) $ i = ab $ i \<longrightarrow> fst (mk_v I ODE (\<chi> c. if Inl c \<in> FVO ODE then sol 0 $ c else ab $ c, bb) (\<chi> c. if Inl c \<in> FVO ODE then sol t $ c else ab $ c)) $ i \<noteq> sol t $ i \<and> (Inl i::'c + 'c) \<in> Inl ` ODE_vars I ODE \<or> fst (mk_v I ODE (\<chi> c. if Inl c \<in> FVO ODE then sol 0 $ c else ab $ c, bb) (\<chi> c. if Inl c \<in> FVO ODE then sol t $ c else ab $ c)) $ i = ab $ i"
+              using f7 a4 a2 by force }
+          then have "Inl i \<in> FVO ODE \<and> fst (aa, ba) $ i = ab $ i \<longrightarrow> fst (mk_v I ODE (\<chi> c. if Inl c \<in> FVO ODE then sol 0 $ c else ab $ c, bb) (\<chi> c. if Inl c \<in> FVO ODE then sol t $ c else ab $ c)) $ i \<noteq> sol t $ i \<and> (Inl i::'c + 'c) \<in> Inl ` ODE_vars I ODE \<or> fst (mk_v I ODE (\<chi> c. if Inl c \<in> FVO ODE then sol 0 $ c else ab $ c, bb) (\<chi> c. if Inl c \<in> FVO ODE then sol t $ c else ab $ c)) $ i = ab $ i"
+            by blast }
+        ultimately have "Inl i \<in> FVO ODE \<longrightarrow> fst (mk_v I ODE (\<chi> c. if Inl c \<in> FVO ODE then sol 0 $ c else ab $ c, bb) (\<chi> c. if Inl c \<in> FVO ODE then sol t $ c else ab $ c)) $ i = fst (aa, ba) $ i"
+          using f7 a6 by fastforce
+        then have "fst (mk_v I ODE (\<chi> c. if Inl c \<in> FVO ODE then sol 0 $ c else ab $ c, bb) (\<chi> c. if Inl c \<in> FVO ODE then sol t $ c else ab $ c)) $ i = fst (aa, ba) $ i"
+          using f8 a4 ode_to_fvo by fastforce
+        then show ?thesis
+          using a1 by presburger
+      qed
     proof -
       fix i :: 'c
       assume a1: "osafe ODE"
@@ -1371,7 +1404,8 @@ next
   hence IH':"\<And>\<nu> \<nu>' I J. Iagree I J (SIGF \<phi>) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<Longrightarrow> \<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem J \<phi>"
     by auto
   hence sem_eq:"\<And>I J. Iagree I J (SIGF \<phi>) \<Longrightarrow> fml_sem I \<phi> = fml_sem J \<phi>"
-    by (smt Collect_cong Collect_mem_eq agree_refl) 
+    apply (auto simp: Collect_cong Collect_mem_eq agree_refl)
+     using agree_refl by blast+
   have "(\<And> \<nu> \<nu>' I J C . Iagree I J (SIGF (InContext C \<phi>)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (InContext C \<phi>)) \<Longrightarrow> \<nu> \<in> fml_sem I (InContext C \<phi>)  \<longleftrightarrow> \<nu>' \<in> fml_sem J (InContext C \<phi>))"
     proof -
       fix \<nu> \<nu>' I J C

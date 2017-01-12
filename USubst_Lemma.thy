@@ -166,8 +166,14 @@ proof (induction rule: dfree.induct[OF free])
         apply(rule blinfun_eqI)
         apply(rule vec_extensionality)
         subgoal for x y ia
-          using bounds[of ia y]  vec_bound[of x]
-          by (smt blinfun_vec.rep_eq bounded_linear_Blinfun_apply bounds vec_lambda_beta)
+          proof -
+            have "(\<chi> s. extendf_deriv I i (args s) \<nu> x y) $ ia = blinfun_apply (blinfun_vec (\<lambda>s. Blinfun (extendf_deriv I i (args s) \<nu> x))) y $ ia"
+              by (simp add: bounded_linear_Blinfun_apply bounds)
+            then have "(\<chi> s. extendf_deriv I i (args s) \<nu> x y) $ ia = blinfun_apply (blinfun_vec (\<lambda>s. Blinfun (extendf_deriv I i (args s) \<nu> x))) y $ ia \<and> bounded_linear (\<lambda>v. \<chi> s. extendf_deriv I i (args s) \<nu> x v)"
+              by (metis \<open>bounded_linear (\<lambda>b. \<chi> ia. extendf_deriv I i (args ia) \<nu> x b)\<close>)
+            then show ?thesis
+              by (simp add: bounded_linear_Blinfun_apply)
+          qed
         done
       have vec_cont:"continuous_on UNIV (\<lambda>x. blinfun_vec (\<lambda> ia.  Blinfun(\<lambda>b. extendf_deriv I i (args ia) \<nu> x b)))"
         apply(rule continuous_blinfun_vec')
@@ -211,9 +217,13 @@ next
   have eq:"(\<lambda>x. Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>1 \<nu> x a + extendf_deriv I i \<theta>\<^sub>2 \<nu> x a)) = (\<lambda>x. Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>1 \<nu> x a) + Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>2 \<nu> x a))"
     apply(rule ext)
     apply(rule blinfun_eqI)
-    subgoal for x i
-      using bound[of x] extendf_deriv_bounded[OF free1 good_interp] extendf_deriv_bounded[OF free2 good_interp] blinfun.add_left bounded_linear_Blinfun_apply
-      by smt
+    subgoal for x j
+      using bound[of x] extendf_deriv_bounded[OF free1 good_interp] 
+      extendf_deriv_bounded[OF free2 good_interp] 
+      blinfun.add_left[of "Blinfun (extendf_deriv I i \<theta>\<^sub>1 \<nu> x)" "Blinfun (extendf_deriv I i \<theta>\<^sub>2 \<nu> x)"]
+      bounded_linear_Blinfun_apply[of "(extendf_deriv I i \<theta>\<^sub>1 \<nu> x)"]
+      bounded_linear_Blinfun_apply[of "(extendf_deriv I i \<theta>\<^sub>2 \<nu> x)"]
+      by (simp add: bounded_linear_Blinfun_apply)
     done
   have "continuous_on UNIV (\<lambda>x. Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>1 \<nu> x a) + Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>2 \<nu> x a))"
     apply(rule continuous_intros)
@@ -237,9 +247,15 @@ next
            dterm_sem (extendf I x) \<theta>\<^sub>2 \<nu> *\<^sub>R Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>1 \<nu> x a))"
     apply(rule ext)
     apply(rule blinfun_eqI)
-    subgoal for x i
+    subgoal for x j
       using extendf_deriv_bounded[OF free1 good_interp] extendf_deriv_bounded[OF free2 good_interp] bounded[of x]
-      by (smt blinfun.scaleR_left bounded_linear_Blinfun_apply mult.commute plus_blinfun.rep_eq real_scaleR_def)
+       blinfun.scaleR_left 
+       bounded_linear_Blinfun_apply[of "Blinfun (extendf_deriv I i \<theta>\<^sub>2 \<nu> x)"]
+       bounded_linear_Blinfun_apply[of "Blinfun (extendf_deriv I i \<theta>\<^sub>1 \<nu> x)"]
+       mult.commute 
+       plus_blinfun.rep_eq[of "dterm_sem (extendf I x) \<theta>\<^sub>1 \<nu> *\<^sub>R Blinfun (extendf_deriv I i \<theta>\<^sub>2 \<nu> x)" "dterm_sem (extendf I x) \<theta>\<^sub>2 \<nu> *\<^sub>R Blinfun (extendf_deriv I i \<theta>\<^sub>1 \<nu> x)"]
+       real_scaleR_def
+       by (simp add: blinfun.scaleR_left bounded_linear_Blinfun_apply)
     done
   have "continuous_on UNIV (\<lambda>x. dterm_sem (extendf I x) \<theta>\<^sub>1 \<nu> *\<^sub>R Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>2 \<nu> x a) +
            dterm_sem (extendf I x) \<theta>\<^sub>2 \<nu> *\<^sub>R Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>1 \<nu> x a))"

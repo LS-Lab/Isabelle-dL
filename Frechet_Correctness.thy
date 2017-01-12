@@ -207,7 +207,10 @@ typedef ('a, 'b, 'c) good_interp = "{I::('a::finite,'b::finite,'c::finite) inter
       have "\<And>x. bounded_linear ((THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x)"
         by (simp add: eq')
       then show " continuous_on UNIV (\<lambda>x. Blinfun ((THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x))"
-        by (smt continuous_on_topological eq' open_UNIV)
+        using continuous_on_topological[of UNIV "(\<lambda>x. Blinfun ((THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x))"]
+          eq' open_UNIV
+          by smt
+        
   qed  
   
 lemma frechet_linear: 
@@ -410,7 +413,24 @@ next
     apply(rule blinfun_eqI)
     subgoal for v i
       using Blinfun_inverse[OF blin', of v] apply auto
-      by (smt blinfun.add_left blinfun.scaleR_left bounded_linear_Blinfun_apply frechet_blin frechet_linear free1 free2 good_interp mult.commute real_scaleR_def)
+      using blinfun.add_left[of "sterm_sem I \<theta>\<^sub>1 v *\<^sub>R blin_frechet (good_interp I) (simple_term \<theta>\<^sub>2) v" "sterm_sem I \<theta>\<^sub>2 v *\<^sub>R blin_frechet (good_interp I) (simple_term \<theta>\<^sub>1) v"]
+        blinfun.scaleR_left[of "sterm_sem I \<theta>\<^sub>1 v" "blin_frechet (good_interp I) (simple_term \<theta>\<^sub>2) v"]
+        blinfun.scaleR_left[of "sterm_sem I \<theta>\<^sub>2 v" "blin_frechet (good_interp I) (simple_term \<theta>\<^sub>1) v"]
+        bounded_linear_Blinfun_apply
+        frechet_blin[OF good_interp free1]
+        frechet_blin[OF good_interp free2]
+        frechet_linear[OF good_interp free1]
+        frechet_linear[OF good_interp free2]
+        mult.commute 
+        real_scaleR_def
+    proof -
+      have f1: "\<And>v. blinfun_apply (blin_frechet (good_interp I) (simple_term \<theta>\<^sub>1) v) = frechet I \<theta>\<^sub>1 v"
+        by (metis (no_types) \<open>(\<lambda>v. Blinfun (frechet I \<theta>\<^sub>1 v)) = blin_frechet (good_interp I) (simple_term \<theta>\<^sub>1)\<close> \<open>\<And>v. bounded_linear (frechet I \<theta>\<^sub>1 v)\<close> bounded_linear_Blinfun_apply)
+      have "\<And>v. blinfun_apply (blin_frechet (good_interp I) (simple_term \<theta>\<^sub>2) v) = frechet I \<theta>\<^sub>2 v"
+      by (metis (no_types) \<open>(\<lambda>v. Blinfun (frechet I \<theta>\<^sub>2 v)) = blin_frechet (good_interp I) (simple_term \<theta>\<^sub>2)\<close> \<open>\<And>v. bounded_linear (frechet I \<theta>\<^sub>2 v)\<close> bounded_linear_Blinfun_apply)
+      then show "sterm_sem I \<theta>\<^sub>1 v * frechet I \<theta>\<^sub>2 v i + frechet I \<theta>\<^sub>1 v i * sterm_sem I \<theta>\<^sub>2 v = blinfun_apply (sterm_sem I \<theta>\<^sub>1 v *\<^sub>R blin_frechet (good_interp I) (simple_term \<theta>\<^sub>2) v + sterm_sem I \<theta>\<^sub>2 v *\<^sub>R blin_frechet (good_interp I) (simple_term \<theta>\<^sub>1) v) i"
+        using f1 by (simp add: \<open>\<And>b. blinfun_apply (sterm_sem I \<theta>\<^sub>1 v *\<^sub>R blin_frechet (good_interp I) (simple_term \<theta>\<^sub>2) v + sterm_sem I \<theta>\<^sub>2 v *\<^sub>R blin_frechet (good_interp I) (simple_term \<theta>\<^sub>1) v) b = blinfun_apply (sterm_sem I \<theta>\<^sub>1 v *\<^sub>R blin_frechet (good_interp I) (simple_term \<theta>\<^sub>2) v) b + blinfun_apply (sterm_sem I \<theta>\<^sub>2 v *\<^sub>R blin_frechet (good_interp I) (simple_term \<theta>\<^sub>1) v) b\<close> \<open>\<And>b. blinfun_apply (sterm_sem I \<theta>\<^sub>1 v *\<^sub>R blin_frechet (good_interp I) (simple_term \<theta>\<^sub>2) v) b = sterm_sem I \<theta>\<^sub>1 v *\<^sub>R blinfun_apply (blin_frechet (good_interp I) (simple_term \<theta>\<^sub>2) v) b\<close> \<open>\<And>b. blinfun_apply (sterm_sem I \<theta>\<^sub>2 v *\<^sub>R blin_frechet (good_interp I) (simple_term \<theta>\<^sub>1) v) b = sterm_sem I \<theta>\<^sub>2 v *\<^sub>R blinfun_apply (blin_frechet (good_interp I) (simple_term \<theta>\<^sub>1) v) b\<close>)
+    qed        
     done
   have cont':"continuous_on UNIV 
     (\<lambda>v. scaleR (sterm_sem I \<theta>\<^sub>1 v) (blin_frechet (good_interp I) (simple_term \<theta>\<^sub>2) v) 
