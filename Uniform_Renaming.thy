@@ -246,8 +246,72 @@ lemma Radj_repd3:
 lemma Radj_eq_iff:"(a = b) = ((Radj x y a) = (Radj x y b))"
   unfolding Radj_def RSadj_def apply auto
   apply (rule state_eq)
-  subgoal for i by(cases "i = x", cases "i = y", auto, (smt vec_lambda_beta)+)
-  subgoal for i by(cases "i = x", cases "i = y", auto, (smt vec_lambda_beta)+)
+  subgoal for i 
+    apply(cases "i = x", cases "i = y", auto)
+      using vec_lambda_beta apply (metis)
+     proof -
+       assume "x \<noteq> y"
+       assume "(\<chi> z. fst a $ (if z = x then y else if z = y then x else z)) = (\<chi> z. fst b $ (if z = x then y else if z = y then x else z))"
+       then have "\<And>s. (\<chi> s. fst a $ (if s = x then y else if s = y then x else s)) $ s = fst b $ (if s = x then y else if s = y then x else s)"
+         by simp
+       then have "\<And>s. fst b $ (if s = x then y else if s = y then x else s) = fst a $ (if s = x then y else if s = y then x else s)"
+         by simp
+       then show "fst a $ x = fst b $ x"
+         by presburger
+     next
+       assume "(\<chi> z. fst a $ (if z = x then y else if z = y then x else z)) = (\<chi> z. fst b $ (if z = x then y else if z = y then x else z))"
+       then have "\<And>s. (\<chi> s. fst a $ (if s = x then y else if s = y then x else s)) $ s = fst b $ (if s = x then y else if s = y then x else s)"
+         by simp
+       then have "\<And>s. fst b $ (if s = x then y else if s = y then x else s) = fst a $ (if s = x then y else if s = y then x else s)"
+         by simp
+       then show "fst a $ i = fst b $ i"
+       proof -
+         { assume "fst b $ x \<noteq> fst a $ x"
+           have "fst b $ x = fst a $ x"
+             using \<open>\<And>s. fst b $ (if s = x then y else if s = y then x else s) = fst a $ (if s = x then y else if s = y then x else s)\<close> by presburger }
+         moreover
+         { assume "i \<noteq> x"
+           then have "i \<noteq> x \<and> i \<noteq> y \<or> fst a $ i = fst b $ i"
+             using \<open>\<And>s. fst b $ (if s = x then y else if s = y then x else s) = fst a $ (if s = x then y else if s = y then x else s)\<close> by presburger
+           then have ?thesis
+             using \<open>\<And>s. fst b $ (if s = x then y else if s = y then x else s) = fst a $ (if s = x then y else if s = y then x else s)\<close> by presburger }
+         ultimately show ?thesis
+           by force
+       qed
+     qed
+   subgoal for i 
+     apply(cases "i = x", cases "i = y", auto)
+       using vec_lambda_beta apply (metis)
+     proof -
+       assume "x \<noteq> y"
+       assume "(\<chi> z. snd a $ (if z = x then y else if z = y then x else z)) = (\<chi> z. snd b $ (if z = x then y else if z = y then x else z))"
+       then have "\<And>s. (\<chi> s. snd a $ (if s = x then y else if s = y then x else s)) $ s = snd b $ (if s = x then y else if s = y then x else s)"
+         by simp
+       then have "\<And>s. snd b $ (if s = x then y else if s = y then x else s) = snd a $ (if s = x then y else if s = y then x else s)"
+         by simp
+       then show "snd a $ x = snd b $ x"
+         by presburger
+     next
+       assume "(\<chi> z. snd a $ (if z = x then y else if z = y then x else z)) = (\<chi> z. snd b $ (if z = x then y else if z = y then x else z))"
+       then have "\<And>s. (\<chi> s. snd a $ (if s = x then y else if s = y then x else s)) $ s = snd b $ (if s = x then y else if s = y then x else s)"
+         by simp
+       then have "\<And>s. snd b $ (if s = x then y else if s = y then x else s) = snd a $ (if s = x then y else if s = y then x else s)"
+         by simp
+       then show "snd a $ i = snd b $ i"
+       proof -
+         { assume "snd b $ x \<noteq> snd a $ x"
+           have "snd b $ x = snd a $ x"
+             using \<open>\<And>s. snd b $ (if s = x then y else if s = y then x else s) = snd a $ (if s = x then y else if s = y then x else s)\<close> by presburger }
+         moreover
+         { assume "i \<noteq> x"
+           then have "i \<noteq> x \<and> i \<noteq> y \<or> snd a $ i = snd b $ i"
+             using \<open>\<And>s. snd b $ (if s = x then y else if s = y then x else s) = snd a $ (if s = x then y else if s = y then x else s)\<close> by presburger
+           then have ?thesis
+             using \<open>\<And>s. snd b $ (if s = x then y else if s = y then x else s) = snd a $ (if s = x then y else if s = y then x else s)\<close> by presburger }
+         ultimately show ?thesis
+           by force
+       qed
+     qed
   done
 
 lemma RSadj_cancel:"RSadj x y (RSadj x y \<nu>) = \<nu>"
@@ -973,3 +1037,6 @@ lemma BRename_sound:
     show ?thesis unfolding valid_def by auto
   qed
 end end
+
+  
+  
