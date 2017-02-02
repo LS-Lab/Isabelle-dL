@@ -45,6 +45,10 @@ definition choice_axiom :: "('sf, 'sc, 'sz) formula"
 where [axiom_defs]:"choice_axiom \<equiv> ([[$\<alpha> vid1 \<union>\<union> $\<alpha> vid2]]Predicational pid1)
   \<leftrightarrow> (([[$\<alpha> vid1]]Predicational pid1) && ([[$\<alpha> vid2]]Predicational pid1))"
 
+definition compose_axiom :: "('sf, 'sc, 'sz) formula"
+where [axiom_defs]:"compose_axiom \<equiv> ([[$\<alpha> vid1 ;; $\<alpha> vid2]]Predicational pid1) \<leftrightarrow> 
+  ([[$\<alpha> vid1]][[ $\<alpha> vid2]]Predicational pid1)"
+  
 definition Kaxiom :: "('sf, 'sc, 'sz) formula"
 where [axiom_defs]:"Kaxiom \<equiv> ([[$\<alpha> vid1]]((Predicational pid1) \<rightarrow> (Predicational pid2)))
   \<rightarrow> ([[$\<alpha> vid1]]Predicational pid1) \<rightarrow> ([[$\<alpha> vid1]]Predicational pid2)"
@@ -100,10 +104,6 @@ lemma loop_forward: "\<nu> \<in> fml_sem I ([[$\<alpha> id1**]]Predicational pid
   \<longrightarrow> \<nu> \<in> fml_sem I (Predicational pid1&&[[$\<alpha> id1]][[$\<alpha> id1**]]Predicational pid1)"
   by (cases \<nu>) (auto intro: converse_rtrancl_into_rtrancl simp add: box_sem)
 
-(* TODO: Use nchotomy instead*)
-lemma nat_case: "\<forall>n::nat. (n = 0) \<or> (\<exists>m. n = Suc m)"
-  by (rule Nat.nat.nchotomy)
-
 lemma loop_backward:
  "\<nu> \<in> fml_sem I (Predicational pid1 && [[$\<alpha> id1]][[$\<alpha> id1**]]Predicational pid1)
   \<longrightarrow> \<nu> \<in> fml_sem I ([[$\<alpha> id1**]]Predicational pid1)"
@@ -125,6 +125,9 @@ theorem box_valid: "valid box_axiom"
 theorem choice_valid: "valid choice_axiom"
   unfolding valid_def choice_axiom_def by (auto)
 
+theorem compose_valid: "valid compose_axiom"
+  unfolding valid_def compose_axiom_def by (auto)
+    
 theorem K_valid: "valid Kaxiom"
   unfolding valid_def Kaxiom_def by (auto)
 
@@ -188,7 +191,6 @@ where "Skolem_holds \<phi> var \<equiv> valid \<phi> \<longrightarrow> valid (Fo
 definition MP_holds :: "('sf, 'sc, 'sz) formula \<Rightarrow> ('sf, 'sc, 'sz) formula \<Rightarrow> bool"
 where "MP_holds \<phi> \<psi> \<equiv> valid (\<phi> \<rightarrow> \<psi>) \<longrightarrow> valid \<phi> \<longrightarrow> valid \<psi>"
 
-(* TODO: Should I do a version that allows all the variables?*)
 definition CT_holds :: "'sf \<Rightarrow> ('sf, 'sz) trm \<Rightarrow> ('sf, 'sz) trm \<Rightarrow> bool"
 where "CT_holds g \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>')
   \<longrightarrow> valid (Equals (Function g (singleton \<theta>)) (Function g (singleton \<theta>')))"
@@ -234,45 +236,19 @@ theorem CT_sound: "CT_holds var \<theta> \<theta>'"
   apply(simp add: CT_lemma)
 done
 
-(* TODO: Why are there two I's *)
-lemma CQ_lemma:"\<And>I::('sf,'sc,'sz) interp. \<And>\<nu>. \<forall>I::('sf,'sc,'sz) interp. \<forall>\<nu>. is_interp I \<longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta>' \<nu> \<Longrightarrow>
-           is_interp I \<Longrightarrow>
-           Predicates I (var::'sz) (vec_lambda(\<lambda>i. dterm_sem I (if i = vid1 then \<theta> else  (Const 0)) \<nu>)) =
-           Predicates I var (vec_lambda(\<lambda>i. dterm_sem I (if i = vid1 then \<theta>' else (Const 0)) \<nu>))"
-proof -
-  fix I :: "('sf,'sc,'sz) interp" and \<nu> :: "(real, 'sz) vec \<times> (real, 'sz) vec"
-  assume a1: "\<forall>I::('sf,'sc,'sz) interp. \<forall> \<nu>. is_interp I \<longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta>' \<nu>"
-  assume a2: "is_interp I"
-  obtain ff :: "('sz \<Rightarrow> real) \<Rightarrow> ('sz \<Rightarrow> real) \<Rightarrow> 'sz" where
-    f3: "\<forall>f fa. f (ff fa f) \<noteq> fa (ff fa f) \<or> vec_lambda f = vec_lambda fa"
-    by (meson Cart_lambda_cong)
-  have "dterm_sem I \<theta> \<nu> = dterm_sem I \<theta>' \<nu> "
-    using a2 a1 by blast
-  then have "dterm_sem I (if ff (\<lambda>f. dterm_sem I (if f = vid1 then \<theta>' else  (Const 0)) \<nu>) (\<lambda>f. dterm_sem I (if f = vid1 then \<theta> else (Const 0)) \<nu>) = vid1 then \<theta> else (Const 0)) \<nu> \<noteq> dterm_sem I (if ff (\<lambda>f. dterm_sem I (if f = vid1 then \<theta>' else (Const 0)) \<nu>) (\<lambda>f. dterm_sem I (if f = vid1 then \<theta> else  (Const 0)) \<nu>) = vid1 then \<theta>' else (Const 0)) \<nu> \<longrightarrow> dterm_sem I (if ff (\<lambda>f. dterm_sem I (if f = vid1 then \<theta>' else (Const 0)) \<nu>) (\<lambda>f. dterm_sem I (if f = vid1 then \<theta> else (Const 0)) \<nu>) = vid1 then \<theta> else (Const 0)) \<nu> = dterm_sem I (if ff (\<lambda>f. dterm_sem I (if f = vid1 then \<theta>' else (Const 0)) \<nu>) (\<lambda>f. dterm_sem I (if f = vid1 then \<theta> else (Const 0)) \<nu>) = vid1 then \<theta>' else (Const 0)) \<nu>"
-    by simp
-  then have "(vec_lambda(\<lambda>f. dterm_sem I (if f = vid1 then \<theta> else (Const 0)) \<nu>)) = (vec_lambda(\<lambda>f. dterm_sem I (if f = vid1 then \<theta>' else  (Const 0)) \<nu>))"
-    using f3 by meson
-  then show "Predicates I (var::'sz) (vec_lambda(\<lambda>f. dterm_sem I (if f = vid1 then \<theta> else (Const 0)) \<nu>)) = Predicates I var (vec_lambda(\<lambda>f. dterm_sem I (if f = vid1 then \<theta>' else  (Const 0)) \<nu>))"
-  (* TODO: Simplify. This subproof used to be a one-line "by presburger" *)
-  proof -
-    obtain ss :: "('sz \<Rightarrow> real) \<Rightarrow> ('sz \<Rightarrow> real) \<Rightarrow> 'sz" where
-      f1: "\<forall>f fa. f (ss fa f) \<noteq> fa (ss fa f) \<or> vec_lambda f = vec_lambda fa"
-      by (meson Cart_lambda_cong)
-    have "dterm_sem I (if ss (\<lambda>s. dterm_sem I (if s = vid1 then \<theta>' else Const 0) \<nu>) (\<lambda>s. dterm_sem I (if s = vid1 then \<theta> else Const 0) \<nu>) = vid1 then \<theta> else Const 0) \<nu> \<noteq> dterm_sem I (if ss (\<lambda>s. dterm_sem I (if s = vid1 then \<theta>' else Const 0) \<nu>) (\<lambda>s. dterm_sem I (if s = vid1 then \<theta> else Const 0) \<nu>) = vid1 then \<theta>' else Const 0) \<nu> \<longrightarrow> dterm_sem I (if ss (\<lambda>s. dterm_sem I (if s = vid1 then \<theta>' else Const 0) \<nu>) (\<lambda>s. dterm_sem I (if s = vid1 then \<theta> else Const 0) \<nu>) = vid1 then \<theta> else Const 0) \<nu> = dterm_sem I (if ss (\<lambda>s. dterm_sem I (if s = vid1 then \<theta>' else Const 0) \<nu>) (\<lambda>s. dterm_sem I (if s = vid1 then \<theta> else Const 0) \<nu>) = vid1 then \<theta>' else Const 0) \<nu>"
-      using \<open>dterm_sem I \<theta> \<nu> = dterm_sem I \<theta>' \<nu>\<close> by presburger
-    then have "(\<chi> s. dterm_sem I (if s = vid1 then \<theta> else Const 0) \<nu>) = (\<chi> s. dterm_sem I (if s = vid1 then \<theta>' else Const 0) \<nu>)"
-      using f1 by meson
-    then show ?thesis
-      by simp
-  qed
-qed
-
 theorem CQ_sound: "CQ_holds var \<theta> \<theta>'"
-  apply(simp only: CQ_holds_def valid_def equals_sem vec_extensionality vec_eq_iff)
-  apply(rule allI | rule impI)+
-  apply(simp only: iff_sem singleton.simps fml_sem.simps mem_Collect_eq)
-  apply(simp only: CQ_lemma)
-done
+proof (auto simp only: CQ_holds_def valid_def equals_sem vec_extensionality vec_eq_iff singleton.simps mem_Collect_eq)
+  fix I :: "('sf,'sc,'sz) interp" and a b
+  assume sem:"\<forall>I::('sf,'sc,'sz) interp. \<forall> \<nu>. is_interp I \<longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta>' \<nu>"
+  assume good:"is_interp I"
+  have sem_eq:"dterm_sem I \<theta> (a,b) = dterm_sem I \<theta>' (a,b)"
+    using sem good by auto
+  have feq:"(\<chi> i. dterm_sem I (if i = vid1 then \<theta> else Const 0) (a, b)) = (\<chi> i. dterm_sem I (if i = vid1 then \<theta>' else Const 0) (a, b))"  
+    apply(rule vec_extensionality)
+    using sem_eq by auto
+  then show "(a, b) \<in> fml_sem I ($\<phi> var (singleton \<theta>) \<leftrightarrow> $\<phi> var (singleton \<theta>'))"
+    by auto
+qed
 
 theorem CE_sound: "CE_holds var \<phi> \<psi>"
   apply(simp only: CE_holds_def valid_def iff_sem)
