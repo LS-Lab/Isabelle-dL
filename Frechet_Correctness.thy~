@@ -30,23 +30,23 @@ proof -
   let ?g = "(\<lambda>v. basis_vector x)"
   let ?g' = "(\<lambda>v. 0)"
   have id_deriv: "(?f has_derivative ?f') (at \<nu>) "
-  by (rule has_derivative_ident)
+    by (rule has_derivative_ident)
   have const_deriv: "(?g has_derivative ?g') (at \<nu>)"
-  by (rule has_derivative_const)
+    by (rule has_derivative_const)
   have inner_deriv:"((\<lambda>x. inner (?f x) (?g x)) has_derivative
                      (\<lambda>h. inner (?f \<nu>) (?g' h) + inner (?f' h) (?g \<nu>))) (at \<nu>)"
-  by (intro has_derivative_inner [OF id_deriv const_deriv])
+    by (intro has_derivative_inner [OF id_deriv const_deriv])
 
   from inner_prod_eq
   have left_eq: "(\<lambda>x. inner (?f x) (?g x)) = (\<lambda>v. vec_nth v x)"
-  by (auto)
+    by (auto)
   from inner_deriv and inner_prod_eq
   have better_deriv:"((\<lambda>v. vec_nth v x) has_derivative
                      (\<lambda>h. inner (?f \<nu>) (?g' h) + inner (?f' h) (?g \<nu>))) (at \<nu>)"
-  by (metis (no_types, lifting) UNIV_I has_derivative_transform)
+    by (metis (no_types, lifting) UNIV_I has_derivative_transform)
   have deriv_eq: "(\<lambda>h. inner (?f \<nu>) (?g' h) + inner (?f' h) (?g \<nu>))
     = (\<lambda>v'. inner v' (\<chi> i. if x = i then 1 else 0))"
-  by(auto)
+    by(auto)
   from better_deriv and deriv_eq show ?thesis by (auto)
 qed
 
@@ -66,18 +66,18 @@ proof -
   let ?f' = "FunctionFrechet I f (?g \<nu>)"
   have hEqFG:  "?h  = ?f  o ?g" by (auto)
   have hEqFG': "?h' = ?f' o ?g'"
-    proof -
-      have frechet_def:"frechet I (Function f args) \<nu>
-          = (\<lambda>v'. FunctionFrechet I f (?g \<nu>) (\<chi> i. frechet I (args i) \<nu> v'))"
+  proof -
+    have frechet_def:"frechet I (Function f args) \<nu>
+        = (\<lambda>v'. FunctionFrechet I f (?g \<nu>) (\<chi> i. frechet I (args i) \<nu> v'))"
       by (auto)
-      have composition:
-        "(\<lambda>v'. FunctionFrechet I f (?g \<nu>) (\<chi> i. frechet I (args i) \<nu> v'))
-      = (FunctionFrechet I f (?g \<nu>)) o (\<lambda> v'. \<chi> i. frechet I (args i) \<nu> v')"
+    have composition:
+      "(\<lambda>v'. FunctionFrechet I f (?g \<nu>) (\<chi> i. frechet I (args i) \<nu> v'))
+       = (FunctionFrechet I f (?g \<nu>)) o (\<lambda> v'. \<chi> i. frechet I (args i) \<nu> v')"
       by (auto)
-      from frechet_def and composition show ?thesis by (auto)
-    qed
+    from frechet_def and composition show ?thesis by (auto)
+  qed
   have fDeriv: "(?f has_derivative ?f') (at (?g \<nu>))"
-    using  good_interp is_interp_def by blast
+    using good_interp is_interp_def by blast
   from IH have gDeriv: "(?g has_derivative ?g') (at \<nu>)" by (auto)
   from fDeriv and gDeriv
   have composeDeriv: "((?f o ?g) has_derivative (?f' o ?g')) (at \<nu>)"
@@ -106,10 +106,10 @@ lemma func_lemma:
   "is_interp I \<Longrightarrow>
   (\<And>\<theta> :: ('a::finite, 'c::finite) trm. \<theta> \<in> range args \<Longrightarrow> (sterm_sem I \<theta> has_derivative frechet I \<theta> \<nu>) (at \<nu>)) \<Longrightarrow>
   (sterm_sem I ($f f args) has_derivative frechet I ($f f args) \<nu>) (at \<nu>)"
-apply(auto simp add: sfunction_case is_interp_def function_case_inner)
-apply(erule func_lemma2)
-apply(auto)  
-done
+  apply(auto simp add: sfunction_case is_interp_def function_case_inner)
+  apply(erule func_lemma2)
+  apply(auto)  
+  done
 
 (* TODO: Should be able to remove these lemmas by adding some inductive_simp rules *)
 lemma dfree_vac1: "\<not> dfree ($' var)"
@@ -119,9 +119,9 @@ lemma dfree_vac2: "\<not> dfree (Differential d)"
   by (auto elim: dfree.cases)
 
 (* Our syntactically-defined derivatives of terms agree with the actual derivatives of the terms.
- Since our definition of derivative is total, this gives us that derivatives are "decidable" for
- terms (modulo computations on reals) and that they obey all the expected identities, which gives
- us the axioms we want for differential terms essentially for free.
+ * Since our definition of derivative is total, this gives us that derivatives are "decidable" for
+ * terms (modulo computations on reals) and that they obey all the expected identities, which gives
+ * us the axioms we want for differential terms essentially for free.
  *)
 lemma frechet_correctness:
   fixes I :: "('a::finite, 'b::finite, 'c::finite) interp" and \<nu>
@@ -136,17 +136,17 @@ next
 qed auto
 
 lemma sterm_determines_frechet:
-fixes I ::"('a1::finite, 'b1::finite, 'c::finite) interp"
-  and J ::"('a2::finite, 'b2::finite, 'c::finite) interp"
-  and \<theta>1 :: "('a1::finite, 'c::finite) trm"
-  and \<theta>2 :: "('a2::finite, 'c::finite) trm"
-  and \<nu> 
-assumes good_interp1:"is_interp I"
-assumes good_interp2:"is_interp J"
-assumes free1:"dfree \<theta>1"
-assumes free2:"dfree \<theta>2"
-assumes sem:"sterm_sem I \<theta>1 = sterm_sem J \<theta>2"
-shows "frechet I \<theta>1 (fst \<nu>) (snd \<nu>) = frechet J \<theta>2 (fst \<nu>) (snd \<nu>)"
+  fixes I ::"('a1::finite, 'b1::finite, 'c::finite) interp"
+    and J ::"('a2::finite, 'b2::finite, 'c::finite) interp"
+    and \<theta>1 :: "('a1::finite, 'c::finite) trm"
+    and \<theta>2 :: "('a2::finite, 'c::finite) trm"
+    and \<nu> 
+  assumes good_interp1:"is_interp I"
+  assumes good_interp2:"is_interp J"
+  assumes free1:"dfree \<theta>1"
+  assumes free2:"dfree \<theta>2"
+  assumes sem:"sterm_sem I \<theta>1 = sterm_sem J \<theta>2"
+  shows "frechet I \<theta>1 (fst \<nu>) (snd \<nu>) = frechet J \<theta>2 (fst \<nu>) (snd \<nu>)"
 proof -
   have d1:"(sterm_sem I \<theta>1 has_derivative (frechet I \<theta>1 (fst \<nu>))) (at (fst \<nu>))"
     using frechet_correctness[OF good_interp1 free1] by auto
@@ -160,16 +160,16 @@ qed
 lemma the_deriv:
   assumes deriv:"(f has_derivative F) (at x)"
   shows "(THE G. (f has_derivative G) (at x)) = F"
-    apply(rule the_equality)
-    subgoal by (rule deriv)
-    subgoal for G by (auto simp add: deriv has_derivative_unique)
-    done
+  apply(rule the_equality)
+   subgoal by (rule deriv)
+  subgoal for G by (auto simp add: deriv has_derivative_unique)
+  done
    
 lemma the_all_deriv:
   assumes deriv:"\<forall>x. (f has_derivative F x) (at x)"
   shows "(THE G. \<forall> x. (f has_derivative G x) (at x)) = F"
     apply(rule the_equality)
-    subgoal by (rule deriv)
+     subgoal by (rule deriv)
     subgoal for G 
       apply(rule ext)
       subgoal for x
@@ -181,68 +181,66 @@ lemma the_all_deriv:
 typedef ('a, 'c) strm = "{\<theta>:: ('a,'c) trm. dfree \<theta>}"
   morphisms raw_term simple_term
   by(rule exI[where x= "Const 0"], auto simp add: dfree_Const)
-
   
 typedef ('a, 'b, 'c) good_interp = "{I::('a::finite,'b::finite,'c::finite) interp. is_interp I}"
   morphisms raw_interp good_interp
   apply(rule exI[where x="\<lparr> Functions = (\<lambda>f x. 0), Predicates = (\<lambda>p x. True), Contexts = (\<lambda>C S. S), Programs = (\<lambda>a. {}), ODEs = (\<lambda>c v. (\<chi> i. 0)), ODEBV = \<lambda>c. {}\<rparr>"])
   apply(auto simp add: is_interp_def)
-   proof -
-     fix x ::real
-     have eq:"(THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) = (\<lambda>_ _. 0)"
-       by(rule the_all_deriv, auto)
-     have eq':"(THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x = (\<lambda>_. 0)"
-       by (simp add: eq)
-     have deriv:"((\<lambda>x.0) has_derivative (\<lambda>x. 0)) (at x)"
-       by auto
-     then show "\<And>x. ((\<lambda>x. 0) has_derivative (THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x) (at x)" 
-       by (auto simp add: eq eq' deriv)
-   next
-     have eq:"(THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) = (\<lambda>_ _. 0)"
-       by(rule the_all_deriv, auto)
-     have eq':"\<forall>x. (THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x = (\<lambda>_. 0)"
-       by (simp add: eq)
-     have deriv:"\<And>x. ((\<lambda>x.0) has_derivative (\<lambda>x. 0)) (at x)"
-       by auto
-     have blin:"\<And>x. bounded_linear ((THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x)"
-       by (simp add: eq')
-     show " continuous_on UNIV (\<lambda>x. Blinfun ((THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x))"
-       apply(clarsimp simp add: continuous_on_topological[of UNIV "(\<lambda>x. Blinfun ((THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x))"])
-       apply(rule exI[where x = UNIV])
-       by(auto simp add: eq' blin)
-   qed
-  
+proof -
+  fix x ::real
+  have eq:"(THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) = (\<lambda>_ _. 0)"
+    by(rule the_all_deriv, auto)
+  have eq':"(THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x = (\<lambda>_. 0)"
+    by (simp add: eq)
+  have deriv:"((\<lambda>x.0) has_derivative (\<lambda>x. 0)) (at x)"
+    by auto
+  then show "\<And>x. ((\<lambda>x. 0) has_derivative (THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x) (at x)" 
+    by (auto simp add: eq eq' deriv)
+next
+  have eq:"(THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) = (\<lambda>_ _. 0)"
+    by(rule the_all_deriv, auto)
+  have eq':"\<forall>x. (THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x = (\<lambda>_. 0)"
+    by (simp add: eq)
+  have deriv:"\<And>x. ((\<lambda>x.0) has_derivative (\<lambda>x. 0)) (at x)"
+    by auto
+  have blin:"\<And>x. bounded_linear ((THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x)"
+    by (simp add: eq')
+  show " continuous_on UNIV (\<lambda>x. Blinfun ((THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x))"
+    apply(clarsimp simp add: continuous_on_topological[of UNIV "(\<lambda>x. Blinfun ((THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x))"])
+    apply(rule exI[where x = UNIV])
+    by(auto simp add: eq' blin)
+ qed
+
 lemma frechet_linear: 
   assumes good_interp:"is_interp I"
-  shows "\<And>v \<theta> . dfree \<theta> \<Longrightarrow> bounded_linear (frechet I \<theta> v)"
-  subgoal for v \<theta>
-  proof(induction rule: dfree.induct)
-    case (dfree_Var i)
-    then show ?case by(auto)
-  next
-    case (dfree_Const r)
-    then show ?case by auto
-  next
-    case (dfree_Fun args i)
-    have blin1:"\<And>x. bounded_linear(FunctionFrechet I i x)"
-      using good_interp unfolding is_interp_def using has_derivative_bounded_linear
-      by blast
-    have blin2:"bounded_linear (\<lambda> a. (\<chi> i. frechet I (args i) v a))"
-      using dfree_Fun.IH by(rule bounded_linear_vec)
-    then show ?case
-      using bounded_linear_compose[of "FunctionFrechet I i (\<chi> i. sterm_sem I (args i) v)" "(\<lambda>a. (\<chi> i. frechet I (args i) v a))", OF blin1 blin2]
-      by auto
-  next
-    case (dfree_Plus \<theta>\<^sub>1 \<theta>\<^sub>2)
-    then show ?case 
-      apply auto
-      using bounded_linear_add by (blast)
-  next
-    case (dfree_Times \<theta>\<^sub>1 \<theta>\<^sub>2)
-    then show ?case
-      by (auto simp add: bounded_linear_add bounded_linear_const_mult bounded_linear_mult_const)
-  qed
-done
+  fixes v \<theta>
+  shows " dfree \<theta> \<Longrightarrow> bounded_linear (frechet I \<theta> v)"
+proof(induction rule: dfree.induct)
+  case (dfree_Var i)
+  then show ?case by(auto)
+next
+  case (dfree_Const r)
+  then show ?case by auto
+next
+  case (dfree_Fun args i)
+  have blin1:"\<And>x. bounded_linear(FunctionFrechet I i x)"
+    using good_interp unfolding is_interp_def using has_derivative_bounded_linear
+    by blast
+  have blin2:"bounded_linear (\<lambda> a. (\<chi> i. frechet I (args i) v a))"
+    using dfree_Fun.IH by(rule bounded_linear_vec)
+  then show ?case
+    using bounded_linear_compose[of "FunctionFrechet I i (\<chi> i. sterm_sem I (args i) v)" "(\<lambda>a. (\<chi> i. frechet I (args i) v a))", OF blin1 blin2]
+    by auto
+next
+  case (dfree_Plus \<theta>\<^sub>1 \<theta>\<^sub>2)
+  then show ?case 
+    apply auto
+    using bounded_linear_add by (blast)
+next
+  case (dfree_Times \<theta>\<^sub>1 \<theta>\<^sub>2)
+  then show ?case
+    by (auto simp add: bounded_linear_add bounded_linear_const_mult bounded_linear_mult_const)
+qed
 
 setup_lifting type_definition_good_interp
 
@@ -262,7 +260,6 @@ lemma sterm_continuous:
   assumes good_interp:"is_interp I"
   shows "dfree \<theta> \<Longrightarrow> continuous_on UNIV (sterm_sem I \<theta>)"
 proof(induction rule: dfree.induct)
-next
   case (dfree_Fun args i)
   assume IH:"\<And>i. continuous_on UNIV (sterm_sem I (args i))"
   have con1:"continuous_on UNIV (Functions I i)"
@@ -273,7 +270,7 @@ next
     using IH by auto
   have con:"continuous_on UNIV ((Functions I i) \<circ> (\<lambda>x.  (\<chi> i. sterm_sem I (args i) x)))"
     apply(rule continuous_on_compose)
-    using con1 con2 apply auto
+     using con1 con2 apply auto
     using continuous_on_subset by blast
   show ?case 
     using con comp_def by(simp)
@@ -285,9 +282,9 @@ lemma sterm_continuous':
   using sterm_continuous continuous_on_subset good_interp by blast
 
 lemma frechet_continuous:
-fixes I :: "('sf, 'sc, 'sz) interp"
-assumes good_interp:"is_interp I"
-shows "dfree \<theta> \<Longrightarrow> continuous_on UNIV (blin_frechet (good_interp I) (simple_term \<theta>))"    
+  fixes I :: "('sf, 'sc, 'sz) interp"
+  assumes good_interp:"is_interp I"
+  shows "dfree \<theta> \<Longrightarrow> continuous_on UNIV (blin_frechet (good_interp I) (simple_term \<theta>))"    
 proof (induction rule: dfree.induct)
   case (dfree_Var i)
   have free:"dfree (Var i)" by (rule dfree_Var)
@@ -339,7 +336,7 @@ next
     unfolding comp_def by blast
   have sub_cont:"continuous_on UNIV ((?blin_ff) \<circ> (\<lambda>x. (\<chi> i. sterm_sem I (args i) x)))"
     apply(rule continuous_intros)+
-    apply (simp add: frees good_interp sterm_continuous')
+     apply (simp add: frees good_interp sterm_continuous')
     using continuous_on_subset great_interp by blast
   have blin_frech_vec:"\<And>x. bounded_linear (\<lambda>v'. \<chi> i. frechet I (args i) x v')" 
     by (simp add: bounded_linear_vec frechet_linear frees good_interp)
@@ -359,22 +356,21 @@ next
     by (auto intro: continuous_intros)
   have cont:"continuous_on UNIV (\<lambda>v. blinfun_compose (Blinfun (FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v))) (Blinfun(\<lambda>v'.  (\<chi> i. frechet I (args i) v v'))))"
     apply(rule cont_intro)
-    subgoal using  sub_cont by simp
+     subgoal using  sub_cont by simp
     using frech_vec_eq cont_frech_vec by presburger
   have best_eq:"(blin_frechet (good_interp I) (simple_term ($f f args))) = (\<lambda>v. blinfun_compose (Blinfun (FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v))) (Blinfun(\<lambda>v'.  (\<chi> i. frechet I (args i) v v')))) "
     apply(rule ext)
     apply(rule blinfun_eqI)
-    proof -
-      fix v :: "(real, 'sz) vec" and i :: "(real, 'sz) vec"
-      have "frechet I ($f f args) v i = blinfun_apply (blin_frechet (good_interp I) (simple_term ($f f args)) v) i"
-        by (metis (no_types) bounded_linear_Blinfun_apply dfree_Fun_simps frechet_blin frechet_linear frees good_interp)
-      then have "FunctionFrechet I f (\<chi> s. sterm_sem I (args s) v) (blinfun_apply (Blinfun (\<lambda>va. \<chi> s. frechet I (args s) v va)) i) = blinfun_apply (blin_frechet (good_interp I) (simple_term ($f f args)) v) i"
-        by (simp add: blin_frech_vec bounded_linear_Blinfun_apply)
-      then show "blinfun_apply (blin_frechet (good_interp I) (simple_term ($f f args)) v) i = blinfun_apply (Blinfun (FunctionFrechet I f (\<chi> s. sterm_sem I (args s) v)) o\<^sub>L Blinfun (\<lambda>va. \<chi> s. frechet I (args s) v va)) i"
-        by (metis (no_types) blinfun_apply_blinfun_compose bounded_linear_Blinfun_apply bounded_linears)
-    qed
-  then show ?case using cont
-    best_eq by auto
+  proof -
+    fix v :: "(real, 'sz) vec" and i :: "(real, 'sz) vec"
+    have "frechet I ($f f args) v i = blinfun_apply (blin_frechet (good_interp I) (simple_term ($f f args)) v) i"
+      by (metis (no_types) bounded_linear_Blinfun_apply dfree_Fun_simps frechet_blin frechet_linear frees good_interp)
+    then have "FunctionFrechet I f (\<chi> s. sterm_sem I (args s) v) (blinfun_apply (Blinfun (\<lambda>va. \<chi> s. frechet I (args s) v va)) i) = blinfun_apply (blin_frechet (good_interp I) (simple_term ($f f args)) v) i"
+      by (simp add: blin_frech_vec bounded_linear_Blinfun_apply)
+    then show "blinfun_apply (blin_frechet (good_interp I) (simple_term ($f f args)) v) i = blinfun_apply (Blinfun (FunctionFrechet I f (\<chi> s. sterm_sem I (args s) v)) o\<^sub>L Blinfun (\<lambda>va. \<chi> s. frechet I (args s) v va)) i"
+      by (metis (no_types) blinfun_apply_blinfun_compose bounded_linear_Blinfun_apply bounded_linears)
+  qed
+  then show ?case using cont best_eq by auto
 next
   case (dfree_Plus \<theta>\<^sub>1 \<theta>\<^sub>2)
   assume IH1:"continuous_on UNIV (blin_frechet (good_interp I) (simple_term \<theta>\<^sub>1))"
@@ -435,11 +431,11 @@ next
     (\<lambda>v. scaleR (sterm_sem I \<theta>\<^sub>1 v) (blin_frechet (good_interp I) (simple_term \<theta>\<^sub>2) v) 
        + scaleR (sterm_sem I \<theta>\<^sub>2 v) (blin_frechet (good_interp I) (simple_term \<theta>\<^sub>1) v))"
     apply(rule continuous_on_add)
+     apply(rule continuous_on_scaleR)
+      apply(rule sterm_continuous[OF good_interp free1])
+     apply(rule IH2)
     apply(rule continuous_on_scaleR)
-    apply(rule sterm_continuous[OF good_interp free1])
-    apply(rule IH2)
-    apply(rule continuous_on_scaleR)
-    apply(rule sterm_continuous[OF good_interp free2])
+     apply(rule sterm_continuous[OF good_interp free2])
     by(rule IH1)
   have cont:"continuous_on UNIV (\<lambda>v. Blinfun (\<lambda>v'. sterm_sem I \<theta>\<^sub>1 v * frechet I \<theta>\<^sub>2 v v' + frechet I \<theta>\<^sub>1 v v' * sterm_sem I \<theta>\<^sub>2 v))"
     using cont' blinfun_eq by auto

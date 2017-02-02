@@ -2272,27 +2272,6 @@ lemma nsubst_mkv:
      by (metis (full_types))+
   done
 
-(* TODO: Merge with lib *)
-lemma constant_when_zero:
-  fixes v::"real \<Rightarrow> (real, 'i::finite) vec"
-  assumes x0: "(v 0) $ i = x0"
-  assumes sol: "(v solves_ode f) {0..t} X"
-  assumes f0: "\<And>s x. s \<in> {0..t} \<Longrightarrow>  f s x $ i = 0"
-  assumes t:"0 \<le> t"
-  shows "v t $ i = x0"
-proof -
-  from solves_odeD[OF sol]
-  have deriv: "(v has_vderiv_on (\<lambda>t. f t (v t))) {0..t}" by simp
-  then have "((\<lambda>t. v t $ i) has_vderiv_on (\<lambda>t. 0)) {0..t}"
-    using f0
-    by (auto simp: has_vderiv_on_def has_vector_derivative_def cart_eq_inner_axis
-      intro!: derivative_eq_intros)
-  from has_vderiv_on_zero_constant convex_UNIV this
-  obtain c where "\<And>x. x \<in> {0..t} \<Longrightarrow> v x $ i = c" by blast
-  with x0 have "c = x0" "v t $ i = c"using \<open>0 \<le> t\<close> by auto
-  then show ?thesis by simp
-qed
-
 lemma ODE_unbound_zero:
   fixes i
   shows "Inl i \<notin> BVO ODE \<Longrightarrow> ODE_sem I ODE x $ i = 0"
@@ -2306,15 +2285,11 @@ lemma ODE_bound_effect:
   shows "Vagree (sol 0,b) (sol s, b) (-(BVO ODE))"
 proof -
   have "\<And>i. Inl i \<notin> BVO ODE \<Longrightarrow>  (\<forall> s. s \<in> {0..t} \<longrightarrow> sol s $ i = sol 0 $ i)"
-    subgoal for i
-      apply auto
-      subgoal for s
-        apply (rule constant_when_zero[of sol i "sol 0 $ i" "(\<lambda> _. ODE_sem I ODE)" s X])
-           using s sol apply auto
-         using ODE_unbound_zero[of i] solves_ode_subset 
-         by fastforce+
-    done
-  done
+    apply auto
+    apply (rule constant_when_zero)
+         using s sol apply auto
+    using ODE_unbound_zero solves_ode_subset 
+    by fastforce+
   then show "Vagree (sol 0, b) (sol s, b) (- BVO ODE)"
     unfolding Vagree_def 
     using s  by (metis Compl_iff fst_conv  snd_conv)

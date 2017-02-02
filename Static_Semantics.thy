@@ -157,12 +157,8 @@ lemma FVDiff_sub:"FVT f \<subseteq> FVDiff f"
 lemma fvdiff_plus1:"FVDiff (Plus t1 t2) = FVDiff t1 \<union> FVDiff t2"
   by (auto)
 
-(* TODO: Use existing lemma instead *)
-lemma union_supset1:"A \<union> B \<supseteq> A"
-  by (auto)
-
 lemma agree_func_fvt:"Vagree \<nu> \<nu>' (FVT (Function f args)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVT (args i))"
-  by (auto simp add: union_supset1 agree_supset Vagree_def)
+  by (auto simp add: Set.Un_upper1 agree_supset Vagree_def)
 
 lemma agree_plus1:"Vagree \<nu> \<nu>' (FVDiff (Plus t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t1)"
 proof -
@@ -170,7 +166,7 @@ proof -
   have agree':"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i) \<union> (\<Union>i\<in>FVT t2. primify i))"
     using fvdiff_plus1 FVDiff.simps agree by (auto)
   have agreeL:"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i))"
-    using agree' agree_supset union_supset1 by (blast)
+    using agree' agree_supset Set.Un_upper1 by (blast)
   show "Vagree \<nu> \<nu>' (FVDiff t1)" using agreeL by (auto)
 qed
 
@@ -180,7 +176,7 @@ proof -
   have agree':"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i) \<union> (\<Union>i\<in>FVT t2. primify i))"
     using fvdiff_plus1 FVDiff.simps agree by (auto)
   have agreeR:"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t2. primify i))"
-    using agree' agree_supset union_supset1 by (blast)
+    using agree' agree_supset Set.Un_upper1 by (blast)
   show "Vagree \<nu> \<nu>' (FVDiff t2)" using agreeR by (auto)
 qed
 
@@ -190,7 +186,7 @@ proof -
   have agree':"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i) \<union> (\<Union>i\<in>FVT t2. primify i))"
     using fvdiff_plus1 FVDiff.simps agree by (auto)
   have agreeL:"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i))"
-    using agree' agree_supset union_supset1 by (blast)
+    using agree' agree_supset Set.Un_upper1 by (blast)
   show "Vagree \<nu> \<nu>' (FVDiff t1)" using agreeL by (auto)
 qed
 
@@ -200,7 +196,7 @@ proof -
   have agree':"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i) \<union> (\<Union>i\<in>FVT t2. primify i))"
     using fvdiff_plus1 FVDiff.simps agree by (auto)
   have agreeR:"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t2. primify i))"
-    using agree' agree_supset union_supset1 by (blast)
+    using agree' agree_supset Set.Un_upper1 by (blast)
   show "Vagree \<nu> \<nu>' (FVDiff t2)" using agreeR by (auto)
 qed
 

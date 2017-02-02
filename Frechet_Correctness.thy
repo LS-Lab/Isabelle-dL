@@ -111,13 +111,6 @@ lemma func_lemma:
   apply(auto)  
   done
 
-(* TODO: Should be able to remove these lemmas by adding some inductive_simp rules *)
-lemma dfree_vac1: "\<not> dfree ($' var)"
-  by (auto elim: dfree.cases)
-
-lemma dfree_vac2: "\<not> dfree (Differential d)"
-  by (auto elim: dfree.cases)
-
 (* Our syntactically-defined derivatives of terms agree with the actual derivatives of the terms.
  * Since our definition of derivative is total, this gives us that derivatives are "decidable" for
  * terms (modulo computations on reals) and that they obey all the expected identities, which gives

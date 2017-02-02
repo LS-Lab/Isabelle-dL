@@ -375,21 +375,24 @@ lemma has_vderiv_on_zero_constant:
 
 lemma constant_when_zero:
   fixes v::"real \<Rightarrow> (real, 'i::finite) vec"
-  assumes x0: "(v 0) $ i = x0"
-  assumes sol: "(v solves_ode f) UNIV UNIV"
-  assumes f0: "\<And>t x. f t x $ i = 0"
-  assumes "0 \<le> t"
+  assumes x0: "(v t0) $ i = x0"
+  assumes sol: "(v solves_ode f) T S"
+  assumes f0: "\<And>s x. s \<in> T \<Longrightarrow> f s x $ i = 0"
+  assumes t0:"t0 \<in> T"
+  assumes t:"t \<in> T"
+  assumes convex:"convex T"
   shows "v t $ i = x0"
 proof -
   from solves_odeD[OF sol]
-  have deriv: "(v has_vderiv_on (\<lambda>t. f t (v t))) UNIV" by simp
-  then have "((\<lambda>t. v t $ i) has_vderiv_on (\<lambda>t. 0)) UNIV"
+  have deriv: "(v has_vderiv_on (\<lambda>t. f t (v t))) T" by simp
+  then have "((\<lambda>t. v t $ i) has_vderiv_on (\<lambda>t. 0)) T"
     using f0
     by (auto simp: has_vderiv_on_def has_vector_derivative_def cart_eq_inner_axis
       intro!: derivative_eq_intros)
-  from has_vderiv_on_zero_constant[OF convex_UNIV this]
-  obtain c where "\<And>x. x \<in> UNIV \<Longrightarrow> v x $ i = c" by blast
-  with x0 have "c = x0" "v t $ i = c"using \<open>0 \<le> t\<close> by auto
+  from has_vderiv_on_zero_constant[OF convex this]
+  obtain c where c:"\<And>x. x \<in> T \<Longrightarrow> v x $ i = c" by blast
+  with x0 have "c = x0" "v t $ i = c"
+    using t t0 c x0 by blast+
   then show ?thesis by simp
 qed
 
@@ -465,8 +468,8 @@ proof -
        (auto intro!: exI[where x=0] simp: vec_eq_iff)
   have sol: "(?v solves_ode ?f) UNIV ?X" using solves ivl by auto
   have thef0: "\<And>t x. ?f t x $ i = 0" by auto
-  have gre:"0 \<le> t" using \<open>0 < t\<close> by auto
-  from constant_when_zero [OF thex0 sol thef0 gre] have "?v t $ i = x"
+  from constant_when_zero [OF thex0 sol thef0]
+  have "?v t $ i = x"
     by auto
   thus ?thesis by auto
  qed
