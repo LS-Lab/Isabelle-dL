@@ -1,6 +1,6 @@
 theory "USubst_Lemma"
 imports
-  "../afp-devel/thys/Ordinary_Differential_Equations/ODE_Analysis"
+  "$AFP/Ordinary_Differential_Equations/ODE_Analysis"
   "./Ids"
   "./Lib"
   "./Syntax"
@@ -4058,4 +4058,113 @@ proof -
   qed
   then show ?thesis unfolding valid_def by blast 
 qed
+  
+
+lemma subst_sequent:
+  fixes I::"('sf, 'sc, 'sz) interp" and \<nu>::"'sz state"
+  assumes good_interp:"is_interp I"
+  assumes Sadmit:"Sadmit \<sigma> (\<Gamma>,\<Delta>)"
+  assumes Ssafe:"Ssafe (\<Gamma>,\<Delta>)"
+  assumes ssafe:"ssafe \<sigma>"
+  shows "(\<nu> \<in> seq_sem I (Ssubst (\<Gamma>,\<Delta>) \<sigma>)) = (\<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) (\<Gamma>,\<Delta>))"
+proof -
+  let ?f = "(seq2fml (\<Gamma>, \<Delta>))"
+  have subst_eqG:"Fsubst (foldr op && \<Gamma> TT) \<sigma> = foldr op && (map (\<lambda>\<phi>. Fsubst \<phi> \<sigma>) \<Gamma>) TT"
+    by(induction \<Gamma>, auto simp add: TT_def)
+  have subst_eqD:"Fsubst (foldr op || \<Delta> FF) \<sigma> = foldr op || (map (\<lambda>\<phi>. Fsubst \<phi> \<sigma>) \<Delta>) FF"
+    by(induction \<Delta>, auto simp add: FF_def Or_def)
+  have subst_eq:"Fsubst ?f \<sigma> = (seq2fml (Ssubst (\<Gamma>, \<Delta>) \<sigma>))"
+    using subst_eqG subst_eqD 
+    by (auto simp add: Implies_def Or_def)
+  have fsafeG:"fsafe (foldr op && \<Gamma> TT)" 
+    using Ssafe apply(induction \<Gamma>, auto simp add: Ssafe_def TT_def)
+    by fastforce
+  have fsafeD:"fsafe (foldr op || \<Delta> FF)" 
+    using Ssafe Or_def apply(induction \<Delta>, auto simp add: Ssafe_def FF_def Or_def)
+    by fastforce
+  have fsafe:"fsafe ?f" 
+    using fsafeD fsafeG by (auto simp add: Implies_def Or_def)
+  have FadmitG:"Fadmit \<sigma> (foldr op && \<Gamma> TT)"
+    using Sadmit Or_def apply(induction \<Gamma>, auto simp add: Sadmit_def TT_def Or_def)
+    by fastforce
+  have FadmitD:"Fadmit \<sigma> (foldr op || \<Delta> FF)"
+    using Sadmit Or_def apply(induction \<Delta>, auto simp add: Sadmit_def FF_def Or_def)
+    by fastforce
+  have Fadmit:"Fadmit \<sigma> ?f" 
+    using FadmitG FadmitD unfolding Implies_def
+    by (simp add: Implies_def Or_def)
+  have "(\<nu> \<in> fml_sem I (Fsubst ?f \<sigma>)) 
+       =(\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) (seq2fml (\<Gamma>, \<Delta>)))"
+    using subst_fml[OF good_interp Fadmit fsafe ssafe]
+    by auto
+  then show ?thesis
+    using subst_eq by auto
+  qed
+
+theorem subst_rule:
+  assumes sound:"sound R"
+  assumes Radmit:"Radmit \<sigma> R"
+  assumes FVS:"FVS \<sigma> = {}"
+  assumes Rsafe:"Rsafe R"
+  assumes ssafe:"ssafe \<sigma>"
+  shows "sound (Rsubst R \<sigma>)"
+proof -
+  obtain SG and C where Rdef:"R = (SG,C)" by (cases R, auto)
+  obtain SG' and C' where Rdef':"Rsubst R \<sigma> = (SG',C')" by (cases R, auto)
+  obtain \<Gamma>C and \<Delta>C where Cdef:"C = (\<Gamma>C, \<Delta>C)" by (cases C, auto)
+  obtain \<Gamma>C' and \<Delta>C' where C'def:"C' = (\<Gamma>C', \<Delta>C')" by (cases C', auto)
+  have CC':"(Ssubst (\<Gamma>C, \<Delta>C) \<sigma>) = (\<Gamma>C', \<Delta>C')"
+    using Rdef Rdef' Cdef C'def by auto
+  have "\<And>I \<nu>. is_interp I \<Longrightarrow> (\<And>\<Gamma> \<Delta> \<omega>  . List.member SG' (\<Gamma>, \<Delta>) \<Longrightarrow> \<omega> \<in> seq_sem I (\<Gamma>, \<Delta>)) \<Longrightarrow> \<nu> \<in> seq_sem I C'"
+  proof -
+    fix I::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    assume good_interp:"is_interp I"
+    assume prems:"(\<And>\<Gamma> \<Delta> \<omega>. List.member SG' (\<Gamma>, \<Delta>) \<Longrightarrow> \<omega> \<in> seq_sem I (\<Gamma>, \<Delta>))"
+    have good_interp':"\<And>\<omega>. is_interp (adjoint I \<sigma> \<omega>)"
+      using adjoint_safe[OF good_interp ] ssafe[unfolded ssafe_def] by auto
+    have sound:"\<And>\<omega>. (\<And>\<phi> \<nu> . List.member SG \<phi> \<Longrightarrow> \<nu> \<in> seq_sem (adjoint I \<sigma> \<omega>) \<phi>) \<Longrightarrow> \<omega> \<in> seq_sem (adjoint I \<sigma> \<omega>) (\<Gamma>C, \<Delta>C)"
+      using soundD_memv[of SG C] sound good_interp' Rdef Cdef by auto
+    have SadmitC:"Sadmit \<sigma> (\<Gamma>C, \<Delta>C)" 
+      using Radmit unfolding Radmit_def Rdef Cdef by auto
+    have SsafeC:"Ssafe (\<Gamma>C, \<Delta>C)" 
+      using Rsafe unfolding Rsafe_def Rdef Cdef by auto
+    have seq_sem:"\<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) (\<Gamma>C, \<Delta>C)"
+    proof(rule sound)
+      fix S :: "('sf,'sc,'sz) sequent" and \<nu>'
+      assume mem:"List.member SG S"
+      obtain \<Gamma>S \<Delta>S where Sdef:"S = (\<Gamma>S, \<Delta>S)" by (cases S, auto)
+      from mem obtain di where di:"di < length SG \<and> SG ! di = S"
+      by (meson in_set_conv_nth in_set_member)
+      have SadmitS:"Sadmit \<sigma> (\<Gamma>S, \<Delta>S)"
+        using Rdef Sdef di Radmit Radmit_def by auto
+      have SsafeS:"Ssafe (\<Gamma>S, \<Delta>S)"
+        using Rsafe unfolding Rsafe_def Rdef Cdef using Sdef mem di by auto
+      have map_mem:"\<And>f L x. List.member L x \<Longrightarrow> List.member (map f L) (f x)"
+        subgoal for f L x 
+          by (induction L, auto simp add: member_rec)
+        done
+      let ?S' = "(Ssubst (\<Gamma>S, \<Delta>S) \<sigma>)"
+      have eq:"Ssubst S \<sigma> = (map (\<lambda>\<phi>. Fsubst \<phi> \<sigma>) \<Gamma>S, map (\<lambda>\<phi>. Fsubst \<phi> \<sigma>) \<Delta>S)" 
+        using Sdef by auto
+      from Sdef have mem':"List.member SG' (fst ?S', snd ?S')"
+        using mem Rdef Rdef' eq map_mem[of SG S "(\<lambda>x. Ssubst x \<sigma>)"] by auto
+      have "\<nu>' \<in> seq_sem I (fst ?S', snd ?S')" by (rule prems[OF mem', of \<nu>'])
+      then have "\<nu>' \<in> seq_sem (adjoint I \<sigma> \<nu>') S"
+        using subst_sequent[OF good_interp SadmitS SsafeS ssafe, of \<nu>']
+        Sdef by auto
+      have VA:"Vagree \<nu> \<nu>' (FVS \<sigma>)" using FVS unfolding Vagree_def by auto
+      show "\<nu>' \<in> seq_sem (local.adjoint I \<sigma> \<nu>) S"
+        using adjoint_consequence VA ssafe[unfolded ssafe_def]
+        by (metis \<open>\<nu>' \<in> seq_sem (local.adjoint I \<sigma> \<nu>') S\<close> dfree_is_dsafe)
+      qed
+    have "\<nu> \<in> seq_sem I (\<Gamma>C', \<Delta>C')"
+      using subst_sequent[OF good_interp SadmitC SsafeC ssafe, of \<nu>] seq_sem Cdef C'def CC'
+      by auto
+    then show  "\<nu> \<in> seq_sem I C'" using C'def by auto
+    qed
+  then show ?thesis
+    apply(rule soundI_memv')
+      using Rdef' by auto
+qed
+
 end end

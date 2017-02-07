@@ -81,10 +81,10 @@ fun FVDiff :: "('a, 'c) trm \<Rightarrow> ('c + 'c) set"
 where "FVDiff f = (\<Union>x \<in> (FVT f). primify x)"
 
 (* Free variables of an ODE includes both the bound variables and the terms *)
-fun FVO :: "('a, 'c) ODE \<Rightarrow> ('c + 'c) set"
+fun FVO :: "('a, 'c) ODE \<Rightarrow> 'c set"
 where
-  "FVO (OVar c) = Inl ` UNIV"
-| "FVO (OSing x \<theta>) = {Inl x} \<union> FVT \<theta>"
+  "FVO (OVar c) = UNIV"
+| "FVO (OSing x \<theta>) = {x} \<union> {x . Inl x \<in> FVT \<theta>}"
 | "FVO (OProd ODE1 ODE2) = FVO ODE1 \<union> FVO ODE2"
 (* Bound variables of a formula
    Bound variables of a program *)
@@ -141,7 +141,7 @@ where
 | "FVP (Assign x \<theta>) = FVT \<theta>"
 | "FVP (DiffAssign x \<theta>) = FVT \<theta>"
 | "FVP (Test \<phi>) = FVF \<phi>"
-| "FVP (EvolveODE ODE \<phi>) = BVO ODE \<union> FVO ODE \<union> FVF \<phi>"
+| "FVP (EvolveODE ODE \<phi>) = BVO ODE \<union> (Inl ` FVO ODE) \<union> FVF \<phi>"
 | "FVP (Choice \<alpha> \<beta>) = FVP \<alpha> \<union> FVP \<beta>"
 | "FVP (Sequence \<alpha> \<beta>) = FVP \<alpha> \<union> (FVP \<beta> - MBV \<alpha>)"
 | "FVP (Loop \<alpha>) = FVP \<alpha>"

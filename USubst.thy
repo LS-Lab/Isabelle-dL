@@ -1,6 +1,6 @@
 theory "USubst"
 imports
-  "../afp-devel/thys/Ordinary_Differential_Equations/ODE_Analysis"
+  "$AFP/Ordinary_Differential_Equations/ODE_Analysis"
   "./Ids"
   "./Lib"
   "./Syntax"
@@ -457,5 +457,20 @@ where "PFadjoint I \<sigma> =
  Programs = Programs I,
  ODEs = ODEs I,
  ODEBV = ODEBV I\<rparr>"
+
+
+fun Ssubst::"('sf, 'sc, 'sz) sequent \<Rightarrow> ('sf,'sc,'sz) subst \<Rightarrow> ('sf,'sc,'sz) sequent"
+where "Ssubst (\<Gamma>,\<Delta>) \<sigma> = (map (\<lambda> \<phi>. Fsubst \<phi> \<sigma>) \<Gamma>, map (\<lambda> \<phi>. Fsubst \<phi> \<sigma>) \<Delta>)"
+  
+fun Rsubst::"('sf, 'sc, 'sz) rule \<Rightarrow> ('sf,'sc,'sz) subst \<Rightarrow> ('sf,'sc,'sz) rule"
+where "Rsubst (SG,C) \<sigma> = (map (\<lambda> \<phi>. Ssubst \<phi> \<sigma>) SG, Ssubst C \<sigma>)"
+
+definition Sadmit::"('sf,'sc,'sz) subst \<Rightarrow> ('sf,'sc,'sz) sequent \<Rightarrow> bool"
+where "Sadmit \<sigma> S \<longleftrightarrow> ((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst S) \<longrightarrow> Fadmit \<sigma> (nth (fst S) i))
+                      \<and>(\<forall>i. i \<ge> 0 \<longrightarrow> i < length (snd S) \<longrightarrow> Fadmit \<sigma> (nth (snd S) i)))"
+  
+definition Radmit::"('sf,'sc,'sz) subst \<Rightarrow> ('sf,'sc,'sz) rule \<Rightarrow> bool"
+where "Radmit \<sigma> R \<longleftrightarrow> (((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst R) \<longrightarrow> Sadmit \<sigma> (nth (fst R) i)) 
+                   \<and> Sadmit \<sigma> (snd R)))"
 
 end end

@@ -1,6 +1,6 @@
 theory "Uniform_Renaming" 
 imports
-  "../afp-devel/thys/Ordinary_Differential_Equations/ODE_Analysis"
+  "$AFP/Ordinary_Differential_Equations/ODE_Analysis"
   "./Ids"
   "./Lib"
   "./Syntax"
@@ -1037,5 +1037,8 @@ proof -
   qed
   then
   show ?thesis unfolding valid_def by auto
-  qed
+qed
+  
+
+
 end end

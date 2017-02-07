@@ -18,7 +18,7 @@ text \<open>
 theory "Differential_Dynamic_Logic" 
 imports
   Complex_Main
-  "../afp-devel/thys/Ordinary_Differential_Equations/ODE_Analysis"
+  "$AFP/Ordinary_Differential_Equations/ODE_Analysis"
   "./Ids"
   "./Lib"
   "./Syntax"

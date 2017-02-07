@@ -113,6 +113,11 @@ where "TT = Geq (Const 0) (Const 0)"
 definition FF ::"('a,'b,'c) formula" 
 where "FF = Geq (Const 0) (Const 1)"
 
+type_synonym ('a,'b,'c) sequent = "('a,'b,'c) formula list * ('a,'b,'c) formula list"
+(* Rule: assumptions, then conclusion *)
+type_synonym ('a,'b,'c) rule = "('a,'b,'c) sequent list * ('a,'b,'c) sequent"
+
+  
 (* silliness to enable proving disequality lemmas *)
 primrec sizeF::"('sf,'sc, 'sz) formula \<Rightarrow> nat"
   and   sizeP::"('sf,'sc, 'sz) hp \<Rightarrow> nat"
@@ -307,6 +312,14 @@ inductive_simps
   and fsafe_Diamond_simps[simp]: "fsafe (Diamond a p)"
   and fsafe_Context_simps[simp]: "fsafe (InContext C p)"
 
+definition Ssafe::"('sf,'sc,'sz) sequent \<Rightarrow> bool"
+where "Ssafe S \<longleftrightarrow>((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst S) \<longrightarrow> fsafe (nth (fst S) i))
+                 \<and>(\<forall>i. i \<ge> 0 \<longrightarrow> i < length (snd S) \<longrightarrow> fsafe (nth (snd S) i)))"
+
+definition Rsafe::"('sf,'sc,'sz) rule \<Rightarrow> bool"
+where "Rsafe R \<longleftrightarrow> ((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst R) \<longrightarrow> Ssafe (nth (fst R) i)) 
+                    \<and> Ssafe (snd R))"
+  
 (* Basic reasoning principles about syntactic constructs, including inductive principles *)
 lemma dfree_is_dsafe: "dfree \<theta> \<Longrightarrow> dsafe \<theta>"
   by (induction rule: dfree.induct) (auto intro: dsafe.intros)
