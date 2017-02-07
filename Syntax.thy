@@ -271,6 +271,7 @@ inductive_simps
   and dfree_Times_simps[simp]: "dfree (Times a b)"
   and dfree_Var_simps[simp]: "dfree (Var x)"
   and dfree_DiffVar_simps[simp]: "dfree (DiffVar x)"
+  and dfree_Differential_simps[simp]: "dfree (Differential x)"
   and dfree_Fun_simps[simp]: "dfree (Function i args)"
   and dfree_Const_simps[simp]: "dfree (Const r)"
 

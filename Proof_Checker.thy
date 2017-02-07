@@ -398,7 +398,6 @@ datatype ('a, 'b, 'c) step =
 | CE  "('a, 'b, 'c) formula" "('a, 'b, 'c) formula" "('a, 'b, 'c) subst"
 | Skolem
 (* Apply Usubst to some other (valid) formula *)
-(* TODO: I don't think I want this, might be easier to do an axiom instantiation rule *)
 | VSubst "('a, 'b, 'c) formula" "('a, 'b, 'c) subst"
 | AxSubst axiom "('a, 'b, 'c) subst"
 | URename
