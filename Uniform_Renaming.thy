@@ -98,30 +98,32 @@ proof (induction rule: dfree.induct)
     unfolding RSadj_def apply auto 
        subgoal by (metis vec_lambda_eta)
       subgoal
-      proof -
-        assume "y \<noteq> x"
-        have f1: "\<And>v s. v $ (s::'sz) = v \<bullet> (\<chi> sa. if s = sa then 1 else 0)"
-          by (metis basis_vector.simps inner_prod_eq)
-        have "(\<chi> s. \<nu>' $ (if s = x then y else if s = y then x else s)) $ y = \<nu>' $ x"
-          by simp
-        then show "\<nu>' \<bullet> (\<chi> s. if x = s then 1 else 0) = (\<chi> s. \<nu>' $ (if s = x then y else if s = y then x else s)) \<bullet> (\<chi> s. if y = s then 1 else 0)"
-          using f1 by force
+      proof (auto simp add: axis_def)
+        assume yx:"y \<noteq> x"
+        have a:"(\<chi> z. \<nu>' $ (if z = x then y else if z = y then x else z)) $ y = \<nu>' $ x"
+         by simp
+       show "\<nu>' \<bullet> (\<chi> i. if i = x then 1 else 0) 
+                 = (\<chi> z. \<nu>' $ (if z = x then y else if z = y then x else z)) \<bullet> (\<chi> i. if i = y then 1 else 0)"
+         by (metis (no_types) a axis_def inner_axis)
       qed
      subgoal
      proof -
-       have "\<And>v s. v \<bullet> (\<chi> sa. if (s::'sz) = sa then 1 else 0) = v $ s"
-         by (metis basis_vector.simps inner_prod_eq)
+       have "\<And>v s. v \<bullet> (\<chi> sa. if sa = (s::'sz) then 1 else 0) = v $ s"
+         subgoal for v s
+           using inner_axis[of v s 1]
+           by (auto simp add: axis_def)
+         done
        then show ?thesis
-         by simp
+         by (auto simp add: axis_def)
      qed
     subgoal
     proof -
       assume a1: "i \<noteq> y"
       assume a2: "i \<noteq> x"
-      have "\<And>v s. v \<bullet> (\<chi> sa. if (s::'sz) = sa then 1 else 0) = v $ s"
-        by (metis (no_types) basis_vector.simps inner_prod_eq)
+      have "\<And>v s. v \<bullet> (\<chi> sa. if sa = (s::'sz) then 1 else 0) = v $ s"
+        by (metis (no_types) inner_axis axis_def inner_prod_eq)
       then show ?thesis
-        using a2 a1 by simp
+        using a2 a1 by (auto simp add: axis_def)
     qed
     done 
 qed (auto simp add: SUren good_interp is_interp_def)

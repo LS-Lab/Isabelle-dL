@@ -18,16 +18,16 @@ text \<open>
 
 lemma inner_prod_eq:
   fixes i::"'a::finite"
-  shows "(\<lambda>(v::'a Rvec). v \<bullet> basis_vector i) = (\<lambda>(v::'a Rvec). v $ i)"
-  unfolding cart_eq_inner_axis basis_vector.simps axis_def by (simp add: eq_commute)
+  shows "(\<lambda>(v::'a Rvec). v \<bullet> axis i 1) = (\<lambda>(v::'a Rvec). v $ i)"
+  unfolding cart_eq_inner_axis axis_def by (simp add: eq_commute)
 
 theorem svar_deriv:
   fixes x:: "'sv::finite" and \<nu>:: "'sv Rvec" and F::"real filter"
-  shows "((\<lambda>v. v $ x) has_derivative (\<lambda>v'. v' \<bullet> (\<chi> i. if x = i then 1 else 0))) (at \<nu>)"
+  shows "((\<lambda>v. v $ x) has_derivative (\<lambda>v'. v' \<bullet> (\<chi> i. if i = x then 1 else 0))) (at \<nu>)"
 proof -
   let ?f = "(\<lambda>v. v)"
   let ?f' = "(\<lambda>v'. v')"
-  let ?g = "(\<lambda>v. basis_vector x)"
+  let ?g = "(\<lambda>v. axis x 1)"
   let ?g' = "(\<lambda>v. 0)"
   have id_deriv: "(?f has_derivative ?f') (at \<nu>) "
     by (rule has_derivative_ident)
@@ -36,7 +36,6 @@ proof -
   have inner_deriv:"((\<lambda>x. inner (?f x) (?g x)) has_derivative
                      (\<lambda>h. inner (?f \<nu>) (?g' h) + inner (?f' h) (?g \<nu>))) (at \<nu>)"
     by (intro has_derivative_inner [OF id_deriv const_deriv])
-
   from inner_prod_eq
   have left_eq: "(\<lambda>x. inner (?f x) (?g x)) = (\<lambda>v. vec_nth v x)"
     by (auto)
@@ -44,10 +43,13 @@ proof -
   have better_deriv:"((\<lambda>v. vec_nth v x) has_derivative
                      (\<lambda>h. inner (?f \<nu>) (?g' h) + inner (?f' h) (?g \<nu>))) (at \<nu>)"
     by (metis (no_types, lifting) UNIV_I has_derivative_transform)
-  have deriv_eq: "(\<lambda>h. inner (?f \<nu>) (?g' h) + inner (?f' h) (?g \<nu>))
-    = (\<lambda>v'. inner v' (\<chi> i. if x = i then 1 else 0))"
-    by(auto)
-  from better_deriv and deriv_eq show ?thesis by (auto)
+  have vec_eq:"(\<chi> i. if i = x then 1 else 0) = (\<chi> i. if x = i then 1 else 0)"
+    by(rule vec_extensionality, auto)
+  have deriv_eq:"(\<lambda>h. \<nu> \<bullet> 0 + h \<bullet> axis x 1) = (\<lambda>v'. v' \<bullet> (\<chi> i. if i = x then 1 else 0))"
+    by(rule ext, auto simp add: axis_def vec_eq)
+  show ?thesis 
+    apply(rule has_derivative_eq_rhs[where f'= "(\<lambda>h. \<nu> \<bullet> 0 + h \<bullet> axis x 1)"])
+    using better_deriv deriv_eq  by auto
 qed
 
 lemma function_case_inner:
@@ -121,8 +123,8 @@ lemma frechet_correctness:
   assumes good_interp: "is_interp I"
   shows "dfree \<theta> \<Longrightarrow> FDERIV (sterm_sem I \<theta>) \<nu> :> (frechet I \<theta> \<nu>)"
 proof (induct rule: dfree.induct)
-  case dfree_Var then show ?case
-    by (simp add: svar_case svar_deriv)
+  case (dfree_Var i) then show ?case
+    by (auto simp add: svar_case svar_deriv axis_def)
 next
   case (dfree_Fun args i) with good_interp show ?case
     by (intro func_lemma) auto
@@ -281,16 +283,14 @@ lemma frechet_continuous:
 proof (induction rule: dfree.induct)
   case (dfree_Var i)
   have free:"dfree (Var i)" by (rule dfree_Var)
-  have bounded_linear:"bounded_linear (\<lambda> \<nu>'. \<nu>' \<bullet> basis_vector i )"
+  have bounded_linear:"bounded_linear (\<lambda> \<nu>'. \<nu>' \<bullet> axis i 1)"
     by (auto simp add: bounded_linear_component_cart)
-  have cont:"continuous_on UNIV (\<lambda>\<nu>. Blinfun(\<lambda> \<nu>'. \<nu>' \<bullet> basis_vector i ))"
+  have cont:"continuous_on UNIV (\<lambda>\<nu>. Blinfun(\<lambda> \<nu>'. \<nu>' \<bullet> axis i 1))"
     using continuous_on_const by blast
-  have eq:"\<And>\<nu> \<nu>'. (\<lambda>\<nu>. Blinfun(\<lambda> \<nu>'. \<nu>' \<bullet> basis_vector i)) \<nu> \<nu>' = (blin_frechet (good_interp I) (simple_term (Var i))) \<nu> \<nu>'"
-    apply(simp)
-    using bounded_linear 
-    using blinfun_inner_left.abs_eq blinfun_inner_left.rep_eq good_interp free
-    by (metis basis_vector.elims frechet.simps(1) mem_Collect_eq simple_term_inverse)
-  have eq':"(\<lambda>\<nu>. Blinfun(\<lambda> \<nu>'. \<nu>' \<bullet> basis_vector i)) = (blin_frechet (good_interp I) (simple_term (Var i)))"
+  have eq:"\<And>\<nu> \<nu>'. (\<lambda>\<nu>. Blinfun(\<lambda> \<nu>'. \<nu>' \<bullet> axis i 1)) \<nu> \<nu>' = (blin_frechet (good_interp I) (simple_term (Var i))) \<nu> \<nu>'"
+    unfolding axis_def apply(auto)
+    by (metis (no_types) axis_def blinfun_inner_left.abs_eq blinfun_inner_left.rep_eq dfree_Var_simps frechet.simps(1) mem_Collect_eq simple_term_inverse)
+  have eq':"(\<lambda>\<nu>. Blinfun(\<lambda> \<nu>'. \<nu>' \<bullet> axis i 1)) = (blin_frechet (good_interp I) (simple_term (Var i)))"
     apply(rule ext)
     apply(rule blinfun_eqI)
     using eq by auto

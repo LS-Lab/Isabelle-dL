@@ -165,18 +165,13 @@ where
 | "sterm_sem I ($' c) v = undefined"
 | "sterm_sem I (Differential d) v = undefined"
   
-(* TODO: Believe this is equivalent to built-in function "axis" *)
-(* basis_vector i is the i'th basis vector for the standard Euclidean basis. *)
-fun basis_vector :: "'a::finite \<Rightarrow> 'a Rvec"
-where "basis_vector x = (\<chi> i. if x = i then 1 else 0)"
-
 (* frechet I \<theta> \<nu> syntactically computes the frechet derivative of the term \<theta> in the interpretation
  * I at state \<nu> (containing only the unprimed variables). The frechet derivative is a
  * linear map from the differential state \<nu> to reals.
  *)
 primrec frechet :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'c) trm \<Rightarrow> 'c simple_state \<Rightarrow> 'c simple_state \<Rightarrow> real"
 where
-  "frechet I (Var x) v = (\<lambda>v'. v' \<bullet> basis_vector x)"
+  "frechet I (Var x) v = (\<lambda>v'. v' \<bullet> axis x 1)"
 | "frechet I (Function f args) v =
     (\<lambda>v'. FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v) (\<chi> i. frechet I (args i) v v'))"
 | "frechet I (Plus t1 t2) v = (\<lambda>v'. frechet I t1 v v' + frechet I t2 v v')"
