@@ -118,7 +118,7 @@ definition is_interp :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarro
 lemma is_interpD:"is_interp I \<Longrightarrow> \<forall>x. \<forall>i. (FDERIV (Functions I i) x :> (FunctionFrechet I i x))"
   unfolding is_interp_def by auto
   
-(* Agreement between interpretations. TODO: Distinguish idents for Predicate vs. Program vs. ODE*)
+(* Agreement between interpretations. *)
 definition Iagree :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a + 'b + 'c) set \<Rightarrow> bool"
 where "Iagree I J V \<equiv>
   (\<forall>i\<in>V.
@@ -201,13 +201,14 @@ where
  * depends only on the xs. *)
 fun ODE_sem:: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'c) ODE \<Rightarrow> 'c Rvec \<Rightarrow> 'c Rvec"
   where
-  "ODE_sem I (OVar x) = ODEs I x"
-| "ODE_sem I (OSing x \<theta>) =  (\<lambda>\<nu>. (\<chi> i. if i = x then sterm_sem I \<theta> \<nu> else 0))"
+  ODE_sem_OVar:"ODE_sem I (OVar x) = ODEs I x"
+| ODE_sem_OSing:"ODE_sem I (OSing x \<theta>) =  (\<lambda>\<nu>. (\<chi> i. if i = x then sterm_sem I \<theta> \<nu> else 0))"
 (* Safety predicate ensures the domains of ODE1 and ODE2 are disjoint, so vector addition
  * is equivalent to saying "take things defined from ODE1 from ODE1, take things defined
  * by ODE2 from ODE2"*)
-(* TODO: Redefine using SOME operator in a way that more closely matches above description. *)
-| "ODE_sem I (OProd ODE1 ODE2) = (\<lambda>\<nu>. ODE_sem I ODE1 \<nu> + ODE_sem I ODE2 \<nu>)"
+(* Note: Could define using SOME operator in a way that more closely matches above description,
+ * but that gets complicated in the OVar case because not all variables are bound by the OVar *)
+| ODE_sem_OProd:"ODE_sem I (OProd ODE1 ODE2) = (\<lambda>\<nu>. ODE_sem I ODE1 \<nu> + ODE_sem I ODE2 \<nu>)"
 
 (* The bound variables of an ODE *)
 fun ODE_vars :: "('a,'b,'c) interp \<Rightarrow> ('a, 'c) ODE \<Rightarrow> 'c set"
@@ -215,7 +216,7 @@ fun ODE_vars :: "('a,'b,'c) interp \<Rightarrow> ('a, 'c) ODE \<Rightarrow> 'c s
   "ODE_vars I (OVar c) = ODEBV I c"
 | "ODE_vars I (OSing x \<theta>) = {x}"
 | "ODE_vars I (OProd ODE1 ODE2) = ODE_vars I ODE1 \<union> ODE_vars I ODE2"
-
+  
 fun semBV ::"('a, 'b,'c) interp \<Rightarrow> ('a, 'c) ODE \<Rightarrow> ('c + 'c) set"
   where "semBV I ODE = Inl ` (ODE_vars I ODE) \<union> Inr ` (ODE_vars I ODE)"
 
@@ -298,7 +299,6 @@ lemma mk_v_agree:"Vagree (mk_v I ODE \<nu> sol) \<nu> (- semBV I ODE)
    using exE[OF mk_v_exists, of \<nu> I ODE sol]
    by (auto simp add: Vagree_def vec_eq_iff)
 
-(* TODO: Could use this to replace SOME operator with THE operator. *)
 lemma mk_v_concrete:"mk_v I ODE \<nu> sol = ((\<chi> i. (if Inl i \<in> semBV I ODE then sol else (fst \<nu>)) $ i),
   (\<chi> i. (if Inr i \<in> semBV I ODE then ODE_sem I ODE sol else (snd \<nu>)) $ i))"
   apply(rule agree_UNIV_eq)
