@@ -117,7 +117,7 @@ lemma  coincidence_frechet :
   shows "dfree \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff \<theta>) \<Longrightarrow> frechet I  \<theta> (fst \<nu>) (snd \<nu>) = frechet I  \<theta> (fst \<nu>') (snd \<nu>')"
 proof (induction rule: dfree.induct)
   case dfree_Var then show ?case
-    by (auto simp: inner_prod_eq Vagree_def simp del: basis_vector.simps)
+    by (auto simp: inner_prod_eq Vagree_def)
 next
   case dfree_Const then show ?case
     by auto
@@ -183,7 +183,7 @@ lemma  coincidence_frechet' :
   shows "dfree \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff \<theta>) \<Longrightarrow> Iagree I J {Inl x | x. x \<in> (SIGT \<theta>)} \<Longrightarrow> frechet I  \<theta> (fst \<nu>) (snd \<nu>) = frechet J  \<theta> (fst \<nu>') (snd \<nu>')"
 proof (induction rule: dfree.induct)
   case dfree_Var then show ?case
-    by (auto simp: inner_prod_eq Vagree_def simp del: basis_vector.simps)
+    by (auto simp: inner_prod_eq Vagree_def)
 next
   case dfree_Const then show ?case
     by auto

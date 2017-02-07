@@ -230,7 +230,7 @@ where "mk_xode I ODE sol = (sol, ODE_sem I ODE sol)"
 (* Given an initial state \<nu> and solution to an ODE at some point, construct the resulting state \<omega>.
  * This is defined using the SOME operator because the concrete definition is unwieldy. *)
 definition mk_v::"('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'c::finite) ODE \<Rightarrow> 'c::finite state \<Rightarrow> 'c::finite simple_state \<Rightarrow> 'c::finite state"
-where "mk_v I ODE \<nu> sol = (SOME \<omega>. 
+where "mk_v I ODE \<nu> sol = (THE \<omega>. 
   Vagree \<omega> \<nu> (- semBV I ODE) 
 \<and> Vagree \<omega> (mk_xode I ODE sol) (semBV I ODE))"
 
@@ -289,10 +289,14 @@ where "concrete_v I ODE \<nu> sol =
 lemma mk_v_exists:"\<exists>\<omega>. Vagree \<omega> \<nu> (- semBV I ODE) 
 \<and> Vagree \<omega> (mk_xode I ODE sol) (semBV I ODE)"
   by(rule exI[where x="(concrete_v I ODE \<nu> sol)"], auto simp add: Vagree_def)
-
+    
 lemma mk_v_agree:"Vagree (mk_v I ODE \<nu> sol) \<nu> (- semBV I ODE) 
 \<and> Vagree (mk_v I ODE \<nu> sol) (mk_xode I ODE sol) (semBV I ODE)"
-  unfolding mk_v_def by (rule someI_ex, rule mk_v_exists)
+  unfolding mk_v_def 
+  apply(rule theI[where a= "((\<chi> i. (if Inl i \<in> semBV I ODE then sol else (fst \<nu>)) $ i),
+  (\<chi> i. (if Inr i \<in> semBV I ODE then ODE_sem I ODE sol else (snd \<nu>)) $ i))"])
+   using exE[OF mk_v_exists, of \<nu> I ODE sol]
+   by (auto simp add: Vagree_def vec_eq_iff)
 
 (* TODO: Could use this to replace SOME operator with THE operator. *)
 lemma mk_v_concrete:"mk_v I ODE \<nu> sol = ((\<chi> i. (if Inl i \<in> semBV I ODE then sol else (fst \<nu>)) $ i),
