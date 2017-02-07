@@ -249,7 +249,6 @@ where "repd v x r = (fst v, (\<chi> y. if x = y then r else vec_nth (snd v) y))"
  * the semantics of (\<phi>)' and (\<psi>)' differ because \<phi> and \<psi> differ syntactically.
  *)
 fun fml_sem  :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) formula \<Rightarrow> 'c::finite state set" and
-  diff_formula_sem  :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) formula \<Rightarrow> 'c::finite state set" and
   prog_sem :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) hp \<Rightarrow> ('c::finite state * 'c::finite state) set"
 where
   "fml_sem I (Geq t1 t2) = {v. dterm_sem I t1 v \<ge> dterm_sem I t2 v}"
@@ -259,12 +258,6 @@ where
 | "fml_sem I (Exists x \<phi>) = {v | v r. (repv v x r) \<in> fml_sem I \<phi>}"
 | "fml_sem I (Diamond \<alpha> \<phi>) = {\<nu> | \<nu> \<omega>. (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<and> \<omega> \<in> fml_sem I \<phi>}"
 | "fml_sem I (InContext c \<phi>) = Contexts I c (fml_sem I \<phi>)"
-
-| "diff_formula_sem I (Geq f g) = {v. dterm_sem I (Differential f) v \<ge> dterm_sem I (Differential g) v}"
-| "diff_formula_sem I (Not p) = diff_formula_sem I p"
-| "diff_formula_sem I (And p q) = diff_formula_sem I p \<inter> diff_formula_sem I p"
-  (* TODO: Totally broken: Think about predicational case *)
-| "diff_formula_sem I  p = (*fml_sem I p*) UNIV"
 
 | "prog_sem I (Pvar p) = Programs I p"
 | "prog_sem I (Assign x t) = {(\<nu>, \<omega>). \<omega> = repv \<nu> x (dterm_sem I t \<nu>)}"

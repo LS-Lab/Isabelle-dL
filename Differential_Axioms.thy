@@ -144,7 +144,7 @@ done
 
 theorem diff_var_axiom_valid: "valid diff_var_axiom"
   apply(auto simp add: diff_var_axiom_def valid_def directional_derivative_def)
-  by (metis basis_vector.simps inner_prod_eq)
+  by (metis inner_prod_eq)
   
 theorem diff_plus_axiom_valid: "valid diff_plus_axiom"
   apply(auto simp add: diff_plus_axiom_def valid_def)
@@ -1694,7 +1694,6 @@ proof -
                         (\<chi> y. if vid2 = y then 0 else fst (a, b) $ y, b) x))}"
      assume VSag:"VSagree (sol 0) (\<chi> y. if vid2 = y then 0 else fst (a, b) $ y)
      {x. x = vid2 \<or> x = vid1 \<or> x = vid2 \<or> x = vid1 \<or> Inl x \<in> Inl ` {x. x = vid2 \<or> x = vid1} \<or> x = vid1}"
-(*       assume VSag:"VSagree (sol 0) (\<chi> y. if vid2 = y then 0 else fst (a, b) $ y) {x. x = vid2 \<or> x = vid1 \<or> x = vid2 \<or> x = vid1}"*)
        let ?sol = "(\<lambda>t. \<chi> i. if i = vid1 then sol t $ vid1 else 0)"
        let ?aaba' = "mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (?sol t)"
      from bigAll[of "fst ?aaba'" "snd ?aaba'"] 
@@ -2034,11 +2033,7 @@ proof -
            have heq':"?h' = ?g' \<circ> ?f'" by(rule ext, auto)
            have fderiv:"(?f has_derivative ?f') (at x)"
              apply(rule has_derivative_vec)
-             subgoal for i
-               apply(cases "i = vid1")
-                apply(auto)
-               by (simp add: svar_deriv)
-             done
+             by (auto simp add: svar_deriv axis_def)
            have gderiv:"(?g has_derivative ?g') (at (?f x))"
              using good_interp unfolding is_interp_def by blast
            have gfderiv: "((?g \<circ> ?f) has_derivative(?g' \<circ> ?f')) (at x)"
@@ -2614,8 +2609,6 @@ Predicates I vid1
                     Inl uu \<in> Inl ` ({x. \<exists>xa. Inl x \<in> FVT (if xa = vid1 then trm.Var vid1 else Const 0)} \<union>
                                      {x. x = vid2 \<or> (\<exists>xa. Inl x \<in> FVT (if xa = vid1 then trm.Var vid1 else Const 0))}) \<or>
                     (\<exists>x. Inl uu \<in> FVT (if x = vid1 then trm.Var vid1 else Const 0))})"
-       (* TODO: delete: {y. y = vid2 \<or>
-                           y = vid1 \<or> y = vid2 \<or> y = vid1 \<or> (\<exists>x. Inl y \<in> FVT (if x = vid1 then trm.Var vid1 else Const 0))}*)
        apply(rule exI[where x="?sol'"])
        apply(rule exI[where x=t])
        apply(rule conjI)
