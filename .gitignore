@@ -1,0 +1,11 @@
+*.aux
+*.log
+*.out
+*.blg
+*.synctex.gz
+*.dvi
+*.pdf
+.DS_Store
+*.*~
+#*.*
+.#*
