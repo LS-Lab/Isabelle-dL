@@ -6,16 +6,16 @@ imports
   "./Syntax"
 begin
 subsection \<open>States\<close>
-text \<open>We formalize a state S as a pair (S_V, S_V') : \<real>^n \<times> \<real>^n , where S_V assigns
-  values to the program variables and S_V' assigns values to their
+text \<open>We formalize a state S as a pair $(S_V, S_V') : R^n \times R^n $, where $S_V$ assigns
+  values to the program variables and $S_V$' assigns values to their
   differentials. Function constants are also formalized as having a fixed arity
-  m (Rvec_dim) which may differ from n. If a function does not need to
+  m \verb|(Rvec_dim)| which may differ from n. If a function does not need to
   have m arguments, any remaining arguments can be uniformly set to 0,
   which simulates the affect of having functions of less arguments.
   
   Most semantic proofs need to reason about states agreeing on variables.
   We say Vagree A B V if states A and B have the same values on all variables in V,
-  similarly with VSagree A B V for simple_states A and B and Iagree I J V for interpretations
+  similarly with VSagree A B V for simple states A and B and Iagree I J V for interpretations
   I and J.
   \<close>
 
@@ -85,14 +85,14 @@ lemma VSagree_refl:"VSagree \<nu> \<nu> A"
 subsection \<open>Denotational Semantics\<close>
 
 text \<open>
-  The central definitions for the denotational semantics are states \nu,
-  interpretations I and the semantic functions [[\psi]]I, [[\theta]]I\nu,
-  [[\alpha]]I, which are represented by the Isabelle functions fml_sem,
-  dterm_sem and prog_sem, respectively.
+  The central definitions for the denotational semantics are states $\nu$,
+  interpretations I and the semantic functions $[[\psi]]I$, $[[\theta]]I\nu$,
+  $[[\alpha]]I$, which are represented by the Isabelle functions \verb|fml_sem|,
+  \verb|dterm_sem| and \verb|prog_sem|, respectively.
 
   For convenience we pretend interpretations contain an extra field called
-  FunctionFrechet specifying the Frechet derivative (FunctionFrechet f \<nu>) : \<real>^m -> \<real> 
-  for every function in every state. The proposition (is_interp I) says that such a
+  FunctionFrechet specifying the Frechet derivative \verb|(FunctionFrechet f \<nu>)| : $R^m \rightarrow R$ 
+  for every function in every state. The proposition \verb|(is_interp I)| says that such a
   derivative actually exists (i.e. all functions are differentiable everywhere)
   without saying what the exact derivative is.
   

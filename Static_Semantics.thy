@@ -17,7 +17,7 @@ text \<open>This section introduces functions for computing properties of the st
   will never depend on anything other than the free variables of that program)
    
   We also prove basic lemmas about these definitions, but their overall correctness is proved elsewhere
-  in the Bound_Effect and Coincidence theorems.
+  in the Bound Effect and Coincidence theorems.
   \<close>
 
 primrec SIGT :: "('a, 'c) trm \<Rightarrow> 'a set"

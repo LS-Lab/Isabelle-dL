@@ -288,7 +288,7 @@ where
 | "deriv_result R (s # ss) = deriv_result (step_result R s) (ss)" 
   
 fun proof_result :: "('sf, 'sc, 'sz) pf \<Rightarrow> ('sf, 'sc, 'sz) rule"
-where "proof_result (D,S) = deriv_result (start_proof D) S"
+where proof_result[code]:"proof_result (D,S) = deriv_result (start_proof D) S"
   
 inductive lrule_ok ::"('sf,'sc,'sz) sequent list \<Rightarrow> ('sf,'sc,'sz) sequent \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> lrule \<Rightarrow> bool"
 where
@@ -382,7 +382,7 @@ and Deriv_cons_simps[prover]: "deriv_ok R ((i,S)#SS)"
 
 inductive proof_ok :: "('sf, 'sc, 'sz) pf \<Rightarrow> bool"
 where
-  Proof_ok:"deriv_ok (start_proof D) S \<Longrightarrow> proof_ok (D,S)"
+  proof_ok[code]:"deriv_ok (start_proof D) S \<Longrightarrow> proof_ok (D,S)"
 
 inductive_simps Proof_ok_simps[prover]: "proof_ok (D,S)"
 
@@ -1749,7 +1749,7 @@ lemma diffconst_result_correct:"proof_result DiffConstProof = ([], ([],[Equals (
   by(auto simp add: prover DiffConstProof_def)
 
 lemma diffconst_sound_lemma:"sound (proof_result DiffConstProof)"
-  apply(rule proof_sound)
+  apply(rule proof_sound)                  
   unfolding DiffConstProof_def
   by (auto simp add: prover DiffConstProof_def DiffConstSubst_def Equals_def empty_def TUadmit_def)
   
