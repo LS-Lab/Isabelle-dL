@@ -10,15 +10,17 @@ text \<open>
   that all inference rules are sound with respect to the denotational
   semantics, and all axioms valid (true in every state and interpretation).
 
-  See: Andre Platzer. A uniform substitution calculus for differential
-  dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International
-  Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings,
-  volume 9195 of LNCS, pages 467-481. Springer, 2015.
+  See: 
+  Brandon Bohrer, Vincent Rahli, Ivana Vukotic, Marcus Völp, André Platzer.
+  Formally verified differential dynamic logic. CPP 2017, pages 208-221
+
+  Andre Platzer. A uniform substitution calculus for differential
+  dynamic logic.  CADE'15, pages 467-481.
 \<close>
 theory "Differential_Dynamic_Logic" 
 imports
   Complex_Main
-  "../afp-devel/thys/Ordinary_Differential_Equations/ODE_Analysis"
+  "$AFP/Ordinary_Differential_Equations/ODE_Analysis"
   "./Ids"
   "./Lib"
   "./Syntax"

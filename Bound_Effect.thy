@@ -1,6 +1,6 @@
 theory "Bound_Effect"
 imports
-  "$AFP/Ordinary_Differential_Equations/ODE_Analysis"
+  "../Ordinary_Differential_Equations/ODE_Analysis"
   "./Ids"
   "./Lib"
   "./Syntax"
@@ -9,7 +9,8 @@ imports
   "./Static_Semantics"
   "./Coincidence"
 begin
-section \<open>The bound effect lemma says that a program can only modify its bound variables and nothing else.
+section \<open>Bound Effect Theorem\<close>
+text \<open>The bound effect lemma says that a program can only modify its bound variables and nothing else.
   This is one of the major lemmas for showing correctness of uniform substitution. \<close>
 
 context ids begin
