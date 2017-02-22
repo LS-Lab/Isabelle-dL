@@ -1,6 +1,6 @@
 theory "Bound_Effect"
 imports
-  "../Ordinary_Differential_Equations/ODE_Analysis"
+  "$AFP/Ordinary_Differential_Equations/ODE_Analysis"
   "./Ids"
   "./Lib"
   "./Syntax"

@@ -6,13 +6,13 @@ text \<open>The differential dynamic logic formalization is parameterized by the
   The identifier type(s) must be finite and have at least 3-4 distinct elements.
   Distinctness is required for soundness of some axioms. \<close>
 locale ids =
-  fixes vid1 :: "('sz::{finite,linorder})"
+  fixes vid1 :: "('sz::{enum,linorder})"
   fixes vid2 :: 'sz
   fixes vid3 :: 'sz
-  fixes fid1 :: "('sf::finite)"
+  fixes fid1 :: "('sf::enum)"
   fixes fid2 :: 'sf
   fixes fid3 :: 'sf
-  fixes pid1 :: "('sc::finite)"
+  fixes pid1 :: "('sc::enum)"
   fixes pid2 :: 'sc
   fixes pid3 :: 'sc
   fixes pid4 :: 'sc

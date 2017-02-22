@@ -23,7 +23,7 @@ proof
 qed
 
 lemma bounded_linear_vec:
-  fixes f::"('a::finite) \<Rightarrow> 'b::real_normed_vector \<Rightarrow> 'c::real_normed_vector"
+  fixes f::"('a::enum) \<Rightarrow> 'b::real_normed_vector \<Rightarrow> 'c::real_normed_vector"
   assumes bounds:"\<And>i. bounded_linear (f i)"
   shows "bounded_linear (\<lambda>x. \<chi> i. f i x)"
 proof -
@@ -58,9 +58,9 @@ proof -
   have axes:"\<And>x. (?g x) = (\<Sum> i\<in>(UNIV::'a set). (axis i (f i x)))"
     unfolding axis_def apply(rule vec_extensionality, auto)
     by (simp add: sum.delta')
-  have triangle:"\<And>x. (\<Sum> i \<in> (UNIV::'a set). norm (axis i (f i x))) \<ge> norm (\<Sum> i \<in> (UNIV::('a::finite) set). axis i (f i x))"
+  have triangle:"\<And>x. (\<Sum> i \<in> (UNIV::'a set). norm (axis i (f i x))) \<ge> norm (\<Sum> i \<in> (UNIV::('a::enum) set). axis i (f i x))"
     using norm_sum by blast
-  have triangle':"\<And>x. (\<Sum> i \<in> (UNIV::'a set). norm (f i x)) \<ge> norm (\<Sum> i \<in> (UNIV::('a::finite) set). axis i (f i x))"
+  have triangle':"\<And>x. (\<Sum> i \<in> (UNIV::'a set). norm (f i x)) \<ge> norm (\<Sum> i \<in> (UNIV::('a::enum) set). axis i (f i x))"
     using norm_axis
     by (simp add: norm_axis Real_Vector_Spaces.sum_norm_le)
   have norms':"\<And>x. (\<Sum> i\<in> (UNIV::'a set). norm (f i x)) \<le> norm x * ?TheK"
@@ -79,7 +79,7 @@ proof -
     using linear norm by auto
 qed
 
-lift_definition blinfun_vec::"('a::finite \<Rightarrow> 'b::real_normed_vector \<Rightarrow>\<^sub>L real) \<Rightarrow> 'b \<Rightarrow>\<^sub>L (real ^ 'a)" is "(\<lambda>(f::('a \<Rightarrow> 'b \<Rightarrow> real)) (x::'b). \<chi> (i::'a). f i x)"
+lift_definition blinfun_vec::"('a::{enum} \<Rightarrow> 'b::real_normed_vector \<Rightarrow>\<^sub>L real) \<Rightarrow> 'b \<Rightarrow>\<^sub>L (real ^ 'a::{enum})" is "(\<lambda>(f::('a \<Rightarrow> 'b \<Rightarrow> real)) (x::'b). \<chi> (i::'a). f i x)"
   by(rule bounded_linear_vec, simp)  
     
 lemmas blinfun_vec_simps[simp] = blinfun_vec.rep_eq
@@ -119,7 +119,7 @@ proof -
 qed
      
 lemma continuous_blinfun_vec':
-  fixes f::"'a::{finite,linorder} \<Rightarrow> 'b::{metric_space, real_normed_vector,abs} \<Rightarrow> 'b \<Rightarrow>\<^sub>L real"
+  fixes f::"'a::{enum,linorder} \<Rightarrow> 'b::{metric_space, real_normed_vector,abs} \<Rightarrow> 'b \<Rightarrow>\<^sub>L real"
   fixes S::"'b set"
   assumes conts:"\<And>i. continuous_on UNIV (f i)"
   shows "continuous_on UNIV (\<lambda>x. blinfun_vec (\<lambda> i. f i x))"
