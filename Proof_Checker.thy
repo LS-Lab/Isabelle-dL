@@ -307,6 +307,19 @@ where
 | Lrule_EquivForward:"\<And>p q. nth (fst (nth SG i)) j = (p \<leftrightarrow> q) \<Longrightarrow> lrule_ok SG C i j EquivForwardL"
 | Lrule_EquivBackward:"\<And>p q. nth (fst (nth SG i)) j = (p \<leftrightarrow> q) \<Longrightarrow> lrule_ok SG C i j EquivBackwardL"
 
+  
+lemma Lrule_And_code:"(case (nth (fst (nth SG i)) j) of(And p q) \<Rightarrow> True | _ \<Rightarrow> False) \<Longrightarrow> lrule_ok SG C i j AndL"
+  sorry
+  
+lemma Lrule_Imply_code:"(case nth (fst (nth SG i)) j of(! (! B && ! (! A)))\<Rightarrow> True | _ \<Rightarrow> False) \<Longrightarrow> lrule_ok SG C i j ImplyL"
+  sorry
+
+lemma Lrule_EquivForward_code:"(case nth (fst (nth SG i)) j of(! (! (A1 && B1) && ! (! A2 && ! B2))) \<Rightarrow> A1 = A2 \<and> B1 = B2 | _ \<Rightarrow> False) \<Longrightarrow> lrule_ok SG C i j EquivForwardL"
+  sorry
+    
+lemma Lrule_EquivBackward_code:"(case nth (fst (nth SG i)) j of(! (! (A1 && B1) && ! (! A2 && ! B2))) \<Rightarrow> A1 = A2 \<and> B1 = B2 | _ \<Rightarrow> False) \<Longrightarrow> lrule_ok SG C i j EquivBackwardL"
+  sorry
+
 named_theorems prover "Simplification rules for checking validity of proof certificates" 
 lemmas [prover] = axiom_defs Box_def Or_def Implies_def filter_append ssafe_def SDom_def FUadmit_def PFUadmit_def id_simps
 
@@ -324,7 +337,23 @@ where
 | Rrule_Cohide:"length (snd (nth SG i)) > j \<Longrightarrow> (\<forall>\<Gamma> q. (nth SG i) \<noteq> (\<Gamma>, [q])) \<Longrightarrow> rrule_ok SG C i j CohideR"
 | Rrule_CohideRR:"length (snd (nth SG i)) > j  \<Longrightarrow> (\<forall>q. (nth SG i) \<noteq> ([], [q])) \<Longrightarrow> rrule_ok SG C i j CohideRR"
 | Rrule_True:"nth (snd (nth SG i)) j = TT \<Longrightarrow> rrule_ok SG C i j TrueR"
+
   
+lemma Rrule_And_code:"(case (nth (snd (nth SG i)) j) of(And p q) \<Rightarrow> True | _ \<Rightarrow> False) \<Longrightarrow> rrule_ok SG C i j AndR"
+  sorry
+  
+lemma Rrule_Imply_code:"(case nth (snd (nth SG i)) j of(! (! B && ! (! A)))\<Rightarrow> True | _ \<Rightarrow> False) \<Longrightarrow> rrule_ok SG C i j ImplyR"
+  sorry
+    
+lemma Rrule_Equiv_code:"(case nth (snd (nth SG i)) j of(! (! (A1 && B1) && ! (! A2 && ! B2))) \<Rightarrow> A1 = A2 \<and> B1 = B2 | _ \<Rightarrow> False) \<Longrightarrow> rrule_ok SG C i j EquivR"
+  sorry
+
+lemma Rrule_Cohide_code:"length (snd (nth SG i)) > j \<Longrightarrow> (case  (nth SG i) of (\<Gamma>, [q]) \<Rightarrow> False | _ \<Rightarrow> True) \<Longrightarrow> rrule_ok SG C i j CohideR"
+  sorry
+  
+lemma Rrule_CohideRR_code:"length (snd (nth SG i)) > j  \<Longrightarrow> (case (nth SG i) of ([], [q]) \<Rightarrow> False | _ \<Rightarrow> True) \<Longrightarrow> rrule_ok SG C i j CohideRR"
+  sorry
+    
 inductive_simps 
     Rrule_And_simps[prover]: "rrule_ok SG C i j AndR"
 and Rrule_Imply_simps[prover]: "rrule_ok SG C i j ImplyR"
@@ -367,8 +396,19 @@ where
     \<Longrightarrow> dsafe \<theta>'
     \<Longrightarrow> ssafe \<sigma>
     \<Longrightarrow> Fadmit \<sigma> (Equiv (Prop p (singleton \<theta>)) (Prop p (singleton \<theta>')))
-    \<Longrightarrow> step_ok (SG,C) i (CQ \<theta> \<theta>' \<sigma>)"  
+    \<Longrightarrow> step_ok (SG,C) i (CQ \<theta> \<theta>' \<sigma>)" 
+
   
+lemma  Step_G_code[code]:"(case (nth SG i) of (Nil, (Not(Diamond a (Not p)))# Nil) \<Rightarrow> True | _ \<Rightarrow> False) \<Longrightarrow> step_ok (SG,C) i G"
+  apply(rule Step_G)  
+  apply(auto simp add: Box_def)
+  apply(cases "snd (SG ! i)")
+   apply(auto)
+    using list.exhaust apply force
+    sledgehammer
+    using list.exhaust apply force
+    sorry
+      
 inductive_simps 
     Step_G_simps[prover]: "step_ok (SG,C) i G"
 and Step_CloseId_simps[prover]: "step_ok (SG,C) i (CloseId j k)"

@@ -966,12 +966,30 @@ proof -
 qed
 
 definition ssafe ::"('sf, 'sc, 'sz) subst \<Rightarrow> bool"
-where "ssafe \<sigma> \<equiv>
+where ssafe_def:"ssafe \<sigma> \<equiv>
   (\<forall> i f'. SFunctions \<sigma> i = Some f' \<longrightarrow> dfree f') \<and> 
   (\<forall> f f'. SPredicates \<sigma> f = Some f'  \<longrightarrow> fsafe f') \<and>
   (\<forall> f f'. SPrograms \<sigma> f = Some f'  \<longrightarrow> hpsafe f') \<and>
   (\<forall> f f'. SODEs \<sigma> f = Some f'  \<longrightarrow> osafe f') \<and>
   (\<forall> C C'. SContexts \<sigma> C = Some C'  \<longrightarrow> fsafe C')"
+  
+lemma ssafe_code[code]:"ssafe \<sigma> \<equiv>
+  (\<forall> i . (case (SFunctions \<sigma> i) of 
+            Some f' \<Rightarrow> dfree f'
+          | None \<Rightarrow> True)) \<and> 
+  (\<forall> f . (case SPredicates \<sigma> f of
+            Some f' \<Rightarrow> fsafe f')) \<and>
+  (\<forall> f . (case SPrograms \<sigma> f of
+            Some f' \<Rightarrow> hpsafe f')) \<and>
+  (\<forall> f . (case SODEs \<sigma> f of
+            Some f' \<Rightarrow> osafe f')) \<and>
+  (\<forall> C . (case SContexts \<sigma> C of
+            Some C' \<Rightarrow> fsafe C'))"
+    sorry
+(*    subgoal for i
+      by(cases "SFunctions \<sigma> i", auto)
+    apply (metis option.simps(5))
+    sledgehammer*)
 
 lemma uadmit_dterm_adjointS:
   assumes ssafe:"ssafe \<sigma>"
