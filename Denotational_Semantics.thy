@@ -106,8 +106,8 @@ record ('a, 'b, 'c) interp =
   Predicates      :: "'c \<Rightarrow> 'c Rvec \<Rightarrow> bool"
   Contexts        :: "'b \<Rightarrow> 'c state set \<Rightarrow> 'c state set"
   Programs        :: "'c \<Rightarrow> ('c state * 'c state) set"
-  ODEs            :: "'c \<Rightarrow> 'c simple_state \<Rightarrow> 'c simple_state"
-  ODEBV           :: "'c \<Rightarrow> 'c set"
+  ODEs            :: "'c \<Rightarrow> ('c space) \<Rightarrow> 'c simple_state \<Rightarrow> 'c simple_state"
+  ODEBV           :: "'c \<Rightarrow> ('c space) \<Rightarrow> 'c set"
 
 fun FunctionFrechet :: "('a::enum, 'b::enum, 'c::enum) interp \<Rightarrow> 'a \<Rightarrow> 'c Rvec \<Rightarrow> 'c Rvec \<Rightarrow> real"
   where "FunctionFrechet I i = (THE f'. \<forall> x. (Functions I i has_derivative f' x) (at x))"
@@ -115,11 +115,26 @@ fun FunctionFrechet :: "('a::enum, 'b::enum, 'c::enum) interp \<Rightarrow> 'a \
 (* For an interpretation to be valid, all functions must be differentiable everywhere.*)
 definition is_interp :: "('a::enum, 'b::enum, 'c::enum) interp \<Rightarrow> bool"
   where "is_interp I \<equiv>
-   \<forall>x. \<forall>i. ((FDERIV (Functions I i) x :> (FunctionFrechet I i x)) \<and> continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I i x)))"
+     (\<forall>x. \<forall>i. ((FDERIV (Functions I i) x :> (FunctionFrechet I i x)) 
+        \<and> continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I i x))))
+   \<and> (\<forall>(c::'c) (s::'c space) (\<nu>::'c simple_state) (\<nu>'::'c simple_state). 
+       (VSagree \<nu> \<nu>' (SPV s) \<longrightarrow> VSagree (ODEs I c s \<nu>) (ODEs I c s \<nu>') (SPV s)))
+   \<and> (\<forall>c s. ODEBV I c s \<subseteq> SPV s)"
 
 lemma is_interpD:"is_interp I \<Longrightarrow> \<forall>x. \<forall>i. (FDERIV (Functions I i) x :> (FunctionFrechet I i x))"
   unfolding is_interp_def by auto
-  
+
+lemmas interp_fderivD = is_interpD
+
+lemma interp_contD:"is_interp I \<Longrightarrow> \<forall>x. \<forall>i. (continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I i x)))"
+  unfolding is_interp_def by auto
+
+lemma interp_agreeD:"\<And>x i c s \<nu> \<nu>'. is_interp I \<Longrightarrow> VSagree \<nu> \<nu>' (SPV s) \<Longrightarrow> VSagree (ODEs I c s \<nu>) (ODEs I c s \<nu>') (SPV s)"
+  unfolding is_interp_def by auto
+
+lemma interp_BVD:"\<And>c s. is_interp I \<Longrightarrow> ODEBV I c s \<subseteq> SPV s"
+  unfolding is_interp_def by auto
+    
 (* Agreement between interpretations. *)
 definition Iagree :: "('a::enum, 'b::enum, 'c::enum) interp \<Rightarrow> ('a::enum, 'b::enum, 'c::enum) interp \<Rightarrow> ('a + 'b + 'c) set \<Rightarrow> bool"
 where "Iagree I J V \<equiv>
@@ -207,7 +222,7 @@ text\<open> The semantics of an ODE is the vector field at a given point. ODE's 
   by ODE2 from ODE2"\<close>
 fun ODE_sem:: "('a::enum, 'b::enum, 'c::enum) interp \<Rightarrow> ('a, 'c) ODE \<Rightarrow> 'c Rvec \<Rightarrow> 'c Rvec"
   where
-  ODE_sem_OVar:"ODE_sem I (OVar x) = ODEs I x"
+  ODE_sem_OVar:"ODE_sem I (OVar x s) = ODEs I x s"
 | ODE_sem_OSing:"ODE_sem I (OSing x \<theta>) =  (\<lambda>\<nu>. (\<chi> i. if i = x then sterm_sem I \<theta> \<nu> else 0))"
 (* Note: Could define using SOME operator in a way that more closely matches above description,
  * but that gets complicated in the OVar case because not all variables are bound by the OVar *)
@@ -216,7 +231,7 @@ fun ODE_sem:: "('a::enum, 'b::enum, 'c::enum) interp \<Rightarrow> ('a, 'c) ODE 
 (* The bound variables of an ODE *)
 fun ODE_vars :: "('a,'b,'c) interp \<Rightarrow> ('a, 'c) ODE \<Rightarrow> 'c set"
   where 
-  "ODE_vars I (OVar c) = ODEBV I c"
+  "ODE_vars I (OVar c s) = ODEBV I c s"
 | "ODE_vars I (OSing x \<theta>) = {x}"
 | "ODE_vars I (OProd ODE1 ODE2) = ODE_vars I ODE1 \<union> ODE_vars I ODE2"
   

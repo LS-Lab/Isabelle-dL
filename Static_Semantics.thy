@@ -35,7 +35,7 @@ where
 
 primrec SIGO   :: "('a, 'c) ODE \<Rightarrow> ('a + 'c) set"
 where
-  "SIGO (OVar c) = {Inr c}"
+  "SIGO (OVar c s) = {Inr c}"
 | "SIGO (OSing x \<theta>) =  {Inl x| x. x \<in> SIGT \<theta>}"
 | "SIGO (OProd ODE1 ODE2) = SIGO ODE1 \<union> SIGO ODE2"
   
@@ -82,18 +82,20 @@ where
 
 fun FVDiff :: "('a, 'c) trm \<Rightarrow> ('c + 'c) set"
 where "FVDiff f = (\<Union>x \<in> (FVT f). primify x)"
-
+  
 text\<open> Free variables of an ODE includes both the bound variables and the terms \<close>
+  
+  
 fun FVO :: "('a, 'c) ODE \<Rightarrow> 'c set"
 where
-  "FVO (OVar c) = UNIV"
+  "FVO (OVar c s) = SPV s"
 | "FVO (OSing x \<theta>) = {x} \<union> {x . Inl x \<in> FVT \<theta>}"
 | "FVO (OProd ODE1 ODE2) = FVO ODE1 \<union> FVO ODE2"
 
 text\<open> Bound variables of ODEs, formulas, programs \<close>
 fun BVO :: "('a, 'c) ODE \<Rightarrow> ('c + 'c) set"
 where 
-  "BVO (OVar c) = UNIV"
+  "BVO (OVar c s) = Inl ` SPV s \<union> Inr ` SPV s"
 | "BVO (OSing x \<theta>) = {Inl x, Inr x}"
 | "BVO (OProd ODE1 ODE2) = BVO ODE1 \<union> BVO ODE2"
   

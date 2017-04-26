@@ -180,7 +180,7 @@ typedef ('a::enum, 'c::enum) strm = "{\<theta>:: ('a,'c) trm. dfree \<theta>}"
   
 typedef ('a, 'b, 'c) good_interp = "{I::('a::enum,'b::enum,'c::enum) interp. is_interp I}"
   morphisms raw_interp good_interp
-  apply(rule exI[where x="\<lparr> Functions = (\<lambda>f x. 0), Predicates = (\<lambda>p x. True), Contexts = (\<lambda>C S. S), Programs = (\<lambda>a. {}), ODEs = (\<lambda>c v. (\<chi> i. 0)), ODEBV = \<lambda>c. {}\<rparr>"])
+  apply(rule exI[where x="\<lparr> Functions = (\<lambda>f x. 0), Predicates = (\<lambda>p x. True), Contexts = (\<lambda>C S. S), Programs = (\<lambda>a. {}), ODEs = (\<lambda>c s v. (\<chi> i. 0)), ODEBV = \<lambda>c s. {}\<rparr>"])
   apply(auto simp add: is_interp_def)
 proof -
   fix x ::real
@@ -205,7 +205,7 @@ next
     apply(clarsimp simp add: continuous_on_topological[of UNIV "(\<lambda>x. Blinfun ((THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x))"])
     apply(rule exI[where x = UNIV])
     by(auto simp add: eq' blin)
- qed
+ qed (auto simp add: VSagree_def)
 
 lemma frechet_linear: 
   assumes good_interp:"is_interp I"
@@ -260,7 +260,7 @@ proof(induction rule: dfree.induct)
   case (dfree_Fun args i)
   assume IH:" \<forall>i. dfree (args i) \<and> continuous_on UNIV (sterm_sem I (args i))"
   have con1:"continuous_on UNIV (Functions I i)"
-    using good_interp unfolding is_interp_def
+    using good_interp using interp_contD[OF good_interp] interp_fderivD[OF good_interp]
     using continuous_on_eq_continuous_within has_derivative_continuous by blast
   have con2:"continuous_on UNIV (\<lambda> x. (\<chi> i. sterm_sem I (args i) x))"
     apply(rule continuous_on_vec_lambda)

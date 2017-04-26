@@ -49,9 +49,14 @@ where
 | "trm_to_string (DiffVar x) = ''Dv{'' @ vid_to_string x @ ''}''"
 | "trm_to_string (Differential t) = ''D{'' @ trm_to_string t @ ''}''"
   
+primrec space_to_string::"'sz space \<Rightarrow> char list"
+where 
+  "space_to_string All = ''*''"
+| "space_to_string (Except x) = ''{'' @ vid_to_string x @ ''.''"
+  
 primrec ode_to_string::"('sf,'sz) ODE \<Rightarrow> char list"
 where  
-  "ode_to_string (OVar x) = oid_to_string x"
+  "ode_to_string (OVar x c) = oid_to_string x @ space_to_string c"
 | "ode_to_string (OSing x t) = ''d'' @ vid_to_string x @ ''='' @ trm_to_string t"
 | "ode_to_string (OProd ODE1 ODE2) = ode_to_string ODE1 @ '', '' @ ode_to_string ODE2 "
      

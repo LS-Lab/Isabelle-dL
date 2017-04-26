@@ -44,9 +44,13 @@ datatype ('a, 'c) trm =
 (* The differential of an arbitrary term (\<theta>)' *)
 | Differential "('a, 'c) trm"
 
+datatype 'a space =
+  All
+| Except 'a
+  
 datatype('a, 'c) ODE =
 (* Variable standing for an ODE system, given meaning by the interpretation *)
-  OVar 'c
+  OVar 'c "'c space" ("_\<lparr>_\<rparr>")
 (* Singleton ODE defining x' = \<theta>, where \<theta> may or may not contain x
  * (but must not contain differentials) *)
 | OSing 'c "('a, 'c) trm"
@@ -216,15 +220,20 @@ where
  * ODE's are valid (e.g. whether they bind the same variable twice) *)
 fun ODE_dom::"('a, 'c) ODE \<Rightarrow> 'c set"
 where 
-  "ODE_dom (OVar c) =  {}"
+  "ODE_dom (OVar c s) =  {}"
 | "ODE_dom (OSing x \<theta>) = {x}"
 | "ODE_dom (OProd ODE1 ODE2) = ODE_dom ODE1 \<union> ODE_dom ODE2"
 
 inductive osafe:: "('a::enum, 'c::enum) ODE \<Rightarrow> bool"
 where
-  osafe_Var:"osafe (OVar c)"
+  osafe_Var:"osafe (OVar c s)"
 | osafe_Sing:"dfree \<theta> \<Longrightarrow> osafe (OSing x \<theta>)"
 | osafe_Prod:"osafe ODE1 \<Longrightarrow> osafe ODE2 \<Longrightarrow> ODE_dom ODE1 \<inter> ODE_dom ODE2 = {} \<Longrightarrow> osafe (OProd ODE1 ODE2)"
+
+fun SPV :: "'a space \<Rightarrow> 'a set"
+where 
+  "SPV All = UNIV"  
+| "SPV (Except v) = UNIV - {v}"
 
 (* Programs/formulas without any differential terms. This definition not currently used but may
  * be useful in the future. *)
@@ -242,7 +251,7 @@ where
 | "hpfree a \<Longrightarrow> hpfree b \<Longrightarrow> hpfree (Sequence a b)"
 | "hpfree a \<Longrightarrow> hpfree (Loop a)"
 | "ffree f \<Longrightarrow> ffree (InContext C f)"
-| "(\<forall> arg. arg \<in> range args \<Longrightarrow> dfree arg) \<Longrightarrow> ffree (Prop p args)"
+| "(\<forall> arg. (arg \<in> range args \<longrightarrow> dfree arg)) \<Longrightarrow> ffree (Prop p args)"
 | "ffree p \<Longrightarrow> ffree (Not p)"
 | "ffree p \<Longrightarrow> ffree q \<Longrightarrow> ffree (And p q)"
 | "ffree p \<Longrightarrow> ffree (Exists x p)"
@@ -290,7 +299,7 @@ inductive_simps
   and dsafe_Const_simps[simp]: "dsafe (Const r)"
 
 inductive_simps
-      osafe_OVar_simps[simp]:"osafe (OVar c)"
+      osafe_OVar_simps[simp]:"osafe (OVar c s)"
   and osafe_OSing_simps[simp]:"osafe (OSing x \<theta>)"
   and osafe_OProd_simps[simp]:"osafe (OProd ODE1 ODE2)"
 
