@@ -32,7 +32,7 @@ where
   
 primrec OUrename :: "'sz \<Rightarrow> 'sz \<Rightarrow> ('sf, 'sz) ODE \<Rightarrow> ('sf, 'sz) ODE"
 where
-  "OUrename x y (OVar c) = undefined"
+  "OUrename x y (OVar c s) = undefined"
 | "OUrename x y (OSing z \<theta>) = OSing (swap x y z) (TUrename x y \<theta>)"
 | "OUrename x y (OProd ODE1 ODE2) = OProd (OUrename x y ODE1) (OUrename x y ODE2)"
   
@@ -1033,7 +1033,7 @@ proof -
     then have agree:"Vagree (repv (Radj x y \<nu>) x (dterm_sem I \<theta> \<nu>)) (repv \<nu> x (dterm_sem I \<theta> \<nu>)) (FVF \<phi>)"
       using agree_sub[OF sub] by auto
     have fml_sem_eq:"(repv (Radj x y \<nu>) x (dterm_sem I \<theta> \<nu>) \<in> fml_sem I \<phi>) = (repv \<nu> x (dterm_sem I \<theta> \<nu>) \<in> fml_sem I \<phi>)"
-      using coincidence_formula[OF fsafe' Iagree_refl agree] by auto
+      using coincidence_formula[OF good_interp good_interp fsafe' Iagree_refl agree] by auto
     have "(\<nu> \<in> fml_sem I ([[y := \<theta>]]FUrename x y \<phi>)) = (repv \<nu> y (dterm_sem I \<theta> \<nu>) \<in> fml_sem I (FUrename x y \<phi>))"
       by auto
     moreover have "... = (Radj x y (repv \<nu> y (dterm_sem I \<theta> \<nu>)) \<in> fml_sem I \<phi>)"
@@ -1042,6 +1042,7 @@ proof -
       using Radj_repv1 by auto
     moreover have "... = (\<nu> \<in> fml_sem I ([[x := \<theta>]]\<phi>))"
       using fml_sem_eq by auto
+        
     moreover have "... = True"
       using valid unfolding valid_def using good_interp by blast
     ultimately
