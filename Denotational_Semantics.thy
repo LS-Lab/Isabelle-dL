@@ -118,7 +118,8 @@ definition is_interp :: "('a::enum, 'b::enum, 'c::enum) interp \<Rightarrow> boo
      (\<forall>x. \<forall>i. ((FDERIV (Functions I i) x :> (FunctionFrechet I i x)) 
         \<and> continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I i x))))
    \<and> (\<forall>(c::'c) (s::'c space) (\<nu>::'c simple_state) (\<nu>'::'c simple_state). 
-       (VSagree \<nu> \<nu>' (SPV s) \<longrightarrow> VSagree (ODEs I c s \<nu>) (ODEs I c s \<nu>') (SPV s)))
+       (VSagree \<nu> \<nu>' (SPV s) \<longrightarrow>  (ODEs I c s \<nu>) = (ODEs I c s \<nu>'))
+     \<and> (\<forall>i. i \<notin> (SPV s) \<longrightarrow> ODEs I c s \<nu> $ i = 0))
    \<and> (\<forall>c s. ODEBV I c s \<subseteq> SPV s)"
 
 lemma is_interpD:"is_interp I \<Longrightarrow> \<forall>x. \<forall>i. (FDERIV (Functions I i) x :> (FunctionFrechet I i x))"
@@ -129,7 +130,10 @@ lemmas interp_fderivD = is_interpD
 lemma interp_contD:"is_interp I \<Longrightarrow> \<forall>x. \<forall>i. (continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I i x)))"
   unfolding is_interp_def by auto
 
-lemma interp_agreeD:"\<And>x i c s \<nu> \<nu>'. is_interp I \<Longrightarrow> VSagree \<nu> \<nu>' (SPV s) \<Longrightarrow> VSagree (ODEs I c s \<nu>) (ODEs I c s \<nu>') (SPV s)"
+lemma interp_agreeD:"\<And>x i c s \<nu> \<nu>'. is_interp I \<Longrightarrow> VSagree \<nu> \<nu>' (SPV s) \<Longrightarrow>  (ODEs I c s \<nu>) = (ODEs I c s \<nu>')"
+  unfolding is_interp_def by auto
+
+lemma interp_zerosD:"\<And>x i c s \<nu>. is_interp I \<Longrightarrow> i \<notin> SPV s \<Longrightarrow> (ODEs I c s \<nu> $ i) = 0"
   unfolding is_interp_def by auto
 
 lemma interp_BVD:"\<And>c s. is_interp I \<Longrightarrow> ODEBV I c s \<subseteq> SPV s"

@@ -63,7 +63,8 @@ next
          0 \<le> t \<and>
          (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu>' x \<in> fml_sem I P} \<and>  (sol 0) = (fst \<nu>')"
       have semBV:"-BVO ODE \<subseteq> -semBV I ODE"
-        by(induction ODE, auto)
+        apply(induction ODE, auto)
+        
       from assm have "Vagree \<omega> \<nu> (- BVO ODE)" using mk_v_agree[of I ODE \<nu> "(sol t)"] 
         using agree_sub[OF semBV] by auto
       thus  "Vagree \<nu> \<omega> (- BVO ODE)" by (rule agree_comm)
