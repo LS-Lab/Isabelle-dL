@@ -30,7 +30,7 @@ record ('a, 'b, 'c) subst =
   SPredicates      :: "'c \<rightharpoonup> ('a + 'c, 'b, 'c) formula"
   SContexts        :: "'b \<rightharpoonup> ('a, 'b + unit, 'c) formula"
   SPrograms        :: "'c \<rightharpoonup> ('a, 'b, 'c) hp"
-  SODEs            :: "'c \<rightharpoonup> ('a, 'c) ODE"
+  SODEs            :: "('c * 'c space) \<rightharpoonup> ('a, 'c) ODE"
 
 context ids begin
 definition NTUadmit :: "('d::enum \<Rightarrow> ('a::enum, 'c::enum) trm) \<Rightarrow> ('a + 'd, 'c) trm \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
@@ -98,13 +98,13 @@ where
   
 primrec OsubstFO::"('a::enum + 'b::enum, 'c::enum) ODE \<Rightarrow> ('b \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'c) ODE"
 where
-  "OsubstFO (OVar c) \<sigma> = OVar c"
+  "OsubstFO (OVar c S) \<sigma> = OVar c S"
 | "OsubstFO (OSing x \<theta>) \<sigma> = OSing x (TsubstFO \<theta> \<sigma>)"
 | "OsubstFO (OProd ODE1 ODE2) \<sigma> = OProd (OsubstFO ODE1 \<sigma>) (OsubstFO ODE2 \<sigma>)"
 
 primrec Osubst::"('a::enum, 'c::enum) ODE \<Rightarrow> ('a, 'b::enum, 'c) subst \<Rightarrow> ('a, 'c) ODE"
 where
-  "Osubst (OVar c) \<sigma> = (case SODEs \<sigma> c of Some c' \<Rightarrow> c' | None \<Rightarrow> OVar c)"
+  "Osubst (OVar c S) \<sigma> = (case SODEs \<sigma> (c, S) of Some c' \<Rightarrow> c' | None \<Rightarrow> OVar c S)"
 | "Osubst (OSing x \<theta>) \<sigma> = OSing x (Tsubst \<theta> \<sigma>)"
 | "Osubst (OProd ODE1 ODE2) \<sigma> = OProd (Osubst ODE1 \<sigma>) (Osubst ODE2 \<sigma>)"
   
@@ -232,12 +232,12 @@ inductive_simps
 
 inductive Oadmit:: "('a::enum, 'b::enum, 'c::enum) subst \<Rightarrow> ('a, 'c) ODE \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
 where 
-  Oadmit_Var:"Oadmit \<sigma> (OVar c) U"
+  Oadmit_Var:"Oadmit \<sigma> (OVar c S) U"
 | Oadmit_Sing:"TUadmit \<sigma> \<theta> U \<Longrightarrow> TadmitF \<sigma> \<theta> \<Longrightarrow> Oadmit \<sigma> (OSing x \<theta>) U"
 | Oadmit_Prod:"Oadmit \<sigma> ODE1 U \<Longrightarrow> Oadmit \<sigma> ODE2 U \<Longrightarrow> ODE_dom (Osubst ODE1 \<sigma>) \<inter> ODE_dom (Osubst ODE2 \<sigma>) = {} \<Longrightarrow> Oadmit \<sigma> (OProd ODE1 ODE2) U"
 
 inductive_simps
-      Oadmit_Var_simps[simp]: "Oadmit \<sigma> (OVar c) U"
+      Oadmit_Var_simps[simp]: "Oadmit \<sigma> (OVar c S) U"
   and Oadmit_Sing_simps[simp]: "Oadmit \<sigma> (OSing x e) U"
   and Oadmit_Prod_simps[simp]: "Oadmit \<sigma> (OProd ODE1 ODE2) U"
 
@@ -252,12 +252,12 @@ where [code]:"OUadmitFO \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \
  
 inductive OadmitFO :: "('d::enum \<Rightarrow> ('a::enum, 'c::enum) trm) \<Rightarrow> ('a + 'd,  'c) ODE \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
 where 
-  OadmitFO_OVar:"OUadmitFO \<sigma> (OVar c) U \<Longrightarrow> OadmitFO \<sigma> (OVar c) U"
+  OadmitFO_OVar:"OUadmitFO \<sigma> (OVar c S) U \<Longrightarrow> OadmitFO \<sigma> (OVar c S) U"
 | OadmitFO_OSing:"OUadmitFO \<sigma> (OSing x \<theta>) U \<Longrightarrow> TadmitFFO \<sigma> \<theta> \<Longrightarrow> OadmitFO \<sigma> (OSing x \<theta>) U"
 | OadmitFO_OProd:"OadmitFO \<sigma> ODE1 U \<Longrightarrow> OadmitFO \<sigma> ODE2 U \<Longrightarrow> OadmitFO \<sigma> (OProd ODE1 ODE2) U"
 
 inductive_simps
-      OadmitFO_OVar_simps[simp]: "OadmitFO \<sigma> (OVar a) U"
+      OadmitFO_OVar_simps[simp]: "OadmitFO \<sigma> (OVar a S) U"
   and OadmitFO_OProd_simps[simp]: "OadmitFO \<sigma> (OProd ODE1 ODE2) U"
   and OadmitFO_OSing_simps[simp]: "OadmitFO \<sigma> (OSing x e) U"
   
@@ -414,8 +414,8 @@ where "adjoint I \<sigma> \<nu> =
  Predicates = (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda>R. \<nu> \<in> fml_sem (extendf I R) p') | None \<Rightarrow> Predicates I p),
  Contexts =   (\<lambda>c. case SContexts \<sigma> c of Some c' \<Rightarrow> (\<lambda>R. fml_sem (extendc I R) c') | None \<Rightarrow> Contexts I c),
  Programs =   (\<lambda>a. case SPrograms \<sigma> a of Some a' \<Rightarrow> prog_sem I a' | None \<Rightarrow> Programs I a),
- ODEs =     (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_sem I ode' | None \<Rightarrow> ODEs I ode),
- ODEBV = (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_vars I ode' | None \<Rightarrow> ODEBV I ode)
+ ODEs =     (\<lambda>ode s. case SODEs \<sigma> (ode,s) of Some ode' \<Rightarrow> ODE_sem I ode' | None \<Rightarrow> ODEs I ode s),
+ ODEBV = (\<lambda>ode s. case SODEs \<sigma> (ode,s) of Some ode' \<Rightarrow> ODE_vars I ode' | None \<Rightarrow> ODEBV I ode s)
  \<rparr>"
 
 lemma dsem_to_ssem:"dfree \<theta> \<Longrightarrow> dterm_sem I \<theta> \<nu> = sterm_sem I \<theta> (fst \<nu>)"
@@ -438,8 +438,8 @@ lemma adjoint_free:
    Predicates = (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda>R. \<nu> \<in> fml_sem (extendf I R) p') | None \<Rightarrow> Predicates I p),
    Contexts =   (\<lambda>c. case SContexts \<sigma> c of Some c' \<Rightarrow> (\<lambda>R. fml_sem (extendc I R) c') | None \<Rightarrow> Contexts I c),
    Programs =   (\<lambda>a. case SPrograms \<sigma> a of Some a' \<Rightarrow> prog_sem I a' | None \<Rightarrow> Programs I a),
-   ODEs =     (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_sem I ode' | None \<Rightarrow> ODEs I ode),
-   ODEBV = (\<lambda>ode. case SODEs \<sigma> ode of Some ode' \<Rightarrow> ODE_vars I ode' | None \<Rightarrow> ODEBV I ode)\<rparr>"
+   ODEs =     (\<lambda>ode s. case SODEs \<sigma> (ode, s) of Some ode' \<Rightarrow> ODE_sem I ode' | None \<Rightarrow> ODEs I ode s),
+   ODEBV = (\<lambda>ode s. case SODEs \<sigma> (ode, s) of Some ode' \<Rightarrow> ODE_vars I ode' | None \<Rightarrow> ODEBV I ode s)\<rparr>"
   using dsem_to_ssem[OF sfree] 
   by (cases \<nu>) (auto simp add: adjoint_def fun_eq_iff split: option.split)
 
