@@ -852,6 +852,8 @@ qed
 lemma uadmit_dterm_adjoint':
   assumes dfree:"\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dfree f'"
   assumes fsafe:"\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f'"
+  assumes osub:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> Inl ` FVO ODE \<union> BVO ODE \<subseteq> Inl ` SPV S \<union> Inr ` SPV S)"
+  assumes osafe:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> osafe ODE)"
   assumes good_interp:"is_interp I"
   shows  "\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}) \<Longrightarrow> dsafe \<theta> \<Longrightarrow> dterm_sem (adjoint I \<sigma> \<nu>) \<theta> = dterm_sem (adjoint I \<sigma> \<omega>) \<theta>"
 proof (induct "\<theta>")
@@ -921,8 +923,8 @@ next
     using dfree dfree_is_dsafe by auto
   have sem:"sterm_sem (local.adjoint I \<sigma> \<nu>) \<theta> = sterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>"
     using uadmit_sterm_adjoint'[OF dsafe fsafe VA', of "\<lambda> x y. x" "\<lambda> x y. x" I] by auto
-  have good1:"is_interp (adjoint I \<sigma> \<nu>)" using adjoint_safe[OF good_interp dfree] by auto
-  have good2:"is_interp (adjoint I \<sigma> \<omega>)" using adjoint_safe[OF good_interp dfree] by auto
+  have good1:"is_interp (adjoint I \<sigma> \<nu>)" using adjoint_safe[OF good_interp dfree osub osafe] by auto
+  have good2:"is_interp (adjoint I \<sigma> \<omega>)" using adjoint_safe[OF good_interp dfree osub osafe] by auto
   have frech:"frechet (local.adjoint I \<sigma> \<nu>) \<theta> = frechet (local.adjoint I \<sigma> \<omega>) \<theta>"
     apply (auto simp add: fun_eq_iff)
     subgoal for a b
@@ -938,6 +940,8 @@ lemma uadmit_dterm_adjoint:
   assumes dfree:"\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dfree f'"
   assumes fsafe:"\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow>  fsafe f'"
   assumes dsafe:"dsafe \<theta>"
+  assumes osub:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> Inl ` FVO ODE \<union> BVO ODE \<subseteq> Inl ` SPV S \<union> Inr ` SPV S)"
+  assumes osafe:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> osafe ODE)"
   assumes good_interp:"is_interp I"
   shows  "dterm_sem (adjoint I \<sigma> \<nu>) \<theta> = dterm_sem (adjoint I \<sigma> \<omega>) \<theta>"
 proof -
@@ -949,7 +953,7 @@ proof -
     by auto
   then have VA':"Vagree \<nu> \<omega> (\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {})"
     using agree_sub[OF sub1 VA] by auto
-  then show "?thesis" using uadmit_dterm_adjoint'[OF dfree fsafe good_interp VA' dsafe] 
+  then show "?thesis" using uadmit_dterm_adjoint'[OF dfree fsafe osub osafe good_interp VA' dsafe ]  
     by auto
 qed
 
@@ -1068,8 +1072,9 @@ where ssafe_def:"ssafe \<sigma> \<equiv>
   (\<forall> i f'. SFunctions \<sigma> i = Some f' \<longrightarrow> dfree f') \<and> 
   (\<forall> f f'. SPredicates \<sigma> f = Some f'  \<longrightarrow> fsafe f') \<and>
   (\<forall> f f'. SPrograms \<sigma> f = Some f'  \<longrightarrow> hpsafe f') \<and>
-  (\<forall> f f'. SODEs \<sigma> f = Some f'  \<longrightarrow> osafe f') \<and>
-  (\<forall> C C'. SContexts \<sigma> C = Some C'  \<longrightarrow> fsafe C')"
+  (\<forall> f c f'. SODEs \<sigma> (f,c) = Some f'  \<longrightarrow> (Inl ` FVO f' \<union> BVO f' \<subseteq> Inl ` SPV c \<union> Inr ` SPV c) \<and> osafe f') \<and>
+  (\<forall> C C'. SContexts \<sigma> C = Some C'  \<longrightarrow> fsafe C')
+"
   
 lemma ssafe_code[code]:"ssafe \<sigma> \<equiv>
   (\<forall> i . (case (SFunctions \<sigma> i) of 
@@ -2159,22 +2164,27 @@ lemma subst_dterm:
     dsafe \<theta> \<Longrightarrow>
     (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> 
     (\<And>f f'. SPredicates \<sigma> f = Some f'  \<Longrightarrow> fsafe f') \<Longrightarrow>
+    (\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> Inl ` FVO ODE \<union> BVO ODE \<subseteq> Inl ` SPV S \<union> Inr ` SPV S) \<Longrightarrow>
+    (\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> osafe ODE) \<Longrightarrow>
     (\<And>\<nu>. dterm_sem I (Tsubst \<theta> \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) \<theta> \<nu>)"
 proof (induction rule: Tadmit.induct)
   case (Tadmit_Fun1 \<sigma> args f f' \<nu>) 
   note safe = Tadmit_Fun1.prems(1) and sfree = Tadmit_Fun1.prems(2)
     and some = Tadmit_Fun1.hyps(1) and NTA = Tadmit_Fun1.hyps(2)
   hence safes:"\<And>i. dsafe (args i)" by auto
+  assume osub:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> Inl ` FVO ODE \<union> BVO ODE \<subseteq> Inl ` SPV S \<union> Inr ` SPV S)"
+  assume osafe:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> osafe ODE)"
   assume IH':" \<forall>i. Tadmit \<sigma> (args i) \<and>
-           (dsafe (args i) \<longrightarrow>
-            (\<forall>x xa. SFunctions \<sigma> x = Some xa \<longrightarrow> dfree xa) \<longrightarrow>
-            (\<forall>x xa. SPredicates \<sigma> x = Some xa \<longrightarrow> fsafe xa) \<longrightarrow>
-            (\<forall>x. dterm_sem I (Tsubst (args i) \<sigma>) x = dterm_sem (local.adjoint I \<sigma> x) (args i) x))"
+        (dsafe (args i) \<longrightarrow>
+         (\<forall>x xa. SFunctions \<sigma> x = Some xa \<longrightarrow> dfree xa) \<longrightarrow>
+         (\<forall>x xa. SPredicates \<sigma> x = Some xa \<longrightarrow> fsafe xa) \<longrightarrow>
+         (\<forall>x xa xb. SODEs \<sigma> (x, xa) = Some xb \<longrightarrow> Inl ` FVO xb \<union> BVO xb \<subseteq> Inl ` SPV xa \<union> Inr ` SPV xa) \<longrightarrow>
+         (\<forall>x xa xb. SODEs \<sigma> (x, xa) = Some xb \<longrightarrow> osafe xb) \<longrightarrow> (\<forall>x. dterm_sem I (Tsubst (args i) \<sigma>) x = dterm_sem (local.adjoint I \<sigma> x) (args i) x))"
   from IH'
   have IH:"(\<And>\<nu>'. \<And>i. dsafe (args i) \<Longrightarrow>
       dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
     and TA:"\<And>i. Tadmit \<sigma> (args i)"
-    using safe sfree some NTA Tadmit_Fun1.prems(3) by blast+
+    using safe sfree some NTA Tadmit_Fun1.prems(3) osub osafe by blast+
   have eqs:"\<And>i \<nu>'. dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>"
     by (auto simp add: IH safes)
   let ?sub = "(\<lambda> i. Tsubst (args i) \<sigma>)"
@@ -2217,6 +2227,8 @@ next
     and safe:"dsafe (Differential \<theta>)"
     and sfree:"\<And>i f'1. SFunctions \<sigma> i = Some f'1 \<Longrightarrow> dfree f'1"
     and spsafe:"\<And>f f'. SPredicates \<sigma> f = Some f'  \<Longrightarrow> fsafe f'"
+    and osub:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> Inl ` FVO ODE \<union> BVO ODE \<subseteq> Inl ` SPV S \<union> Inr ` SPV S)"
+    and osafe:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> osafe ODE)"
       by auto
   from sfree have sdsafe:"\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dsafe f'"
     using dfree_is_dsafe by auto  
@@ -2230,7 +2242,7 @@ next
     using IH[OF tsafe sfree] by auto
   have sem_eq:"\<And>\<nu>'. dsafe \<theta> \<Longrightarrow> is_interp I \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta> = dterm_sem (local.adjoint I \<sigma> \<nu>') \<theta>"
     subgoal for \<nu>'
-      using uadmit_dterm_adjoint[OF TUA VA sfree spsafe, of "(\<lambda> x y. x)" "(\<lambda> x y. x)" I \<nu> \<nu>']
+      using uadmit_dterm_adjoint[OF TUA VA sfree spsafe , of "(\<lambda> x y. x)" "(\<lambda> x y. x)" I \<nu> \<nu>'] osub osafe
       by auto
     done
   have IH'':"\<And>\<nu>'. dterm_sem I (Tsubst \<theta> \<sigma>) \<nu>' = dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta> \<nu>'"
@@ -2255,8 +2267,9 @@ next
         adjoint_safe[OF good_interp sfree] 
         tsubst_preserves_free[OF free sfree] 
         free sem_eq]
+      osub osafe
     by auto
-qed auto  
+qed (auto)
 
 subsection\<open>Substitution theorems for ODEs\<close>
 lemma osubst_preserves_safe:
@@ -3896,9 +3909,12 @@ next
         "(\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f')"
         unfolding ssafe_def by auto
     from hpsafe have dsafe:"dsafe \<theta>" by (auto elim: hpsafe.cases)
+    have osub:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> Inl ` FVO ODE \<union> BVO ODE \<subseteq> Inl ` SPV S \<union> Inr ` SPV S)"
+    and  osafe:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> osafe ODE)"
+    using ssafe unfolding ssafe_def by auto
     fix \<nu> \<omega>
     show "?thesis \<nu> \<omega>"
-      using subst_dterm[OF good_interp TA dsafe ssafes]
+      using subst_dterm[OF good_interp TA dsafe ssafes osub osafe]
       by auto
   qed
   then show ?case by auto
@@ -3913,9 +3929,12 @@ next
         "(\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f')"
         unfolding ssafe_def by auto
     from hpsafe have dsafe:"dsafe \<theta>" by (auto elim: hpsafe.cases)
+    have osub:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> Inl ` FVO ODE \<union> BVO ODE \<subseteq> Inl ` SPV S \<union> Inr ` SPV S)"
+    and  osafe:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> osafe ODE)"
+    using ssafe unfolding ssafe_def by auto
     fix \<nu> \<omega>
     show "?thesis \<nu> \<omega>"
-      using subst_dterm[OF good_interp TA dsafe ssafes]
+      using subst_dterm[OF good_interp TA dsafe ssafes osub osafe]
       by auto
   qed
   then show ?case by auto
@@ -3945,10 +3964,13 @@ next
     from ssafe have ssafes:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
       "(\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f')"
       unfolding ssafe_def by auto
+    have osub:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> Inl ` FVO ODE \<union> BVO ODE \<subseteq> Inl ` SPV S \<union> Inr ` SPV S)"
+    and  osafe:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> osafe ODE)"
+    using ssafe unfolding ssafe_def by auto
     fix \<nu>
     show "?thesis \<nu>" using 
-      subst_dterm[OF good_interp TA1 dsafe1 ssafes]
-      subst_dterm[OF good_interp TA2 dsafe2 ssafes]
+      subst_dterm[OF good_interp TA1 dsafe1 ssafes osub osafe]
+      subst_dterm[OF good_interp TA2 dsafe2 ssafes osub osafe]
       by auto 
   qed
   then show ?case by auto 
@@ -3969,9 +3991,12 @@ next
       unfolding ssafe_def by auto
       fix \<nu>
       from fsafe have safes:"\<And>i. dsafe (args i)" using dfree_is_dsafe by auto
+      have osub:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> Inl ` FVO ODE \<union> BVO ODE \<subseteq> Inl ` SPV S \<union> Inr ` SPV S)"
+      and  osafe:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> osafe ODE)"
+      using ssafe unfolding ssafe_def by auto
       have IH:"(\<And>\<nu>'. \<And>i. dsafe (args i) \<Longrightarrow>
           dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
-        using  subst_dterm[OF good_interp TA safes ssafes] by auto
+        using  subst_dterm[OF good_interp TA safes ssafes osub osafe] by auto
       have eqs:"\<And>i \<nu>'. dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>"
         by (auto simp add: IH safes)
       let ?sub = "(\<lambda> i. Tsubst (args i) \<sigma>)"
@@ -4002,9 +4027,12 @@ next
         unfolding ssafe_def by auto
     fix \<nu>
     from safe have  safes:"\<And>i. dsafe (args i)" using dfree_is_dsafe by auto
+    have osub:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> Inl ` FVO ODE \<union> BVO ODE \<subseteq> Inl ` SPV S \<union> Inr ` SPV S)"
+    and  osafe:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> osafe ODE)"
+    using ssafe unfolding ssafe_def by auto
     have IH:"(\<And>\<nu>'. \<And>i. dsafe (args i) \<Longrightarrow>
         dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
-    using  subst_dterm[OF good_interp TA safes ssafes] by auto
+    using  subst_dterm[OF good_interp TA safes ssafes osub osafe] by auto
     have Ieq:"Predicates I p = Predicates (adjoint I \<sigma> \<nu>) p"
       using none unfolding adjoint_def by auto
     have vec:"(\<chi> i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) = (\<chi> i. dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)"
@@ -4100,12 +4128,15 @@ next
        "(\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f')"
        unfolding ssafe_def by auto
      fix \<nu>
+     have osub:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> Inl ` FVO ODE \<union> BVO ODE \<subseteq> Inl ` SPV S \<union> Inr ` SPV S)"
+     and  osafe:"(\<And>c S ODE. SODEs \<sigma> (c, S) = Some ODE \<Longrightarrow> osafe ODE)"
+     using ssafe unfolding ssafe_def by auto
      have TA:"\<And>i. Tadmit \<sigma> (args i)" using Fadmit_Prop1.hyps(1) by auto
      note some = Fadmit_Prop1.hyps(2) and NFA = Fadmit_Prop1.hyps(3)
      from fsafe have safes:"\<And>i. dsafe (args i)" using dfree_is_dsafe by auto
      have IH:"(\<And>\<nu>'. \<And>i. dsafe (args i) \<Longrightarrow>
          dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
-       using  subst_dterm[OF good_interp TA safes ssafes] by auto
+       using  subst_dterm[OF good_interp TA safes ssafes osub osafe] by auto
      have eqs:"\<And>i \<nu>'. dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>"
        by (auto simp add: IH safes)
      let ?sub = "(\<lambda> i. Tsubst (args i) \<sigma>)"
