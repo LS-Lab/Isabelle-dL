@@ -585,11 +585,13 @@ lemma adjointFO_safe:
       qed
       done
     subgoal for c s \<nu> \<nu>'
-      sorry
+      using good_interp interp_agreeD by blast
     subgoal for c s \<nu> i 
-      sorry
+      using good_interp interp_agreeD
+      by (simp add: interp_zerosD)
     subgoal for c s x
-      sorry
+      using good_interp interp_agreeD interp_zerosD interp_BVD
+      by fastforce
   done
 
 subsection \<open>Lemmas about adjoint interpretations\<close>
@@ -1076,7 +1078,7 @@ where ssafe_def:"ssafe \<sigma> \<equiv>
   (\<forall> C C'. SContexts \<sigma> C = Some C'  \<longrightarrow> fsafe C')
 "
   
-lemma ssafe_code[code]:"ssafe \<sigma> \<equiv>
+lemma ssafe_code[code]:"ssafe \<sigma> =
   (\<forall> i . (case (SFunctions \<sigma> i) of 
             Some f' \<Rightarrow> dfree f'
           | None \<Rightarrow> True)) \<and> 
@@ -1085,15 +1087,17 @@ lemma ssafe_code[code]:"ssafe \<sigma> \<equiv>
   (\<forall> f . (case SPrograms \<sigma> f of
             Some f' \<Rightarrow> hpsafe f')) \<and>
   (\<forall> f . (case SODEs \<sigma> f of
-            Some f' \<Rightarrow> osafe f')) \<and>
+            Some f' \<Rightarrow> (Inl ` FVO f' \<union> BVO f' \<subseteq> Inl ` SPV c \<union> Inr ` SPV c) \<and> osafe f')) \<and>
   (\<forall> C . (case SContexts \<sigma> C of
             Some C' \<Rightarrow> fsafe C'))"
+  apply(auto simp add: ssafe_def)
+  subgoal for i  by(cases "SFunctions \<sigma> i", auto)
+  subgoal for i  apply (cases "SFunctions \<sigma> i", auto)
+    by (metis option.simps(5))
+  subgoal for f f'  
     sorry
-(*    subgoal for i
-      by(cases "SFunctions \<sigma> i", auto)
-    apply (metis option.simps(5))
-    sledgehammer*)
-
+  sorry
+    
 lemma uadmit_dterm_adjointS:
   assumes ssafe:"ssafe \<sigma>"
   assumes good_interp:"is_interp I"
@@ -3603,7 +3607,7 @@ next
       subgoal for x1 x2 x
         apply(cases "SODEs \<sigma> (x1, x2)", auto)
         using good_interp 
-        sorry
+        by (meson Un_iff set_mp ssafe ssafe_def)
       done
     have hmm:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (-(BVO ODE))"
       subgoal for s
@@ -3678,9 +3682,19 @@ next
       subgoal for x1 x2 xa  apply( cases "SODEs \<sigma> (x1, x2)", auto)
         using good_interp is_interp_def
          apply blast
-        using good_interp is_interp_def
-        sorry
-      sorry
+        using good_interp is_interp_def ssafe ssafe_def 
+      proof -
+        fix a :: "('sf, 'sz) ODE"
+        assume a1: "xa \<in> ODE_vars I a"
+        assume a2: "(Inl xa::'sz + 'sz) \<notin> Inl ` SPV x2"
+        assume a3: "Inl xa \<notin> Inr ` SPV x2"
+        assume "SODEs \<sigma> (x1, x2) = Some a"
+        then have "Inl ` FVO a \<subseteq> Inl ` SPV x2 \<union> Inr ` SPV x2"
+          using ssafe ssafe_def by auto
+        then show ?thesis
+          using a3 a2 a1 by (metis (no_types) Un_iff good_interp image_subset_iff ode_to_fvo)
+      qed
+      using \<open>\<And>xa x2 x1. \<lbrakk>Inl xa \<notin> Inl ` SPV x2; Inl xa \<notin> Inr ` SPV x2; xa \<in> ODE_vars I (case SODEs \<sigma> (x1, x2) of None \<Rightarrow> x1\<lparr>x2\<rparr> | Some c' \<Rightarrow> c')\<rbrakk> \<Longrightarrow> False\<close> by fastforce
     have fml_vagree:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s)) (sol 0, bb) (- BVO ODE)"
       subgoal for s using agree_sub[OF mysub fml_vagree[of s]] by auto done
     have fml_sem_eq:"\<And>s. s \<in> {0..t} \<Longrightarrow> fml_sem (adjoint I \<sigma> (mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s))) \<phi> = fml_sem (adjoint I \<sigma> (sol 0, bb)) \<phi>"
@@ -3758,7 +3772,9 @@ next
       subgoal for s
         apply(rule ODE_bound_effect[OF adjoint_safe[OF good_interp], of \<sigma> s t])
          apply auto[1]
-        using sol sorry
+        using sol apply auto
+        using sol ssafe unfolding ssafe_def apply auto
+         by blast+
       done
     from hmm have hmm':"\<And>s. s \<in> {0..t} \<Longrightarrow> VSagree (sol 0) (sol s) {x. Inl x \<in> (-(BVO ODE))}"
       unfolding VSagree_def Vagree_def by auto
@@ -3828,8 +3844,19 @@ next
          apply auto
         using good_interp 
          apply (meson contra_subsetD image_eqI interp_BVD)
-        sorry 
-      sorry
+         using Un_iff good_interp image_subset_iff ode_to_fvo ssafe ssafe_def sup.boundedE
+        proof -
+          fix a :: "('sf, 'sz) ODE"
+          assume a1: "xa \<in> ODE_vars I a"
+          assume a2: "(Inl xa::'sz + 'sz) \<notin> Inl ` SPV x2"
+          assume a3: "Inl xa \<notin> Inr ` SPV x2"
+          assume "SODEs \<sigma> (x1, x2) = Some a"
+          then have "Inl ` FVO a \<subseteq> Inl ` SPV x2 \<union> Inr ` SPV x2"
+          using ssafe ssafe_def by blast
+        then show ?thesis
+            using a3 a2 a1 by (metis (no_types) Un_iff good_interp image_subset_iff ode_to_fvo)
+        qed
+      using \<open>\<And>xa x2 x1. \<lbrakk>Inl xa \<notin> Inl ` SPV x2; Inl xa \<notin> Inr ` SPV x2; xa \<in> ODE_vars I (case SODEs \<sigma> (x1, x2) of None \<Rightarrow> x1\<lparr>x2\<rparr> | Some c' \<Rightarrow> c')\<rbrakk> \<Longrightarrow> False\<close> by fastforce
     have fml_vagree:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s)) (sol 0, bb) (- BVO ODE)"
       subgoal for s using agree_sub[OF mysub fml_vagree[of s]] by auto done
     have fml_sem_eq:"\<And>s. s \<in> {0..t} \<Longrightarrow> fml_sem (adjoint I \<sigma> (mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s))) \<phi> = fml_sem (adjoint I \<sigma> (sol 0, bb)) \<phi>"
