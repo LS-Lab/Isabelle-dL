@@ -371,8 +371,11 @@ lemma extendf_deriv:
     
 lemma extendf_safe:
   assumes good_interp:"is_interp I"
-(*  assumes goodf:"dfree f'"*)
   shows "is_interp (extendf I R)"
+(*  apply(unfold is_interp_def, simp)
+  apply(rule conjI)
+    apply(rule conjI)
+  *)  
     sorry
   
 lemma adjoint_safe:
@@ -2371,6 +2374,7 @@ lemma ODE_unbound_zero:
 
 lemma ODE_bound_effect:
   fixes s t sol ODE X b
+  assumes good_interp:"is_interp I"
   assumes s:"s \<in> {0..t}"
   assumes sol:"(sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t}  X"
   shows "Vagree (sol 0,b) (sol s, b) (-(BVO ODE))"
@@ -2379,7 +2383,7 @@ proof -
     apply auto
     apply (rule constant_when_zero)
          using s sol apply auto
-    using ODE_unbound_zero solves_ode_subset 
+    using ODE_unbound_zero solves_ode_subset good_interp is_interp_def
     by fastforce+
   then show "Vagree (sol 0, b) (sol s, b) (- BVO ODE)"
     unfolding Vagree_def 
@@ -2442,7 +2446,7 @@ next
         by auto
       have hmm:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,b) (sol s, b) (-(BVO ODE))"
         using ODE_bound_effect sol
-        by (metis osubst_preserves_BVO)
+        by (metis osubst_preserves_BVO good_interp)
       have FVT_sub:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y)) \<subseteq> (-(BVO ODE))"
         using NOU NO_to_NOU OUadmitFO_def 
         by fastforce
@@ -2545,8 +2549,15 @@ next
       using nsubst_mkv[OF good_interp NOU osafe frees]
       by auto
     have hmm:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,b) (sol s, b) (-(BVO ODE))"
-      using ODE_bound_effect sol
-      by (metis osubst_preserves_ODE_vars)
+       proof -
+         fix s :: real
+         assume a1: "s \<in> {0..t}"
+         obtain aa :: "('a \<Rightarrow> ('sf, 'sz) trm) \<Rightarrow> 'a" where
+           "\<And>i f p. \<not> is_interp i \<or> \<not> dsafe (f (aa f)) \<or> is_interp (adjointFO i f p)"
+           by (meson adjointFO_safe)
+         then show "Vagree (sol 0, b) (sol s, b) (- BVO ODE)"
+           using a1 ODE_bound_effect frees good_interp sol by blast
+       qed
     have FVT_sub:"(\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y)) \<subseteq> (-(BVO ODE))"
       using NOU NO_to_NOU unfolding OUadmitFO_def by fastforce
     have agrees:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,b) (sol s, b) (\<Union>y\<in>{y. Inl (Inr y) \<in> SIGO ODE}. FVT (\<sigma> y))" 
@@ -3514,7 +3525,7 @@ next
       subgoal for t using subst_mkv[OF good_interp OA osafe ssafe, of "(sol 0, bb)" "(sol t, bb)"] by auto done
     have hmmsubst:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (-(BVO (Osubst ODE \<sigma>)))"
       subgoal for s
-        apply (rule ODE_bound_effect[of s])
+        apply (rule ODE_bound_effect[OF good_interp, of s])
          apply auto[1]
         by (rule sol)
       done
@@ -3676,9 +3687,9 @@ next
       subgoal for t using subst_mkv[OF good_interp OA osafe ssafe, of "(sol 0, bb)" "(sol t, bb)"] by auto done
     have hmm:"\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (-(BVO ODE))"
       subgoal for s
-        apply (rule ODE_bound_effect[of s])
+        apply(rule ODE_bound_effect[OF adjoint_safe[OF good_interp], of \<sigma> s t])
          apply auto[1]
-        by (rule sol)
+        using sol sorry
       done
     from hmm have hmm':"\<And>s. s \<in> {0..t} \<Longrightarrow> VSagree (sol 0) (sol s) {x. Inl x \<in> (-(BVO ODE))}"
       unfolding VSagree_def Vagree_def by auto
@@ -4270,7 +4281,8 @@ proof -
       have VA:"Vagree \<nu> \<nu>' (FVS \<sigma>)" using FVS unfolding Vagree_def by auto
       show "\<nu>' \<in> seq_sem (local.adjoint I \<sigma> \<nu>) S"
         using adjoint_consequence VA ssafe[unfolded ssafe_def]
-        by (metis \<open>\<nu>' \<in> seq_sem (local.adjoint I \<sigma> \<nu>') S\<close> dfree_is_dsafe)
+        good_interp \<open>\<nu>' \<in> seq_sem (local.adjoint I \<sigma> \<nu>') S\<close> dfree_is_dsafe
+        by (simp add: dfree_is_dsafe FVS_def)
       qed
     have "\<nu> \<in> seq_sem I (\<Gamma>C', \<Delta>C')"
       using subst_sequent[OF good_interp SadmitC SsafeC ssafe, of \<nu>] seq_sem Cdef C'def CC'
