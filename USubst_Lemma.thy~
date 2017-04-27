@@ -113,8 +113,10 @@ lemma extendf_deriv_continuous:
   shows "continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i f' \<nu> x))"
 proof (induction rule: dfree.induct[OF free])
   case (3 args f)
-  assume dfrees:"\<And>i. dfree (args i)"
-  assume const:"\<And>j. continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i (args j) \<nu> x))"
+  assume assm:"\<forall>ia. dfree (args ia) \<and> continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i (args ia) \<nu> x))"
+  from assm have dfrees:"\<And>i. dfree (args i)"
+  and const:"\<And>j. continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i (args j) \<nu> x))"
+    by auto
   then show ?case 
     unfolding extendf_deriv.simps
     apply(cases f)
@@ -291,14 +293,22 @@ lemma extendf_deriv:
       apply auto
       subgoal for b using has_derivative_proj' by blast
      subgoal for a
-   proof -
-     assume dfrees:"(\<And>i. dfree (args i))"
-     assume IH1:"(\<And>ia. \<forall>x. ((\<lambda>R. dterm_sem
+     proof -
+       assume IH':" \<forall>i. dfree (args i) \<and>
+        (\<forall>x. ((\<lambda>R. dterm_sem
+                    \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                       ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
+                    (args i) \<nu>) has_derivative
+              extendf_deriv I i_f (args i) \<nu> x)
+              (at x))"
+     from IH' have dfrees:"(\<And>i. dfree (args i))"
+     and IH1:"(\<And>ia. \<forall>x. ((\<lambda>R. dterm_sem
                       \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
                          ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
                       (args ia) \<nu>) has_derivative
                 extendf_deriv I i_f (args ia) \<nu> x)
                 (at x))"
+       by auto
      then have IH1':"(\<And>ia. \<And>x. ((\<lambda>R. dterm_sem
                       \<lparr>Functions = case_sum (Functions I) (\<lambda>f' _. R $ f'), Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
                          ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
@@ -956,12 +966,30 @@ proof -
 qed
 
 definition ssafe ::"('sf, 'sc, 'sz) subst \<Rightarrow> bool"
-where "ssafe \<sigma> \<equiv>
+where ssafe_def:"ssafe \<sigma> \<equiv>
   (\<forall> i f'. SFunctions \<sigma> i = Some f' \<longrightarrow> dfree f') \<and> 
   (\<forall> f f'. SPredicates \<sigma> f = Some f'  \<longrightarrow> fsafe f') \<and>
   (\<forall> f f'. SPrograms \<sigma> f = Some f'  \<longrightarrow> hpsafe f') \<and>
   (\<forall> f f'. SODEs \<sigma> f = Some f'  \<longrightarrow> osafe f') \<and>
   (\<forall> C C'. SContexts \<sigma> C = Some C'  \<longrightarrow> fsafe C')"
+  
+lemma ssafe_code[code]:"ssafe \<sigma> \<equiv>
+  (\<forall> i . (case (SFunctions \<sigma> i) of 
+            Some f' \<Rightarrow> dfree f'
+          | None \<Rightarrow> True)) \<and> 
+  (\<forall> f . (case SPredicates \<sigma> f of
+            Some f' \<Rightarrow> fsafe f')) \<and>
+  (\<forall> f . (case SPrograms \<sigma> f of
+            Some f' \<Rightarrow> hpsafe f')) \<and>
+  (\<forall> f . (case SODEs \<sigma> f of
+            Some f' \<Rightarrow> osafe f')) \<and>
+  (\<forall> C . (case SContexts \<sigma> C of
+            Some C' \<Rightarrow> fsafe C'))"
+    sorry
+(*    subgoal for i
+      by(cases "SFunctions \<sigma> i", auto)
+    apply (metis option.simps(5))
+    sledgehammer*)
 
 lemma uadmit_dterm_adjointS:
   assumes ssafe:"ssafe \<sigma>"
@@ -1934,9 +1962,10 @@ proof (induction rule: TadmitF.induct)
 next
   case (TadmitF_Fun2  \<sigma> args f) 
   assume none:"SFunctions \<sigma> f = None" 
-  note admit = TadmitF_Fun2.hyps(1) and sfree = TadmitF_Fun2.prems(1)
+  note  sfree = TadmitF_Fun2.prems(1)
   have IH:"(\<And>i. TadmitF \<sigma> (args i) \<Longrightarrow>
       sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>))" 
+    and admit:"\<And>i. TadmitF \<sigma> (args i)"
     using  TadmitF_Fun2.prems TadmitF_Fun2.IH by auto
   have eqs:"\<And>i. sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)"
     by (auto simp add: IH admit)
@@ -1951,10 +1980,14 @@ lemma nsubst_dterm':
   shows "TadmitFO \<sigma> \<theta> \<Longrightarrow> dfree \<theta> \<Longrightarrow> (\<And>i. dsafe (\<sigma> i)) \<Longrightarrow> dterm_sem I (TsubstFO \<theta> \<sigma>) \<nu> = dterm_sem (adjointFO I \<sigma> \<nu>) \<theta> \<nu>"
 proof (induction rule: TadmitFO.induct)
   case (TadmitFO_Fun \<sigma> args f)
-  assume admit:"\<And>i. TadmitFO \<sigma> (args i)"
-  assume IH:"\<And>i. dfree (args i) \<Longrightarrow> (\<And>i. dsafe (\<sigma> i)) \<Longrightarrow> dterm_sem I (TsubstFO (args i) \<sigma>) \<nu> = dterm_sem (adjointFO I \<sigma> \<nu>) (args i) \<nu>"
   assume free:"dfree ($f f args)"
   assume safe:"\<And>i. dsafe (\<sigma> i)"
+  assume IH':"\<forall>i. TadmitFO \<sigma> (args i) \<and>
+           (dfree (args i) \<longrightarrow> (\<forall>x. dsafe (\<sigma> x)) \<longrightarrow> dterm_sem I (TsubstFO (args i) \<sigma>) \<nu> = dterm_sem (adjointFO I \<sigma> \<nu>) (args i) \<nu>)"
+  from IH' free safe 
+  have IH:"\<And>i. dfree (args i) \<Longrightarrow> (\<And>i. dsafe (\<sigma> i)) \<Longrightarrow> dterm_sem I (TsubstFO (args i) \<sigma>) \<nu> = dterm_sem (adjointFO I \<sigma> \<nu>) (args i) \<nu>"
+    and admit:"\<And>i. TadmitFO \<sigma> (args i)"
+    by auto
   from free have frees: "\<And>i. dfree (args i)" by (auto dest: dfree.cases)
   have sem:"\<And>i. dterm_sem I (TsubstFO (args i) \<sigma>) \<nu> = dterm_sem (adjointFO I \<sigma> \<nu>) (args i) \<nu>"
     using IH[OF frees safe] by auto
@@ -2006,8 +2039,9 @@ lemma tsubst_preserves_safe:
 "dsafe \<theta> \<Longrightarrow>  (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> dsafe(Tsubst \<theta> \<sigma>)"
 proof (induction rule: dsafe.induct) 
   case (dsafe_Fun args i) 
-  assume dsafes:"\<And>i. dsafe (args i)"
-  assume IH:"\<And>j. (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> dsafe (Tsubst (args j) \<sigma>)"
+  assume IH':"\<forall>i. dsafe (args i) \<and> ((\<forall>x xa. SFunctions \<sigma> x = Some xa \<longrightarrow> dfree xa) \<longrightarrow> dsafe (Tsubst (args i) \<sigma>))"
+  from IH' have IH:"\<And>j. (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> dsafe (Tsubst (args j) \<sigma>)" and dsafes:"\<And>i. dsafe (args i)"
+    by auto
   assume frees:"\<And>i f. SFunctions \<sigma> i = Some f \<Longrightarrow> dfree f"
   have IH':"\<And>i. dsafe (Tsubst (args i) \<sigma>)"
     using frees IH by auto
@@ -2030,12 +2064,19 @@ lemma subst_dterm:
     (\<And>\<nu>. dterm_sem I (Tsubst \<theta> \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) \<theta> \<nu>)"
 proof (induction rule: Tadmit.induct)
   case (Tadmit_Fun1 \<sigma> args f f' \<nu>) 
-  note safe = Tadmit_Fun1.prems(1) and sfree = Tadmit_Fun1.prems(2) and TA = Tadmit_Fun1.hyps(1)
-    and some = Tadmit_Fun1.hyps(2) and NTA = Tadmit_Fun1.hyps(3)
+  note safe = Tadmit_Fun1.prems(1) and sfree = Tadmit_Fun1.prems(2)
+    and some = Tadmit_Fun1.hyps(1) and NTA = Tadmit_Fun1.hyps(2)
   hence safes:"\<And>i. dsafe (args i)" by auto
+  assume IH':" \<forall>i. Tadmit \<sigma> (args i) \<and>
+           (dsafe (args i) \<longrightarrow>
+            (\<forall>x xa. SFunctions \<sigma> x = Some xa \<longrightarrow> dfree xa) \<longrightarrow>
+            (\<forall>x xa. SPredicates \<sigma> x = Some xa \<longrightarrow> fsafe xa) \<longrightarrow>
+            (\<forall>x. dterm_sem I (Tsubst (args i) \<sigma>) x = dterm_sem (local.adjoint I \<sigma> x) (args i) x))"
+  from IH'
   have IH:"(\<And>\<nu>'. \<And>i. dsafe (args i) \<Longrightarrow>
       dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
-    using  Tadmit_Fun1.prems Tadmit_Fun1.IH by auto
+    and TA:"\<And>i. Tadmit \<sigma> (args i)"
+    using safe sfree some NTA Tadmit_Fun1.prems(3) by blast+
   have eqs:"\<And>i \<nu>'. dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>"
     by (auto simp add: IH safes)
   let ?sub = "(\<lambda> i. Tsubst (args i) \<sigma>)"
@@ -2056,12 +2097,13 @@ proof (induction rule: Tadmit.induct)
     using some unfolding adjoint_def adjointFO_def by auto
 next
   case (Tadmit_Fun2 \<sigma> args f \<nu>) 
-  note safe = Tadmit_Fun2.prems(1) and sfree = Tadmit_Fun2.prems(2) and TA = Tadmit_Fun2.hyps(1)
-  and none = Tadmit_Fun2.hyps(2) 
+  note safe = Tadmit_Fun2.prems(1) and sfree = Tadmit_Fun2.prems(2)
+  and none = Tadmit_Fun2.hyps(1) 
   hence safes:"\<And>i. dsafe (args i)" by auto
   have IH:"(\<And>\<nu>'. \<And>i. dsafe (args i) \<Longrightarrow>
       dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
-  using  Tadmit_Fun2.prems Tadmit_Fun2.IH by auto
+    and TA:"\<And>i. Tadmit \<sigma> (args i)"
+  using  Tadmit_Fun2.hyps Tadmit_Fun2.prems Tadmit_Fun2.IH by blast+
   have Ieq:"Functions I f = Functions (adjoint I \<sigma> \<nu>) f"
     using none unfolding adjoint_def by auto
   have vec:"(\<chi> i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) = (\<chi> i. dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)"
@@ -2550,7 +2592,7 @@ next
     using nsubst_dterm[OF good_interp, of \<sigma> \<theta>2] by auto
 next
   case (NFadmit_Prop \<sigma> args f)
-  assume NTA:"\<And>i. TadmitFO \<sigma> (args i)"
+  have NTA:"\<And>i. TadmitFO \<sigma> (args i)" using NFadmit_Prop.hyps by auto
   have "\<And>\<nu>.  fsafe ($\<phi> f args) \<Longrightarrow>  (\<And>i. dsafe (\<sigma> i)) \<Longrightarrow> (\<nu> \<in> fml_sem I (FsubstFO ($\<phi> f args) \<sigma>)) = (\<nu> \<in> fml_sem (adjointFO I \<sigma> \<nu>) ($\<phi> f args))"
   proof -
     fix \<nu>
@@ -3819,8 +3861,8 @@ next
   then show "?case" by auto
 next
   case (Fadmit_Prop2 \<sigma> args p) 
-  note TA = Fadmit_Prop2.hyps(1)
-    and none = Fadmit_Prop2.hyps(2)
+  have TA:"\<And>i. Tadmit \<sigma> (args i)" using Fadmit_Prop2.hyps(1) by auto
+  note none = Fadmit_Prop2.hyps(2)
   have "fsafe (Prop p args) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> (\<And>\<nu>.(\<nu> \<in> fml_sem I (Fsubst ($\<phi> p args) \<sigma>)) = (\<nu> \<in> fml_sem (local.adjoint I \<sigma> \<nu>) ($\<phi> p args)))"
   proof -
     assume safe:"fsafe (Prop p args)" and ssafe:"ssafe \<sigma>"
@@ -3927,8 +3969,8 @@ next
        "(\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f')"
        unfolding ssafe_def by auto
      fix \<nu>
-     note TA = Fadmit_Prop1.hyps(1)
-       and some = Fadmit_Prop1.hyps(2) and NFA = Fadmit_Prop1.hyps(3)
+     have TA:"\<And>i. Tadmit \<sigma> (args i)" using Fadmit_Prop1.hyps(1) by auto
+     note some = Fadmit_Prop1.hyps(2) and NFA = Fadmit_Prop1.hyps(3)
      from fsafe have safes:"\<And>i. dsafe (args i)" using dfree_is_dsafe by auto
      have IH:"(\<And>\<nu>'. \<And>i. dsafe (args i) \<Longrightarrow>
          dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
