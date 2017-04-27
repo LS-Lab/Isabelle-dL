@@ -372,15 +372,44 @@ lemma extendf_deriv:
 lemma extendf_safe:
   assumes good_interp:"is_interp I"
   shows "is_interp (extendf I R)"
-(*  apply(unfold is_interp_def, simp)
-  apply(rule conjI)
-    apply(rule conjI)
-  *)  
-    sorry
+  unfolding is_interp_def apply auto
+  subgoal for x i
+    apply(cases i)
+    subgoal for a  using good_interp unfolding is_interp_def by auto
+    subgoal for b       
+      using good_interp unfolding is_interp_def apply (auto intro: derivative_intros intro: derivative_eq_intros)
+    proof -
+      let ?f' = "(\<lambda> _ _. 0)"
+      have hasd:"\<forall>x. ((\<lambda>_. R $ b) has_derivative ?f' x) (at x)"
+        by auto
+      then have the_eq:"?f' = (THE f. \<forall>x. ((\<lambda>_. R $ b) has_derivative f x) (at x))"
+        by (metis (mono_tags) the_all_deriv)
+      show "((\<lambda>_. R $ b) has_derivative (THE f'. \<forall>x. ((\<lambda>_. R $ b) has_derivative f' x) (at x)) x) (at x)"
+        using hasd the_eq by (metis (mono_tags))
+    qed
+    done
+  subgoal for i
+    apply(cases i)
+    subgoal for a  using good_interp unfolding is_interp_def by auto
+    subgoal for b       
+      using good_interp unfolding is_interp_def apply (auto intro: derivative_intros intro: derivative_eq_intros)
+    proof -
+      let ?f' = "(\<lambda> _ _. 0)"
+      have hasd:"\<forall>x. ((\<lambda>_. R $ b) has_derivative ?f' x) (at x)"
+        by auto
+      then have the_eq:"?f' = (THE f. \<forall>x. ((\<lambda>_. R $ b) has_derivative f x) (at x))"
+        by (metis (mono_tags) the_all_deriv)
+      show "continuous_on UNIV (\<lambda>x. Blinfun ((THE f'. \<forall>x. ((\<lambda>_. R $ b) has_derivative f' x) (at x)) x))"
+        using the_eq by (metis (mono_tags) continuous_on_cong continuous_on_const)
+    qed
+    done
+  using good_interp unfolding is_interp_def by (auto,blast)
   
 lemma adjoint_safe:
   assumes good_interp:"is_interp I"
-  assumes good_subst:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') "    
+  assumes good_subst:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') "
+  assumes good_ode:"(\<And> c S ODE. SODEs \<sigma> (c,S) = Some ODE \<Longrightarrow> (Inl ` FVO ODE) \<union> (BVO ODE) \<subseteq> ((Inl ` SPV S) \<union> (Inr ` SPV S)))"
+  assumes safe_ode:"(\<And> c S ODE. SODEs \<sigma> (c,S) = Some ODE \<Longrightarrow> osafe ODE)"
   shows "is_interp (adjoint I \<sigma> \<nu>)"
   apply(unfold is_interp_def)
   apply(unfold adjoint_def)
@@ -445,20 +474,47 @@ lemma adjoint_safe:
       subgoal 
         using good_interp unfolding is_interp_def by auto 
       subgoal for a
-        using good_interp unfolding is_interp_def apply auto
-        sorry
+      proof -
+        assume VSA:"VSagree \<nu> \<nu>' (SPV s)"
+        assume some:"SODEs \<sigma> (c, s) = Some a"
+        have sub:" FVO a  \<subseteq>  SPV s"
+          using good_ode[of c s, OF some] by auto
+        have VSSA:"VSagree \<nu> \<nu>' ( FVO a)"
+          using VSA sub unfolding VSagree_def by auto
+        have osafe:"osafe a" by (rule safe_ode[OF some])
+        show ?thesis
+          apply (auto simp add: some)
+          by (rule coincidence_ode'[OF osafe VSSA Iagree_refl good_interp good_interp])
+        qed
       done
     subgoal for c s \<nu> i
       apply(cases "SODEs \<sigma> (c,s)")
       using good_interp unfolding is_interp_def apply(auto)
-      
-      sorry
+      proof -
+        fix a
+        assume iSPV:"i \<notin> SPV s"
+        assume some:"SODEs \<sigma> (c, s) = Some a"
+        assume deriv:"\<forall>x i. (Functions I i has_derivative (THE f'. \<forall>x. (Functions I i has_derivative f' x) (at x)) x) (at x) \<and>
+            continuous_on UNIV (\<lambda>x. Blinfun ((THE f'. \<forall>x. (Functions I i has_derivative f' x) (at x)) x))"
+        assume ODE_eq:"\<forall>c s \<nu>. (\<forall>\<nu>'. VSagree \<nu> \<nu>' (SPV s) \<longrightarrow> ODEs I c s \<nu> = ODEs I c s \<nu>') \<and> (\<forall>i. i \<notin> SPV s \<longrightarrow> ODEs I c s \<nu> $ i = 0)"
+        assume sub:"\<forall>c s. ODEBV I c s \<subseteq> SPV s"
+        have neato:"\<And>\<nu>.  i \<notin> FVO a \<Longrightarrow> ODE_sem I a \<nu> $ i = 0"
+          proof (induction "a")
+          qed (auto simp add:interp_zerosD[OF good_interp])
+        have "i \<notin> FVO a" using iSPV using good_ode[OF some] by auto
+        then show "ODE_sem I a \<nu> $ i = 0"
+          using neato by auto
+    qed
     subgoal for c s x
       apply(cases "SODEs \<sigma> (c,s)")
       subgoal apply auto
         by (meson contra_subsetD good_interp interp_BVD)
       apply auto
-        using good_interp sorry
+      subgoal for a
+        using good_interp 
+        using good_ode[of c s a]
+        using ode_to_fvo by fastforce
+      done
     done
 
 lemma adjointFO_safe:
