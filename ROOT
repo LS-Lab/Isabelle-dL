@@ -1,7 +1,7 @@
 chapter AFP
 
 session "Differential_Dynamic_Logic" (AFP) = "HOL-ODE" +
-  options [timeout = 1200, document = pdf, document_output = "output"]
+  options [timeout = 1200]
   theories 
     Axioms
     Bound_Effect

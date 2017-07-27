@@ -44,13 +44,9 @@ datatype ('a, 'c) trm =
 (* The differential of an arbitrary term (\<theta>)' *)
 | Differential "('a, 'c) trm"
 
-datatype 'a space =
-  All
-| Except 'a
-  
 datatype('a, 'c) ODE =
 (* Variable standing for an ODE system, given meaning by the interpretation *)
-  OVar 'c "'c space" ("_\<lparr>_\<rparr>")
+  OVar 'c
 (* Singleton ODE defining x' = \<theta>, where \<theta> may or may not contain x
  * (but must not contain differentials) *)
 | OSing 'c "('a, 'c) trm"
@@ -198,19 +194,19 @@ where "P p = Predicational p"
 end
 
 subsection \<open>Well-Formedness predicates\<close>
-inductive dfree :: "('a::enum, 'c::enum) trm \<Rightarrow> bool"
+inductive dfree :: "('a, 'c) trm \<Rightarrow> bool"
 where
   dfree_Var: "dfree (Var i)"
 | dfree_Const: "dfree (Const r)"
-| dfree_Fun: "(\<forall> i. dfree (args i)) \<Longrightarrow> dfree (Function i args)"
+| dfree_Fun: "(\<forall>i. dfree (args i)) \<Longrightarrow> dfree (Function i args)"
 | dfree_Plus: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dfree_Times: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
-    
-inductive dsafe :: "('sf::enum, 'sz::enum) trm \<Rightarrow> bool"
+  
+inductive dsafe :: "('a, 'c) trm \<Rightarrow> bool"
 where
   dsafe_Var: "dsafe (Var i)"
 | dsafe_Const: "dsafe (Const r)"
-| dsafe_Fun: "(\<forall> i. dsafe (args i)) \<Longrightarrow> dsafe (Function i args)"
+| dsafe_Fun: "(\<And>i. dsafe (args i)) \<Longrightarrow> dsafe (Function i args)"
 | dsafe_Plus: "dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dsafe_Times: "dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dsafe_Diff: "dfree \<theta> \<Longrightarrow> dsafe (Differential \<theta>)"
@@ -220,25 +216,20 @@ where
  * ODE's are valid (e.g. whether they bind the same variable twice) *)
 fun ODE_dom::"('a, 'c) ODE \<Rightarrow> 'c set"
 where 
-  "ODE_dom (OVar c s) =  {}"
+  "ODE_dom (OVar c) =  {}"
 | "ODE_dom (OSing x \<theta>) = {x}"
 | "ODE_dom (OProd ODE1 ODE2) = ODE_dom ODE1 \<union> ODE_dom ODE2"
 
-inductive osafe:: "('a::enum, 'c::enum) ODE \<Rightarrow> bool"
+inductive osafe:: "('a, 'c) ODE \<Rightarrow> bool"
 where
-  osafe_Var:"osafe (OVar c s)"
+  osafe_Var:"osafe (OVar c)"
 | osafe_Sing:"dfree \<theta> \<Longrightarrow> osafe (OSing x \<theta>)"
 | osafe_Prod:"osafe ODE1 \<Longrightarrow> osafe ODE2 \<Longrightarrow> ODE_dom ODE1 \<inter> ODE_dom ODE2 = {} \<Longrightarrow> osafe (OProd ODE1 ODE2)"
 
-fun SPV :: "'a space \<Rightarrow> 'a set"
-where 
-  "SPV All = UNIV"  
-| "SPV (Except v) = UNIV - {v}"
-
 (* Programs/formulas without any differential terms. This definition not currently used but may
  * be useful in the future. *)
-inductive hpfree:: "('sf::enum, 'sc::enum, 'sz::enum) hp \<Rightarrow> bool"
-  and     ffree::  "('sf::enum, 'sc::enum, 'sz::enum) formula \<Rightarrow> bool"
+inductive hpfree:: "('a, 'b, 'c) hp \<Rightarrow> bool"
+  and     ffree::  "('a, 'b, 'c) formula \<Rightarrow> bool"
 where
   "hpfree (Pvar x)"
 | "dfree e \<Longrightarrow> hpfree (Assign x e)"
@@ -251,7 +242,7 @@ where
 | "hpfree a \<Longrightarrow> hpfree b \<Longrightarrow> hpfree (Sequence a b)"
 | "hpfree a \<Longrightarrow> hpfree (Loop a)"
 | "ffree f \<Longrightarrow> ffree (InContext C f)"
-| "(\<forall> arg. (arg \<in> range args \<longrightarrow> dfree arg)) \<Longrightarrow> ffree (Prop p args)"
+| "(\<And>arg. arg \<in> range args \<Longrightarrow> dfree arg) \<Longrightarrow> ffree (Prop p args)"
 | "ffree p \<Longrightarrow> ffree (Not p)"
 | "ffree p \<Longrightarrow> ffree q \<Longrightarrow> ffree (And p q)"
 | "ffree p \<Longrightarrow> ffree (Exists x p)"
@@ -259,8 +250,8 @@ where
 | "ffree (Predicational P)"
 | "dfree t1 \<Longrightarrow> dfree t2 \<Longrightarrow> ffree (Geq t1 t2)"
 
-inductive hpsafe:: "('sf::enum, 'sc::enum, 'sz::enum) hp \<Rightarrow> bool"
-  and     fsafe::  "('sf::enum, 'sc::enum, 'sz::enum) formula \<Rightarrow> bool"
+inductive hpsafe:: "('a, 'b, 'c) hp \<Rightarrow> bool"
+  and     fsafe::  "('a, 'b, 'c) formula \<Rightarrow> bool"
 where
    hpsafe_Pvar:"hpsafe (Pvar x)"
  | hpsafe_Assign:"dsafe e \<Longrightarrow> hpsafe (Assign x e)"
@@ -272,7 +263,7 @@ where
  | hpsafe_Loop:"hpsafe a \<Longrightarrow> hpsafe (Loop a)"
 
  | fsafe_Geq:"dsafe t1 \<Longrightarrow> dsafe t2 \<Longrightarrow> fsafe (Geq t1 t2)"
- | fsafe_Prop:"(\<forall> i. dsafe (args i)) \<Longrightarrow> fsafe (Prop p args)"
+ | fsafe_Prop:"(\<And>i. dsafe (args i)) \<Longrightarrow> fsafe (Prop p args)"
  | fsafe_Not:"fsafe p \<Longrightarrow> fsafe (Not p)"
  | fsafe_And:"fsafe p \<Longrightarrow> fsafe q \<Longrightarrow> fsafe (And p q)"
  | fsafe_Exists:"fsafe p \<Longrightarrow> fsafe (Exists x p)"
@@ -299,7 +290,7 @@ inductive_simps
   and dsafe_Const_simps[simp]: "dsafe (Const r)"
 
 inductive_simps
-      osafe_OVar_simps[simp]:"osafe (OVar c s)"
+      osafe_OVar_simps[simp]:"osafe (OVar c)"
   and osafe_OSing_simps[simp]:"osafe (OSing x \<theta>)"
   and osafe_OProd_simps[simp]:"osafe (OProd ODE1 ODE2)"
 
@@ -321,11 +312,11 @@ inductive_simps
   and fsafe_Diamond_simps[simp]: "fsafe (Diamond a p)"
   and fsafe_Context_simps[simp]: "fsafe (InContext C p)"
 
-definition Ssafe::"('sf::enum,'sc::enum,'sz::enum) sequent \<Rightarrow> bool"
+definition Ssafe::"('sf,'sc,'sz) sequent \<Rightarrow> bool"
 where "Ssafe S \<longleftrightarrow>((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst S) \<longrightarrow> fsafe (nth (fst S) i))
                  \<and>(\<forall>i. i \<ge> 0 \<longrightarrow> i < length (snd S) \<longrightarrow> fsafe (nth (snd S) i)))"
 
-definition Rsafe::"('sf::enum,'sc::enum,'sz::enum) rule \<Rightarrow> bool"
+definition Rsafe::"('sf,'sc,'sz) rule \<Rightarrow> bool"
 where "Rsafe R \<longleftrightarrow> ((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst R) \<longrightarrow> Ssafe (nth (fst R) i)) 
                     \<and> Ssafe (snd R))"
   

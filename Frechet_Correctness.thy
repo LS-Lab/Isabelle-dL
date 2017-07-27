@@ -1,6 +1,6 @@
 theory "Frechet_Correctness"
 imports
-  "$AFP/Ordinary_Differential_Equations/ODE_Analysis"
+  "../Ordinary_Differential_Equations/ODE_Analysis"
   "./Lib"
   "./Syntax"
   "./Denotational_Semantics"
@@ -17,12 +17,12 @@ text \<open>
 \<close>
 
 lemma inner_prod_eq:
-  fixes i::"'a::enum"
+  fixes i::"'a::finite"
   shows "(\<lambda>(v::'a Rvec). v \<bullet> axis i 1) = (\<lambda>(v::'a Rvec). v $ i)"
   unfolding cart_eq_inner_axis axis_def by (simp add: eq_commute)
 
 theorem svar_deriv:
-  fixes x:: "'sv::enum" and \<nu>:: "'sv Rvec" and F::"real filter"
+  fixes x:: "'sv::finite" and \<nu>:: "'sv Rvec" and F::"real filter"
   shows "((\<lambda>v. v $ x) has_derivative (\<lambda>v'. v' \<bullet> (\<chi> i. if i = x then 1 else 0))) (at \<nu>)"
 proof -
   let ?f = "(\<lambda>v. v)"
@@ -106,7 +106,7 @@ qed
 
 lemma func_lemma:
   "is_interp I \<Longrightarrow>
-  (\<And>\<theta> :: ('a::enum, 'c::enum) trm. \<theta> \<in> range args \<Longrightarrow> (sterm_sem I \<theta> has_derivative frechet I \<theta> \<nu>) (at \<nu>)) \<Longrightarrow>
+  (\<And>\<theta> :: ('a::finite, 'c::finite) trm. \<theta> \<in> range args \<Longrightarrow> (sterm_sem I \<theta> has_derivative frechet I \<theta> \<nu>) (at \<nu>)) \<Longrightarrow>
   (sterm_sem I ($f f args) has_derivative frechet I ($f f args) \<nu>) (at \<nu>)"
   apply(auto simp add: sfunction_case is_interp_def function_case_inner)
   apply(erule func_lemma2)
@@ -119,7 +119,7 @@ text \<open> The syntactic definition of term derivatives agrees with the semant
   us the axioms we want for differential terms essentially for free.
  \<close>
 lemma frechet_correctness:
-  fixes I :: "('a::enum, 'b::enum, 'c::enum) interp" and \<nu>
+  fixes I :: "('a::finite, 'b::finite, 'c::finite) interp" and \<nu>
   assumes good_interp: "is_interp I"
   shows "dfree \<theta> \<Longrightarrow> FDERIV (sterm_sem I \<theta>) \<nu> :> (frechet I \<theta> \<nu>)"
 proof (induct rule: dfree.induct)
@@ -132,10 +132,10 @@ qed auto
 
 text \<open>If terms are semantically equivalent in all states, so are their derivatives\<close>
 lemma sterm_determines_frechet:
-  fixes I ::"('a1::enum, 'b1::enum, 'c::enum) interp"
-    and J ::"('a2::enum, 'b2::enum, 'c::enum) interp"
-    and \<theta>1 :: "('a1::enum, 'c::enum) trm"
-    and \<theta>2 :: "('a2::enum, 'c::enum) trm"
+  fixes I ::"('a1::finite, 'b1::finite, 'c::finite) interp"
+    and J ::"('a2::finite, 'b2::finite, 'c::finite) interp"
+    and \<theta>1 :: "('a1::finite, 'c::finite) trm"
+    and \<theta>2 :: "('a2::finite, 'c::finite) trm"
     and \<nu> 
   assumes good_interp1:"is_interp I"
   assumes good_interp2:"is_interp J"
@@ -174,13 +174,13 @@ lemma the_all_deriv:
       done
     done
   
-typedef ('a::enum, 'c::enum) strm = "{\<theta>:: ('a,'c) trm. dfree \<theta>}"
+typedef ('a, 'c) strm = "{\<theta>:: ('a,'c) trm. dfree \<theta>}"
   morphisms raw_term simple_term
   by(rule exI[where x= "Const 0"], auto simp add: dfree_Const)
   
-typedef ('a, 'b, 'c) good_interp = "{I::('a::enum,'b::enum,'c::enum) interp. is_interp I}"
+typedef ('a, 'b, 'c) good_interp = "{I::('a::finite,'b::finite,'c::finite) interp. is_interp I}"
   morphisms raw_interp good_interp
-  apply(rule exI[where x="\<lparr> Functions = (\<lambda>f x. 0), Predicates = (\<lambda>p x. True), Contexts = (\<lambda>C S. S), Programs = (\<lambda>a. {}), ODEs = (\<lambda>c s v. (\<chi> i. 0)), ODEBV = \<lambda>c s. {}\<rparr>"])
+  apply(rule exI[where x="\<lparr> Functions = (\<lambda>f x. 0), Predicates = (\<lambda>p x. True), Contexts = (\<lambda>C S. S), Programs = (\<lambda>a. {}), ODEs = (\<lambda>c v. (\<chi> i. 0)), ODEBV = \<lambda>c. {}\<rparr>"])
   apply(auto simp add: is_interp_def)
 proof -
   fix x ::real
@@ -205,7 +205,7 @@ next
     apply(clarsimp simp add: continuous_on_topological[of UNIV "(\<lambda>x. Blinfun ((THE f'. \<forall>x. ((\<lambda>x. 0) has_derivative f' x) (at x)) x))"])
     apply(rule exI[where x = UNIV])
     by(auto simp add: eq' blin)
- qed (auto simp add: VSagree_def)
+ qed
 
 lemma frechet_linear: 
   assumes good_interp:"is_interp I"
@@ -223,8 +223,7 @@ next
     using good_interp unfolding is_interp_def using has_derivative_bounded_linear
     by blast
   have blin2:"bounded_linear (\<lambda> a. (\<chi> i. frechet I (args i) v a))"
-    apply(rule bounded_linear_vec)
-    using dfree_Fun.IH by auto 
+    using dfree_Fun.IH by(rule bounded_linear_vec)
   then show ?case
     using bounded_linear_compose[of "FunctionFrechet I i (\<chi> i. sterm_sem I (args i) v)" "(\<lambda>a. (\<chi> i. frechet I (args i) v a))", OF blin1 blin2]
     by auto
@@ -258,9 +257,9 @@ lemma sterm_continuous:
   shows "dfree \<theta> \<Longrightarrow> continuous_on UNIV (sterm_sem I \<theta>)"
 proof(induction rule: dfree.induct)
   case (dfree_Fun args i)
-  assume IH:" \<forall>i. dfree (args i) \<and> continuous_on UNIV (sterm_sem I (args i))"
+  assume IH:"\<And>i. continuous_on UNIV (sterm_sem I (args i))"
   have con1:"continuous_on UNIV (Functions I i)"
-    using good_interp using interp_contD[OF good_interp] interp_fderivD[OF good_interp]
+    using good_interp unfolding is_interp_def
     using continuous_on_eq_continuous_within has_derivative_continuous by blast
   have con2:"continuous_on UNIV (\<lambda> x. (\<chi> i. sterm_sem I (args i) x))"
     apply(rule continuous_on_vec_lambda)
@@ -312,11 +311,8 @@ next
   then show ?case by (metis cont)
 next
   case (dfree_Fun args f)
-  assume IH':" \<forall>i. dfree (args i) \<and> continuous_on UNIV (blin_frechet (good_interp I) (simple_term (args i)))"
-  from IH' have IH:"\<And>i. continuous_on UNIV (blin_frechet (good_interp I) (simple_term (args i)))"
-    by auto
-  from IH' have frees:"(\<And>i. dfree (args i))" 
-    by auto
+  assume IH:"\<And>i. continuous_on UNIV (blin_frechet (good_interp I) (simple_term (args i)))"
+  assume frees:"(\<And>i. dfree (args i))"
   then have free:"dfree ($f f args)" by (auto)
   have great_interp:"\<And>f. continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I f x))" using good_interp unfolding is_interp_def by auto
   have cont1:"\<And>v. continuous_on UNIV (\<lambda>v'. (\<chi> i. frechet I (args i) v v'))"

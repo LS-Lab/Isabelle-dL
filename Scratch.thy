@@ -113,11 +113,73 @@ global_interpretation ddl:ids x y z x y z x y z w
   and ddl_step_result = "ddl.step_result"
   and ddl_Rrule_result = "ddl.Rrule_result"
   and ddl_Lrule_result = "ddl.Lrule_result"
+  and ddl_step_ok = "ddl.step_ok"
+  and ddl_proof_ok = "ddl.proof_ok"
+  and ddl_deriv_ok = "ddl.deriv_ok"
+  and ddl_lrule_ok = "ddl.lrule_ok"
+  and ddl_rrule_ok = "ddl.rrule_ok"
+  and ddl_ssafe = "ddl.ssafe"
   by(standard, auto simp add: x_def y_def z_def w_def)
 (* defines Tsubst = ddl.Tsubst*)
+(*  and ddl_osafe = "ddl.osafe"
+  and ddl_fsafe = "ddl.fsafe"
+  and ddl_dfree = "ddl.dfree"
+   hpsafe, osafe, fsafe, dfree*)
 
-declare ddl.proof_result.simps[code_pred_simp]  ddl.deriv_result.simps[code_pred_simp] ddl.start_proof.simps[code_pred_simp] ddl.step_result.simps[code_pred_simp]
-export_code "ddl_proof_result" in Scala
+    
+declare 
+ddl.proof_result.simps[code_pred_simp]  
+ddl.deriv_result.simps[code_pred_simp] 
+ddl.start_proof.simps[code_pred_simp] 
+ddl.step_result.simps[code_pred_simp]
+Syntax.hpsafe_fsafe.intros[code_pred_intro]
+Syntax.osafe.intros[code_pred_intro]
+Syntax.dsafe.intros[code_pred_intro]
+Syntax.dfree.intros[code_pred_intro]
+export_code "ddl_proof_result" in SML
+
+code_pred "Syntax.dfree"  using Syntax.dfree.cases by metis
+code_pred "Syntax.osafe"  using Syntax.osafe.cases by metis
+code_pred "Syntax.fsafe"  
+  apply(rule Syntax.fsafe.cases[of xa thesis]) 
+           apply blast+
+  apply(rule hpsafe.cases)
+           apply blast+
+  apply(rule dsafe.cases)
+         apply blast+
+    done
+    
+
+export_code "ddl_ssafe" in Scala
+export_code "ddl_start_proof" in Scala
+  
+declare 
+ddl.lrule_ok.intros[code_pred_intro]
+ddl.rrule_ok.intros[code_pred_intro]
+ddl.step_ok.intros[code_pred_intro]
+ddl.deriv_ok.intros[code_pred_intro]
+ddl.proof_ok.intros[code_pred_intro]
+(*    \<Longrightarrow> Fadmit \<sigma> (Equiv (Prop p (singleton \<theta>)) (Prop p (singleton \<theta>')))*)
+
+code_pred (modes: i \<Rightarrow> i \<Rightarrow> i \<Rightarrow> i \<Rightarrow> i \<Rightarrow> bool as lrule_ok_i) "ddl.lrule_ok"  by(rule   Scratch.ddl.lrule_ok.cases)
+thm ddl_lrule_ok.equation    
+
+code_pred "ddl_rrule_ok" 
+  apply(rule ddl.rrule_ok.cases[of x "(xa, xb)" xc xd xe thesis])
+        apply auto
+    done
+    
+code_pred "ddl_step_ok" 
+  apply(rule ddl.step_ok.cases[of "(x, xa, xb)" xc xd])
+    apply(auto)
+    done
+code_pred "ddl_deriv_ok" by (rule ddl.deriv_ok.cases)
+code_pred "ddl_proof_ok"  by (rule ddl.proof_ok.cases, auto)
+thm ddl_proof_ok.equation
+  
+declare ddl_proof_ok.equation[code_pred_simp] 
+declare ddl_proof_ok.equation[code] 
+
 
 (*definition foo::real where "foo = 1.234"
 export_code foo in SML*)

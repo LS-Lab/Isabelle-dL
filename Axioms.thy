@@ -1,6 +1,6 @@
 theory "Axioms" 
 imports
-  "$AFP/Ordinary_Differential_Equations/ODE_Analysis"
+  "../Ordinary_Differential_Equations/ODE_Analysis"
   "./Ids"
   "./Lib"
   "./Syntax"
@@ -214,12 +214,12 @@ theorem Skolem_sound: "Skolem_holds \<phi> var"
 theorem MP_sound: "MP_holds \<phi> \<psi>"
   by (auto simp add: MP_holds_def valid_def)
 
-lemma CT_lemma:"\<And>I::('sf::enum, 'sc::enum, 'sz::{enum,linorder}) interp. \<And> a::(real, 'sz) vec. \<And> b::(real, 'sz) vec. \<forall>I::('sf,'sc,'sz) interp. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b)) \<Longrightarrow>
+lemma CT_lemma:"\<And>I::('sf::finite, 'sc::finite, 'sz::{finite,linorder}) interp. \<And> a::(real, 'sz) vec. \<And> b::(real, 'sz) vec. \<forall>I::('sf,'sc,'sz) interp. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b)) \<Longrightarrow>
              is_interp I \<Longrightarrow>
              Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = vid1 then \<theta> else  (Const 0)) (a, b))) =
              Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = vid1 then \<theta>' else (Const 0)) (a, b)))"
 proof -
-  fix I :: "('sf::enum, 'sc::enum, 'sz::{enum,linorder}) interp" and a :: "(real, 'sz) vec" and b :: "(real, 'sz) vec"
+  fix I :: "('sf::finite, 'sc::finite, 'sz::{finite,linorder}) interp" and a :: "(real, 'sz) vec" and b :: "(real, 'sz) vec"
   assume a1: "is_interp I"
   assume "\<forall>I::('sf,'sc,'sz) interp. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b))"
   then have "\<forall>i. dterm_sem I (if i = vid1 then \<theta>' else (Const 0)) (a, b) = dterm_sem I (if i = vid1 then \<theta> else (Const 0)) (a, b)"
