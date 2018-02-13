@@ -1,8 +1,6 @@
 theory Interval_Arithmetic
 imports 
   Complex_Main
-  "~~/src/HOL/Word/Word"
-  "~~/src/HOL/Word/WordBitwise"
   "./Word_Lib/Word_Lib"
   "./Word_Lib/Word_Lemmas"
 begin

@@ -7,6 +7,7 @@ locale ids =
   fixes vid1 :: "('sz::{finite,linorder})"
   fixes vid2 :: 'sz
   fixes vid3 :: 'sz
+  fixes is_vid1 :: "'sz \<Rightarrow> bool"
   fixes fid1 :: "('sf::finite)"
   fixes fid2 :: 'sf
   fixes fid3 :: 'sf
