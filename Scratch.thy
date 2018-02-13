@@ -52,6 +52,14 @@ qed
 end
     
 
+instantiation bword :: equal begin
+definition equal_bword :: "bword \<Rightarrow> bword \<Rightarrow> bool"
+  where "equal_bword \<equiv> (\<lambda>x y. sint (Rep_bword x) = sint (Rep_bword y))"
+instance
+  apply(standard)
+  by(auto simp add: equal_bword_def Rep_bword_inject)
+end
+
 instantiation myvars :: enum begin
 definition enum_myvars where   "enum_myvars \<equiv> [i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16, i17, i18, i19, i20]"
 definition enum_all_myvars where "enum_all_myvars P \<equiv> list_all P [i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16, i17, i18, i19, i20]"

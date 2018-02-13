@@ -1,6 +1,8 @@
 theory Syntax
 imports
   Complex_Main
+  "./Word_Lib/Word_Lib"
+  "./Word_Lib/Word_Lemmas"
   "./Ids"
 begin 
 section \<open>Syntax\<close>
@@ -25,12 +27,38 @@ text \<open>
   The types of terms and ODE systems follow the same approach, but have only two type 
   variables because they cannot contain contexts.
 \<close>
+type_synonym word = "32 Word.word"
+
+definition NEG_INF::"word"
+where "NEG_INF = -((2 ^ 31) -1)"
+
+definition POS_INF::"word"
+where "POS_INF = (2^31) - 1"
+
+typedef bword = "{n::word. sint n \<ge> sint NEG_INF \<and> sint n \<le> sint POS_INF}"
+  apply(rule exI[where x=NEG_INF])
+  by (auto simp add: NEG_INF_def POS_INF_def)
+
+
+
+(* Numeric literals *)
+type_synonym lit = bword
+      
+setup_lifting type_definition_bword
+
+lift_definition bword_zero::"bword" is "0::32 Word.word"
+  by(auto simp add: POS_INF_def NEG_INF_def)
+
+lift_definition bword_one::"bword" is "1::32 Word.word"
+  by(auto simp add: POS_INF_def NEG_INF_def)
+
+lift_definition bword_neg_one::"bword" is "-1::32 Word.word"
+  by(auto simp add: POS_INF_def NEG_INF_def)
+
 datatype ('a, 'c) trm =
 (* Real-valued variables given meaning by the state and modified by programs. *)
   Var 'c
-(* N.B. This is technically more expressive than true dL since most reals
- * can't be written down. *)
-| Const real
+| Const lit
 (* A function (applied to its arguments) consists of an identifier for the function
  * and a function 'c \<Rightarrow> ('a, 'c) trm (where 'c is a finite type) which specifies one
  * argument of the function for each element of type 'c. To simulate a function with
@@ -126,10 +154,10 @@ definition DPredl :: "'c \<Rightarrow> ('a,'b,'c) formula"
   where "DPredl fid = Prop fid Var"
 
 definition Neg :: "('a,'c) trm \<Rightarrow> ('a,'c) trm" 
-  where "Neg \<theta> = Times \<theta>  (Const (-1))"
+  where "Neg \<theta> = Times \<theta>  (Const (bword_neg_one))"
 
 definition Minus :: "('a,'c) trm \<Rightarrow> ('a,'c) trm \<Rightarrow> ('a,'c) trm" 
-  where "Minus \<theta>\<^sub>1 \<theta>\<^sub>2= Plus \<theta>\<^sub>1 (Times \<theta>\<^sub>2  (Const (-1)))"
+  where "Minus \<theta>\<^sub>1 \<theta>\<^sub>2= Plus \<theta>\<^sub>1 (Times \<theta>\<^sub>2  (Const (bword_neg_one)))"
 
 definition Or :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" (infixl "||" 7)
 where "Or P Q = Not (And (Not P) (Not Q))"
@@ -162,10 +190,10 @@ definition Box :: "('a, 'b, 'c) hp \<Rightarrow> ('a, 'b, 'c) formula \<Rightarr
 where "Box \<alpha> P = Not (Diamond \<alpha> (Not P))"
   
 definition TT ::"('a,'b,'c) formula" 
-where "TT = Geq (Const 0) (Const 0)"
+where "TT = Geq (Const (bword_zero)) (Const (bword_zero))"
 
 definition FF ::"('a,'b,'c) formula" 
-where "FF = Geq (Const 0) (Const 1)"
+where "FF = Geq (Const (bword_zero)) (Const (bword_one))"
 
 type_synonym ('a,'b,'c) sequent = "('a,'b,'c) formula list * ('a,'b,'c) formula list"
 (* Rule: assumptions, then conclusion *)
@@ -215,20 +243,20 @@ lemma [expr_diseq]:"p \<noteq> InContext C p" by(induction p, auto)
  * We encode a predicational as a context applied to a formula whose truth value is constant with
  * respect to the state (specifically, always true)*)
 fun Predicational :: "'b \<Rightarrow> ('a, 'b, 'c) formula" ("Pc")
-where "Predicational P = InContext P (Geq (Const 0) (Const 0))"
+where "Predicational P = InContext P (Geq (Const (bword_zero)) (Const (bword_zero)))"
 
 (* Abbreviations for common syntactic constructs in order to make axiom definitions, etc. more
  * readable. *)
 context ids begin
 (* "Empty" function argument tuple, encoded as tuple where all arguments assume a constant value. *)
 definition empty::" 'b \<Rightarrow> ('a, 'b) trm"
-where "empty \<equiv> \<lambda>i.(Const 0)"
+where "empty \<equiv> \<lambda>i.(Const (bword_zero))"
 
 (* Function argument tuple with (effectively) one argument, where all others have a constant value. *)
 fun singleton :: "('a, 'sz) trm \<Rightarrow> ('sz \<Rightarrow> ('a, 'sz) trm)"
-where "singleton t i = (if i = vid1 then t else (Const 0))"
+where "singleton t i = (if i = vid1 then t else (Const (bword_zero)))"
 
-lemma expand_singleton:"singleton t = (\<lambda>i. (if i = vid1 then t else (Const 0)))"
+lemma expand_singleton:"singleton t = (\<lambda>i. (if i = vid1 then t else (Const (bword_zero))))"
   by auto
 
 (* Function applied to one argument *)
@@ -534,7 +562,7 @@ context ids begin
 lemma proj_sing1:"(singleton \<theta> vid1) = \<theta>"
   by (auto)
 
-lemma proj_sing2:"vid1 \<noteq> y  \<Longrightarrow> (singleton \<theta> y) = (Const 0)"
+lemma proj_sing2:"vid1 \<noteq> y  \<Longrightarrow> (singleton \<theta> y) = (Const (bword_zero))"
   by (auto)
 end
 

@@ -179,7 +179,7 @@ where
 | "sterm_sem I (Function f args) v = Functions I f (\<chi> i. sterm_sem I (args i) v)"
 | "sterm_sem I (Plus t1 t2) v = sterm_sem I t1 v + sterm_sem I t2 v"
 | "sterm_sem I (Times t1 t2) v = sterm_sem I t1 v * sterm_sem I t2 v"
-| "sterm_sem I (Const r) v = r"
+| "sterm_sem I (Const b) v = sint (Rep_bword b)"
 (*| "sterm_sem I ($$F' f) v = DFunls I f v"*)
 | "sterm_sem I ($' c) v = undefined"
 | "sterm_sem I ($$F f) v = undefined"
@@ -217,7 +217,7 @@ where
 | "dterm_sem I (Times t1 t2) = (\<lambda>v. (dterm_sem I t1 v) * (dterm_sem I t2 v))"
 | "dterm_sem I (Differential t) = (\<lambda>v. directional_derivative I t v)"
 | "dterm_sem I ($$F f) = (\<lambda>v. Funls I f v)"
-| "dterm_sem I (Const c) = (\<lambda>v. c)"
+| "dterm_sem I (Const b) = (\<lambda>v. sint (Rep_bword b))"
 
 text\<open> The semantics of an ODE is the vector field at a given point. ODE's are all time-independent
   so no time variable is necessary. Terms on the RHS of an ODE must be differential-free, so
@@ -346,7 +346,7 @@ lemma svar_case:
   by auto
 
 lemma sconst_case:
-  "sterm_sem I (Const r) = (\<lambda>v. r)"
+  "sterm_sem I (Const b) = (\<lambda>v. sint (Rep_bword b))"
   by auto
 
 lemma sfunction_case:
@@ -396,7 +396,9 @@ lemma diamond_sem [simp]: "fml_sem I (Diamond \<alpha> \<phi>)
   by auto
 
 lemma tt_sem [simp]:"fml_sem I TT = UNIV" unfolding TT_def by auto
-lemma ff_sem [simp]:"fml_sem I FF = {}" unfolding FF_def by auto
+lemma ff_sem [simp]:"fml_sem I FF = {}" 
+  using Abs_bword_inverse[of 0] Abs_bword_inverse[of 1]  
+  unfolding FF_def POS_INF_def NEG_INF_def by (auto)
 
 lemma iff_to_impl: "((\<nu> \<in> fml_sem I A) \<longleftrightarrow> (\<nu> \<in> fml_sem I B))
   \<longleftrightarrow> (((\<nu> \<in> fml_sem I A) \<longrightarrow> (\<nu> \<in> fml_sem I B))
