@@ -1,9 +1,9 @@
 theory "Pretty_Printer" 
 imports
-  "../Ordinary_Differential_Equations/ODE_Analysis"
-  "./Ids"
-  "./Lib"
-  "./Syntax"
+  Ordinary_Differential_Equations.ODE_Analysis
+  "Ids"
+  "Lib"
+  "Syntax"
 begin
 context ids begin
 
@@ -44,6 +44,7 @@ where
   "trm_to_string (Var x) = vid_to_string x"
 | "trm_to_string (Const r) = ''r''"
 | "trm_to_string (Function f args) = fid_to_string f"
+| "trm_to_string (Functional f) = fid_to_string f @ ''(||)''"
 | "trm_to_string (Plus t1 t2) = trm_to_string t1 @ ''+'' @ trm_to_string t2"
 | "trm_to_string (Times t1 t2) = trm_to_string t1 @ ''*'' @ trm_to_string t2"
 | "trm_to_string (DiffVar x) = ''Dv{'' @ vid_to_string x @ ''}''"
@@ -51,7 +52,7 @@ where
   
 primrec ode_to_string::"('sf,'sz) ODE \<Rightarrow> char list"
 where  
-  "ode_to_string (OVar x) = oid_to_string x"
+  "ode_to_string (OVar x sp) = oid_to_string x"
 | "ode_to_string (OSing x t) = ''d'' @ vid_to_string x @ ''='' @ trm_to_string t"
 | "ode_to_string (OProd ODE1 ODE2) = ode_to_string ODE1 @ '', '' @ ode_to_string ODE2 "
      
@@ -77,6 +78,7 @@ where
   
   | "hp_to_string (Pvar a) = hpid_to_string a"
   | "hp_to_string (Assign x e) = vid_to_string x @ '':='' @ trm_to_string e"
+  | "hp_to_string (AssignAny x) = vid_to_string x @ '':=*'' "
   | "hp_to_string (DiffAssign x e) = ''D{'' @ vid_to_string x @ ''}:='' @ trm_to_string e"
   | "hp_to_string (Test p) = ''?'' @ fml_to_string p"
   | "hp_to_string (EvolveODE ODE p) = ''{'' @ ode_to_string ODE @ ''&'' @ fml_to_string p @ ''}''"

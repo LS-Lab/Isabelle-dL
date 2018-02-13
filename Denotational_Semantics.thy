@@ -1,6 +1,6 @@
 theory "Denotational_Semantics" 
 imports
-  "../Ordinary_Differential_Equations/ODE_Analysis"
+  Ordinary_Differential_Equations.ODE_Analysis
   "./Lib"
   "./Ids"
   "./Syntax"
@@ -60,6 +60,8 @@ lemma VSagree_UNIV_eq:"VSagree A B UNIV \<Longrightarrow> A = B"
 
 lemma agree_comm:"\<And>A B V. Vagree A B V \<Longrightarrow> Vagree B A V" unfolding Vagree_def by auto
 
+lemma agree_eq:"\<And>A B V. A = B \<Longrightarrow> Vagree A B V" unfolding Vagree_def by auto
+
 lemma agree_sub:"\<And>\<nu> \<omega> A B . A \<subseteq> B \<Longrightarrow> Vagree \<nu> \<omega> B \<Longrightarrow> Vagree \<nu> \<omega> A"
   unfolding Vagree_def by auto
 
@@ -103,11 +105,13 @@ text\<open>
 \<close>
 record ('a, 'b, 'c) interp =
   Functions       :: "'a \<Rightarrow> 'c Rvec \<Rightarrow> real"
+(*  DFunls           :: "'a \<Rightarrow> 'c simple_state \<Rightarrow> real"*)
+  Funls           :: "'a \<Rightarrow> 'c state \<Rightarrow> real"
   Predicates      :: "'c \<Rightarrow> 'c Rvec \<Rightarrow> bool"
   Contexts        :: "'b \<Rightarrow> 'c state set \<Rightarrow> 'c state set"
   Programs        :: "'c \<Rightarrow> ('c state * 'c state) set"
-  ODEs            :: "'c \<Rightarrow> 'c simple_state \<Rightarrow> 'c simple_state"
-  ODEBV           :: "'c \<Rightarrow> 'c set"
+  ODEs            :: "'c \<Rightarrow> 'c space \<Rightarrow> 'c simple_state \<Rightarrow> 'c simple_state"
+  ODEBV           :: "'c \<Rightarrow> 'c space \<Rightarrow> 'c set"
 
 fun FunctionFrechet :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> 'a \<Rightarrow> 'c Rvec \<Rightarrow> 'c Rvec \<Rightarrow> real"
   where "FunctionFrechet I i = (THE f'. \<forall> x. (Functions I i has_derivative f' x) (at x))"
@@ -115,7 +119,8 @@ fun FunctionFrechet :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow
 (* For an interpretation to be valid, all functions must be differentiable everywhere.*)
 definition is_interp :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> bool"
   where "is_interp I \<equiv>
-   \<forall>x. \<forall>i. ((FDERIV (Functions I i) x :> (FunctionFrechet I i x)) \<and> continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I i x)))"
+   (\<forall>x. \<forall>i. ((FDERIV (Functions I i) x :> (FunctionFrechet I i x)) \<and> continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I i x))))
+\<and>  (\<forall> ode. \<forall> x. ODEBV I ode (NB x) \<subseteq> -{x})"
 
 lemma is_interpD:"is_interp I \<Longrightarrow> \<forall>x. \<forall>i. (FDERIV (Functions I i) x :> (FunctionFrechet I i x))"
   unfolding is_interp_def by auto
@@ -125,6 +130,8 @@ definition Iagree :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> 
 where "Iagree I J V \<equiv>
   (\<forall>i\<in>V.
     (\<forall>x. i = Inl x \<longrightarrow> Functions I x = Functions J x) \<and>
+(*    (\<forall>x. i = Inl x \<longrightarrow> DFunls I x = DFunls J x) \<and>*)
+    (\<forall>x. i = Inl x \<longrightarrow> Funls I x = Funls J x) \<and>
     (\<forall>x. i = Inr (Inl x) \<longrightarrow> Contexts I x = Contexts J x) \<and>
     (\<forall>x. i = Inr (Inr x) \<longrightarrow> Predicates I x = Predicates J x) \<and>
     (\<forall>x. i = Inr (Inr x) \<longrightarrow> Programs I x = Programs J x) \<and>
@@ -132,6 +139,12 @@ where "Iagree I J V \<equiv>
     (\<forall>x. i = Inr (Inr x) \<longrightarrow> ODEBV I x = ODEBV J x))"
 
 lemma Iagree_Func:"Iagree I J V \<Longrightarrow> Inl f \<in> V \<Longrightarrow> Functions I f = Functions J f"
+  unfolding Iagree_def by auto
+
+(*lemma Iagree_DFunl:"Iagree I J V \<Longrightarrow> Inl f \<in> V \<Longrightarrow> DFunls I f = DFunls J f"
+  unfolding Iagree_def by auto*)
+
+lemma Iagree_Funl:"Iagree I J V \<Longrightarrow> Inl f \<in> V \<Longrightarrow> Funls I f = Funls J f"
   unfolding Iagree_def by auto
 
 lemma Iagree_Contexts:"Iagree I J V \<Longrightarrow> Inr (Inl C) \<in> V \<Longrightarrow> Contexts I C = Contexts J C"
@@ -144,6 +157,9 @@ lemma Iagree_Prog:"Iagree I J V \<Longrightarrow> Inr (Inr a) \<in> V \<Longrigh
   unfolding Iagree_def by auto
 
 lemma Iagree_ODE:"Iagree I J V \<Longrightarrow> Inr (Inr a) \<in> V \<Longrightarrow> ODEs I a = ODEs J a"
+  unfolding Iagree_def by auto  
+
+lemma Iagree_ODEBV:"Iagree I J V \<Longrightarrow> Inr (Inr a) \<in> V \<Longrightarrow> ODEBV I a = ODEBV J a"
   unfolding Iagree_def by auto  
 
 lemma Iagree_comm:"\<And>A B V. Iagree A B V \<Longrightarrow> Iagree B A V" 
@@ -164,7 +180,9 @@ where
 | "sterm_sem I (Plus t1 t2) v = sterm_sem I t1 v + sterm_sem I t2 v"
 | "sterm_sem I (Times t1 t2) v = sterm_sem I t1 v * sterm_sem I t2 v"
 | "sterm_sem I (Const r) v = r"
+(*| "sterm_sem I ($$F' f) v = DFunls I f v"*)
 | "sterm_sem I ($' c) v = undefined"
+| "sterm_sem I ($$F f) v = undefined"
 | "sterm_sem I (Differential d) v = undefined"
   
 (* frechet I \<theta> \<nu> syntactically computes the frechet derivative of the term \<theta> in the interpretation
@@ -180,8 +198,10 @@ where
 | "frechet I (Times t1 t2) v =
     (\<lambda>v'. sterm_sem I t1 v * frechet I t2 v v' + frechet I t1 v v' * sterm_sem I t2 v)"
 | "frechet I (Const r) v = (\<lambda>v'. 0)"
+(*| "frechet I ($$F' f) v = DFunls I f v"*)
 | "frechet I ($' c) v = undefined"
 | "frechet I (Differential d) v = undefined"
+| "frechet I ($$F f) v = undefined"
 
 definition directional_derivative :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'c) trm \<Rightarrow> 'c state \<Rightarrow> real"
 where "directional_derivative I t = (\<lambda>v. frechet I t (fst v) (snd v))"
@@ -196,6 +216,7 @@ where
 | "dterm_sem I (Plus t1 t2) = (\<lambda>v. (dterm_sem I t1 v) + (dterm_sem I t2 v))"
 | "dterm_sem I (Times t1 t2) = (\<lambda>v. (dterm_sem I t1 v) * (dterm_sem I t2 v))"
 | "dterm_sem I (Differential t) = (\<lambda>v. directional_derivative I t v)"
+| "dterm_sem I ($$F f) = (\<lambda>v. Funls I f v)"
 | "dterm_sem I (Const c) = (\<lambda>v. c)"
 
 text\<open> The semantics of an ODE is the vector field at a given point. ODE's are all time-independent
@@ -207,19 +228,27 @@ text\<open> The semantics of an ODE is the vector field at a given point. ODE's 
   by ODE2 from ODE2"\<close>
 fun ODE_sem:: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'c) ODE \<Rightarrow> 'c Rvec \<Rightarrow> 'c Rvec"
   where
-  ODE_sem_OVar:"ODE_sem I (OVar x) = ODEs I x"
+  ODE_sem_OVar:"ODE_sem I (OVar x sp) = (\<lambda>\<nu>. (\<chi> i. if i \<in> ODEBV I x sp then ODEs I x sp  \<nu> $ i else 0))"
 | ODE_sem_OSing:"ODE_sem I (OSing x \<theta>) =  (\<lambda>\<nu>. (\<chi> i. if i = x then sterm_sem I \<theta> \<nu> else 0))"
 (* Note: Could define using SOME operator in a way that more closely matches above description,
  * but that gets complicated in the OVar case because not all variables are bound by the OVar *)
 | ODE_sem_OProd:"ODE_sem I (OProd ODE1 ODE2) = (\<lambda>\<nu>. ODE_sem I ODE1 \<nu> + ODE_sem I ODE2 \<nu>)"
 
+lemma ODE_sem_assoc:"ODE_sem I (oprod ODE1 ODE2) = ODE_sem I (OProd ODE1 ODE2)"
+  apply(induction ODE1 arbitrary:ODE2)
+  by(auto)
+
 (* The bound variables of an ODE *)
 fun ODE_vars :: "('a,'b,'c) interp \<Rightarrow> ('a, 'c) ODE \<Rightarrow> 'c set"
   where 
-  "ODE_vars I (OVar c) = ODEBV I c"
+  "ODE_vars I (OVar c sp) = ODEBV I c sp"
 | "ODE_vars I (OSing x \<theta>) = {x}"
 | "ODE_vars I (OProd ODE1 ODE2) = ODE_vars I ODE1 \<union> ODE_vars I ODE2"
-  
+
+lemma ODE_vars_assoc:"ODE_vars I (oprod ODE1 ODE2) = ODE_vars I (OProd ODE1 ODE2)"
+  apply(induction ODE1 arbitrary:ODE2)
+  by(auto)
+
 fun semBV ::"('a, 'b,'c) interp \<Rightarrow> ('a, 'c) ODE \<Rightarrow> ('c + 'c) set"
   where "semBV I ODE = Inl ` (ODE_vars I ODE) \<union> Inr ` (ODE_vars I ODE)"
 
@@ -260,6 +289,7 @@ where
 
 | "prog_sem I (Pvar p) = Programs I p"
 | "prog_sem I (Assign x t) = {(\<nu>, \<omega>). \<omega> = repv \<nu> x (dterm_sem I t \<nu>)}"
+| "prog_sem I (AssignAny x) = {(\<nu>, \<omega>) | \<omega> \<nu> r. \<omega> = repv \<nu> x r}"
 | "prog_sem I (DiffAssign x t) = {(\<nu>, \<omega>). \<omega> = repd \<nu> x (dterm_sem I t \<nu>)}"
 | "prog_sem I (Test \<phi>) = {(\<nu>, \<nu>) | \<nu>. \<nu> \<in> fml_sem I \<phi>}"
 | "prog_sem I (Choice \<alpha> \<beta>) = prog_sem I \<alpha> \<union> prog_sem I \<beta>"
@@ -394,6 +424,9 @@ lemma or_foldl_sem_conv:"\<nu> \<in> fml_sem I (foldr Or \<Gamma> FF) \<Longrigh
   by(induction \<Gamma>, auto simp add: member_rec)
 
 lemma seq_semI':"(\<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr Or \<Delta> FF)) \<Longrightarrow> \<nu> \<in> seq_sem I (\<Gamma>,\<Delta>)"
+  by auto 
+
+lemma seq_sem_UNIV_I:"(\<And>\<nu>. \<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr Or \<Delta> FF)) \<Longrightarrow> seq_sem I (\<Gamma>,\<Delta>) = UNIV"
   by auto 
 
 lemma seq_semD':"\<And>P. \<nu> \<in> seq_sem I (\<Gamma>,\<Delta>) \<Longrightarrow> ((\<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr Or \<Delta> FF)) \<Longrightarrow> P) \<Longrightarrow> P"

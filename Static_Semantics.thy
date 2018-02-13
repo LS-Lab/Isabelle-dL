@@ -1,6 +1,6 @@
 theory "Static_Semantics"
 imports
-  "../Ordinary_Differential_Equations/ODE_Analysis"
+  Ordinary_Differential_Equations.ODE_Analysis
   "./Ids"
   "./Lib"
   "./Syntax"
@@ -28,6 +28,7 @@ where
   "SIGT (Var var) = {}"
 | "SIGT (Const r) = {}"
 | "SIGT (Function var f) = {var} \<union> (\<Union>i. SIGT (f i))"
+| "SIGT (Functional var) = {var}"
 | "SIGT (Plus t1 t2) = SIGT t1 \<union> SIGT t2"
 | "SIGT (Times t1 t2) = SIGT t1 \<union> SIGT t2"
 | "SIGT (DiffVar x) = {}"
@@ -35,15 +36,21 @@ where
 
 primrec SIGO   :: "('a, 'c) ODE \<Rightarrow> ('a + 'c) set"
 where
-  "SIGO (OVar c) = {Inr c}"
+  "SIGO (OVar c _) = {Inr c}"
 | "SIGO (OSing x \<theta>) =  {Inl x| x. x \<in> SIGT \<theta>}"
 | "SIGO (OProd ODE1 ODE2) = SIGO ODE1 \<union> SIGO ODE2"
-  
+
+lemma SIGO_assoc:"SIGO (oprod ODE1 ODE2) = SIGO (OProd ODE1 ODE2)"
+  apply(induction ODE1 arbitrary:ODE2)
+  by( auto)
+
+
 primrec SIGP   :: "('a, 'b, 'c) hp      \<Rightarrow> ('a + 'b + 'c) set"
 and     SIGF   :: "('a, 'b, 'c) formula \<Rightarrow> ('a + 'b + 'c) set"
 where
   "SIGP (Pvar var) = {Inr (Inr var)}"
 | "SIGP (Assign var t) = {Inl x | x. x \<in> SIGT t}"
+| "SIGP (AssignAny var) = {}"
 | "SIGP (DiffAssign var t) = {Inl x | x. x \<in> SIGT t}"
 | "SIGP (Test p) = SIGF p"
 | "SIGP (EvolveODE ODE p) = SIGF p \<union> {Inl x | x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) | x. Inr x \<in> SIGO ODE}"
@@ -75,6 +82,7 @@ where
   "FVT (Var x) = {Inl x}"
 | "FVT (Const x) = {}"
 | "FVT (Function f args) = (\<Union>i. FVT (args i))"
+| "FVT (Functional f) = UNIV"
 | "FVT (Plus f g) = FVT f \<union> FVT g"
 | "FVT (Times f g) = FVT f \<union> FVT g"
 | "FVT (Differential f) = (\<Union>x \<in> (FVT f). primify x)"
@@ -86,17 +94,37 @@ where "FVDiff f = (\<Union>x \<in> (FVT f). primify x)"
 text\<open> Free variables of an ODE includes both the bound variables and the terms \<close>
 fun FVO :: "('a, 'c) ODE \<Rightarrow> 'c set"
 where
-  "FVO (OVar c) = UNIV"
+  "FVO (OVar c (Some x)) = UNIV" 
+| "FVO (OVar c None) = UNIV" 
 | "FVO (OSing x \<theta>) = {x} \<union> {x . Inl x \<in> FVT \<theta>}"
 | "FVO (OProd ODE1 ODE2) = FVO ODE1 \<union> FVO ODE2"
 
+(* lemma oprod_induct:
+  assumes BC1:"(\<And>x t ODE2. P (OSing x t) ODE2)"
+  assumes BC2:"(\<And>c ODE2. (P (OVar c) ODE2))"
+  assumes  IH:"\<And>l1 l2 x. (\<And>x. P l1 x) \<Longrightarrow> (\<And>x. P l2 x) \<Longrightarrow> P (OProd l1 l2) x"
+*)
+lemma FVO_assoc:"FVO (oprod ODE1 ODE2) = FVO (OProd ODE1 ODE2)"
+  apply(induction ODE1 arbitrary:ODE2)
+  by(auto)
+  
 text\<open> Bound variables of ODEs, formulas, programs \<close>
 fun BVO :: "('a, 'c) ODE \<Rightarrow> ('c + 'c) set"
 where 
-  "BVO (OVar c) = UNIV"
+  "BVO (OVar c (Some x)) = -{Inl x, Inr x}"
+| "BVO (OVar c None) = UNIV"
 | "BVO (OSing x \<theta>) = {Inl x, Inr x}"
 | "BVO (OProd ODE1 ODE2) = BVO ODE1 \<union> BVO ODE2"
-  
+
+lemma BVO_assoc:"BVO (oprod ODE1 ODE2) = BVO (OProd ODE1 ODE2)"
+  apply(induction ODE1 arbitrary:ODE2)
+  by(auto)
+
+lemma BVO_lr:"(Inl x \<in> BVO ODE) = (Inr x \<in> BVO ODE)"
+  apply(induction ODE,auto)
+  subgoal for x1 x2 by(cases x2,auto)
+  subgoal for x1 x2 by(cases x2,auto) done
+
 fun BVF :: "('a, 'b, 'c) formula \<Rightarrow> ('c + 'c) set"
 and BVP :: "('a, 'b, 'c) hp \<Rightarrow> ('c + 'c) set"
 where
@@ -110,6 +138,7 @@ where
 
 | "BVP (Pvar a) = UNIV"
 | "BVP (Assign x \<theta>) = {Inl x}"
+| "BVP (AssignAny x) = {Inl x}"
 | "BVP (DiffAssign x \<theta>) = {Inr x}"
 | "BVP (Test \<phi>) = {}"
 | "BVP (EvolveODE ODE \<phi>) = BVO ODE"
@@ -141,12 +170,16 @@ where
 | "FVF (InContext C p) = UNIV"
 | "FVP (Pvar a) = UNIV"
 | "FVP (Assign x \<theta>) = FVT \<theta>"
+| "FVP (AssignAny x)  = {}"
 | "FVP (DiffAssign x \<theta>) = FVT \<theta>"
 | "FVP (Test \<phi>) = FVF \<phi>"
-| "FVP (EvolveODE ODE \<phi>) = BVO ODE \<union> (Inl ` FVO ODE) \<union> FVF \<phi>"
+| "FVP (EvolveODE ODE \<phi>) = ((Inl ` FVO ODE) \<union> FVF \<phi>)"
 | "FVP (Choice \<alpha> \<beta>) = FVP \<alpha> \<union> FVP \<beta>"
 | "FVP (Sequence \<alpha> \<beta>) = FVP \<alpha> \<union> (FVP \<beta> - MBV \<alpha>)"
 | "FVP (Loop \<alpha>) = FVP \<alpha>"
+
+fun FVSeq :: "('a,'b,'c) sequent \<Rightarrow> ('c + 'c) set"
+  where "FVSeq (A,S) = (List.foldr (\<lambda> x acc.  (acc \<union> (FVF x))) A {}) \<union> (List.foldr (\<lambda> x acc.  (acc \<union> (FVF x))) S {})"
 
 subsection \<open>Lemmas for reasoning about static semantics\<close> 
 

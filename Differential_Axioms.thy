@@ -1,6 +1,6 @@
 theory "Differential_Axioms" 
 imports
-  "../Ordinary_Differential_Equations/ODE_Analysis"
+  Ordinary_Differential_Equations.ODE_Analysis
   "./Ids"
   "./Lib"
   "./Syntax"     
@@ -29,6 +29,14 @@ definition diff_plus_axiom :: "('sf, 'sc, 'sz) formula"
 where [axiom_defs]:"diff_plus_axiom \<equiv> Equals (Differential (Plus (state_fun fid1) (state_fun fid2))) 
     (Plus (Differential (state_fun fid1)) (Differential (state_fun fid2)))"
 
+definition dMinusAxiom::"('sf,'sc,'sz) formula"
+  where [axiom_defs]:"dMinusAxiom \<equiv> 
+Equals
+ (Differential (Minus (DFunl fid1) (DFunl fid2)))
+ (Minus (Differential (DFunl fid1)) (Differential(DFunl  fid2)))"
+
+
+
 definition diff_times_axiom :: "('sf, 'sc, 'sz) formula"
 where [axiom_defs]:"diff_times_axiom \<equiv> Equals (Differential (Times (state_fun fid1) (state_fun fid2))) 
     (Plus (Times (Differential (state_fun fid1)) (state_fun fid2)) 
@@ -41,17 +49,25 @@ where [axiom_defs]:"diff_chain_axiom \<equiv> [[Assign vid2 (f1 fid2 vid1)]]([[D
 
 subsection \<open>ODE Axioms\<close>
 definition DWaxiom :: "('sf, 'sc, 'sz) formula"
-where [axiom_defs]:"DWaxiom = ([[EvolveODE (OVar vid1) (Predicational pid1)]](Predicational pid1))"
+(*
+[{c_&q_(||)}]p_(||) <-> ([{c_&q_(||)}](q_(||)->p_(||)))*)
+  where [axiom_defs]:"DWaxiom =  Equiv([[EvolveODE (OVar vid1 None) (Pc pid2)]]Pc pid1) (([[EvolveODE (OVar vid1 None) (Pc pid2)]](Pc pid2 \<rightarrow> Pc pid1)))"
 
 definition DWaxiom' :: "('sf, 'sc, 'sz) formula"
 where [axiom_defs]:"DWaxiom' = ([[EvolveODE (OSing vid1 (Function fid1 (singleton (Var vid1)))) (Prop vid2 (singleton (Var vid1)))]](Prop vid2 (singleton (Var vid1))))"
-  
+
+(* ([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||) 
+
+[{c&q(||)}]r(||) \<rightarrow> ([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||))
+[1&2]3 \<rightarrow> ([1&2]1 <-> [1&(2&3)]1)
+*)
+
 definition DCaxiom :: "('sf, 'sc, 'sz) formula"
 where [axiom_defs]:"DCaxiom = (
-([[EvolveODE (OVar vid1) (Predicational pid1)]]Predicational pid3) \<rightarrow>
-(([[EvolveODE (OVar vid1) (Predicational pid1)]](Predicational pid2)) 
+([[EvolveODE (OVar vid1 None) (Pc pid2)]]Pc pid3) \<rightarrow>
+(([[EvolveODE (OVar vid1 None) (Pc pid2)]](Pc pid1)) 
   \<leftrightarrow>  
-   ([[EvolveODE (OVar vid1) (And (Predicational pid1) (Predicational pid3))]]Predicational pid2)))"
+   ([[EvolveODE (OVar vid1 None) (And (Pc pid2) (Pc pid3))]]Pc pid1)))"
 
 definition DEaxiom :: "('sf, 'sc, 'sz) formula"
 where [axiom_defs]:"DEaxiom = 
@@ -72,18 +88,575 @@ where [axiom_defs]:"DSaxiom =
         (Prop vid2 (singleton (Plus (Var vid1) (Times (f0 fid1) (Var vid3)))))))
    ([[Assign vid1 (Plus (Var vid1) (Times (f0 fid1) (Var vid2)))]]p1 vid3 vid1)))))"
 
+
+(* TODO: Axiom + proof 
+[{x_'=f(||), c  & q(||)}]p(||) 
+<-> [{c,x_'=f(||)&q(||)}][x_':=f(||);]p(||)
+
+x_ = vid1
+f\<lparr>\<rparr>= fid1
+c = vid1
+q\<lparr>\<rparr> = pid2
+p\<lparr>\<rparr> = pid1
+
+[{x_'=f(||),c&q(||)}]p(||) <-> [{c,x_'=f(||)&q(||)}][x_':=f(||);]p(||)
+*)
+(* TODO: fid1 \<rightarrow> fid2*)
+definition DiffEffectSysAxiom::"('sf,'sc,'sz) formula"
+  where [axiom_defs]:"DiffEffectSysAxiom \<equiv> 
+([[EvolveODE (oprod (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) (P pid2)]]P pid1)
+ \<leftrightarrow> ([[EvolveODE (oprod (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (P pid2)]]([[DiffAssign vid1 (DFunl fid1)]]P pid1))"
+
+lemma ODE_zero:"\<And>i. is_interp I \<Longrightarrow> Inl i \<notin> BVO ODE \<Longrightarrow> Inr i \<notin> BVO ODE \<Longrightarrow> ODE_sem I ODE \<nu> $ i= 0"
+proof(induction ODE)
+  case (OVar x1 x2)
+  then show ?case  apply(cases x2,auto)
+  proof -
+    assume Some:"x2 = Some i"
+    assume good:"is_interp I"
+    assume elem:"i \<in> ODEBV I x1 (Some i)"
+    have bv:"ODEBV I x1 (Some i) \<subseteq> - {i}" using good unfolding is_interp_def by auto
+    then show "ODEs I x1 (Some i) \<nu> $ i = 0"
+      using good elem  unfolding is_interp_def using bv by(auto)
+  qed
+next
+  case (OSing x1 x2)
+  then show ?case by auto
+next
+  case (OProd ODE1 ODE2)
+  then show ?case by auto
+qed
+
+
+lemma ODE_unbound_zero:
+  fixes i
+  assumes good_interp:"is_interp I"
+  shows "i \<notin> ODE_vars I ODE \<Longrightarrow> ODE_sem I ODE x $ i = 0"
+proof (induction ODE)
+  case (OVar x1 x2)
+  assume notin:"i \<notin> ODE_vars I (OVar x1 x2)"
+  have thing:"(\<And>ode x. ODEBV I ode (Some x) \<subseteq> - {x})" using good_interp unfolding is_interp_def by auto
+   show ?case 
+    apply(cases x2)
+    subgoal using notin by auto
+    using thing[of "x1"] notin by(cases x2,auto)
+next
+  case (OSing x1 x2)
+  then show ?case by auto
+next
+  case (OProd ODE1 ODE2)
+  then show ?case by auto
+qed
+
+
+lemma ODE_bound_effect:
+  fixes s t sol ODE X b
+  assumes good_interp:"is_interp I"
+  assumes s:"s \<in> {0..t}"  
+  assumes sol:"(sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t}  X"
+  shows "Vagree (sol 0,b) (sol s, b) (-(BVO ODE))"
+proof -
+  have imp:"\<And>i. Inl i \<notin> BVO ODE \<Longrightarrow> i \<notin> ODE_vars I ODE"
+    subgoal for i
+      apply(induction ODE,auto) 
+      subgoal for x1 x2
+        apply(cases x2,auto)
+        using good_interp unfolding is_interp_def by auto done done
+  have "\<And>i. Inl i \<notin> BVO ODE \<Longrightarrow>  (\<forall> s. s \<in> {0..t} \<longrightarrow> sol s $ i = sol 0 $ i)"
+    apply auto
+    apply (rule constant_when_zero)
+         using s sol apply auto
+    using ODE_unbound_zero solves_ode_subset good_interp imp
+    by fastforce+
+  then show "Vagree (sol 0, b) (sol s, b) (- BVO ODE)"
+    unfolding Vagree_def 
+    using s  by (metis Compl_iff fst_conv  snd_conv)
+qed
+
+lemma ODE_bound_effect_tight_left:
+  fixes s t sol ODE X b
+  assumes good_interp:"is_interp I"
+  assumes s:"s \<in> {0..t}"  
+  assumes sol:"(sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t}  X"
+  shows "VSagree (sol 0) (sol s) (-(ODE_vars I ODE))"
+proof -
+  have "\<And>i. i \<notin> ODE_vars I ODE \<Longrightarrow>  (\<forall> s. s \<in> {0..t} \<longrightarrow> sol s $ i = sol 0 $ i)"
+    apply auto
+    apply (rule constant_when_zero)
+         using s sol apply auto
+    using  ODE_unbound_zero solves_ode_subset good_interp 
+    by fastforce+
+  then show "VSagree (sol 0) (sol s) (-(ODE_vars I ODE))"
+    apply(auto)
+    unfolding VSagree_def 
+    using s  Compl_iff fst_conv  snd_conv 
+    by (metis (full_types) atLeastAtMost_iff)
+qed
+
+lemma ODE_bound_effect_tight:
+  fixes s t sol ODE X b
+  assumes good_interp:"is_interp I"
+  assumes s:"s \<in> {0..t}"  
+  assumes sol:"(sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t}  X"
+  shows "Vagree (sol 0,b) (sol s,b) (-(semBV I ODE))"
+proof -
+  have "\<And>i. i \<notin> ODE_vars I ODE \<Longrightarrow>  (\<forall> s. s \<in> {0..t} \<longrightarrow> sol s $ i = sol 0 $ i)"
+    apply auto
+    apply (rule constant_when_zero)
+         using s sol apply auto
+    using  ODE_unbound_zero solves_ode_subset good_interp 
+    by fastforce+
+  then show "Vagree (sol 0,b) (sol s,b) (-(semBV I ODE))"
+    using ODE_bound_effect_tight_left[OF good_interp s sol]
+    by(auto simp add: Vagree_def VSagree_def)
+qed
+
+
+theorem DiffEffectSys_valid:"valid DiffEffectSysAxiom"
+proof (unfold DiffEffectSysAxiom_def, simp)
+  have dsafe:"dsafe ($f fid1 (singleton (trm.Var vid1)))" unfolding singleton_def by(auto intro: dsafe.intros)
+  have osafe:"osafe(OSing vid1 (f1 fid1 vid1))" unfolding f1_def empty_def singleton_def using dsafe osafe.intros dsafe.intros
+    by (simp add: osafe_Sing dfree_Const) 
+  have fsafe:"fsafe (p1 vid2 vid1)" unfolding p1_def singleton_def using hpsafe_fsafe.intros(10)
+    using dsafe dsafe_Fun_simps image_iff
+    by (simp add: dfree_Const)
+     have solves_ode_cong:"\<And> SOL ODE1 ODE2 T X1 X2.
+     ODE1 = ODE2 \<Longrightarrow> X1 = X2 \<Longrightarrow> (SOL solves_ode ODE1) T X1 \<Longrightarrow> (SOL solves_ode ODE2) T X2"
+       by(auto)
+     have comm_sem:"\<And>I. (\<lambda>_. ODE_sem I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) 
+                      = (\<lambda>_. ODE_sem I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))))"
+       by(rule ext,auto)
+     have eq_mkv_weak:"\<And> I x y ODE1 ODE2. 
+      (ODE_vars I ODE1) = UNIV \<Longrightarrow> (ODE_vars I ODE2) = UNIV \<Longrightarrow> 
+      (ODE_sem I ODE1) = (ODE_sem I ODE2) \<Longrightarrow> mk_v I ODE1 x y = mk_v I ODE2 x y"
+       subgoal for I x y ODE1 ODE2
+         apply(rule agree_UNIV_eq)
+       using mk_v_agree[of I "ODE1" x y]
+       using mk_v_agree[of I "ODE2" x y]
+       by(auto simp add: Vagree_def) done
+   have eq_mkv:"\<And> I x y ODE1 ODE2. 
+      (semBV I ODE1) = (semBV I ODE2) \<Longrightarrow> 
+      (ODE_sem I ODE1) = (ODE_sem I ODE2) \<Longrightarrow> mk_v I ODE1 x y = mk_v I ODE2 x y"
+       subgoal for I x y ODE1 ODE2
+         apply(rule agree_UNIV_eq)
+       using mk_v_agree[of I "ODE1" x y]
+       using mk_v_agree[of I "ODE2" x y]
+       apply(auto simp add: Vagree_def)
+       subgoal for i
+         apply(erule allE[where x=i])+
+         apply(clarsimp)
+         by metis
+       subgoal for i
+         apply(erule allE[where x=i])+
+         apply(clarsimp)
+         by metis
+       done done
+   have obv:"\<And>I. is_interp I \<Longrightarrow> ODEBV I vid1 (Some vid1) \<subseteq> -{vid1}"
+     unfolding is_interp_def by auto
+   have eq_mkv2:"\<And>I::('sf,'sc,'sz)interp. \<And>x y.  is_interp I \<Longrightarrow> 
+           mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) x y = 
+           mk_v I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) x y"
+   proof -
+     fix I::"('sf,'sc,'sz) interp" and x y
+     assume good:"is_interp I"
+     show "mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) x y = mk_v I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) x y"
+       apply(rule eq_mkv)
+         by auto
+   qed
+     have comm_mkv:"\<And> I ab bb. is_interp I \<Longrightarrow> {x. mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) x \<in> fml_sem I (Pc pid2)} 
+                   = {x. mk_v I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) (ab, bb) x \<in> fml_sem I (Pc pid2)}"
+       subgoal for I x y using eq_mkv2[of I "(x,y)"] apply auto done done
+  show "valid (([[EvolveODE (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) (P pid2)]] (P pid1)) \<leftrightarrow>
+ ([[EvolveODE ((OProd (OVar vid1 (Some vid1))(OSing vid1 (DFunl fid1)))) (P pid2)]]
+    [[DiffAssign vid1 (DFunl fid1)]]P pid1))"
+    apply(auto simp only: DEaxiom_def valid_def Let_def iff_sem impl_sem)
+    apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq box_sem f1_def p1_def P_def expand_singleton)
+   proof -
+     fix I ::"('sf,'sc,'sz) interp"
+       and aa ba ab bb sol 
+       and t::real
+       and ac bc
+     assume good:"is_interp I"
+     assume bigNone:"
+\<forall>\<omega>. (\<exists>\<nu> sol t. ((ab, bb), \<omega>) = (\<nu>, mk_v I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) \<nu> (sol t)) \<and>
+                       0 \<le> t \<and>
+                       (sol solves_ode (\<lambda>_. ODE_sem I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))))) {0..t}
+                        {x. mk_v I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) \<nu> x \<in> fml_sem I (Pc pid2)} \<and>
+                       sol 0 = fst \<nu>) \<longrightarrow>
+            \<omega> \<in> fml_sem I (Pc pid1)"
+     let ?my\<omega> = "mk_v I (OProd  (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) (ab,bb) (sol t)"
+     assume t:"0 \<le> t"
+     assume aaba:"(aa, ba) = mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)"
+     assume sol:"(sol solves_ode (\<lambda>_. ODE_sem I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))) {0..t}
+        {x. mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) x \<in> fml_sem I (Pc pid2)}"
+     assume sol0:"sol 0 = fst (ab, bb)"
+     assume acbc:"
+     (ac, bc) =
+       repd (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) vid1
+        (dterm_sem I (DFunl fid1) (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)))"
+     have bigEx:"(\<exists>\<nu> sol t. ((ab, bb), ?my\<omega>) = (\<nu>, mk_v I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) \<nu> (sol t)) \<and>
+                       0 \<le> t \<and>
+                       (sol solves_ode (\<lambda>_. ODE_sem I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))))) {0..t}
+                        {x. mk_v I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) \<nu> x \<in> fml_sem I (Pc pid2)} \<and>
+                       sol 0 = fst \<nu>)"
+       apply(rule exI[where x="(ab, bb)"])
+       apply(rule exI[where x="sol"])
+       apply(rule exI[where x="t"])
+       apply(rule conjI) 
+        apply(rule refl)
+       apply(rule conjI)
+        apply(rule t)
+       apply(rule conjI)
+        apply(rule solves_ode_cong[where ?ODE1.5="(\<lambda>_. ODE_sem I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)) ))" ,
+                       where ?X1.5="{x. mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) x \<in> fml_sem I (Pc pid2)}"])
+       subgoal apply auto by(rule ext,rule ext, rule vec_extensionality,auto) 
+       subgoal using comm_mkv[OF good] by auto
+       apply(rule sol)
+       by (rule sol0)
+     have bigRes:"?my\<omega> \<in> fml_sem I (Pc pid1)" using bigNone bigEx by blast
+     have notin1:"Inl vid1 \<notin> BVO (OVar vid1 (Some vid1))" using obv by auto
+     have notin2:"Inr vid1 \<notin> BVO (OVar vid1 (Some vid1))" using obv by auto
+         (*  todo: change, not quite true *)
+     have ODE_sem:"ODE_sem I (OVar vid1 (Some vid1)) (sol t) $ vid1 = 0"
+       using ODE_zero notin1 notin2 good 
+       by blast 
+     have tset:"t \<in> {0..t}" using t by auto
+     have sol_mkv_eq:"(sol t) =  fst (mk_v I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) (ab, bb) (sol t))"
+       using mk_v_agree[of "I" "(OProd  (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))" "(ab, bb)" "(sol t)"]
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]
+       apply(simp add: Vagree_def)
+       apply(erule conjE)+
+       apply(erule allE[where x="vid1"])+
+       apply(cases "vid1 \<in> ODEBV I vid1 (Some vid1)")
+       using sol0 apply(auto simp add: DFunl_def ODE_sem sol0)
+       using good obv apply auto
+       (* TODO: stuff about if derivative is zero then value is constant*)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]
+       unfolding Vagree_def apply auto
+       apply (smt  Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       
+       done
+     have FVF_univ:"FVF (Pc pid1) = UNIV" by auto
+     have repd_eq:"\<And>\<nu> x r.  (snd \<nu>) $ x = r \<Longrightarrow> \<nu> = repd \<nu> x r" subgoal for \<nu> x r 
+         apply(cases "\<nu>", simp)
+         by(rule vec_extensionality, auto) done
+     
+     have sem_eq':"
+((mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) \<in> fml_sem I (Pc pid1)) = 
+                            (repd (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) vid1
+        (dterm_sem I (DFunl fid1) (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t))) \<in> fml_sem I (Pc pid1))"
+       apply(rule coincidence_formula)
+       subgoal by simp
+       apply(rule good)
+       apply(rule good)
+       subgoal by (rule Iagree_refl)
+       using mk_v_agree[of "I" "(OProd  (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))" "(ab, bb)" "(sol t)"]
+       apply(simp add: Vagree_def)
+       apply(erule conjE)+
+       apply(erule allE[where x="vid1"])+
+       apply(auto simp add: DFunl_def ODE_sem)
+
+       apply (metis DFunl_def eq_mkv2 good sol_mkv_eq)
+       apply (metis DFunl_def eq_mkv2 good sol_mkv_eq)
+       apply (metis DFunl_def eq_mkv2 good sol_mkv_eq)
+       apply (metis DFunl_def eq_mkv2 good sol_mkv_eq)
+       apply (metis DFunl_def eq_mkv2 good sol_mkv_eq)
+       apply (metis DFunl_def eq_mkv2 good sol_mkv_eq)
+       apply (metis DFunl_def eq_mkv2 good sol_mkv_eq)
+       apply (metis DFunl_def eq_mkv2 good sol_mkv_eq)
+                  apply (metis DFunl_def eq_mkv2 good sol_mkv_eq obv)
+       using DFunl_def eq_mkv2 good sol_mkv_eq obv apply blast
+                  apply (metis DFunl_def eq_mkv2 good sol_mkv_eq obv)
+                  apply (metis DFunl_def eq_mkv2 good sol_mkv_eq obv)
+       using DFunl_def eq_mkv2 good sol_mkv_eq obv apply blast
+                  apply (metis DFunl_def eq_mkv2 good sol_mkv_eq obv)
+                  apply (metis DFunl_def eq_mkv2 good sol_mkv_eq obv)
+       using DFunl_def eq_mkv2 good sol_mkv_eq obv apply blast
+                  apply (metis DFunl_def eq_mkv2 good sol_mkv_eq obv)
+                  apply (metis DFunl_def eq_mkv2 good sol_mkv_eq obv)
+       using DFunl_def eq_mkv2 good sol_mkv_eq obv apply blast
+       apply (metis DFunl_def eq_mkv2 good sol_mkv_eq obv) done
+     then have sem_eq:"
+(?my\<omega> \<in> fml_sem I (Pc pid1)) = 
+                            (repd (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) vid1
+        (dterm_sem I (DFunl fid1) (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t))) \<in> fml_sem I (Pc pid1))"
+       using DFunl_def eq_mkv2 good sol_mkv_eq obv
+              by auto
+     show  "repd (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) vid1
+        (dterm_sem I (DFunl fid1) (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)))
+       \<in> fml_sem I (Pc pid1)"
+       using bigRes sem_eq by blast
+   next
+     fix I::"('sf,'sc,'sz)interp" 
+     and aa ba ab bb sol 
+     and t::real
+     assume good_interp:"is_interp I"
+     assume all:"\<forall>\<omega>. (\<exists>\<nu> sol t. ((ab, bb), \<omega>) = (\<nu>, mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) \<nu> (sol t)) \<and>
+                       0 \<le> t \<and>
+                       (sol solves_ode (\<lambda>_. ODE_sem I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))) {0..t}
+                        {x. mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) \<nu> x \<in> fml_sem I (Pc pid2)} \<and>
+                       sol 0 = fst \<nu>) \<longrightarrow>
+            (\<forall>\<omega>'. \<omega>' = repd \<omega> vid1 (dterm_sem I (DFunl fid1) \<omega>) \<longrightarrow> \<omega>' \<in> fml_sem I (Pc pid1))"
+      let ?my\<omega> = "mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab,bb) (sol t)"
+      assume t:"0 \<le> t"
+      assume aaba:"(aa, ba) = mk_v I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) (ab, bb) (sol t)"
+      assume sol:"
+        (sol solves_ode (\<lambda>_. ODE_sem I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))))) {0..t}
+        {x. mk_v I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) (ab, bb) x \<in> fml_sem I (Pc pid2)}"
+      assume sol0:"sol 0 = fst (ab, bb)"
+
+      have bigEx:"(\<exists>\<nu> sol t. ((ab, bb), ?my\<omega>) = (\<nu>, mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) \<nu> (sol t)) \<and>
+                       0 \<le> t \<and>
+                       (sol solves_ode (\<lambda>_. ODE_sem I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))) {0..t}
+                        {x. mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) \<nu> x \<in> fml_sem I (Pc pid2)} \<and>
+                       sol 0 = fst \<nu>)"
+        apply(rule exI[where x="(ab, bb)"])
+        apply(rule exI[where x=sol])
+        apply(rule exI[where x=t])
+        apply(rule conjI)
+         apply(rule refl)
+        apply(rule conjI)
+         apply(rule t)
+        apply(rule conjI)
+         apply(rule solves_ode_cong[where ?ODE1.5="(\<lambda>_. ODE_sem I (OProd (OSing vid1 (DFunl fid1))(OVar vid1 (Some vid1))))", 
+              where ?X1.5=" {x. mk_v I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) (ab, bb) x \<in> fml_sem I (Pc pid2)}"]) 
+       subgoal apply auto by(rule ext,rule ext, rule vec_extensionality,auto) 
+       subgoal using comm_mkv[OF good_interp] by auto
+       apply(rule sol)
+       by (rule sol0)
+      have notin1:"Inl vid1 \<notin> BVO (OVar vid1 (Some vid1))" using good_interp unfolding is_interp_def by auto
+      have notin2:"Inr vid1 \<notin> BVO (OVar vid1 (Some vid1))" using good_interp unfolding is_interp_def by auto
+      have ODE_sem:"ODE_sem I (OVar vid1 (Some vid1)) (sol t) $ vid1 = 0"
+        using good_interp unfolding is_interp_def by auto
+      note good = good_interp 
+      have tset:"t \<in> {0..t}" using t by auto
+      have vas:"Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))"
+                "\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))"
+       using mk_v_agree[of "I" "(OProd  (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))" "(ab, bb)" "(sol t)"]
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]
+       by(simp add: Vagree_def)+
+
+     have sol_mkv_eq:"(sol t) =  fst (mk_v I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) (ab, bb) (sol t))"
+       using mk_v_agree[of "I" "(OProd  (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))" "(ab, bb)" "(sol t)"]
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]
+       apply(simp add: Vagree_def)
+       apply(erule conjE)+
+       apply(erule allE[where x="vid1"])+
+       apply(cases "vid1 \<in> ODEBV I vid1 (Some vid1)")
+       using sol0 apply(auto simp add: DFunl_def ODE_sem sol0)
+       using good obv apply auto
+       (* TODO: stuff about if derivative is zero then value is constant*)
+       
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]
+       unfolding Vagree_def apply auto
+       apply (smt Compl_iff DFunl_def Vagree_def vas fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       apply(rule vec_extensionality)
+       using sol0 good obv DFunl_def eq_mkv2 good ODE_bound_effect_tight[OF good tset sol]  unfolding Vagree_def
+       apply (smt Compl_iff DFunl_def Vagree_def \<open>Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (ab, bb) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))) \<and> Vagree (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) (mk_xode I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (sol t)) (semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> \<open>\<And>b. Vagree (sol 0, b) (sol t, b) (- semBV I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))))\<close> fst_conv mk_xode.simps)
+       done
+      have vec_eq:"
+      (\<chi> i. dterm_sem I (Var i) (mk_v I (OProd  (OSing vid1 (DFunl fid1))(OVar vid1 (Some vid1))) (ab, bb) (sol t))) =
+      (\<chi> i. sterm_sem I (Var i) (sol t))"
+        apply(rule vec_extensionality)
+        using mk_v_agree[of I "(OProd  (OSing vid1 (DFunl fid1))(OVar vid1 (Some vid1)))" "(ab, bb)" "(sol t)"]
+        apply (simp add: Vagree_def)
+        subgoal for i
+          apply(cases "i = vid1")   
+          subgoal by(auto)
+          subgoal apply(clarsimp) apply(erule allE[where x=i])+
+            apply(auto)
+            using notin1 notin2 sol_mkv_eq by auto
+            done done
+      have rep_sem_eq:"repd (mk_v I (OProd  (OSing vid1 (DFunl fid1))(OVar vid1 (Some vid1))) (ab, bb) (sol t)) vid1
+                 (dterm_sem I (DFunl fid1)
+                   (mk_v I (OProd  (OSing vid1 (DFunl fid1))(OVar vid1 (Some vid1))) (ab, bb) (sol t)))  \<in> fml_sem I (Pc pid1)
+         = (repd ?my\<omega> vid1 (dterm_sem I (DFunl fid1) ?my\<omega>) \<in> fml_sem I (Pc pid1))"
+        apply(rule coincidence_formula)
+          subgoal by simp apply(rule good_interp) apply(rule good_interp)
+          subgoal by (rule Iagree_refl)
+       using mk_v_agree[of "I" "(OProd  (OSing vid1 (DFunl fid1))(OVar vid1 (Some vid1)))" "(ab, bb)" "(sol t)"]
+       unfolding Vagree_def 
+       apply simp
+       apply(erule conjE)+
+       apply(erule allE[where x="vid1"])+
+       apply(simp add: ODE_sem)
+       using vec_eq eq_mkv2 
+       by (simp add: good_interp)
+     note good = good_interp
+     have sem_eq':"
+((mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) \<in> fml_sem I (Pc pid1)) = 
+                            (repd (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) vid1
+        (dterm_sem I (DFunl fid1) (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t))) \<in> fml_sem I (Pc pid1))"
+       apply(rule coincidence_formula)
+       subgoal by simp
+       apply(rule good)
+       apply(rule good)
+       subgoal by (rule Iagree_refl)
+       using mk_v_agree[of "I" "(OProd  (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)))" "(ab, bb)" "(sol t)"]
+       apply(simp add: Vagree_def)
+       apply(erule conjE)+
+       apply(erule allE[where x="vid1"])+
+       apply(auto simp add: DFunl_def ODE_sem)
+
+       apply (metis DFunl_def eq_mkv2 good sol_mkv_eq)
+       apply (metis DFunl_def eq_mkv2 good sol_mkv_eq)
+       apply (metis DFunl_def eq_mkv2 good sol_mkv_eq)
+       apply (metis DFunl_def eq_mkv2 good sol_mkv_eq)
+       apply (metis DFunl_def eq_mkv2 good sol_mkv_eq)
+       apply (metis DFunl_def eq_mkv2 good sol_mkv_eq)
+       apply (metis DFunl_def eq_mkv2 good sol_mkv_eq)
+       apply (metis DFunl_def eq_mkv2 good sol_mkv_eq)
+                  apply (metis DFunl_def eq_mkv2 good sol_mkv_eq obv)
+       using DFunl_def eq_mkv2 good sol_mkv_eq obv apply blast
+                  apply (metis DFunl_def eq_mkv2 good sol_mkv_eq obv)
+                  apply (metis DFunl_def eq_mkv2 good sol_mkv_eq obv)
+       using DFunl_def eq_mkv2 good sol_mkv_eq obv apply blast
+                  apply (metis DFunl_def eq_mkv2 good sol_mkv_eq obv)
+                  apply (metis DFunl_def eq_mkv2 good sol_mkv_eq obv)
+       using DFunl_def eq_mkv2 good sol_mkv_eq obv apply blast
+                  apply (metis DFunl_def eq_mkv2 good sol_mkv_eq obv)
+                  apply (metis DFunl_def eq_mkv2 good sol_mkv_eq obv)
+       using DFunl_def eq_mkv2 good sol_mkv_eq obv apply blast
+       apply (metis DFunl_def eq_mkv2 good sol_mkv_eq obv) done
+
+     then have sem_eq'':"
+(?my\<omega> \<in> fml_sem I (Pc pid1)) = 
+                            (repd (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) vid1
+        (dterm_sem I (DFunl fid1) (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t))) \<in> fml_sem I (Pc pid1))"
+       using DFunl_def eq_mkv2 good sol_mkv_eq obv by auto
+      have sem_eq:
+        "(repd ?my\<omega> vid1 (dterm_sem I (DFunl fid1) ?my\<omega>) \<in> fml_sem I (Pc pid1)) 
+     = (mk_v I (OProd  (OSing vid1 (DFunl fid1))(OVar vid1 (Some vid1))) (ab, bb) (sol t) \<in> fml_sem I (Pc pid1)) "
+       using sem_eq' sem_eq'' DFunl_def eq_mkv2 good sol_mkv_eq obv 
+       by auto
+
+(*        using notin1 by auto        *)
+      have some_sem:"repd (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) vid1
+                (dterm_sem I (DFunl fid1)
+                  (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t))) \<in> fml_sem I (Pc pid1)"
+        using rep_sem_eq 
+        using all bigEx by blast
+      have bigImp:"(\<forall>\<omega>'. \<omega>' = repd ?my\<omega> vid1 (dterm_sem I (DFunl fid1) ?my\<omega>) \<longrightarrow> \<omega>' \<in> fml_sem I (Pc pid1))"
+        apply(rule allI)
+        apply(rule impI)
+        apply auto
+        using some_sem by auto
+      have fml_sem:"repd ?my\<omega> vid1 (dterm_sem I (DFunl fid1) ?my\<omega>) \<in> fml_sem I (Pc pid1)"
+        using sem_eq bigImp by blast
+     show "mk_v I (OProd  (OSing vid1 (DFunl fid1))(OVar vid1 (Some vid1))) (ab, bb) (sol t) \<in> fml_sem I (Pc pid1)"
+       using fml_sem sem_eq by blast
+   qed
+qed
+
+
 (* 
 (Q \<rightarrow> [c&Q](f(x)' \<ge> g(x)')) 
 \<rightarrow>
 ([c&Q](f(x) \<ge> g(x))) --> (Q \<rightarrow> (f(x) \<ge> g(x))
 *)
-definition DIGeqaxiom :: "('sf, 'sc, 'sz) formula"
-where [axiom_defs]:"DIGeqaxiom = 
+
+(* in axiombase:
+(q(||) -> [{c&q(||)}](p(||)'))
+\<rightarrow>
+([{c&q(||)}]p(||) <-> [?q(||);]p(||))
+ *)
+
+definition DIGeqaxiom :: "('sf,'sz) ODE \<Rightarrow> ('sf,'sz) trm \<Rightarrow> ('sf,'sz) trm \<Rightarrow> ('sf, 'sc, 'sz) formula"
+where [axiom_defs]:"DIGeqaxiom ODE \<theta>1 \<theta>2 = 
 Implies 
-  (Implies (Prop vid1 empty) ([[EvolveODE (OVar vid1) (Prop vid1 empty)]](Geq (Differential (f1 fid1 vid1)) (Differential (f1 fid2 vid1)))))
-  (Implies
-     (Implies(Prop vid1 empty) (Geq (f1 fid1 vid1) (f1 fid2 vid1)))
-     ([[EvolveODE (OVar vid1) (Prop vid1 empty)]](Geq (f1 fid1 vid1) (f1 fid2 vid1))))"
+  (Implies (DPredl vid1) (And (Geq \<theta>1 \<theta>2) 
+      ([[EvolveODE ODE (DPredl vid1)]](Geq (Differential \<theta>1) (Differential \<theta>2)))))
+  ([[EvolveODE ODE (DPredl vid1)]](Geq \<theta>1 \<theta>2))
+"
 
 
   (* 
@@ -97,17 +670,17 @@ g(x) > h(x) \<rightarrow> [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [
 definition DIGraxiom :: "('sf, 'sc, 'sz) formula"
 where [axiom_defs]:"DIGraxiom = 
 Implies 
-  (Implies (Prop vid1 empty) ([[EvolveODE (OVar vid1) (Prop vid1 empty)]](Geq (Differential (f1 fid1 vid1)) (Differential (f1 fid2 vid1)))))
+  (Implies (Prop vid1 empty) ([[EvolveODE (OVar vid1 None) (Prop vid1 empty)]](Geq (Differential (f1 fid1 vid1)) (Differential (f1 fid2 vid1)))))
   (Implies
      (Implies(Prop vid1 empty) (Greater (f1 fid1 vid1) (f1 fid2 vid1)))
-     ([[EvolveODE (OVar vid1) (Prop vid1 empty)]](Greater (f1 fid1 vid1) (f1 fid2 vid1))))"
+     ([[EvolveODE (OVar vid1 None) (Prop vid1 empty)]](Greater (f1 fid1 vid1) (f1 fid2 vid1))))"
 
 (* [{1' = 1(1) & 1(1)}]2(1) <->
    \<exists>2. [{1'=1(1), 2' = 2(1)*2 + 3(1) & 1(1)}]2(1)*)
 definition DGaxiom :: "('sf, 'sc, 'sz) formula"
 where [axiom_defs]:"DGaxiom = (([[EvolveODE (OSing vid1 (f1 fid1 vid1)) (p1 vid1 vid1)]]p1 vid2 vid1) \<leftrightarrow> 
   (Exists vid2 
-    ([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1)) (OSing vid2 (Plus (Times (f1 fid2 vid1) (Var vid2)) (f1 fid3 vid1)))) (p1 vid1 vid1)]]
+    ([[EvolveODE (oprod (OSing vid1 (f1 fid1 vid1)) (OSing vid2 (Plus (Times (f1 fid2 vid1) (Var vid2 )) (f1 fid3 vid1)))) (p1 vid1 vid1)]]
        p1 vid2 vid1)))"
 
 subsection \<open>Proofs for Derivative Axioms\<close>
@@ -130,7 +703,7 @@ proof -
   then show ?thesis using empty_zero f_linear Linear_Algebra.linear_0 by (auto)
 qed
 
-lemma constant_deriv_zero:"is_interp I \<Longrightarrow> directional_derivative I ($f id1 empty) \<nu> = 0"
+lemma constant_deriv_zero:"\<And>id. is_interp I \<Longrightarrow> directional_derivative I ($f id empty) \<nu> = 0"
   apply(simp only: is_interp_def directional_derivative_def frechet.simps frechet_correctness)
   apply(rule constant_deriv_inner)
   apply(auto)
@@ -145,7 +718,31 @@ done
 theorem diff_var_axiom_valid: "valid diff_var_axiom"
   apply(auto simp add: diff_var_axiom_def valid_def directional_derivative_def)
   by (metis inner_prod_eq)
-  
+
+theorem dMinusAxiom_valid: "valid dMinusAxiom"
+  apply(auto simp add: dMinusAxiom_def valid_def Minus_def)
+  subgoal for I a b
+    using frechet_correctness[of I "(Plus (state_fun fid1) (state_fun fid2))" b] 
+    unfolding state_fun_def apply (auto intro: dfree.intros)
+    unfolding directional_derivative_def by auto
+ done
+
+(* (c_()*f_(||))' = c_()*(f_(||))' *)
+definition DiffLinearAxiom::"('sf,'sc,'sz) formula"
+  where [axiom_defs]:"DiffLinearAxiom \<equiv> 
+ Equals 
+  (Differential (Times (Function fid2 empty) (DFunl fid1)))
+  (Times (Function fid2 empty) (Differential (DFunl fid1)))"
+
+theorem DiffLinear_valid:"valid DiffLinearAxiom"
+  apply(auto simp add: DiffLinearAxiom_def valid_def Minus_def DFunl_def empty_def)
+  subgoal for I a b
+    using frechet_correctness[of I "(Times  ($f fid2 (\<lambda>i. Const 0)) ($f fid1 trm.Var))" b] 
+    using constant_deriv_zero[where id=fid2, where I=I]
+    unfolding state_fun_def apply (auto intro: dfree.intros)
+    unfolding directional_derivative_def by(auto simp add: empty_def) 
+  done
+
 theorem diff_plus_axiom_valid: "valid diff_plus_axiom"
   apply(auto simp add: diff_plus_axiom_def valid_def)
   subgoal for I a b
@@ -167,9 +764,14 @@ subsection \<open>Proofs for ODE Axioms\<close>
 lemma DW_valid:"valid DWaxiom"
   apply(unfold DWaxiom_def valid_def Let_def impl_sem )
   apply(safe)
-  apply(auto simp only: fml_sem.simps prog_sem.simps box_sem)
-  subgoal for I aa ba ab bb sol t using mk_v_agree[of I "(OVar vid1)" "(ab,bb)" "sol t"]
-    Vagree_univ[of "aa" "ba" "sol t" "ODEs I vid1 (sol t)"] solves_ode_domainD
+    apply(auto simp only: fml_sem.simps prog_sem.simps box_sem iff_sem)
+  subgoal for I aa ba ab bb sol t 
+    using mk_v_agree[of I "(OVar vid1 None)" "(ab,bb)" "sol t"]
+    Vagree_univ[of "aa" "ba" "sol t" "ODEs I vid1 None (sol t) "] solves_ode_domainD
+    by (fastforce)
+  subgoal for I aa ba ab bb sol t 
+    using mk_v_agree[of I "(OVar vid1 None)" "(ab,bb)" "sol t"]
+    Vagree_univ[of "aa" "ba" "sol t" "ODEs I vid1 None (sol t) "] solves_ode_domainD
     by (fastforce)
   done
 
@@ -298,13 +900,10 @@ proof -
   qed
 qed
 
-lemma ODE_zero:"\<And>i. Inl i \<notin> BVO ODE \<Longrightarrow> Inr i \<notin> BVO ODE \<Longrightarrow> ODE_sem I ODE \<nu> $ i= 0"
-  by(induction ODE, auto)
-
 lemma DE_sys_valid:
   assumes disj:"{Inl vid1, Inr vid1} \<inter> BVO ODE = {}"
-  shows "valid (([[EvolveODE (OProd  (OSing vid1 (f1 fid1 vid1)) ODE) (p1 vid2 vid1)]] (P pid1)) \<leftrightarrow>
- ([[EvolveODE ((OProd  (OSing vid1 (f1 fid1 vid1))ODE)) (p1 vid2 vid1)]]
+  shows "valid (([[EvolveODE (oprod  (OSing vid1 (f1 fid1 vid1)) ODE) (p1 vid2 vid1)]] (P pid1)) \<leftrightarrow>
+ ([[EvolveODE ((oprod  (OSing vid1 (f1 fid1 vid1))ODE)) (p1 vid2 vid1)]]
     [[DiffAssign vid1 (f1 fid1 vid1)]]P pid1))"
 proof -
   have dsafe:"dsafe ($f fid1 (singleton (trm.Var vid1)))" unfolding singleton_def by(auto intro: dsafe.intros)
@@ -313,8 +912,8 @@ proof -
   have fsafe:"fsafe (p1 vid2 vid1)" unfolding p1_def singleton_def using hpsafe_fsafe.intros(10)
     using dsafe dsafe_Fun_simps image_iff
     by (simp add: dfree_Const)
-  show "valid (([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1)) ODE) (p1 vid2 vid1)]] (P pid1)) \<leftrightarrow>
- ([[EvolveODE ((OProd (OSing vid1 (f1 fid1 vid1)) ODE)) (p1 vid2 vid1)]]
+  show "valid (([[EvolveODE (oprod (OSing vid1 (f1 fid1 vid1)) ODE) (p1 vid2 vid1)]] (P pid1)) \<leftrightarrow>
+ ([[EvolveODE ((oprod (OSing vid1 (f1 fid1 vid1)) ODE)) (p1 vid2 vid1)]]
     [[DiffAssign vid1 (f1 fid1 vid1)]]P pid1))"
     apply(auto simp only: DEaxiom_def valid_def Let_def iff_sem impl_sem)
     apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq box_sem f1_def p1_def P_def expand_singleton)
@@ -324,33 +923,33 @@ proof -
        and t::real
        and ac bc
      assume good:"is_interp I"
-     assume bigAll:"
-     \<forall>\<omega>. (\<exists>\<nu> sol t. ((ab, bb), \<omega>) = (\<nu>, mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) ODE) \<nu> (sol t)) \<and>
+     assume bigNone:"
+     \<forall>\<omega>. (\<exists>\<nu> sol t. ((ab, bb), \<omega>) = (\<nu>, mk_v I (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) ODE) \<nu> (sol t)) \<and>
                     0 \<le> t \<and>
-                    (sol solves_ode (\<lambda>_. ODE_sem I (OProd(OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) ODE ))) {0..t}
+                    (sol solves_ode (\<lambda>_. ODE_sem I (oprod(OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) ODE ))) {0..t}
                      {x. Predicates I vid2
                           (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-                                 (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> x))} \<and>
+                                 (mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> x))} \<and>
                     sol 0 = fst \<nu>) \<longrightarrow>
           \<omega> \<in> fml_sem I (Pc pid1)"
-     let ?my\<omega> = "mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab,bb) (sol t)"
+     let ?my\<omega> = "mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab,bb) (sol t)"
      assume t:"0 \<le> t"
-     assume aaba:"(aa, ba) = mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)"
-     assume sol:"(sol solves_ode (\<lambda>_. ODE_sem I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE))) {0..t}
+     assume aaba:"(aa, ba) = mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)"
+     assume sol:"(sol solves_ode (\<lambda>_. ODE_sem I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE))) {0..t}
       {x. Predicates I vid2
            (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-                  (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) x))}"
+                  (mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) x))}"
      assume sol0:"sol 0 = fst (ab, bb)"
      assume acbc:"(ac, bc) =
-     repd (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)) vid1
+     repd (mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)) vid1
       (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))
-        (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)))"
-     have bigEx:"(\<exists>\<nu> sol t. ((ab, bb), ?my\<omega>) = (\<nu>, mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> (sol t)) \<and>
+        (mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)))"
+     have bigEx:"(\<exists>\<nu> sol t. ((ab, bb), ?my\<omega>) = (\<nu>, mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> (sol t)) \<and>
                     0 \<le> t \<and>
-                    (sol solves_ode (\<lambda>_. ODE_sem I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE))) {0..t}
+                    (sol solves_ode (\<lambda>_. ODE_sem I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE))) {0..t}
                      {x. Predicates I vid2
                           (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-                                 (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> x))} \<and>
+                                 (mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> x))} \<and>
                     sol 0 = fst \<nu>)"
        apply(rule exI[where x="(ab, bb)"])
        apply(rule exI[where x="sol"])
@@ -362,35 +961,35 @@ proof -
        apply(rule conjI)
         using sol apply blast
        by (rule sol0)
-     have bigRes:"?my\<omega> \<in> fml_sem I (Pc pid1)" using bigAll bigEx by blast
+     have bigRes:"?my\<omega> \<in> fml_sem I (Pc pid1)" using bigNone bigEx by blast
      have notin1:"Inl vid1 \<notin> BVO ODE" using disj by auto
      have notin2:"Inr vid1 \<notin> BVO ODE" using disj by auto
      have ODE_sem:"ODE_sem I ODE (sol t) $ vid1 = 0"
-       using ODE_zero notin1 notin2 
+       using ODE_zero notin1 notin2  good
        by blast 
      have vec_eq:"(\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol t)) =
            (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-            (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)))"
+            (mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)))"
        apply(rule vec_extensionality)
        apply simp
-       using mk_v_agree[of I "(OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE)" "(ab, bb)" "(sol t)"]
+       using mk_v_agree[of I "(oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE)" "(ab, bb)" "(sol t)"]
        by(simp add: Vagree_def)
-     have sem_eq:"(?my\<omega> \<in> fml_sem I (Pc pid1)) = ((repd (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)) vid1
+     have sem_eq:"(?my\<omega> \<in> fml_sem I (Pc pid1)) = ((repd (mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)) vid1
      (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))
-       (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)))) \<in> fml_sem I (Pc pid1))"
+       (mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)))) \<in> fml_sem I (Pc pid1))"
        apply(rule coincidence_formula)
-         subgoal by simp
+         subgoal by simp apply(rule good) apply(rule good)
         subgoal by (rule Iagree_refl)
-       using mk_v_agree[of "I" "(OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE)" "(ab, bb)" "(sol t)"]
+       using mk_v_agree[of "I" "(oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE)" "(ab, bb)" "(sol t)"]
        unfolding Vagree_def 
        apply simp
        apply(erule conjE)+
        apply(erule allE[where x="vid1"])+
        apply(simp add: ODE_sem)
        using vec_eq by simp
-     show  "repd (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)) vid1
+     show  "repd (mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)) vid1
       (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))
-        (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)))
+        (mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)))
      \<in> fml_sem I (Pc pid1)"
        using bigRes sem_eq by blast
    next
@@ -398,29 +997,29 @@ proof -
      and aa ba ab bb sol 
      and t::real
      assume good_interp:"is_interp I"
-     assume all:"\<forall>\<omega>. (\<exists>\<nu> sol t. ((ab, bb), \<omega>) = (\<nu>, mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> (sol t)) \<and>
+     assume all:"\<forall>\<omega>. (\<exists>\<nu> sol t. ((ab, bb), \<omega>) = (\<nu>, mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> (sol t)) \<and>
                        0 \<le> t \<and>
-                       (sol solves_ode (\<lambda>_. ODE_sem I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE))) {0..t}
+                       (sol solves_ode (\<lambda>_. ODE_sem I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE))) {0..t}
                         {x. Predicates I vid2
                              (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-                                    (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> x))} \<and>
+                                    (mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> x))} \<and>
                        sol 0 = fst \<nu>) \<longrightarrow>
              (\<forall>\<omega>'. \<omega>' = repd \<omega> vid1 (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) \<omega>) \<longrightarrow> \<omega>' \<in> fml_sem I (Pc pid1))"
-      let ?my\<omega> = "mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)" 
+      let ?my\<omega> = "mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)" 
       assume t:"0 \<le> t"
-      assume aaba:"(aa, ba) = mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)"
+      assume aaba:"(aa, ba) = mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)"
       assume sol:"
-        (sol solves_ode (\<lambda>_. ODE_sem I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE))) {0..t}
+        (sol solves_ode (\<lambda>_. ODE_sem I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE))) {0..t}
          {x. Predicates I vid2
               (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-                    (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) x))}"
+                    (mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) x))}"
       assume sol0:"sol 0 = fst (ab, bb)"
-      have bigEx:"(\<exists>\<nu> sol t. ((ab, bb), ?my\<omega>) = (\<nu>, mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> (sol t)) \<and>
+      have bigEx:"(\<exists>\<nu> sol t. ((ab, bb), ?my\<omega>) = (\<nu>, mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> (sol t)) \<and>
                       0 \<le> t \<and>
-                      (sol solves_ode (\<lambda>_. ODE_sem I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE))) {0..t}
+                      (sol solves_ode (\<lambda>_. ODE_sem I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE))) {0..t}
                        {x. Predicates I vid2
                             (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-                                   (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> x))} \<and>
+                                   (mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) \<nu> x))} \<and>
                       sol 0 = fst \<nu>)"
         apply(rule exI[where x="(ab, bb)"])
         apply(rule exI[where x=sol])
@@ -431,40 +1030,41 @@ proof -
          apply(rule t)
         apply(rule conjI)
          using sol sol0 by(blast)+
-      have rep_sem_eq:"repd (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)) vid1
+      have rep_sem_eq:"repd (mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)) vid1
                  (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))
-                   (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)))  \<in> fml_sem I (Pc pid1)
+                   (mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)))  \<in> fml_sem I (Pc pid1)
          = (repd ?my\<omega> vid1 (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) ?my\<omega>) \<in> fml_sem I (Pc pid1))"
         apply(rule coincidence_formula)
-          subgoal by simp
+          subgoal by simp apply(rule good_interp) apply (rule good_interp)
          subgoal by (rule Iagree_refl)
         by(simp add: Vagree_def)
       have notin1:"Inl vid1 \<notin> BVO ODE" using disj by auto
       have notin2:"Inr vid1 \<notin> BVO ODE" using disj by auto
       have ODE_sem:"ODE_sem I ODE (sol t) $ vid1 = 0"
-        using ODE_zero notin1 notin2 
+        using ODE_zero notin1 notin2 good_interp
         by blast 
       have vec_eq:"
       (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-             (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t))) =
+             (mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t))) =
       (\<chi> i. sterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (sol t))"
         apply(rule vec_extensionality)
-        using mk_v_agree[of I "(OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE)" "(ab, bb)" "(sol t)"]
+        using mk_v_agree[of I "(oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE)" "(ab, bb)" "(sol t)"]
         by (simp add: Vagree_def)
       have sem_eq:
         "(repd ?my\<omega> vid1 (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) ?my\<omega>) \<in> fml_sem I (Pc pid1)) 
-     = (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t) \<in> fml_sem I (Pc pid1)) "
+     = (mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t) \<in> fml_sem I (Pc pid1)) "
         apply(rule coincidence_formula)
-          subgoal by simp
+          subgoal by simp apply(rule good_interp) apply(rule good_interp)
          subgoal by (rule Iagree_refl)
         using mk_v_agree[of I "(OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE)" "(ab, bb)" "(sol t)"]
         unfolding Vagree_def apply simp
         apply(erule conjE)+
         apply(erule allE[where x=vid1])+
-        by (simp add: ODE_sem vec_eq)
-      have some_sem:"repd (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)) vid1
+        using ODE_sem_assoc ODE_sem vec_eq
+        by (simp add: ODE_sem vec_eq )
+      have some_sem:"repd (mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t)) vid1
                 (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))
-                  (mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t))) \<in> fml_sem I (Pc pid1)"
+                  (mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t))) \<in> fml_sem I (Pc pid1)"
         using rep_sem_eq 
         using all bigEx by blast
       have bigImp:"(\<forall>\<omega>'. \<omega>' = repd ?my\<omega> vid1 (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) ?my\<omega>) \<longrightarrow> \<omega>' \<in> fml_sem I (Pc pid1))"
@@ -474,7 +1074,7 @@ proof -
         using some_sem by auto
       have fml_sem:"repd ?my\<omega> vid1 (dterm_sem I ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) ?my\<omega>) \<in> fml_sem I (Pc pid1)"
         using sem_eq bigImp by blast
-     show "mk_v I (OProd  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t) \<in> fml_sem I (Pc pid1)"
+     show "mk_v I (oprod  (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))ODE) (ab, bb) (sol t) \<in> fml_sem I (Pc pid1)"
        using fml_sem sem_eq by blast
    qed
 qed
@@ -484,66 +1084,80 @@ proof (auto simp only: fml_sem.simps prog_sem.simps DCaxiom_def valid_def iff_se
   fix I::"('sf,'sc,'sz) interp" and aa ba bb sol t
   assume "is_interp I"
     and all3:"\<forall>a b. (\<exists>sola. sol 0 = sola 0 \<and>
-                  (\<exists>t. (a, b) = mk_v I (OVar vid1) (sola 0, bb) (sola t) \<and>
-                        0 \<le> t \<and> (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. mk_v I (OVar vid1) (sola 0, bb) x \<in> Contexts I pid1 UNIV})) \<longrightarrow>
+                  (\<exists>t. (a, b) = mk_v I (OVar vid1 None) (sola 0, bb) (sola t) \<and>
+                        0 \<le> t \<and> (sola solves_ode (\<lambda>a b. \<chi> i. if i \<in> ODEBV I vid1 None then ODEs I vid1 None b $ i else 0)) {0..t} 
+                         {x. mk_v I (OVar vid1 None) (sola 0, bb) x \<in> Contexts I pid2 UNIV})) \<longrightarrow>
            (a, b) \<in> Contexts I pid3 UNIV"
     and all2:"\<forall>a b. (\<exists>sola. sol 0 = sola 0 \<and>
-                   (\<exists>t. (a, b) = mk_v I (OVar vid1) (sola 0, bb) (sola t) \<and>
-                        0 \<le> t \<and> (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. mk_v I (OVar vid1) (sola 0, bb) x \<in> Contexts I pid1 UNIV})) \<longrightarrow>
-           (a, b) \<in> Contexts I pid2 UNIV"
+                   (\<exists>t. (a, b) = mk_v I (OVar vid1 None) (sola 0, bb) (sola t) \<and>
+                        0 \<le> t \<and> (sola solves_ode (\<lambda>a b. \<chi> i. if i \<in> ODEBV I vid1 None then ODEs I vid1 None b $ i else 0)) {0..t} 
+                         {x. mk_v I (OVar vid1 None) (sola 0, bb) x \<in> Contexts I pid2 UNIV})) \<longrightarrow>
+           (a, b) \<in> Contexts I pid1 UNIV"
     and t:"0 \<le> t"
-    and aaba:"(aa, ba) = mk_v I (OVar vid1) (sol 0, bb) (sol t)"
-    and sol:"(sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
-       {x. mk_v I (OVar vid1) (sol 0, bb) x \<in> Contexts I pid1 UNIV \<and> mk_v I (OVar vid1) (sol 0, bb) x \<in> Contexts I pid3 UNIV}"
-    from sol have
-          sol1:"(sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. mk_v I (OVar vid1) (sol 0, bb) x \<in> Contexts I pid1 UNIV}"
-      by (metis (mono_tags, lifting) Collect_mono solves_ode_supset_range)
+    and aaba:"(aa, ba) = mk_v I (OVar vid1 None) (sol 0, bb) (sol t)"
+    and sol:"(sol solves_ode (\<lambda>a b. \<chi> i. if i \<in> ODEBV I vid1 None then ODEs I vid1 None b $ i else 0)) {0..t}
+       {x. mk_v I (OVar vid1 None) (sol 0, bb) x \<in> Contexts I pid2 UNIV \<and> 
+           mk_v I (OVar vid1 None) (sol 0, bb) x \<in> Contexts I pid3 UNIV}"
+    have sol1:"(sol solves_ode (\<lambda>a b. \<chi> i. if i \<in> ODEBV I vid1 None then ODEs I vid1 None b $ i else 0)) {0..t} 
+          {x. mk_v I (OVar vid1 None) (sol 0, bb) x \<in> Contexts I pid2 UNIV}"
+      apply(rule solves_ode_supset_range) apply(rule sol)
+    by auto
     from all2 have all2':"\<And>v. (\<exists>sola. sol 0 = sola 0 \<and>
-                   (\<exists>t. v = mk_v I (OVar vid1) (sola 0, bb) (sola t) \<and>
-                        0 \<le> t \<and> (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. mk_v I (OVar vid1) (sola 0, bb) x \<in> Contexts I pid1 UNIV})) \<Longrightarrow>
-           v \<in> Contexts I pid2 UNIV" by auto
-    show "mk_v I (OVar vid1) (sol 0, bb) (sol t) \<in> Contexts I pid2 UNIV" 
-      apply(rule all2'[of "mk_v I (OVar vid1) (sol 0, bb) (sol t)"])
+                   (\<exists>t. v = mk_v I (OVar vid1 None) (sola 0, bb) (sola t) \<and>
+                        0 \<le> t \<and> (sola solves_ode (\<lambda>a b. \<chi> i. if i \<in> ODEBV I vid1 None then ODEs I vid1 None b $ i else 0)) {0..t} {x. mk_v I (OVar vid1 None) (sola 0, bb) x \<in> Contexts I pid2 UNIV})) \<Longrightarrow>
+           v \<in> Contexts I pid1 UNIV" 
+     
+      using solves_ode_domainD by fastforce
+    show "mk_v I (OVar vid1 None) (sol 0, bb) (sol t) \<in> Contexts I pid1 UNIV" 
+      apply(rule all2'[of "mk_v I (OVar vid1 None) (sol 0, bb) (sol t)"])
       apply(rule exI[where x=sol])
       apply(rule conjI)
        subgoal by (rule refl)
-      subgoal using t sol1 by auto
+       subgoal 
+         apply(rule exI[where x=t])
+         apply(rule conjI)
+         subgoal using t sol1 by auto
+         apply(rule conjI) subgoal by (rule t)
+         using sol1 by auto
      done
 next
   fix I::"('sf,'sc,'sz) interp" and  aa ba bb sol t
   assume "is_interp I"
   and all3:"\<forall>a b. (\<exists>sola. sol 0 = sola 0 \<and>
-                (\<exists>t. (a, b) = mk_v I (OVar vid1) (sola 0, bb) (sola t) \<and>
-                     0 \<le> t \<and> (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. mk_v I (OVar vid1) (sola 0, bb) x \<in> Contexts I pid1 UNIV})) \<longrightarrow>
-        (a, b) \<in> Contexts I pid3 UNIV"
-  and all2:"\<forall>a b. (\<exists>sola. sol 0 = sola 0 \<and>
-                (\<exists>t. (a, b) = mk_v I (OVar vid1) (sola 0, bb) (sola t) \<and>
-                     0 \<le> t \<and>
-                     (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
-                       {x. mk_v I (OVar vid1) (sola 0, bb) x \<in> Contexts I pid1 UNIV \<and>
-                          mk_v I (OVar vid1) (sola 0, bb) x \<in> Contexts I pid3 UNIV})) \<longrightarrow>
-        (a, b) \<in> Contexts I pid2 UNIV"
+                     (\<exists>t. (a, b) = mk_v I (OVar vid1 None) (sola 0, bb) (sola t) \<and>
+                          0 \<le> t \<and>
+                          (sola solves_ode (\<lambda>a b. \<chi> i. if i \<in> ODEBV I vid1 None then ODEs I vid1 None b $ i else 0)) {0..t}
+                           {x. mk_v I (OVar vid1 None) (sola 0, bb) x \<in> Contexts I pid2 UNIV})) \<longrightarrow>
+             (a, b) \<in> Contexts I pid3 UNIV"
+  and all2:" \<forall>a b. (\<exists>sola. sol 0 = sola 0 \<and>
+                     (\<exists>t. (a, b) = mk_v I (OVar vid1 None) (sola 0, bb) (sola t) \<and>
+                          0 \<le> t \<and>
+                          (sola solves_ode (\<lambda>a b. \<chi> i. if i \<in> ODEBV I vid1 None then ODEs I vid1 None b $ i else 0)) {0..t}
+                           {x. mk_v I (OVar vid1 None) (sola 0, bb) x \<in> Contexts I pid2 UNIV \<and>
+                               mk_v I (OVar vid1 None) (sola 0, bb) x \<in> Contexts I pid3 UNIV})) \<longrightarrow>
+             (a, b) \<in> Contexts I pid1 UNIV"
   and t:"0 \<le> t"
-  and aaba:"(aa, ba) = mk_v I (OVar vid1) (sol 0, bb) (sol t)"
-  and sol:"(sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. mk_v I (OVar vid1) (sol 0, bb) x \<in> Contexts I pid1 UNIV}"
+  and aaba:"(aa, ba) = mk_v I (OVar vid1 None) (sol 0, bb) (sol t)"
+  and sol:"(sol solves_ode (\<lambda>a b. \<chi> i. if i \<in> ODEBV I vid1 None then ODEs I vid1 None b $ i else 0)) {0..t} {x. mk_v I (OVar vid1 None) (sol 0, bb) x \<in> Contexts I pid2 UNIV}"
   from all2 
   have all2':"\<And>v. (\<exists>sola. sol 0 = sola 0 \<and>
-                (\<exists>t. v = mk_v I (OVar vid1) (sola 0, bb) (sola t) \<and>
+                (\<exists>t. v = mk_v I (OVar vid1 None) (sola 0, bb) (sola t) \<and>
                      0 \<le> t \<and>
-                     (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
-                      {x. mk_v I (OVar vid1) (sola 0, bb) x \<in> Contexts I pid1 UNIV \<and>
-                          mk_v I (OVar vid1) (sola 0, bb) x \<in> Contexts I pid3 UNIV})) \<Longrightarrow>
-        v \<in> Contexts I pid2 UNIV"
+                     (sola solves_ode (\<lambda>a b. \<chi> i. if i \<in> ODEBV I vid1 None then ODEs I vid1 None b $ i else 0)) {0..t}
+                      {x. mk_v I (OVar vid1 None) (sola 0, bb) x \<in> Contexts I pid2 UNIV \<and>
+                          mk_v I (OVar vid1 None) (sola 0, bb) x \<in> Contexts I pid3 UNIV})) \<Longrightarrow>
+        v \<in> Contexts I pid1 UNIV"
     by auto
   from all3
   have all3':"\<And>v. (\<exists>sola. sol 0 = sola 0 \<and>
-                (\<exists>t. v = mk_v I (OVar vid1) (sola 0, bb) (sola t) \<and>
-                     0 \<le> t \<and> (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t} {x. mk_v I (OVar vid1) (sola 0, bb) x \<in> Contexts I pid1 UNIV})) \<Longrightarrow>
+                (\<exists>t. v = mk_v I (OVar vid1 None) (sola 0, bb) (sola t) \<and>
+                     0 \<le> t \<and> (sola solves_ode (\<lambda>a b. \<chi> i. if i \<in> ODEBV I vid1 None then ODEs I vid1 None b $ i else 0)) {0..t} 
+           {x. mk_v I (OVar vid1 None) (sola 0, bb) x \<in> Contexts I pid2 UNIV})) \<Longrightarrow>
         v \<in> Contexts I pid3 UNIV"
     by auto
-  have inp1:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> mk_v I (OVar vid1) (sol 0, bb) (sol s) \<in> Contexts I pid1 UNIV"
+  have inp1:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> mk_v I (OVar vid1 None) (sol 0, bb) (sol s) \<in> Contexts I pid2 UNIV"
     using sol solves_odeD atLeastAtMost_iff by blast
-  have inp3:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> mk_v I (OVar vid1) (sol 0, bb) (sol s) \<in> Contexts I pid3 UNIV"
+  have inp3:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> mk_v I (OVar vid1 None) (sol 0, bb) (sol s) \<in> Contexts I pid3 UNIV"
     apply(rule all3')
     subgoal for s 
       apply(rule exI [where x=sol])
@@ -557,16 +1171,16 @@ next
       subgoal using sol by (meson atLeastatMost_subset_iff order_refl solves_ode_subset)
       done
    done
-   have inp13:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> mk_v I (OVar vid1) (sol 0, bb) (sol s) \<in> Contexts I pid1 UNIV \<and> mk_v I (OVar vid1) (sol 0, bb) (sol s) \<in> Contexts I pid3 UNIV"
+   have inp13:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> mk_v I (OVar vid1 None) (sol 0, bb) (sol s) \<in> Contexts I pid2 UNIV \<and> mk_v I (OVar vid1 None) (sol 0, bb) (sol s) \<in> Contexts I pid3 UNIV"
      using inp1 inp3 by auto
-   have sol13:"(sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
-     {x. mk_v I (OVar vid1) (sol 0, bb) x \<in> Contexts I pid1 UNIV \<and> mk_v I (OVar vid1) (sol 0, bb) x \<in> Contexts I pid3 UNIV}"
+   have sol13:"(sol solves_ode (\<lambda>a b. \<chi> i. if i \<in> ODEBV I vid1 None then ODEs I vid1 None b $ i else 0)) {0..t}
+     {x. mk_v I (OVar vid1 None) (sol 0, bb) x \<in> Contexts I pid2 UNIV \<and> mk_v I (OVar vid1 None) (sol 0, bb) x \<in> Contexts I pid3 UNIV}"
      apply(rule solves_odeI)
       subgoal using sol by (rule solves_odeD)
      subgoal for s using inp13[of s] by auto
      done
-  show "mk_v I (OVar vid1) (sol 0, bb) (sol t) \<in> Contexts I pid2 UNIV"
-    using t sol13 all2'[of "mk_v I (OVar vid1) (sol 0, bb) (sol t)"] by auto
+  show "mk_v I (OVar vid1 None) (sol 0, bb) (sol t) \<in> Contexts I pid1 UNIV"
+    using t sol13 all2'[of "mk_v I (OVar vid1 None) (sol 0, bb) (sol t)"] by auto
 qed
 
 lemma DS_valid:"valid DSaxiom"
@@ -638,7 +1252,7 @@ proof -
       subgoal for i
         apply (cases "i = vid1")
          apply(auto  simp add: f0_def empty_def)
-      done
+        done
     done
   have prereq1b:"snd (?abba) = snd (mk_v I (OSing vid1 (f0 fid1)) (a,b) (?sol r))"
     using agrees aaba 
@@ -701,7 +1315,7 @@ proof -
     using req1 leq req3 req4 thisW by fastforce
   have sem_eq:"?abba \<in> fml_sem I (p1 vid3 vid1) \<longleftrightarrow> (aa,ba) \<in> fml_sem I (p1 vid3 vid1)"
     apply (rule coincidence_formula)
-      apply (auto simp add: aaba Vagree_def p1_def f0_def empty_def)
+      apply (auto simp add: aaba Vagree_def p1_def f0_def empty_def) apply(rule good_interp) apply(rule good_interp)
     subgoal using Iagree_refl by auto
     done
   from inPred sem_eq have  inPred':"(aa,ba) \<in> fml_sem I (p1 vid3 vid1)"
@@ -1152,118 +1766,97 @@ lemma dterm_sterm_dfree:
 (*  
 g(x)\<ge> h(x) \<rightarrow>  [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c]g(x) \<ge> h(x)
 *)                        
-lemma DIGeq_valid:"valid DIGeqaxiom"
+lemma DIGeq_valid:
+  fixes ODE::"('sf,'sz) ODE"  and \<theta>1 \<theta>2 ::"('sf,'sz)trm"
+  assumes osafe:"osafe ODE"
+  assumes free1:"dfree \<theta>1"
+  assumes free2:"dfree \<theta>2"
+  assumes BVO1:"FVT \<theta>1 \<subseteq> Inl ` ODE_dom ODE"
+  assumes BVO2:"FVT \<theta>2 \<subseteq> Inl ` ODE_dom ODE"
+  shows "valid (DIGeqaxiom ODE \<theta>1 \<theta>2)"
   unfolding DIGeqaxiom_def
   apply(unfold DIGeqaxiom_def valid_def impl_sem iff_sem)
-  apply(auto) (* 4 goals*)
+  apply(auto) (* 2 goals*)
   proof -
     fix I::"('sf,'sc,'sz) interp" and  b aa ba 
       and sol::"real \<Rightarrow> 'sz simple_state" 
       and t::real
-    let ?ODE = "OVar vid1"
+    assume good_interp:"is_interp I"
+    let ?ODE = "ODE"
     let ?\<phi> = "(\<lambda>t. mk_v I (?ODE) (sol 0, b) (sol t))"
     assume t:"0 \<le> t"
-      and sol:"(sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
-      {x. Predicates I vid1 (\<chi> i. dterm_sem I (empty i) (mk_v I ?ODE (sol 0, b) x))}"
-      and notin:" \<not>(Predicates I vid1 (\<chi> i. dterm_sem I (empty i) (sol 0, b)))"
-    have fsafe:"fsafe (Prop vid1 empty)" by (auto simp add: empty_def)
-    from sol have "Predicates I vid1 (\<chi> i. dterm_sem I (empty i) (?\<phi> 0))"
-      using t solves_ode_domainD[of sol "(\<lambda>a. ODEs I vid1)" "{0..t}"]  by auto
-    then have incon:"Predicates I vid1 (\<chi> i. dterm_sem I (empty i) ((sol 0, b)))"
-      using coincidence_formula[OF fsafe Iagree_refl[of I], of "(sol 0, b)" "?\<phi> 0"]
-      unfolding Vagree_def by (auto simp add: empty_def)
-    show "dterm_sem I (f1 fid2 vid1)  (mk_v I (OVar vid1) (sol 0, b) (sol t)) \<le> dterm_sem I (f1 fid1 vid1) (mk_v I (OVar vid1) (sol 0, b) (sol t))"
+      and sol:"(sol solves_ode (\<lambda>a b. ODE_sem I ODE b)) {0..t}
+      {x. mk_v I (ODE) (sol 0, b) x \<in> fml_sem I (DPredl vid1)}"
+      and notin:" (sol 0, b) \<notin> fml_sem I (DPredl vid1)"
+    have fsafe:"fsafe (DPredl vid1)" by (auto simp add: empty_def DPredl_def)
+    have VA:"Vagree (sol 0, b) (mk_v I (ODE) (sol 0, b) (sol 0)) (FVF (DPredl vid1))" 
+      using mk_v_agree[of I "?ODE" "(sol 0, b)" "sol 0"] unfolding Vagree_def DPredl_def apply auto 
+       by metis
+    from sol have "(?\<phi> 0)  \<in> fml_sem I (DPredl vid1)"
+      using t solves_ode_domainD[of sol "(\<lambda>a b. ODE_sem I ODE b  )" "{0..t}"] 
+        by auto
+    then have incon:"((sol 0, b))   \<in> fml_sem I (DPredl vid1)"
+      using coincidence_formula[OF fsafe good_interp good_interp Iagree_refl[of I], of "(sol 0, b)" "?\<phi> 0"] sol
+      VA by auto
+    show "dterm_sem I (\<theta>2)  (mk_v I (ODE) (sol 0, b) (sol t)) \<le> dterm_sem I (\<theta>1) (mk_v I (ODE) (sol 0, b) (sol t))"
       using notin incon by auto
-  next
-    fix I::"('sf,'sc,'sz) interp" and  b aa ba 
-      and sol::"real \<Rightarrow> 'sz simple_state" 
-      and t::real
-    let ?ODE = "OVar vid1"
-    let ?\<phi> = "(\<lambda>t. mk_v I (?ODE) (sol 0, b) (sol t))"
-    assume t:"0 \<le> t"
-      and sol:"(sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
-      {x. Predicates I vid1 (\<chi> i. dterm_sem I (empty i) (mk_v I ?ODE (sol 0, b) x))}"
-      and notin:" \<not>(Predicates I vid1 (\<chi> i. dterm_sem I (empty i) (sol 0, b)))"
-    have fsafe:"fsafe (Prop vid1 empty)" by (auto simp add: empty_def)
-    from sol have "Predicates I vid1 (\<chi> i. dterm_sem I (empty i) (?\<phi> 0))"
-      using t solves_ode_domainD[of sol "(\<lambda>a. ODEs I vid1)" "{0..t}"]  by auto
-    then have incon:"Predicates I vid1 (\<chi> i. dterm_sem I (empty i) ((sol 0, b)))"
-      using coincidence_formula[OF fsafe Iagree_refl[of I], of "(sol 0, b)" "?\<phi> 0"]
-      unfolding Vagree_def by (auto simp add: empty_def)
-    show "dterm_sem I (f1 fid2 vid1)  (mk_v I (OVar vid1) (sol 0, b) (sol t)) \<le> dterm_sem I (f1 fid1 vid1) (mk_v I (OVar vid1) (sol 0, b) (sol t))"
-      using notin incon by auto
-  next
-    fix I::"('sf,'sc,'sz) interp" and  b aa ba 
-      and sol::"real \<Rightarrow> 'sz simple_state" 
-      and t::real
-    let ?ODE = "OVar vid1"
-    let ?\<phi> = "(\<lambda>t. mk_v I (?ODE) (sol 0, b) (sol t))"
-    assume t:"0 \<le> t"
-    assume sol:"(sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
-        {x. Predicates I vid1 (\<chi> i. dterm_sem I (local.empty i) (mk_v I (OVar vid1) (sol 0, b) x))}"
-    assume notin:"\<not> Predicates I vid1 (\<chi> i. dterm_sem I (local.empty i) (sol 0, b))"
-    have fsafe:"fsafe (Prop vid1 empty)" by (auto simp add: empty_def)
-    from sol have "Predicates I vid1 (\<chi> i. dterm_sem I (empty i) (?\<phi> 0))"
-      using t solves_ode_domainD[of sol "(\<lambda>a. ODEs I vid1)" "{0..t}"]  by auto
-    then have incon:"Predicates I vid1 (\<chi> i. dterm_sem I (empty i) ((sol 0, b)))"
-      using coincidence_formula[OF fsafe Iagree_refl[of I], of "(sol 0, b)" "?\<phi> 0"]
-      unfolding Vagree_def by (auto simp add: empty_def)
-    show "dterm_sem I (f1 fid2 vid1) (mk_v I (OVar vid1) (sol 0, b) (sol t))
-       \<le> dterm_sem I (f1 fid1 vid1) (mk_v I (OVar vid1) (sol 0, b) (sol t))"
-      using incon notin by auto
 next
     fix I::"('sf,'sc,'sz) interp" and  b aa ba 
       and sol::"real \<Rightarrow> 'sz simple_state" 
       and t::real
-    let ?ODE = "OVar vid1"
+    let ?ODE = "ODE"
     let ?\<phi> = "(\<lambda>t. mk_v I (?ODE) (sol 0, b) (sol t))"
     assume good_interp:"is_interp I"
-    assume aaba:"(aa, ba) = mk_v I (OVar vid1) (sol 0, b) (sol t)"
+    assume aaba:"(aa, ba) = mk_v I (ODE) (sol 0, b) (sol t)"
     assume t:"0 \<le> t"
-    assume sol:"(sol solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
-        {x. Predicates I vid1 (\<chi> i. dterm_sem I (local.empty i) (mk_v I (OVar vid1) (sol 0, b) x))}"
-    assume box:"\<forall>a ba. (\<exists>sola. sol 0 = sola 0 \<and>
-                      (\<exists>t. (a, ba) = mk_v I (OVar vid1) (sola 0, b) (sola t) \<and>
+    assume sol:"(sol solves_ode (\<lambda>a b.  ODE_sem I ODE  b)) {0..t}
+        {x. mk_v I (ODE) (sol 0, b) x \<in> fml_sem I (DPredl vid1)}"
+    assume box:" \<forall>a ba. (\<exists>sola. sol 0 = sola 0 \<and>
+                      (\<exists>t. (a, ba) = mk_v I (ODE) (sola 0, b) (sola t) \<and>
                            0 \<le> t \<and>
-                           (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..t}
-                            {x. Predicates I vid1
-                                 (\<chi> i. dterm_sem I (local.empty i) (mk_v I (OVar vid1) (sola 0, b) x))})) \<longrightarrow>
-              directional_derivative I (f1 fid2 vid1) (a, ba) \<le> directional_derivative I (f1 fid1 vid1) (a, ba)"
-    assume geq0:"dterm_sem I (f1 fid2 vid1) (sol 0, b) \<le> dterm_sem I (f1 fid1 vid1) (sol 0, b)"
-    have free1:"dfree ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))"
-      by (auto intro: dfree.intros)
-    have free2:"dfree ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))"
-      by (auto intro: dfree.intros)
+                           (sola solves_ode (\<lambda>a b. ODE_sem I ODE b )) {0..t}
+                            {x. mk_v I (ODE) (sola 0, b) x \<in> fml_sem I (DPredl vid1)})) \<longrightarrow>
+              directional_derivative I (\<theta>2) (a, ba) \<le> directional_derivative I (\<theta>1) (a, ba)"
+    then have boxRule:" \<And>a ba. (\<exists>sola. sol 0 = sola 0 \<and>
+                      (\<exists>t. (a, ba) = mk_v I (ODE) (sola 0, b) (sola t) \<and>
+                           0 \<le> t \<and>
+                           (sola solves_ode (\<lambda>a b. ODE_sem I ODE b )) {0..t}
+                            {x. mk_v I (ODE) (sola 0, b) x \<in> fml_sem I (DPredl vid1)})) \<Longrightarrow>
+              directional_derivative I (\<theta>2) (a, ba) \<le> directional_derivative I (\<theta>1) (a, ba)"
+      using box by(simp)
+    assume geq0:"dterm_sem I (\<theta>2) (sol 0, b) \<le> dterm_sem I (\<theta>1) (sol 0, b)"
+    note ffree1 = free2
+    note ffree2 = free1
     from geq0 
-    have geq0':"sterm_sem I (f1 fid2 vid1) (sol 0) \<le> sterm_sem I (f1 fid1 vid1) (sol 0)"
-      unfolding f1_def using dterm_sterm_dfree[OF free1, of I "sol 0" b] dterm_sterm_dfree[OF free2, of I "sol 0" b] 
+    have geq0':"sterm_sem I (\<theta>2) (sol 0) \<le> sterm_sem I (\<theta>1) (sol 0)"
+      unfolding f1_def using dterm_sterm_dfree[OF ffree1, of I "sol 0" b] dterm_sterm_dfree[OF ffree2, of I "sol 0" b] 
       by auto  
     let ?\<phi>s = "\<lambda>x. fst (?\<phi> x)"
     let ?\<phi>t = "\<lambda>x. snd (?\<phi> x)"
-    let ?df1 = "(\<lambda>t. dterm_sem I (f1 fid2 vid1) (?\<phi> t))"
-    let ?f1 = "(\<lambda>t. sterm_sem I (f1 fid2 vid1) (?\<phi>s t))"
-    let ?f1' = "(\<lambda> s t'. t' * frechet I (f1 fid2 vid1) (?\<phi>s s) (?\<phi>t s))"
+    let ?df1 = "(\<lambda>t. dterm_sem I (\<theta>2) (?\<phi> t))"
+    let ?f1 = "(\<lambda>t. sterm_sem I (\<theta>2) (?\<phi>s t))"
+    let ?f1' = "(\<lambda> s t'. t' * frechet I (\<theta>2) (?\<phi>s s) (?\<phi>t s))"
     have dfeq:"?df1 = ?f1" 
       apply(rule ext)
       subgoal for t
-        using dterm_sterm_dfree[OF free1, of I "?\<phi>s t" "snd (?\<phi> t)"] unfolding f1_def expand_singleton by auto
+        using dterm_sterm_dfree[OF ffree1, of I "?\<phi>s t" "snd (?\<phi> t)"] unfolding f1_def expand_singleton by auto
       done
-    have free3:"dfree (f1 fid2 vid1)" unfolding f1_def by (auto intro: dfree.intros)
-    let ?df2 = "(\<lambda>t. dterm_sem I (f1 fid1 vid1) (?\<phi> t))"
-    let ?f2 = "(\<lambda>t. sterm_sem I (f1 fid1 vid1) (?\<phi>s t))"
-    let ?f2' = "(\<lambda>s t' . t' * frechet I (f1 fid1 vid1) (?\<phi>s s) (?\<phi>t s))"
+    note free3 = free2
+    let ?df2 = "(\<lambda>t. dterm_sem I (\<theta>1) (?\<phi> t))"
+    let ?f2 = "(\<lambda>t. sterm_sem I (\<theta>1) (?\<phi>s t))"
+    let ?f2' = "(\<lambda>s t' . t' * frechet I (\<theta>1) (?\<phi>s s) (?\<phi>t s))"
     let ?int = "{0..t}"
     have bluh:"\<And>x i. (Functions I i has_derivative (THE f'. \<forall>x. (Functions I i has_derivative f' x) (at x)) x) (at x)"
       using good_interp unfolding is_interp_def by auto
-    have blah:"(Functions I fid2 has_derivative (THE f'. \<forall>x. (Functions I fid2 has_derivative f' x) (at x)) (\<chi> i. if i = vid1 then sol t $ vid1 else 0)) (at (\<chi> i. if i = vid1 then sol t $ vid1 else 0))"
+    have blah:"(Functions I fid2 has_derivative (THE f'. \<forall>x. (Functions I fid2 has_derivative f' x) (at x)) (\<chi> i. sol t $ i)) (at (\<chi> i.  sol t $ i))"
       using bluh by auto
     have bigEx:"\<And>s. s \<in> {0..t} \<Longrightarrow>(\<exists>sola. sol 0 = sola 0 \<and>
          (\<exists>ta. (fst (?\<phi> s),
                 snd (?\<phi> s)) =
-               mk_v I (OVar vid1) (sola 0, b) (sola ta) \<and>
+               mk_v I (ODE) (sola 0, b) (sola ta) \<and>
                0 \<le> ta \<and>
-               (sola solves_ode (\<lambda>a. ODEs I vid1)) {0..ta}
-                {x. Predicates I vid1 (\<chi> i. dterm_sem I (local.empty i) (mk_v I (OVar vid1) (sol 0, b) x))}))"
+               (sola solves_ode (\<lambda>a b. ODE_sem I ODE b)) {0..ta}
+                {x.  (mk_v I (ODE) (sol 0, b) x) \<in> fml_sem I (DPredl vid1)}))"
       subgoal for s
         apply(rule exI[where x=sol])
         apply(rule conjI)
@@ -1277,37 +1870,33 @@ next
         using atLeastAtMost_iff atLeastatMost_subset_iff order_refl solves_ode_on_subset
         by (metis (no_types, lifting) subsetI)
       done
-    have box':"\<And>s. s \<in> {0..t} \<Longrightarrow> directional_derivative I (f1 fid2 vid1) (?\<phi>s s, ?\<phi>t s) 
-                                \<le> directional_derivative I (f1 fid1 vid1) (?\<phi>s s, ?\<phi>t s)"
-      subgoal for s
-      using box 
-      apply simp
-      apply (erule allE[where x="?\<phi>s s"])
-      apply (erule allE[where x="?\<phi>t s"])
-      using bigEx[of s] by auto 
-    done
-    have dsafe1:"dsafe (f1 fid2 vid1)" unfolding f1_def by (auto intro: dsafe.intros)
-    have dsafe2:"dsafe (f1 fid1 vid1)" unfolding f1_def by (auto intro: dsafe.intros)
-    have agree1:"Vagree (sol 0, b) (?\<phi> 0) (FVT (f1 fid2 vid1))"
-      using mk_v_agree[of I "(OVar vid1)" "(sol 0, b)" "fst (?\<phi> 0)"]
-      unfolding f1_def Vagree_def expand_singleton 
-      apply auto
+    have box':"\<And>s. s \<in> {0..t} \<Longrightarrow> directional_derivative I (\<theta>2) (?\<phi>s s, ?\<phi>t s) 
+                                \<le> directional_derivative I (\<theta>1) (?\<phi>s s, ?\<phi>t s)"
+      subgoal for s 
+        using bigEx[of s] box by metis
+    done 
+    have dsafe1:"dsafe (\<theta>2)" using dfree_is_dsafe[OF free2] by auto
+    have dsafe2:"dsafe (\<theta>1)" using dfree_is_dsafe[OF free1] by auto
+    have agree1:"Vagree (sol 0, b) (?\<phi> 0) (FVT (\<theta>2))"
+      using mk_v_agree[of I "(ODE)" "(sol 0, b)" "fst (?\<phi> 0)"]
+      unfolding f1_def Vagree_def expand_singleton   using BVO2
+      apply (auto simp add: DFunl_def)
       by (metis (no_types, lifting) Compl_iff Vagree_def fst_conv mk_v_agree mk_xode.simps semBV.simps)
-    have agree2:"Vagree (sol 0, b) (?\<phi> 0) (FVT (f1 fid1 vid1))"
-      using mk_v_agree[of I "(OVar vid1)" "(sol 0, b)" "fst (?\<phi> 0)"]
-      unfolding f1_def Vagree_def expand_singleton 
-      apply auto
+    have agree2:"Vagree (sol 0, b) (?\<phi> 0) (FVT (\<theta>1))"
+      using mk_v_agree[of I "(OVar vid1 None)" "(sol 0, b)" "fst (?\<phi> 0)"]
+      unfolding f1_def Vagree_def expand_singleton    using BVO1
+      apply (auto simp add: DFunl_def)
       by (metis (no_types, lifting) Compl_iff Vagree_def fst_conv mk_v_agree mk_xode.simps semBV.simps)
-    have sem_eq1:"dterm_sem I (f1 fid2 vid1) (sol 0, b) = dterm_sem I (f1 fid2 vid1) (?\<phi> 0)"
+    have sem_eq1:"dterm_sem I (\<theta>2) (sol 0, b) = dterm_sem I (\<theta>2) (?\<phi> 0)"
       using coincidence_dterm[OF dsafe1 agree1] by auto
-    then have sem_eq1':"sterm_sem I (f1 fid2 vid1) (sol 0) = sterm_sem I (f1 fid2 vid1) (?\<phi>s 0)"
-      using dterm_sterm_dfree[OF free1, of I "sol 0" "b"] 
-            dterm_sterm_dfree[OF free1, of I "(?\<phi>s 0)" "snd (?\<phi> 0)"]
+    then have sem_eq1':"sterm_sem I (\<theta>2) (sol 0) = sterm_sem I (\<theta>2) (?\<phi>s 0)"
+      using dterm_sterm_dfree[OF free2, of I "sol 0" "b"] 
+            dterm_sterm_dfree[OF free2, of I "(?\<phi>s 0)" "snd (?\<phi> 0)"]
       unfolding f1_def expand_singleton by auto
-    have sem_eq2:"dterm_sem I (f1 fid1 vid1) (sol 0, b) = dterm_sem I (f1 fid1 vid1) (?\<phi> 0)"
+    have sem_eq2:"dterm_sem I (\<theta>1) (sol 0, b) = dterm_sem I (\<theta>1) (?\<phi> 0)"
       using coincidence_dterm[OF dsafe2 agree2] by auto
-    then have sem_eq2':"sterm_sem I (f1 fid1 vid1) (sol 0) = sterm_sem I (f1 fid1 vid1) (?\<phi>s 0)" 
-      using dterm_sterm_dfree[OF free2, of I "sol 0" "b"] dterm_sterm_dfree[OF free2, of I "(?\<phi>s 0)" "snd (?\<phi> 0)"]
+    then have sem_eq2':"sterm_sem I (\<theta>1) (sol 0) = sterm_sem I (\<theta>1) (?\<phi>s 0)" 
+      using dterm_sterm_dfree[OF free1, of I "sol 0" "b"] dterm_sterm_dfree[OF free1, of I "(?\<phi>s 0)" "snd (?\<phi> 0)"]
       unfolding f1_def expand_singleton by auto
     have good_interp':"\<And>i x. (Functions I i has_derivative (THE f'. \<forall>x. (Functions I i has_derivative f' x) (at x)) x) (at x)"
       using good_interp unfolding is_interp_def by auto
@@ -1316,31 +1905,24 @@ next
         (f has_derivative f') (at x within s) \<Longrightarrow>
         (g has_derivative g') (at (f x) within f ` s) \<Longrightarrow> (g \<circ> f has_derivative g' \<circ> f') (at x within s)"
       by(auto intro: derivative_intros)
-    have sol1:"(sol solves_ode (\<lambda>_. ODE_sem I (OVar vid1))) {0..t} {x. mk_v I (OVar vid1) (sol 0, b) x \<in> fml_sem I (Prop vid1 empty)}"
+    have sol1:"(sol solves_ode (\<lambda>_. ODE_sem I (ODE))) {0..t} 
+        {x. mk_v I (ODE) (sol 0, b) x \<in> fml_sem I (DPredl vid1)}"
       using sol unfolding p1_def singleton_def empty_def by auto
-    have FVTsub1:"vid1 \<in> ODE_vars I (OVar vid1) \<Longrightarrow> FVT ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) \<subseteq> semBV I ((OVar vid1))"
-      apply auto
-      subgoal for x xa
-        apply(cases "xa = vid1")
-         by auto
-      done
-    have FVTsub2:"vid1 \<in> ODE_vars I (OVar vid1) \<Longrightarrow> FVT ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) \<subseteq> semBV I ((OVar vid1))"
-      apply auto
-      subgoal for x xa
-        apply(cases "xa = vid1")
-         by auto
-      done
-    have osafe:"osafe (OVar vid1)"
-      by auto
-    have deriv1:"\<And>s. vid1 \<in> ODE_vars I (OVar vid1) \<Longrightarrow> s \<in> ?int \<Longrightarrow> (?f1 has_derivative (?f1' s)) (at s within {0..t})"
+    have sub_lem:"Inl ` ODE_dom ODE \<subseteq> semBV I ODE"
+     by(induction ODE,auto)
+     have FVTsub1:"FVT \<theta>2 \<subseteq> semBV I ODE"
+     using sub_lem BVO2 by auto
+    have FVTsub2:"FVT \<theta>1 \<subseteq> semBV I ODE"
+     using sub_lem BVO1 by auto
+    have deriv1:"\<And>s. s \<in> ?int \<Longrightarrow> (?f1 has_derivative (?f1' s)) (at s within {0..t})"
       subgoal for s
-        using  rift_in_space_time[OF good_interp free1 osafe sol1 FVTsub1, of s]
+        using  rift_in_space_time[OF good_interp free2 osafe sol1 FVTsub1]
         unfolding f1_def expand_singleton directional_derivative_def
         by blast
       done
-    have deriv2:"\<And>s. vid1 \<in> ODE_vars I (OVar vid1) \<Longrightarrow> s \<in> ?int \<Longrightarrow> (?f2 has_derivative (?f2' s)) (at s within {0..t})"
+    have deriv2:"\<And>s. s \<in> ?int \<Longrightarrow> (?f2 has_derivative (?f2' s)) (at s within {0..t})"
       subgoal for s
-        using rift_in_space_time[OF good_interp free2 osafe sol1 FVTsub2, of s] 
+        using rift_in_space_time[OF good_interp free1 osafe sol1 FVTsub2, of s] 
         unfolding f1_def expand_singleton directional_derivative_def
         by blast
       done
@@ -1348,52 +1930,31 @@ next
       subgoal for s using box'[of s] 
         by (simp add: directional_derivative_def)
       done
-    have preserve_agree1:"vid1 \<notin> ODE_vars I (OVar vid1) \<Longrightarrow> VSagree (sol 0) (fst (mk_v I (OVar vid1) (sol 0, b) (sol t))) {vid1}"
-      using mk_v_agree[of I "OVar vid1" "(sol 0, b)" "sol t"]
+    have preserve_agree1:"\<And>S. S \<subseteq> -(ODE_vars I ODE) \<Longrightarrow> VSagree (sol 0) (fst (mk_v I ODE (sol 0, b) (sol t))) S"
+      using mk_v_agree[of I "ODE" "(sol 0, b)" "sol t"]
       unfolding Vagree_def VSagree_def
       by auto
-    have preserve_coincide1:
-      "vid1 \<notin> ODE_vars I (OVar vid1) \<Longrightarrow> 
-      sterm_sem I (f1 fid2 vid1) (fst (mk_v I (OVar vid1) (sol 0, b) (sol t)))
-     = sterm_sem I (f1 fid2 vid1) (sol 0)" 
-      using coincidence_sterm[of "(sol 0, b)" "(mk_v I (OVar vid1) (sol 0, b) (sol t))" "f1 fid2 vid1" I]
-      preserve_agree1 unfolding VSagree_def Vagree_def f1_def by auto
-    have preserve_coincide2:
-      "vid1 \<notin> ODE_vars I (OVar vid1) \<Longrightarrow> 
-      sterm_sem I (f1 fid1 vid1) (fst (mk_v I (OVar vid1) (sol 0, b) (sol t)))
-     = sterm_sem I (f1 fid1 vid1) (sol 0)" 
-      using coincidence_sterm[of "(sol 0, b)" "(mk_v I (OVar vid1) (sol 0, b) (sol t))" "f1 fid1 vid1" I]
-      preserve_agree1 unfolding VSagree_def Vagree_def f1_def by auto
     have "?f1 t \<le> ?f2 t"
       apply(cases "t = 0")
        subgoal using geq0' sem_eq1' sem_eq2' by auto  
       subgoal
-        apply(cases "vid1 \<in> ODE_vars I (OVar vid1)")
         subgoal
-          apply (rule MVT'[OF deriv2 deriv1, of t]) (* 8 subgoals *)
+          apply (rule MVT'[OF deriv2 deriv1, of t]) (* 6 subgoals *)
                  subgoal by auto
                 subgoal by auto
                subgoal for s using deriv2[of s] using leq by auto
-              using t leq geq0' sem_eq1' sem_eq2' by auto
-        subgoal
-          using geq0 
-          using dterm_sterm_dfree[OF free1, of I "sol 0" "b"]
-          using dterm_sterm_dfree[OF free2, of I "sol 0" "b"]
-          using preserve_coincide1 preserve_coincide2
-          by(simp add: f1_def)
-        done
-      done
+              using t leq geq0' sem_eq1' sem_eq2' by auto done done
     then 
-    show "       dterm_sem I (f1 fid2 vid1) (mk_v I (OVar vid1) (sol 0, b) (sol t))
-       \<le> dterm_sem I (f1 fid1 vid1) (mk_v I (OVar vid1) (sol 0, b) (sol t))
+    show "       dterm_sem I (\<theta>2) (mk_v I ODE (sol 0, b) (sol t))
+       \<le> dterm_sem I (\<theta>1) (mk_v I ODE (sol 0, b) (sol t))
 "
       using t 
       dterm_sterm_dfree[OF free2, of I "?\<phi>s t" "snd (?\<phi> t)"]
       dterm_sterm_dfree[OF free1, of I "?\<phi>s t" "snd (?\<phi> t)"]
       by (simp add: f1_def)
 qed 
-  
-  
+(*
+    
 lemma DIGr_valid:"valid DIGraxiom"
   unfolding DIGraxiom_def
   apply(unfold DIGraxiom_def valid_def impl_sem iff_sem)
@@ -1633,15 +2194,15 @@ next
     dterm_sterm_dfree[OF free1, of I "?\<phi>s t" "snd (?\<phi> t)"]
     using geq0 f1_def
     by (simp add: f1_def)
-qed 
-
+qed *)
+(*
 lemma DG_valid:"valid DGaxiom"
 proof -
   have osafe:"osafe (OSing vid1 (f1 fid1 vid1))" 
     by(auto simp add: osafe_Sing dfree_Fun dfree_Const f1_def expand_singleton)
   have fsafe:"fsafe (p1 vid1 vid1)" 
     by(auto simp add: p1_def dfree_Const)
-  have osafe2:"osafe (OProd (OSing vid1 (f1 fid1 vid1)) (OSing vid2 (Plus (Times (f1 fid2 vid1) (trm.Var vid2)) (f1 fid3 vid1))))"
+  have osafe2:"osafe (oprod (OSing vid1 (f1 fid1 vid1)) (OSing vid2 (Plus (Times (f1 fid2 vid1) (trm.Var vid2)) (f1 fid3 vid1))))"
     by(auto simp add: f1_def expand_singleton osafe.intros dfree.intros vne12)
   note sem = ode_alt_sem[OF osafe fsafe]
   note sem2 = ode_alt_sem[OF osafe2 fsafe]
@@ -1664,7 +2225,7 @@ proof -
                             (\<exists>x. Inl uu \<in> FVT (if x = vid1 then trm.Var vid1 else Const 0))}) \<longrightarrow>
              Predicates I vid2 (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (aa, ba))"
        then have 
-         bigAll:"
+         bigNone:"
 \<And>aa ba. (\<exists>sol t. (aa, ba) = mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol t) \<and>
                       0 \<le> t \<and>
                       (sol solves_ode (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)) {0..t}
@@ -1696,7 +2257,7 @@ proof -
      {x. x = vid2 \<or> x = vid1 \<or> x = vid2 \<or> x = vid1 \<or> Inl x \<in> Inl ` {x. x = vid2 \<or> x = vid1} \<or> x = vid1}"
        let ?sol = "(\<lambda>t. \<chi> i. if i = vid1 then sol t $ vid1 else 0)"
        let ?aaba' = "mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (?sol t)"
-     from bigAll[of "fst ?aaba'" "snd ?aaba'"] 
+     from bigNone[of "fst ?aaba'" "snd ?aaba'"] 
      have bigEx:"(\<exists>sol t. ?aaba' = mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol t) \<and>
                         0 \<le> t \<and>
                         (sol solves_ode (\<lambda>a b. \<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) b else 0)) {0..t}
@@ -1708,13 +2269,13 @@ proof -
        by simp
      have pre1:"?aaba' = mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (?sol t)" 
        by (rule refl)
-     have agreeL:"\<And>s. fst (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+     have agreeL:"\<And>s. fst (mk_v I (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                    (OSing vid2
                      (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                        ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
            (\<chi> y. if vid2 = y then 0 else fst (a, b) $ y, b) (sol s)) $ vid1 = sol s $ vid1"
        subgoal for s
-         using mk_v_agree[of I "(OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+         using mk_v_agree[of I "(oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                    (OSing vid2
                       (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                         ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))" "(\<chi> y. if vid2 = y then 0 else fst (a, b) $ y, b)" "(sol s)"]
@@ -1726,7 +2287,7 @@ proof -
          done
        have FV:"(FVF (p1 vid1 vid1)) = {Inl vid1}" unfolding p1_def expand_singleton
          apply auto subgoal for x xa apply(cases "xa = vid1") by auto done
-       have agree:"\<And>s. Vagree (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+       have agree:"\<And>s. Vagree (mk_v I (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                      (OSing vid2
                        (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                          ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
@@ -1881,7 +2442,7 @@ proof -
         ultimately show ?thesis by auto
       qed
       have res_stateX:"(fst ?res_state) $ vid1 = sol t $ vid1" 
-        using mk_v_agree[of I "(OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+        using mk_v_agree[of I "(oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                     (OSing vid2
                       (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                         ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))"
@@ -1912,43 +2473,44 @@ proof -
                 (OSing vid2
                   (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                     ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))))))"
-        then have ag:" Vagree (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+        then have ag:" Vagree (mk_v I (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                  (OSing vid2
                    (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                      ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
          (\<chi> y. if vid2 = y then 0 else fst (a, b) $ y, b) (sol t))
  (mk_xode I
-   (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+   (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
      (OSing vid2
        (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
          ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
    (sol t))
- (semBV I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+ (semBV I (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
             (OSing vid2
               (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                 ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))))))" by auto
-        have sembv:"(semBV I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+        have sembv:"(semBV I (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
             (OSing vid2
               (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                 ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))) = {Inl vid1, Inr vid1, Inl vid2, Inr vid2}" by auto
         have sub:"{Inl vid1} \<subseteq> {Inl vid1, Inr vid1, Inl vid2, Inr vid2}" by auto
-        have ag':"Vagree (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+        have ag':"Vagree (mk_v I (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                  (OSing vid2
                    (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                      ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
          (\<chi> y. if vid2 = y then 0 else fst (a, b) $ y, b) (sol t))
    (mk_xode I
-     (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+     (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
        (OSing vid2
          (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
            ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
      (sol t)) {Inl vid1}" using ag sembv agree_sub[OF sub] by auto
         then have "fst ?res_state $ vid1 = fst ((mk_xode I
-     (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+     (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
        (OSing vid2
          (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
            ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
-     (sol t))) $ vid1" unfolding Vagree_def by blast
+     (sol t))) $ vid1" unfolding Vagree_def 
+           (*by blast *)
         moreover have "... = sol t $ vid1" by auto
         ultimately show "?thesis" by linarith
       qed
@@ -1968,8 +2530,8 @@ proof -
 subgoal for I a b r aa ba sol t
 proof -
   assume good_interp:"is_interp I"
-  assume bigAll:"    \<forall>aa ba. (\<exists>sol t. (aa, ba) =
-                     mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+  assume bigNone:"    \<forall>aa ba. (\<exists>sol t. (aa, ba) =
+                     mk_v I (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                               (OSing vid2
                                 (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                                   ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
@@ -1980,7 +2542,7 @@ proof -
                              (\<chi> i. if i = vid2 then sterm_sem I (Plus (Times (f1 fid2 vid1) (trm.Var vid2)) (f1 fid3 vid1)) b else 0)))
                       {0..t} {x. Predicates I vid1
                                   (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-                                         (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+                                         (mk_v I (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                                                    (OSing vid2
                                                      (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                                                        ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
@@ -2378,14 +2940,14 @@ proof -
       by(rule solves_ode_subset, rule sol_new, rule sub')
     let ?soly = "ll_new.flow 0 r"
     let ?sol' = "(\<lambda>t. \<chi> i. if i = vid2 then ?soly t else sol t $ i)" 
-    let ?aaba' = "mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+    let ?aaba' = "mk_v I (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                              (OSing vid2
                                (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                                  ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))))) 
                          (\<chi> y. if vid2 = y then r else fst (a, b) $ y, b) 
                          (?sol' t)"
     have duh:"(fst ?aaba', snd ?aaba') = ?aaba'" by auto
-    note bigEx = spec[OF spec[OF bigAll, where x="fst ?aaba'"], where x="snd ?aaba'"]
+    note bigEx = spec[OF spec[OF bigNone, where x="fst ?aaba'"], where x="snd ?aaba'"]
     have sol_deriv:"\<And>s. s \<in> {0..t} \<Longrightarrow> (sol has_derivative (\<lambda>xa. xa *\<^sub>R (\<chi> i. if i = vid1 then sterm_sem I (f1 fid1 vid1) (sol s) else 0))) (at s within {0..t})"
        using sol apply simp
        by(drule solves_odeD(1), auto simp add: has_vderiv_on_def has_vector_derivative_def)
@@ -2497,20 +3059,20 @@ proof -
        subgoal for s
          using inner_deriv[of s] deriv_eta[of s] by auto done
      have FVT:"\<And>i. FVT (if i = vid1 then trm.Var vid1 else Const 0) \<subseteq> {Inl vid1}" by auto
-     have agree:"\<And>s. Vagree (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol s)) (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+     have agree:"\<And>s. Vagree (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol s)) (mk_v I (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                   (OSing vid2
                     (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                       ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
           (\<chi> y. if vid2 = y then r else fst (a, b) $ y, b) (\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i)) {Inl vid1}"
        subgoal for s
          using mk_v_agree [of "I" "(OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))" "(a, b)" "(sol s)"]
-         using mk_v_agree [of I "(OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+         using mk_v_agree [of I "(oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                   (OSing vid2
                     (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                       ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))" "(\<chi> y. if vid2 = y then r else fst (a, b) $ y, b)" "(\<chi> i. if i = vid2 then ll_new.flow 0 r s else sol s $ i)"]
          unfolding Vagree_def using vne12 by simp
        done
-     have agree':"\<And>s i. Vagree (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol s)) (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+     have agree':"\<And>s i. Vagree (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol s)) (mk_v I (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                   (OSing vid2
                     (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                       ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
@@ -2519,7 +3081,7 @@ proof -
      have safe:"\<And>i. dsafe (if i = vid1 then trm.Var vid1 else Const 0)" subgoal for i apply(cases "i = vid1", auto) done done           
      have dterm_sem_eq:"\<And>s i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol s)) 
        = dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-       (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+       (mk_v I (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                   (OSing vid2
                     (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                       ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
@@ -2527,7 +3089,7 @@ proof -
        subgoal for s i using coincidence_dterm[OF safe[of i] agree'[of s i], of I] by auto done
      have dterm_vec_eq:"\<And>s. (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol s)))
        = (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-       (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+       (mk_v I (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                   (OSing vid2
                     (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                       ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
@@ -2541,7 +3103,7 @@ proof -
                (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol s))) \<Longrightarrow>
 Predicates I vid1
  (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-        (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+        (mk_v I (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                   (OSing vid2
                     (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                       ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
@@ -2551,7 +3113,7 @@ Predicates I vid1
   s \<le> t \<Longrightarrow>
   Predicates I vid1
    (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-          (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+          (mk_v I (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                     (OSing vid2
                       (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                         ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
@@ -2566,7 +3128,7 @@ Predicates I vid1
         (\<chi> i. if i = vid2 then sterm_sem I (Plus (Times (f1 fid2 vid1) (trm.Var vid2)) (f1 fid3 vid1)) b else 0)))
  {0..t} {x. Predicates I vid1
              (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-                    (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+                    (mk_v I (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                               (OSing vid2
                                 (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                                   ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
@@ -2585,7 +3147,7 @@ Predicates I vid1
  {y. y = vid2 \<or> y = vid1 \<or> y = vid2 \<or> y = vid1 \<or> (\<exists>x. Inl y \<in> FVT (if x = vid1 then trm.Var vid1 else Const 0))} "
        by (auto simp add: set_eq)
      have bigPre:"(\<exists>sol t. (fst ?aaba', snd ?aaba') =
-                    mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+                    mk_v I (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                              (OSing vid2
                                (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                                  ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
@@ -2596,7 +3158,7 @@ Predicates I vid1
                             (\<chi> i. if i = vid2 then sterm_sem I (Plus (Times (f1 fid2 vid1) (trm.Var vid2)) (f1 fid3 vid1)) b else 0)))
                      {0..t} {x. Predicates I vid1
                                  (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0)
-                                        (mk_v I (OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+                                        (mk_v I (oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                                                   (OSing vid2
                                                     (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                                                       ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))
@@ -2622,7 +3184,7 @@ Predicates I vid1
        using mp[OF bigEx bigPre] by auto
      let ?other_state = "(mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol t))"
      have agree:"Vagree (?aaba') (?other_state) {Inl vid1} "
-       using mk_v_agree [of "I" "(OProd (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
+       using mk_v_agree [of "I" "(oprod (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))
                  (OSing vid2
                    (Plus (Times ($f fid2 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)) (trm.Var vid2))
                      ($f fid3 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0)))))"
@@ -2650,7 +3212,9 @@ Predicates I vid1
             (mk_v I (OSing vid1 ($f fid1 (\<lambda>i. if i = vid1 then trm.Var vid1 else Const 0))) (a, b) (sol t)))"
      using pred_sem dsem_eq by auto
 qed
+
 done
 qed
+*)
 end end
 

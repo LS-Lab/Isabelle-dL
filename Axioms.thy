@@ -1,10 +1,10 @@
 theory "Axioms" 
 imports
-  "../Ordinary_Differential_Equations/ODE_Analysis"
-  "./Ids"
-  "./Lib"
-  "./Syntax"
-  "./Denotational_Semantics"
+  Ordinary_Differential_Equations.ODE_Analysis
+  "Ids"
+  "Lib"
+  "Syntax"
+  "Denotational_Semantics"
 begin context ids begin
 
 section \<open>Axioms\<close>
@@ -19,6 +19,134 @@ text \<open>
   ODE's. Differential axioms are handled separately because the proofs are significantly more involved.
   \<close>
 named_theorems axiom_defs "Axiom definitions"
+named_theorems axrule_defs "Axiomatic Rule definitions"
+
+
+definition AllElimAxiom::"('sf,'sc,'sz) formula"
+  where [axiom_defs]:"AllElimAxiom \<equiv> (Forall vid1 (Pc pid1)) \<rightarrow> (Pc pid1)"
+
+lemma AllElimAxiom_valid:"valid AllElimAxiom"
+proof (unfold AllElimAxiom_def, unfold valid_def, simp, rule allI, rule impI, rule allI, rule allI, rule impI)
+  fix I::"('sf,'sc,'sz)interp" and  a b
+  assume good_interp:"is_interp I"
+  assume all:"\<forall>r. (\<chi> y. if vid1 = y then r else fst (a, b) $ y, b) \<in> Contexts I pid1 UNIV"
+  have eq:"(\<chi> y. if vid1 = y then a $ vid1 else fst (a, b) $ y, b) = (a,b)"
+    by(auto, rule vec_extensionality,auto)
+  show "(a, b) \<in> Contexts I pid1 UNIV"
+    using spec[OF all, of "a $ vid1"] eq by auto
+qed
+
+(* [a](p_(||)&q_(||)) <-> [a]p_(||)&[a]q_(||)" *)
+definition BoxSplitAxiom::"('sf,'sc,'sz) formula"
+  where [axiom_defs]:"BoxSplitAxiom \<equiv> 
+([[Pvar vid1]](And (Pc pid1) (Pc pid2)))
+\<leftrightarrow>  (And ([[Pvar vid1]](Pc pid1))
+         ([[Pvar vid1]](Pc pid2)))
+"
+
+definition ImpSelfAxiom::"('sf,'sc,'sz) formula"
+  where [axiom_defs]:"ImpSelfAxiom \<equiv> 
+Equiv
+ ((Prop vid1 empty) \<rightarrow>(Prop vid1 empty))
+ TT"
+
+(* s() = t() -> (ctxF_(s()) <-> ctxF_(t()))
+ *)
+definition constFcongAxiom::"('sf,'sc,'sz) formula"
+  where [axiom_defs]:"constFcongAxiom \<equiv> 
+Implies
+ (Equals (Function fid1 empty) (Function fid2 empty))
+ (Equiv 
+   (Prop vid1 (singleton (Function fid1 empty))) 
+   (Prop vid1 (singleton (Function fid2 empty))))
+"
+
+lemma constFcong_valid:"valid constFcongAxiom"
+proof (simp add: constFcongAxiom_def valid_def, rule allI, rule impI, rule allI, rule allI, rule impI, unfold empty_def)
+  fix I::"('sf,'sc,'sz) interp" and a b
+  assume good_interp:"is_interp I"
+  assume fn:"Functions I fid1 (\<chi> i. dterm_sem I (Const 0) (a, b)) = Functions I fid2 (\<chi> i. dterm_sem I (Const 0) (a, b))" 
+  have vec_eq:"(\<chi> i. dterm_sem I (if i = vid1 then $f fid1 (\<lambda>i. Const 0) else Const 0) (a, b)) = (\<chi> i. dterm_sem I (if i = vid1 then $f fid2 (\<lambda>i. Const 0) else Const 0) (a, b))"
+    apply(rule vec_extensionality)
+    using fn by (auto simp add: empty_def)
+  then show "Predicates I vid1 (\<chi> i. dterm_sem I (if i = vid1 then $f fid1 (\<lambda>i. Const 0)  else Const 0) (a, b)) =
+             Predicates I vid1 (\<chi> i. dterm_sem I (if i = vid1 then $f fid2 (\<lambda>i. Const 0)  else Const 0) (a, b))"
+    by auto
+qed
+
+definition assignAnyAxiom::"('sf,'sc,'sz) formula"
+  where [axiom_defs]:"assignAnyAxiom \<equiv>
+Equiv
+ (Box (AssignAny vid1) (Pc pid1))
+ (Forall vid1 (Pc pid1))"
+
+lemma assignAny_valid:"valid assignAnyAxiom"
+  unfolding assignAnyAxiom_def valid_def Box_def Equiv_def Or_def by auto
+
+definition assignEqAxiom::"('sf,'sc,'sz) formula"
+  where [axiom_defs]:"assignEqAxiom \<equiv> 
+Equiv 
+  ([[Assign vid1 (Function fid1 empty)]](P pid1))
+  (Forall vid1 (Implies (Equals (Var vid1) (Function fid1 empty)) (P pid1)))"
+
+lemma assignEq_valid:"valid assignEqAxiom"
+proof (unfold assignEqAxiom_def, unfold valid_def, rule allI, rule allI, rule impI, simp)
+  fix I::"('sf,'sc,'sz) interp" and \<nu>
+  assume "is_interp I"
+  have dir1:"((\<chi> y. if vid1 = y then Functions I fid1 (\<chi> i. dterm_sem I (local.empty i) \<nu>) else fst \<nu> $ y, snd \<nu>) \<in> fml_sem I (P pid1)) \<Longrightarrow>
+           (\<forall>r. r = Functions I fid1 (\<chi> i. dterm_sem I (local.empty i) (\<chi> y. if vid1 = y then r else fst \<nu> $ y, snd \<nu>)) \<longrightarrow>
+                (\<chi> y. if vid1 = y then r else fst \<nu> $ y, snd \<nu>) \<in> fml_sem I (P pid1))"
+  proof (auto)
+    fix r
+    assume f1:"(\<chi> y. if vid1 = y then Functions I fid1 (\<chi> i. dterm_sem I (local.empty i) \<nu>) else fst \<nu> $ y, snd \<nu>) \<in> fml_sem I (P pid1)"
+    assume  f:"r = Functions I fid1 (\<chi> i. dterm_sem I (local.empty i) (\<chi> y. if vid1 = y then r else fst \<nu> $ y, snd \<nu>))"
+    have eq:"(\<chi> y. if vid1 = y then r else fst \<nu> $ y) 
+           = (\<chi> y. if vid1 = y then Functions I fid1 (\<chi> i. dterm_sem I (local.empty i) \<nu>) else fst \<nu> $ y)"
+      apply(rule vec_extensionality)
+      using f by (auto simp add: empty_def)
+    show "(\<chi> y. if vid1 = y then r else fst \<nu> $ y, snd \<nu>) \<in> fml_sem I (P pid1)"
+      using f1 eq by auto
+  qed
+  have dir2:"(\<forall>r. r = Functions I fid1 (\<chi> i. dterm_sem I (local.empty i) (\<chi> y. if vid1 = y then r else fst \<nu> $ y, snd \<nu>)) \<longrightarrow>
+                (\<chi> y. if vid1 = y then r else fst \<nu> $ y, snd \<nu>) \<in> fml_sem I (P pid1)) \<Longrightarrow>
+    ((\<chi> y. if vid1 = y then Functions I fid1 (\<chi> i. dterm_sem I (local.empty i) \<nu>) else fst \<nu> $ y, snd \<nu>) \<in> fml_sem I (P pid1))"
+  proof -
+    assume f:"(\<forall>r. r = Functions I fid1 (\<chi> i. dterm_sem I (local.empty i) (\<chi> y. if vid1 = y then r else fst \<nu> $ y, snd \<nu>)) \<longrightarrow>
+                (\<chi> y. if vid1 = y then r else fst \<nu> $ y, snd \<nu>) \<in> fml_sem I (P pid1))"
+    then have ff:"(\<And>r. r = Functions I fid1 (\<chi> i. dterm_sem I (local.empty i) (\<chi> y. if vid1 = y then r else fst \<nu> $ y, snd \<nu>)) \<Longrightarrow>
+                (\<chi> y. if vid1 = y then r else fst \<nu> $ y, snd \<nu>) \<in> fml_sem I (P pid1))"
+      by auto
+    show "((\<chi> y. if vid1 = y then Functions I fid1 (\<chi> i. dterm_sem I (local.empty i) \<nu>) else fst \<nu> $ y, snd \<nu>) \<in> fml_sem I (P pid1))"
+      apply(rule ff)
+      by(auto simp add: empty_def)
+    qed
+  show 
+"((\<chi> y. if vid1 = y then Functions I fid1 (\<chi> i. dterm_sem I (local.empty i) \<nu>) else fst \<nu> $ y, snd \<nu>) \<in> fml_sem I (P pid1)) =
+           (\<forall>r. r = Functions I fid1 (\<chi> i. dterm_sem I (local.empty i) (\<chi> y. if vid1 = y then r else fst \<nu> $ y, snd \<nu>)) \<longrightarrow>
+                (\<chi> y. if vid1 = y then r else fst \<nu> $ y, snd \<nu>) \<in> fml_sem I (P pid1))"
+  using dir1 dir2 by blast
+qed
+
+definition allInstAxiom::"('sf,'sc,'sz) formula"
+  where [axiom_defs]:"allInstAxiom \<equiv> Implies (Forall vid1 (Prop vid1 (singleton (Var vid1)))) ( Prop vid1(singleton (Function fid1 empty)))"
+
+lemma allInst_valid:"valid allInstAxiom"
+proof (unfold allInstAxiom_def, unfold valid_def, rule allI, rule allI, rule impI, simp, rule impI)
+  fix I::"('sf,'sc,'sz) interp" and \<nu>
+  let ?f = "$f fid1 local.empty"
+  let ?fs = "dterm_sem I ?f \<nu>"
+  assume "is_interp I"
+  assume pre:"(\<forall>r. Predicates I vid1
+                 (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (\<chi> y. if vid1 = y then r else fst \<nu> $ y, snd \<nu>)))"
+  have arg_eq:"(\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const 0) (\<chi> y. if vid1 = y then ?fs else fst \<nu> $ y, snd \<nu>))
+                  = (\<chi> i. dterm_sem I (if i = vid1 then ?f else Const 0) (fst \<nu> , snd \<nu>))"
+    by(rule vec_extensionality,auto)
+  show "Predicates I vid1 (\<chi> i. dterm_sem I (if i = vid1 then ?f else Const 0) \<nu>)"
+    using spec[OF pre, of ?fs] arg_eq by auto
+qed
+
+definition EquivReflexiveAxiom::"('sf,'sc,'sz) formula"
+  where [axiom_defs]:"EquivReflexiveAxiom \<equiv> (Prop vid1 empty) \<leftrightarrow> (Prop  vid1 empty)"
 
 definition assign_axiom :: "('sf, 'sc, 'sz) formula"
 where [axiom_defs]:"assign_axiom \<equiv>
@@ -26,7 +154,8 @@ where [axiom_defs]:"assign_axiom \<equiv>
     \<leftrightarrow> Prop vid1 (singleton ($f fid1 empty))"
 
 definition diff_assign_axiom :: "('sf, 'sc, 'sz) formula"
-where [axiom_defs]:"diff_assign_axiom \<equiv>
+  where [axiom_defs]:"diff_assign_axiom \<equiv>
+(* [x_':=f();]p(x_') <-> p(f())*)
   ([[DiffAssign vid1  ($f fid1 empty)]] (Prop vid1 (singleton (DiffVar vid1))))
     \<leftrightarrow> Prop vid1 (singleton ($f fid1 empty))"
 
@@ -62,12 +191,82 @@ definition Ibroken :: "('sf, 'sc, 'sz) formula"
     \<rightarrow> ($P [] \<rightarrow> ([[($$a)**]]$P [])))"*)
 
 definition Iaxiom :: "('sf, 'sc, 'sz) formula"
-where [axiom_defs]:"Iaxiom \<equiv> 
-([[($\<alpha> vid1)**]](Predicational pid1 \<rightarrow> ([[$\<alpha> vid1]]Predicational pid1)))
-  \<rightarrow>((Predicational pid1 \<rightarrow> ([[($\<alpha> vid1)**]]Predicational pid1)))"
+  where [axiom_defs]:"Iaxiom \<equiv> 
+(Pc pid1  && ([[Loop(Pvar vid1)]](Pc pid1 \<rightarrow> ([[Pvar vid1]] Pc pid1)))) \<rightarrow> ([[Loop(Pvar vid1)]]Pc pid1)"
+(*([[($\<alpha> vid1)**]](Predicational pid1 \<rightarrow> ([[$\<alpha> vid1]]Predicational pid1)))
+  \<rightarrow>((Predicational pid1 \<rightarrow> ([[($\<alpha> vid1)**]]Predicational pid1)))*)
 
 definition Vaxiom :: "('sf, 'sc, 'sz) formula"
 where [axiom_defs]:"Vaxiom \<equiv> ($\<phi> vid1 empty) \<rightarrow> ([[$\<alpha> vid1]]($\<phi> vid1 empty))"
+
+(*  vid1 (singleton (f1 fid1 vid1))) (Prop vid1 (singleton (f1 fid2 vid1)))*)
+definition CEaxrule :: "('sf,'sc,'sz) rule"
+  where [axrule_defs]:"CEaxrule \<equiv> ([  ([],[Equiv(Pc pid1 ) (Pc pid2)])  ],    
+([], [Equiv(InContext pid3 (Pc pid1)) (InContext pid3 (Pc pid2))]))"
+
+lemma sound_CEaxrule: "sound CEaxrule"
+proof (unfold CEaxrule_def,rule soundI)
+  fix I::"('sf,'sc,'sz) interp"
+  assume good_interp:"is_interp I"
+  assume pres:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [([], [Pc pid1 \<leftrightarrow> Pc pid2])] \<Longrightarrow> seq_sem I ([([], [Pc pid1 \<leftrightarrow> Pc pid2])] ! i) = UNIV)"
+  have pre:"fml_sem I (Pc pid1) = fml_sem I (Pc pid2)"
+    using pres[of 0] by(auto simp add: Equiv_def Or_def TT_def FF_def)
+  show "seq_sem I ([], [InContext pid3 (Pc pid1) \<leftrightarrow> InContext pid3 (Pc pid2)]) = UNIV"
+    using pre by(auto simp add: pre)
+qed
+
+definition CTaxrule :: "('sf,'sc,'sz) rule"
+  where [axrule_defs]:
+"CTaxrule \<equiv> ([],([],[]))"
+
+definition CQaxrule :: "('sf,'sc,'sz) rule"
+  where [axrule_defs]:"CQaxrule \<equiv> ([   ([],[Equals ($$F fid1) ($$F fid2)])   ],
+  ([],[Equiv(Prop vid3 (singleton ($$F fid1)))(Prop vid3 (singleton ($$F fid2)))]))"
+
+lemma sound_CQaxrule: "sound CQaxrule"
+proof (unfold CQaxrule_def,rule soundI)
+  fix I::"('sf,'sc,'sz) interp"
+  assume good_interp:"is_interp I"
+  assume pres:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [([], [Equals ($$F fid1) ($$F fid2)])] \<Longrightarrow> seq_sem I ([([], [Equals ($$F fid1) ($$F fid2)])] ! i) = UNIV)"
+  have pre:"fml_sem I (Equals ($$F fid1) ($$F fid2)) = UNIV"
+    using pres[of 0] by(auto simp add: Equiv_def Or_def TT_def FF_def pres[of 0])
+  then have pre2:"dterm_sem I ($$F fid1) = dterm_sem I ($$F fid2)"
+    using pres[of 0] apply(auto simp add: Equiv_def Or_def TT_def FF_def pres[of 0])
+    apply(rule ext)
+    using pre by auto
+  have vec_eq:"\<And>a b. (\<chi> i. dterm_sem I (if i = vid1 then $$F fid1 else Const 0) (a, b)) = (\<chi> i. dterm_sem I (if i = vid1 then $$F fid2 else Const 0) (a, b))"
+    apply(rule vec_extensionality)
+    using pre2 by(auto)
+  show "seq_sem I ([], [Equiv(Prop vid3 (singleton ($$F fid1)))(Prop vid3 (singleton ($$F fid2)))]) = UNIV"
+    using pre2 vec_eq by(auto simp add: pre2 vec_eq)
+qed
+
+definition Gaxrule :: "('sf,'sc,'sz) rule"
+where [axrule_defs]:"Gaxrule \<equiv> ([   ([],[(P pid1)])   ],   ([],[ ([[Pvar vid1]](P pid1)) ]))"
+
+lemma sound_Gaxrule: "sound Gaxrule"
+proof (unfold Gaxrule_def,rule soundI)
+  fix I::"('sf,'sc,'sz) interp"
+  assume good_interp:"is_interp I"
+  assume pres:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [([], [P pid1])] \<Longrightarrow> seq_sem I ([([], [P pid1])] ! i) = UNIV)"
+  then have pre:"(\<And>\<nu>. \<nu> \<in> fml_sem I (P pid1))" using pres[of 0] by(auto simp add: TT_def FF_def Or_def Implies_def)
+  show "seq_sem I ([], [([[$\<alpha> vid1]]P pid1)]) = UNIV"
+    by(auto simp add: pre)
+qed
+
+definition monbrule :: "('sf,'sc,'sz) rule"
+where [axrule_defs]:"monbrule \<equiv> ([   ([P pid1],[(P pid2)])   ],   ([([[Pvar vid1]](P pid1))],[ ([[Pvar vid1]](P pid2)) ]))"
+
+lemma sound_monbrule: "sound monbrule"
+proof (unfold monbrule_def,rule soundI)
+  fix I::"('sf,'sc,'sz) interp"
+  assume good_interp:"is_interp I"
+  assume pres:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [([P pid1], [P pid2])] \<Longrightarrow> seq_sem I ([([P pid1], [P pid2])] ! i) = UNIV)"
+  then have pre:"\<And>\<nu>. \<nu> \<in> fml_sem I (P pid1) \<Longrightarrow> \<nu> \<in> fml_sem I (P pid2)"
+    using pres[of 0] by(auto simp add: FF_def TT_def Implies_def Or_def)
+  then show "seq_sem I ([([[$\<alpha> vid1]]P pid1)], [([[$\<alpha> vid1]]P pid2)]) = UNIV"
+    by(auto simp add: FF_def TT_def Implies_def Or_def)
+qed
 
 subsection \<open>Validity proofs for axioms\<close>
 text \<open>Because an axiom in a uniform substitution calculus is an individual formula, 
@@ -174,8 +373,48 @@ qed
 theorem I_valid: "valid Iaxiom" 
   apply(unfold Iaxiom_def valid_def)
   apply(rule impI | rule allI)+
-  apply(simp only: impl_sem)
-  using I_axiom_lemma by blast
+  apply(auto simp add: impl_sem)
+proof -
+  fix I::"('sf,'sc,'sz)interp" and a b c d
+  assume good_interp:"is_interp I"
+  assume P1:"(a, b) \<in> Contexts I pid1 UNIV"
+  assume "\<forall>aa ba. ((a, b), aa, ba) \<in> (Programs I vid1)\<^sup>* \<longrightarrow>
+               (aa, ba) \<in> Contexts I pid1 UNIV \<longrightarrow> (\<forall>a b. ((aa, ba), a, b) \<in> Programs I vid1 \<longrightarrow> (a, b) \<in> Contexts I pid1 UNIV)"
+  then have IS:"\<And> e f g h. ((a, b), (e, f)) \<in> (Programs I vid1)\<^sup>* \<Longrightarrow>
+               (e, f) \<in> Contexts I pid1 UNIV \<Longrightarrow> ((e, f), (g,h)) \<in> Programs I vid1 \<Longrightarrow> (g,h) \<in> Contexts I pid1 UNIV"
+    by auto
+  have res:"\<And>c d. ((a,b), (c,d)) \<in> (Programs I vid1)\<^sup>* \<Longrightarrow> (c,d) \<in> Contexts I pid1 UNIV"
+  proof -
+    fix c d 
+    show "(((a,b), (c,d)) \<in> (Programs  I vid1)\<^sup>*) \<Longrightarrow> (c,d) \<in> Contexts I pid1 UNIV"
+      apply(induction rule:rtrancl_induct)
+       apply(rule P1)
+    proof -
+      fix y z
+      assume vy:"((a,b), y) \<in> (Programs I  vid1)\<^sup>*"
+      assume yz:"(y, z) \<in> Programs I vid1"
+      assume yPP:"y \<in> Contexts I pid1 UNIV"
+      have almost:"\<And>z.  ((fst y, snd y), z) \<in> Programs I vid1 \<Longrightarrow> (fst z,snd z) \<in> Contexts I pid1 UNIV"
+        apply(rule IS[of "fst y" "snd y"] )
+        using vy apply(cases y,auto)
+        using yPP by auto
+      then have imp3:"y \<in> Contexts I pid1 UNIV \<Longrightarrow>  y \<in> fml_sem I ([[$\<alpha> vid1 ]](Predicational pid1))"
+        by(auto)
+      have imp4:"y \<in> fml_sem I (Predicational pid1) \<Longrightarrow> y \<in> fml_sem I  ([[$\<alpha> vid1]](Predicational pid1))"
+        using imp3 impl_sem by (auto)
+      have yaPP:"y \<in> fml_sem I ([[$\<alpha> vid1]]Predicational pid1)" using imp4 yPP by auto
+      have zPP:"z \<in> fml_sem I (Predicational pid1)" using yaPP box_sem yz mem_Collect_eq 
+        proof -
+        have "(y, z) \<in> prog_sem I ($\<alpha> vid1)"
+          by (simp add: yz)
+        then show ?thesis
+          using box_sem yaPP by blast
+        qed
+      show "z \<in> Contexts I pid1 UNIV" using zPP by simp
+    qed
+  qed
+  then show "((a, b), c, d) \<in> (Programs I vid1)\<^sup>* \<Longrightarrow> (c, d) \<in> Contexts I pid1 UNIV" by auto
+qed
 
 theorem V_valid: "valid Vaxiom"
   apply(simp only: valid_def Vaxiom_def impl_sem box_sem)

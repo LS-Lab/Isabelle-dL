@@ -1,10 +1,10 @@
 theory "Frechet_Correctness"
 imports
-  "../Ordinary_Differential_Equations/ODE_Analysis"
-  "./Lib"
-  "./Syntax"
-  "./Denotational_Semantics"
-  "./Ids"
+  Ordinary_Differential_Equations.ODE_Analysis
+  "Lib"
+  "Syntax"
+  "Denotational_Semantics"
+  "Ids"
 begin
 context ids begin
 section \<open>Characterization of Term Derivatives\<close>
@@ -180,7 +180,7 @@ typedef ('a, 'c) strm = "{\<theta>:: ('a,'c) trm. dfree \<theta>}"
   
 typedef ('a, 'b, 'c) good_interp = "{I::('a::finite,'b::finite,'c::finite) interp. is_interp I}"
   morphisms raw_interp good_interp
-  apply(rule exI[where x="\<lparr> Functions = (\<lambda>f x. 0), Predicates = (\<lambda>p x. True), Contexts = (\<lambda>C S. S), Programs = (\<lambda>a. {}), ODEs = (\<lambda>c v. (\<chi> i. 0)), ODEBV = \<lambda>c. {}\<rparr>"])
+  apply(rule exI[where x="\<lparr> Functions = (\<lambda>f x. 0), Funls = (\<lambda>F v. 0), Predicates = (\<lambda>p x. True), Contexts = (\<lambda>C S. S), Programs = (\<lambda>a. {}), ODEs = (\<lambda>c sp v. (\<chi> i. 0)), ODEBV = \<lambda>c sp. {}\<rparr>"])
   apply(auto simp add: is_interp_def)
 proof -
   fix x ::real
@@ -223,9 +223,8 @@ next
     using good_interp unfolding is_interp_def using has_derivative_bounded_linear
     by blast
   have blin2:"bounded_linear (\<lambda> a. (\<chi> i. frechet I (args i) v a))"
-    using dfree_Fun.IH 
-    sorry
-(*    by(rule bounded_linear_vec)*)
+    apply(rule bounded_linear_vec)
+    using dfree_Fun.IH by auto
   then show ?case
     using bounded_linear_compose[of "FunctionFrechet I i (\<chi> i. sterm_sem I (args i) v)" "(\<lambda>a. (\<chi> i. frechet I (args i) v a))", OF blin1 blin2]
     by auto
@@ -258,8 +257,8 @@ lemma sterm_continuous:
   assumes good_interp:"is_interp I"
   shows "dfree \<theta> \<Longrightarrow> continuous_on UNIV (sterm_sem I \<theta>)"
 proof(induction rule: dfree.induct)
-(*  case (dfree_Fun args i)
-  assume IH:"\<And>i. continuous_on UNIV (sterm_sem I (args i))"
+  case (dfree_Fun args i)
+  assume IH:"\<forall> i. dfree (args i) \<and> continuous_on UNIV (sterm_sem I (args i))"
   have con1:"continuous_on UNIV (Functions I i)"
     using good_interp unfolding is_interp_def
     using continuous_on_eq_continuous_within has_derivative_continuous by blast
@@ -272,9 +271,7 @@ proof(induction rule: dfree.induct)
     using continuous_on_subset by blast
   show ?case 
     using con comp_def by(simp)
-(*next  case dfree_Functional show ?case sorry*)
-qed (auto intro: continuous_intros)*)
-  sorry
+qed (auto intro: continuous_intros)
 
 lemma sterm_continuous':
   assumes good_interp:"is_interp I"
@@ -315,8 +312,9 @@ next
   then show ?case by (metis cont)
 next
   case (dfree_Fun args f)
-  assume IH:"\<And>i. continuous_on UNIV (blin_frechet (good_interp I) (simple_term (args i)))"
-  assume frees:"(\<And>i. dfree (args i))"
+  assume trueIH:"\<forall>i. dfree (args i) \<and> continuous_on UNIV (blin_frechet (good_interp I) (simple_term (args i)))"
+  from trueIH have IH:"\<And>i.  continuous_on UNIV (blin_frechet (good_interp I) (simple_term (args i)))" by auto
+  from trueIH have frees:"(\<And>i. dfree (args i))" by auto
   then have free:"dfree ($f f args)" by (auto)
   have great_interp:"\<And>f. continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I f x))" using good_interp unfolding is_interp_def by auto
   have cont1:"\<And>v. continuous_on UNIV (\<lambda>v'. (\<chi> i. frechet I (args i) v v'))"

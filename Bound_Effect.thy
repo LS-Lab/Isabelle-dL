@@ -1,13 +1,13 @@
 theory "Bound_Effect"
 imports
-  "../Ordinary_Differential_Equations/ODE_Analysis"
-  "./Ids"
-  "./Lib"
-  "./Syntax"
-  "./Denotational_Semantics"
-  "./Frechet_Correctness"
-  "./Static_Semantics"
-  "./Coincidence"
+  Ordinary_Differential_Equations.ODE_Analysis
+  "Ids"
+  "Lib"
+  "Syntax"
+  "Denotational_Semantics"
+  "Frechet_Correctness"
+  "Static_Semantics"
+  "Coincidence"
 begin
 section \<open>Bound Effect Theorem\<close>
 text \<open>The bound effect lemma says that a program can only modify its bound variables and nothing else.
@@ -54,7 +54,7 @@ next
   proof -
     assume sem:"(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P)"
     from sem have agree:"Vagree \<nu> \<omega> (- BVO ODE)"
-      apply(simp only: prog_sem.simps(8) mem_Collect_eq osafe fsafe)
+      apply(simp only: prog_sem.simps mem_Collect_eq osafe fsafe)
       apply(erule exE)+
     proof -
       fix \<nu>' sol t  
@@ -63,7 +63,16 @@ next
          0 \<le> t \<and>
          (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu>' x \<in> fml_sem I P} \<and>  (sol 0) = (fst \<nu>')"
       have semBV:"-BVO ODE \<subseteq> -semBV I ODE"
-        by(induction ODE, auto)
+      proof(induction ODE)
+        case (OVar x1 x2)
+        then show ?case using good_interp by(cases x2, auto simp add: is_interp_def)
+      next
+        case (OSing x1 x2)
+        then show ?case by auto
+      next
+        case (OProd ODE1 ODE2)
+        then show ?case by auto
+      qed
       from assm have "Vagree \<omega> \<nu> (- BVO ODE)" using mk_v_agree[of I ODE \<nu> "(sol t)"] 
         using agree_sub[OF semBV] by auto
       thus  "Vagree \<nu> \<omega> (- BVO ODE)" by (rule agree_comm)

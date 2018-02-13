@@ -36,17 +36,30 @@ datatype ('a, 'c) trm =
  * argument of the function for each element of type 'c. To simulate a function with
  * less than 'c arguments, set the remaining arguments to a constant, such as Const 0*)
 | Function 'a "'c \<Rightarrow> ('a, 'c) trm" ("$f")
+(* A functional is analogous to a function, but can depend on ALL state variables*)
+| Functional 'a ("$$F")
+(* A functional that can depend only on base variables and thus is differentiable*)
+(*| DFunctional 'a ("$$F'")*)
 | Plus "('a, 'c) trm" "('a, 'c) trm"
 | Times "('a, 'c) trm" "('a, 'c) trm"
 (* A (real-valued) variable standing for a differential, such as x', given meaning by the state
  * and modified by programs. *)
-| DiffVar 'c ("$'")
+| DiffVar 'c ("$'") 
 (* The differential of an arbitrary term (\<theta>)' *)
 | Differential "('a, 'c) trm"
 
+type_synonym 'c space  = "'c option"
+
+definition All ::"'c space" where Space_All_def[simp]:"All = None"
+definition NB ::"'c \<Rightarrow> 'c space" where Space_NB_def[simp]:"NB = Some"
+(*
+datatype 'c space =
+  All
+| NB 'c (* one variable not-bound *)*)
+
 datatype('a, 'c) ODE =
 (* Variable standing for an ODE system, given meaning by the interpretation *)
-  OVar 'c
+  OVar 'c "'c space"
 (* Singleton ODE defining x' = \<theta>, where \<theta> may or may not contain x
  * (but must not contain differentials) *)
 | OSing 'c "('a, 'c) trm"
@@ -54,11 +67,31 @@ datatype('a, 'c) ODE =
  * OProd (x' = y) (y' = -x) is the system {x' = y, y' = -x} *)
 | OProd "('a, 'c) ODE" "('a, 'c) ODE"
 
+fun oprod::"('a,'c) ODE \<Rightarrow> ('a,'c) ODE \<Rightarrow> ('a,'c) ODE"
+  where "oprod (OSing x t) ODE2 = (OProd (OSing x t) ODE2)"
+  | "oprod (OVar c d) ODE2 = (OProd (OVar c d) ODE2)"
+  | "oprod (OProd ll lr) ODE2 = oprod ll (oprod lr  ODE2)"
+
+lemma oprod_induct:
+  fixes l r::"('a,'c)ODE" and P::"('a,'c)ODE \<Rightarrow> ('a,'c)ODE \<Rightarrow> bool"
+  assumes BC1:"(\<And>x t ODE2. P (OSing x t) ODE2)"
+  assumes BC2:"(\<And>c d ODE2. (P (OVar c d) ODE2))"
+  assumes  IH:"\<And>l1 l2 x. (\<And>x. P l1 x) \<Longrightarrow> (\<And>x. P l2 x) \<Longrightarrow> P (OProd l1 l2) x"
+  shows "P l r"
+  apply(induction l arbitrary:r)
+    apply(rule BC2)
+   apply(rule BC1)
+  by(rule IH)
+
+
+
 datatype ('a, 'b, 'c) hp =
 (* Variables standing for programs, given meaning by the interpretation. *)
   Pvar 'c                           ("$\<alpha>")
 (* Assignment to a real-valued variable x := \<theta> *)
 | Assign 'c "('a, 'c) trm"                (infixr ":=" 10)
+(* Nondeterministic assignment to a real-valued variable x := * *)
+| AssignAny 'c                
 (* Assignment to a differential variable*)
 | DiffAssign 'c "('a, 'c) trm"
 (* Program ?\<phi> succeeds iff \<phi> holds in current state. *)
@@ -86,6 +119,18 @@ and ('a, 'b, 'c) formula =
 | InContext 'b "('a, 'b, 'c) formula"
     
 (* Derived forms *)
+definition DFunl :: "'a \<Rightarrow> ('a,'c) trm"
+  where "DFunl fid = Function fid Var"
+
+definition DPredl :: "'c \<Rightarrow> ('a,'b,'c) formula"
+  where "DPredl fid = Prop fid Var"
+
+definition Neg :: "('a,'c) trm \<Rightarrow> ('a,'c) trm" 
+  where "Neg \<theta> = Times \<theta>  (Const (-1))"
+
+definition Minus :: "('a,'c) trm \<Rightarrow> ('a,'c) trm \<Rightarrow> ('a,'c) trm" 
+  where "Minus \<theta>\<^sub>1 \<theta>\<^sub>2= Plus \<theta>\<^sub>1 (Times \<theta>\<^sub>2  (Const (-1)))"
+
 definition Or :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" (infixl "||" 7)
 where "Or P Q = Not (And (Not P) (Not Q))"
 
@@ -101,9 +146,18 @@ where "Forall x P = Not (Exists x (Not P))"
 definition Equals :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) formula"
 where "Equals \<theta> \<theta>' = ((Geq \<theta> \<theta>') && (Geq \<theta>' \<theta>))"
 
+definition NotEquals :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) formula"
+where "NotEquals \<theta> \<theta>' = Not((Geq \<theta> \<theta>') && (Geq \<theta>' \<theta>))"
+
 definition Greater :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) formula"
 where "Greater \<theta> \<theta>' = ((Geq \<theta> \<theta>') && (Not (Geq \<theta>' \<theta>)))"
-  
+
+definition Less :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) formula"
+  where "Less \<theta> \<theta>' = ((Geq \<theta>' \<theta>) && (Not (Geq \<theta> \<theta>')))"
+
+definition Leq :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) formula"
+  where "Leq \<theta> \<theta>' = (Geq \<theta>' \<theta>)"
+
 definition Box :: "('a, 'b, 'c) hp \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" ("([[_]]_)" 10)
 where "Box \<alpha> P = Not (Diamond \<alpha> (Not P))"
   
@@ -124,6 +178,7 @@ primrec sizeF::"('sf,'sc, 'sz) formula \<Rightarrow> nat"
 where 
   "sizeP (Pvar a) = 1"
 | "sizeP (Assign x \<theta>) = 1"
+| "sizeP (AssignAny _) = 1"
 | "sizeP (DiffAssign x \<theta>) = 1"
 | "sizeP (Test \<phi>) = Suc (sizeF \<phi>)"
 | "sizeP (EvolveODE ODE \<phi>) = Suc (sizeF \<phi>)"
@@ -199,15 +254,18 @@ where
   dfree_Var: "dfree (Var i)"
 | dfree_Const: "dfree (Const r)"
 | dfree_Fun: "(\<forall>i. dfree (args i)) \<Longrightarrow> dfree (Function i args)"
-| dfree_Functional: "(\<forall>i. dfree (args i)) \<Longrightarrow> dfree (Function i args)"
 | dfree_Plus: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dfree_Times: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
+(* regular functionals are not dfree because they can depend on differential state, that's what dfunctionals are for *)
+(*| dfree_DFunctional: "dfree ($$F' fid)"*)
   
 inductive dsafe :: "('a, 'c) trm \<Rightarrow> bool"
 where
   dsafe_Var: "dsafe (Var i)"
 | dsafe_Const: "dsafe (Const r)"
 | dsafe_Fun: "(\<forall>i. dsafe (args i)) \<Longrightarrow> dsafe (Function i args)"
+(* | dsafe_DFunl: "dsafe ($$F' i)" *)
+| dsafe_Funl: "dsafe ($$F i)"
 | dsafe_Plus: "dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dsafe_Times: "dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dsafe_Diff: "dfree \<theta> \<Longrightarrow> dsafe (Differential \<theta>)"
@@ -217,15 +275,36 @@ where
  * ODE's are valid (e.g. whether they bind the same variable twice) *)
 fun ODE_dom::"('a, 'c) ODE \<Rightarrow> 'c set"
 where 
-  "ODE_dom (OVar c) =  {}"
+  "ODE_dom (OVar c d) =  {}"
 | "ODE_dom (OSing x \<theta>) = {x}"
 | "ODE_dom (OProd ODE1 ODE2) = ODE_dom ODE1 \<union> ODE_dom ODE2"
 
+lemma ODE_dom_assoc:"ODE_dom (oprod ODE1 ODE2) = ODE_dom (OProd ODE1 ODE2)"
+  apply(induction ODE1 arbitrary:ODE2)
+  by(auto)
+
 inductive osafe:: "('a, 'c) ODE \<Rightarrow> bool"
 where
-  osafe_Var:"osafe (OVar c)"
+  osafe_Var:"osafe (OVar c d)"
 | osafe_Sing:"dfree \<theta> \<Longrightarrow> osafe (OSing x \<theta>)"
 | osafe_Prod:"osafe ODE1 \<Longrightarrow> osafe ODE2 \<Longrightarrow> ODE_dom ODE1 \<inter> ODE_dom ODE2 = {} \<Longrightarrow> osafe (OProd ODE1 ODE2)"
+
+lemma osafe_assoc:
+  fixes ODE1 ODE2
+  shows "osafe (OProd ODE1 ODE2) = osafe (oprod ODE1 ODE2)"
+proof -
+  have lr:"osafe (OProd ODE1 ODE2) \<Longrightarrow> osafe (oprod ODE1 ODE2)"
+    apply(induction ODE1 arbitrary:ODE2)
+       apply(auto)
+    by (metis (no_types, lifting) ODE.distinct ODE.inject ODE_dom.simps ODE_dom_assoc Un_empty inf_sup_distrib1 inf_sup_distrib2 osafe.cases osafe_Prod)
+
+(*    by (metis (no_types, lifting) ODE.distinct(3) ODE.distinct(5) ODE.inject(3) ODE_dom.simps(3) ODE_dom_assoc Un_empty inf_sup_distrib1 inf_sup_distrib2 osafe.cases osafe_Prod)*)
+  have rl:"osafe (oprod ODE1 ODE2) \<Longrightarrow> osafe (OProd ODE1 ODE2)"
+    apply(induction ODE1 arbitrary:ODE2)
+      apply(auto)
+    by (metis (no_types, lifting) ODE.distinct ODE.inject ODE_dom.simps ODE_dom_assoc Un_empty inf_sup_distrib1 inf_sup_distrib2 osafe.cases osafe_Prod)
+  show ?thesis using lr rl by (auto)
+qed
 
 (* Programs/formulas without any differential terms. This definition not currently used but may
  * be useful in the future. *)
@@ -234,6 +313,7 @@ inductive hpfree:: "('a, 'b, 'c) hp \<Rightarrow> bool"
 where
   "hpfree (Pvar x)"
 | "dfree e \<Longrightarrow> hpfree (Assign x e)"
+| "hpfree (AssignAny x)"
 (* Differential programs allowed but not differential terms  *)
 | "dfree e \<Longrightarrow> hpfree (DiffAssign x e)"
 | "ffree P \<Longrightarrow> hpfree (Test P)" 
@@ -256,6 +336,7 @@ inductive hpsafe:: "('a, 'b, 'c) hp \<Rightarrow> bool"
 where
    hpsafe_Pvar:"hpsafe (Pvar x)"
  | hpsafe_Assign:"dsafe e \<Longrightarrow> hpsafe (Assign x e)"
+ | hpsafe_AssignAny:" hpsafe (AssignAny e)"
  | hpsafe_DiffAssign:"dsafe e \<Longrightarrow> hpsafe (DiffAssign x e)"
  | hpsafe_Test:"fsafe P \<Longrightarrow> hpsafe (Test P)" 
  | hpsafe_Evolve:"osafe ODE \<Longrightarrow> fsafe P \<Longrightarrow> hpsafe (EvolveODE ODE P)"
@@ -278,6 +359,7 @@ inductive_simps
   and dfree_Var_simps[simp]: "dfree (Var x)"
   and dfree_DiffVar_simps[simp]: "dfree (DiffVar x)"
   and dfree_Differential_simps[simp]: "dfree (Differential x)"
+(*  and dfree_DFunl_simps[simp]: "dfree (DFunctional i)"*)
   and dfree_Fun_simps[simp]: "dfree (Function i args)"
   and dfree_Const_simps[simp]: "dfree (Const r)"
 
@@ -287,11 +369,13 @@ inductive_simps
   and dsafe_Var_simps[simp]: "dsafe (Var x)"
   and dsafe_DiffVar_simps[simp]: "dsafe (DiffVar x)"
   and dsafe_Fun_simps[simp]: "dsafe (Function i args)"
+  and dsafe_Funl_simps[simp]: "dsafe ($$F i)"
+(*  and dsafe_DFunl_simps[simp]: "dsafe ($$F' i)"*)
   and dsafe_Diff_simps[simp]: "dsafe (Differential a)"
   and dsafe_Const_simps[simp]: "dsafe (Const r)"
 
 inductive_simps
-      osafe_OVar_simps[simp]:"osafe (OVar c)"
+      osafe_OVar_simps[simp]:"osafe (OVar c d)"
   and osafe_OSing_simps[simp]:"osafe (OSing x \<theta>)"
   and osafe_OProd_simps[simp]:"osafe (OProd ODE1 ODE2)"
 
@@ -302,6 +386,7 @@ inductive_simps
   and hpsafe_ODE_simps[simp]: "hpsafe (EvolveODE ODE p)"
   and hpsafe_Choice_simps[simp]: "hpsafe (a \<union>\<union> b)"
   and hpsafe_Assign_simps[simp]: "hpsafe (Assign x e)"
+  and hpsafe_AssignAny_simps[simp]: "hpsafe (AssignAny e)"
   and hpsafe_DiffAssign_simps[simp]: "hpsafe (DiffAssign x e)"
   and hpsafe_Test_simps[simp]: "hpsafe (? p)"
   
@@ -313,21 +398,118 @@ inductive_simps
   and fsafe_Diamond_simps[simp]: "fsafe (Diamond a p)"
   and fsafe_Context_simps[simp]: "fsafe (InContext C p)"
 
-definition Ssafe::"('sf,'sc,'sz) sequent \<Rightarrow> bool"
-where "Ssafe S \<longleftrightarrow>((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst S) \<longrightarrow> fsafe (nth (fst S) i))
+fun Ssafe::"('sf,'sc,'sz) sequent \<Rightarrow> bool"
+where Ssafe_def:"Ssafe S =((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst S) \<longrightarrow> fsafe (nth (fst S) i))
                  \<and>(\<forall>i. i \<ge> 0 \<longrightarrow> i < length (snd S) \<longrightarrow> fsafe (nth (snd S) i)))"
 
-definition Rsafe::"('sf,'sc,'sz) rule \<Rightarrow> bool"
-where "Rsafe R \<longleftrightarrow> ((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst R) \<longrightarrow> Ssafe (nth (fst R) i)) 
-                    \<and> Ssafe (snd R))"
-  
+lemma index_list_induct:
+  fixes P and n :: nat
+  assumes BC:"\<And>L. 0 < length L \<Longrightarrow> P L 0"
+  assumes IH:"\<And>x xs i. (i < length xs \<Longrightarrow> P xs i \<Longrightarrow> P (x # xs) (Suc i))" 
+  assumes i:"n < length L"
+  shows "P L n"
+  using i
+  apply(induction L arbitrary: n)
+  subgoal for n using i BC[of "L"] by auto
+  subgoal for x xs m 
+      apply(cases "m = 0")
+    subgoal using BC[of "x # xs"] by auto
+    using IH[of "m-1"] i  by auto
+  done
+
+
+
+lemma nth_member:"n < List.length L \<Longrightarrow> List.member L (List.nth L n)"
+  apply(induction L, auto simp add: member_rec)
+  by (metis in_set_member length_Cons nth_mem set_ConsD)
+
+lemma member_nth:"List.member L x \<Longrightarrow> \<exists>n. n < List.length L \<and> x = (List.nth L n)"
+  apply(induction L, auto simp add: member_rec)
+  using in_set_member length_Cons nth_mem set_ConsD 
+  by auto
+
+lemma member_nthE:"List.member L x \<Longrightarrow> (\<And>n.  (n < List.length L \<and> x = (List.nth L n)) \<Longrightarrow> P) \<Longrightarrow> P"
+  using member_nth[of L x]  apply simp
+  by(erule exE,auto)
+
+lemma Ssafe_code[code]:
+"Ssafe S =
+ ((foldr (\<lambda> x acc. acc \<and> fsafe x) (fst S) True)
+\<and> (foldr (\<lambda> x acc. acc \<and> fsafe x) (snd S) True))"
+  apply(auto)
+  subgoal
+  proof -
+    assume all:"\<forall>i<length (fst S). fsafe (fst S ! i)"
+    have mem:"\<And>x. List.member (fst S) x \<Longrightarrow> fsafe x" 
+      apply(erule member_nthE)
+      using all by (auto)
+    have memimp:"\<And>L. (\<forall>x. List.member L x \<longrightarrow> fsafe x) \<Longrightarrow>  (foldr (\<lambda>x acc. acc \<and> fsafe x)  L True)"
+      subgoal for L
+        apply(induction L)
+        by(auto simp add: member_rec)
+      done
+    show "foldr (\<lambda>x acc. acc \<and> fsafe x)  (fst S) True" 
+      using all mem memimp by auto
+  qed
+  proof -
+    assume all:"\<forall>i<length (snd S). fsafe (snd S ! i)"
+    have mem:"\<And>x. List.member (snd S) x \<Longrightarrow> fsafe x" 
+      apply(erule member_nthE)
+      using all by (auto)
+    have memimp:"\<And>L. (\<forall>x. List.member L x \<longrightarrow> fsafe x) \<Longrightarrow>  (foldr (\<lambda>x acc. acc \<and> fsafe x)  L True)"
+      subgoal for L
+        apply(induction L)
+        by(auto simp add: member_rec)
+      done
+    show "foldr (\<lambda>x acc. acc \<and> fsafe x)  (snd S) True" 
+      using all mem memimp by auto
+  next
+    fix i
+  assume fold:"foldr (\<lambda>x acc. acc \<and> fsafe x) (fst S) True"
+  assume i:"i < length (fst S)"
+  then have mem:"List.member (fst S) (fst S ! i)"
+    using nth_member i by auto
+  have memimp:"\<And>L x. (foldr (\<lambda>x acc. acc \<and> fsafe x)  L True) \<Longrightarrow>List.member L x \<Longrightarrow> fsafe x"
+      subgoal for L
+        apply(induction L)
+        by(auto simp add: member_rec)
+      done
+  show "fsafe (fst S ! i)"
+    using mem memimp  fold by auto  
+next
+  fix i
+  assume fold:"foldr (\<lambda>x acc. acc \<and> fsafe x) (snd S) True"
+  assume i:"i < length (snd S)"
+  then have mem:"List.member (snd S) (snd S ! i)"
+    using nth_member i by auto
+  have memimp:"\<And>L x. (foldr (\<lambda>x acc. acc \<and> fsafe x)  L True) \<Longrightarrow>List.member L x \<Longrightarrow> fsafe x"
+      subgoal for L
+        apply(induction L)
+        by(auto simp add: member_rec)
+      done
+  show "fsafe (snd S ! i)"
+    using mem memimp  fold by auto  
+qed
+    
+(*
+lemma closeI_sub:"j < length \<Gamma> \<Longrightarrow> sublist (closeI \<Gamma> j) \<Gamma>"
+proof -
+  assume j:"j < length \<Gamma>"
+  have imp:"j < length \<Gamma> \<Longrightarrow> sublist (closeI \<Gamma> j) \<Gamma>"
+      apply(rule index_list_induct[of "(\<lambda> \<Gamma> j. sublist (closeI \<Gamma> j) \<Gamma>)"])
+    subgoal for L by (auto simp add: sublist_def, cases L, auto simp add: member_rec)
+    using j by(auto simp add: sublist_def member_rec j)
+  then show ?thesis using j by auto
+qed
+*)
 (* Basic reasoning principles about syntactic constructs, including inductive principles *)
 lemma dfree_is_dsafe: "dfree \<theta> \<Longrightarrow> dsafe \<theta>"
   by (induction rule: dfree.induct) (auto intro: dsafe.intros)
   
-lemma hp_induct [case_names Var Assign DiffAssign Test Evolve Choice Compose Star]:
+lemma hp_induct [case_names Var Assign AssignAny DiffAssign Test Evolve Choice Compose Star]:
    "(\<And>x. P ($\<alpha> x)) \<Longrightarrow>
     (\<And>x1 x2. P (x1 := x2)) \<Longrightarrow>
+    (\<And>x1. P (AssignAny x1 )) \<Longrightarrow>
     (\<And>x1 x2. P (DiffAssign x1 x2)) \<Longrightarrow>
     (\<And>x. P (? x)) \<Longrightarrow>
     (\<And>x1 x2. P (EvolveODE x1 x2)) \<Longrightarrow>

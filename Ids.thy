@@ -9,6 +9,7 @@ locale ids =
   fixes vid1 :: "('sz::{finite,linorder})"
   fixes vid2 :: 'sz
   fixes vid3 :: 'sz
+  fixes is_vid1 :: "'sz \<Rightarrow> bool"
   fixes fid1 :: "('sf::finite)"
   fixes fid2 :: 'sf
   fixes fid3 :: 'sf
@@ -16,6 +17,7 @@ locale ids =
   fixes pid2 :: 'sc
   fixes pid3 :: 'sc
   fixes pid4 :: 'sc
+  assumes vid1_isvid1:"is_vid1 vid1"
   assumes vne12:"vid1 \<noteq> vid2"
   assumes vne23:"vid2 \<noteq> vid3"
   assumes vne13:"vid1 \<noteq> vid3"
