@@ -311,6 +311,15 @@ where
 | dsafe_DiffVar: "dsafe ($' i)"
 | dsafe_Max :"dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Max \<theta>\<^sub>1 \<theta>\<^sub>2)"
 
+inductive dexec :: "('a, 'c) trm \<Rightarrow> bool"
+where
+  dexec_Var: "dexec (Var i)"
+| dexec_Const: "dexec (Const r)"
+| dexec_Plus: "dexec \<theta>\<^sub>1 \<Longrightarrow> dexec \<theta>\<^sub>2 \<Longrightarrow> dexec (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
+| dexec_Times: "dexec \<theta>\<^sub>1 \<Longrightarrow> dexec \<theta>\<^sub>2 \<Longrightarrow> dexec (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
+| dexec_Max :"dexec \<theta>\<^sub>1 \<Longrightarrow> dexec \<theta>\<^sub>2 \<Longrightarrow> dexec (Max \<theta>\<^sub>1 \<theta>\<^sub>2)"
+
+
 (* Explictly-written variables that are bound by the ODE. Needed to compute whether
  * ODE's are valid (e.g. whether they bind the same variable twice) *)
 fun ODE_dom::"('a, 'c) ODE \<Rightarrow> 'c set"
@@ -392,6 +401,19 @@ where
  | fsafe_Diamond:"hpsafe a \<Longrightarrow> fsafe p \<Longrightarrow> fsafe (Diamond a p)"
  | fsafe_InContext:"fsafe f \<Longrightarrow> fsafe (InContext C f)"
 
+inductive hpexec:: "('a, 'b, 'c) hp \<Rightarrow> bool"
+  and     fexec::  "('a, 'b, 'c) formula \<Rightarrow> bool"
+where
+   hpexec_Pvar:"hpexec (Pvar x)"
+ | hpexec_Assign:"dexec e \<Longrightarrow> hpexec (Assign x e)"
+ | hpexec_Test:"fexec P \<Longrightarrow> hpexec (Test P)" 
+ | hpexec_Choice:"hpexec a \<Longrightarrow> hpexec b \<Longrightarrow> hpexec (Choice a b )"
+ | hpexec_Sequence:"hpexec a \<Longrightarrow> hpexec b \<Longrightarrow> hpexec (Sequence a b)"
+
+ | fexec_Geq:"dexec t1 \<Longrightarrow> dexec t2 \<Longrightarrow> fexec (Geq t1 t2)"
+ | fexec_Not:"fexec p \<Longrightarrow> fexec (Not p)"
+ | fexec_And:"fexec p \<Longrightarrow> fexec q \<Longrightarrow> fexec (And p q)"
+
 (* Auto-generated simplifier rules for safety predicates *)  
 inductive_simps
       dfree_Plus_simps[simp]: "dfree (Plus a b)"
@@ -412,9 +434,15 @@ inductive_simps
   and dsafe_DiffVar_simps[simp]: "dsafe (DiffVar x)"
   and dsafe_Fun_simps[simp]: "dsafe (Function i args)"
   and dsafe_Funl_simps[simp]: "dsafe ($$F i)"
-(*  and dsafe_DFunl_simps[simp]: "dsafe ($$F' i)"*)
   and dsafe_Diff_simps[simp]: "dsafe (Differential a)"
   and dsafe_Const_simps[simp]: "dsafe (Const r)"
+
+inductive_simps
+      dexec_Plus_simps[simp]: "dexec (Plus a b)"
+  and dexec_Times_simps[simp]: "dexec (Times a b)"
+  and dexec_Max_simps[simp]: "dexec (Max a b)"
+  and dexec_Var_simps[simp]: "dexec (Var x)"
+  and dexec_Const_simps[simp]: "dexec (Const r)"
 
 inductive_simps
       osafe_OVar_simps[simp]:"osafe (OVar c d)"
@@ -439,6 +467,16 @@ inductive_simps
   and fsafe_Exists_simps[simp]: "fsafe (Exists x p)"
   and fsafe_Diamond_simps[simp]: "fsafe (Diamond a p)"
   and fsafe_Context_simps[simp]: "fsafe (InContext C p)"
+
+inductive_simps
+      hpexec_Sequence_simps[simp]: "hpexec (a ;; b)"
+  and hpexec_Choice_simps[simp]: "hpexec (a \<union>\<union> b)"
+  and hpexec_Assign_simps[simp]: "hpexec (Assign x e)"
+  and hpexec_Test_simps[simp]: "hpexec (? p)"
+  
+  and fexec_Geq_simps[simp]: "fexec (Geq t1 t2)"
+  and fexec_Not_simps[simp]: "fexec (Not p)"
+  and fexec_And_simps[simp]: "fexec (And p q)"
 
 fun Ssafe::"('sf,'sc,'sz) sequent \<Rightarrow> bool"
 where Ssafe_def:"Ssafe S =((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst S) \<longrightarrow> fsafe (nth (fst S) i))
