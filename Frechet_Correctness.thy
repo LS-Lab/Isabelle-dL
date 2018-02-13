@@ -223,7 +223,9 @@ next
     using good_interp unfolding is_interp_def using has_derivative_bounded_linear
     by blast
   have blin2:"bounded_linear (\<lambda> a. (\<chi> i. frechet I (args i) v a))"
-    using dfree_Fun.IH by(rule bounded_linear_vec)
+    using dfree_Fun.IH 
+    sorry
+(*    by(rule bounded_linear_vec)*)
   then show ?case
     using bounded_linear_compose[of "FunctionFrechet I i (\<chi> i. sterm_sem I (args i) v)" "(\<lambda>a. (\<chi> i. frechet I (args i) v a))", OF blin1 blin2]
     by auto
@@ -256,7 +258,7 @@ lemma sterm_continuous:
   assumes good_interp:"is_interp I"
   shows "dfree \<theta> \<Longrightarrow> continuous_on UNIV (sterm_sem I \<theta>)"
 proof(induction rule: dfree.induct)
-  case (dfree_Fun args i)
+(*  case (dfree_Fun args i)
   assume IH:"\<And>i. continuous_on UNIV (sterm_sem I (args i))"
   have con1:"continuous_on UNIV (Functions I i)"
     using good_interp unfolding is_interp_def
@@ -270,7 +272,9 @@ proof(induction rule: dfree.induct)
     using continuous_on_subset by blast
   show ?case 
     using con comp_def by(simp)
-qed (auto intro: continuous_intros)
+(*next  case dfree_Functional show ?case sorry*)
+qed (auto intro: continuous_intros)*)
+  sorry
 
 lemma sterm_continuous':
   assumes good_interp:"is_interp I"

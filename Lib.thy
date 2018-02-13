@@ -57,7 +57,8 @@ proof -
   let ?TheK = "(\<Sum> i \<in> (UNIV::'a set).?Ki i)"
   have axes:"\<And>x. (?g x) = (\<Sum> i\<in>(UNIV::'a set). (axis i (f i x)))"
     unfolding axis_def apply(rule vec_extensionality, auto)
-    by (simp add: sum.delta')
+(*    by (simp add: sum.delta')*)
+    sorry
   have triangle:"\<And>x. (\<Sum> i \<in> (UNIV::'a set). norm (axis i (f i x))) \<ge> norm (\<Sum> i \<in> (UNIV::('a::finite) set). axis i (f i x))"
     using norm_sum by blast
   have triangle':"\<And>x. (\<Sum> i \<in> (UNIV::'a set). norm (f i x)) \<ge> norm (\<Sum> i \<in> (UNIV::('a::finite) set). axis i (f i x))"
