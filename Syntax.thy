@@ -404,8 +404,7 @@ where
 inductive hpexec:: "('a, 'b, 'c) hp \<Rightarrow> bool"
   and     fexec::  "('a, 'b, 'c) formula \<Rightarrow> bool"
 where
-   hpexec_Pvar:"hpexec (Pvar x)"
- | hpexec_Assign:"dexec e \<Longrightarrow> hpexec (Assign x e)"
+   hpexec_Assign:"dexec e \<Longrightarrow> hpexec (Assign x e)"
  | hpexec_Test:"fexec P \<Longrightarrow> hpexec (Test P)" 
  | hpexec_Choice:"hpexec a \<Longrightarrow> hpexec b \<Longrightarrow> hpexec (Choice a b )"
  | hpexec_Sequence:"hpexec a \<Longrightarrow> hpexec b \<Longrightarrow> hpexec (Sequence a b)"
@@ -477,6 +476,9 @@ inductive_simps
   and fexec_Geq_simps[simp]: "fexec (Geq t1 t2)"
   and fexec_Not_simps[simp]: "fexec (Not p)"
   and fexec_And_simps[simp]: "fexec (And p q)"
+  and fexec_Le_simps[simp]: "fexec (Le p q)"
+  and fexec_Ge_simps[simp]: "fexec (Ge p q)"
+  and fexec_Leq_simps[simp]: "fexec (Leq p q)"
 
 fun Ssafe::"('sf,'sc,'sz) sequent \<Rightarrow> bool"
 where Ssafe_def:"Ssafe S =((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst S) \<longrightarrow> fsafe (nth (fst S) i))

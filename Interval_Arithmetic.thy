@@ -3,11 +3,12 @@ imports
   Complex_Main
   "./Word_Lib/Word_Lib"
   "./Word_Lib/Word_Lemmas"
+  "./Syntax"
 begin
 
 type_synonym word = "32 Word.word"
 
-definition NEG_INF::"word"
+(*definition NEG_INF::"word"
 where "NEG_INF = -((2 ^ 31) -1)"
 
 definition POS_INF::"word"
@@ -17,28 +18,27 @@ typedef bword = "{n::word. sint n \<ge> sint NEG_INF \<and> sint n \<le> sint PO
   apply(rule exI[where x=NEG_INF])
   by (auto simp add: NEG_INF_def POS_INF_def)
 
-setup_lifting type_definition_bword
+setup_lifting type_definition_bword*)
 
 
 (*export_code xCoord in Haskell module_name Example 
 definition *)
 
-type_synonym id = string
-
+(*
 (* To make running the proof easier, don't include ODEs yet *)
-datatype trm =
+datatype ('sf,'sz) trm =
   Const bword     ("_ \<in> \<R>" 10)
 | Var id         ("_ \<in> \<V>" 10)
-| Plus trm trm  (infix "+" 10)
-| Times trm trm (infix "*" 10)
-| Max trm trm
-| Min trm trm
-| Neg trm        ("-")
+| Plus ('sf,'sz) trm ('sf,'sz) trm  (infix "+" 10)
+| Times ('sf,'sz) trm ('sf,'sz) trm (infix "*" 10)
+| Max ('sf,'sz) trm ('sf,'sz) trm
+| Min ('sf,'sz) trm ('sf,'sz) trm
+| Neg ('sf,'sz) trm        ("-")
 
 datatype fml =
-  Le trm trm     ("_ < _")
-| Leq trm trm
-| Equals trm trm
+  Le ('sf,'sz) trm ('sf,'sz) trm     ("_ < _")
+| Leq ('sf,'sz) trm ('sf,'sz) trm
+| Equals ('sf,'sz) trm ('sf,'sz) trm
 | And fml fml    ("_ & _")
 | Or fml fml    
 | Not fml        ("\<not>")
@@ -46,17 +46,17 @@ datatype fml =
 datatype hp =
   Test fml       ("?")
 | Seq hp hp      ("_ ; _")
-| Assign id trm  ("_ <- _")
+| Assign id ('sf,'sz) trm  ("_ <- _")
 | Choice hp hp
-
-type_synonym rstate = "id \<Rightarrow> real"
-type_synonym wstate = "(id + id) \<Rightarrow> word"
+*)
+type_synonym 'sz rstate = "'sz \<Rightarrow> real"
+type_synonym 'sz wstate = "('sz + 'sz) \<Rightarrow> word"
 
 
 definition word::"word \<Rightarrow> bool"
 where word_def[simp]:"word w \<equiv> w \<in> {NEG_INF..POS_INF}"
 
-definition wstate::"wstate \<Rightarrow> prop"
+definition wstate::"'sz wstate \<Rightarrow> prop"
 where wstate_def[simp]:"wstate \<nu> \<equiv> (\<And>i. word (\<nu> (Inl i)) \<and> word (\<nu> (Inr i)))"
 
 named_theorems rep_simps "Simplifications for representation functions"
@@ -83,23 +83,23 @@ where "repL w r \<equiv> \<exists> r'. r' \<le> r \<and> repe w r'"
 definition repP ::"word * word \<Rightarrow> real \<Rightarrow> bool" (infix "\<equiv>\<^sub>P" 10)
 where "repP w r \<equiv> let (w1, w2) = w in repL w1 r \<and> repU w2 r" 
 
-inductive rtsem :: "trm \<Rightarrow> rstate \<Rightarrow> real  \<Rightarrow> bool"  ("([_]_ \<down> _)" 10)
-where "Rep_bword w \<equiv>\<^sub>E r \<Longrightarrow> ([w \<in> \<R>]\<nu> \<down> r)"
-| "([x \<in> \<V>]\<nu> \<down> \<nu> x)"
-| "\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> ([\<theta>\<^sub>1 + \<theta>\<^sub>2]\<nu> \<down> (r\<^sub>1 + r\<^sub>2))"
-| "\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> ([\<theta>\<^sub>1 * \<theta>\<^sub>2]\<nu> \<down> (r\<^sub>1 * r\<^sub>2))"
+inductive rtsem :: "('sf, 'sz) trm \<Rightarrow> 'sz rstate \<Rightarrow> real  \<Rightarrow> bool"  ("([_]_ \<down> _)" 10)
+where "Rep_bword w \<equiv>\<^sub>E r \<Longrightarrow> ([Const w]\<nu> \<down> r)"
+| "([Var x]\<nu> \<down> \<nu> x)"
+| "\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> ([Plus \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> (r\<^sub>1 + r\<^sub>2))"
+| "\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> ([Times \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> (r\<^sub>1 * r\<^sub>2))"
 | "\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> ([Max \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> (max r\<^sub>1 r\<^sub>2))"
 | "\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> ([Min \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> (min r\<^sub>1 r\<^sub>2))"
-| "([\<theta>]\<nu> \<down> r) \<Longrightarrow> ([-\<theta>]\<nu> \<down> -r)"
+| "([\<theta>]\<nu> \<down> r) \<Longrightarrow> ([Neg \<theta>]\<nu> \<down> -r)"
 
 inductive_simps 
-    rtsem_Const_simps[simp] : "([w \<in> \<R>]\<nu> \<down> r)"
-and rtsem_Var_simps[simp] : "([x \<in> \<V>]\<nu> \<down> r)"
-and rtsem_PlusU_simps[simp] : "([\<theta>\<^sub>1 + \<theta>\<^sub>2]\<nu> \<down> r)"
-and rtsem_TimesU_simps[simp] : "([\<theta>\<^sub>1 * \<theta>\<^sub>2]\<nu> \<down> r)"
+    rtsem_Const_simps[simp] : "([(Const w)]\<nu> \<down> r)"
+and rtsem_Var_simps[simp] : "([Var x]\<nu> \<down> r)"
+and rtsem_PlusU_simps[simp] : "([Plus \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> r)"
+and rtsem_TimesU_simps[simp] : "([Times \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> r)"
 and rtsem_Max_simps[simp] : "([Max \<theta>\<^sub>1 \<theta>\<^sub>2] \<nu> \<down> r)"
 and rtsem_Min_simps[simp] : "([Min \<theta>\<^sub>1 \<theta>\<^sub>2] \<nu> \<down> r)"
-and rtsem_Neg_simps[simp] : "([-\<theta>] \<nu> \<down> r)"
+and rtsem_Neg_simps[simp] : "([Neg \<theta>] \<nu> \<down> r)"
 
 definition set_less :: "real set \<Rightarrow> real set \<Rightarrow> bool" (infix "<\<^sub>S" 10)
 where "set_less A B \<equiv> (\<forall> x y. x \<in> A \<and> y \<in> B \<longrightarrow> x < y)"
@@ -107,44 +107,44 @@ where "set_less A B \<equiv> (\<forall> x y. x \<in> A \<and> y \<in> B \<longri
 definition set_geq :: "real set \<Rightarrow> real set \<Rightarrow> bool" (infix "\<ge>\<^sub>S" 10)
 where "set_geq A B \<equiv> (\<forall> x y. x \<in> A \<and> y \<in> B \<longrightarrow> x \<ge> y)"
 
-inductive rfsem :: "fml \<Rightarrow> rstate \<Rightarrow> bool \<Rightarrow> bool" ("([_]_) \<down> _" 20)
+inductive rfsem :: "('sf,'sc,'sz) formula \<Rightarrow> 'sz rstate \<Rightarrow> bool \<Rightarrow> bool" ("([_]_) \<downharpoonright> _" 20)
 where 
-  rLeT:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> r\<^sub>1 < r\<^sub>2 \<Longrightarrow> ([\<theta>\<^sub>1 < \<theta>\<^sub>2] \<nu> \<down> True)"
-| rLeF:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> r\<^sub>1 \<ge> r\<^sub>2 \<Longrightarrow> ([\<theta>\<^sub>1 < \<theta>\<^sub>2] \<nu> \<down> False)"
-| rLeqT:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> r\<^sub>1 \<le> r\<^sub>2 \<Longrightarrow> ([Leq \<theta>\<^sub>1 \<theta>\<^sub>2] \<nu> \<down> True)"
-| rLeqF:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> r\<^sub>1 > r\<^sub>2 \<Longrightarrow> ([Leq \<theta>\<^sub>1 \<theta>\<^sub>2] \<nu> \<down> False)"
-| rEqualsT:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> r\<^sub>1 = r\<^sub>2 \<Longrightarrow> ([Equals \<theta>\<^sub>1 \<theta>\<^sub>2] \<nu> \<down> True)"
-| rEqualsF:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> r\<^sub>1 \<noteq> r\<^sub>2 \<Longrightarrow> ([Equals \<theta>\<^sub>1 \<theta>\<^sub>2] \<nu> \<down> False)"
-| rAndT:"\<lbrakk>([\<phi>]\<nu> \<down> True); ([\<psi>]\<nu> \<down> True)\<rbrakk> \<Longrightarrow> ([\<phi> & \<psi>]\<nu> \<down> True)"
-| rAndF1:"([\<phi>]\<nu> \<down> False) \<Longrightarrow> ([\<phi> & \<psi>]\<nu> \<down> False)"
-| rAndF2:"([\<psi>]\<nu> \<down> False) \<Longrightarrow> ([\<phi> & \<psi>]\<nu> \<down> False)"
-| rOrT1:"([\<phi>]\<nu> \<down> True) \<Longrightarrow> ([Or \<phi> \<psi>]\<nu> \<down> True)"
-| rOrT2:"([\<psi>]\<nu> \<down> True) \<Longrightarrow> ([Or \<phi> \<psi>]\<nu> \<down> True)"
-| rOrF:"\<lbrakk>([\<phi>]\<nu> \<down> False) ;([\<psi>]\<nu> \<down> False)\<rbrakk> \<Longrightarrow> ([\<phi> & \<psi>]\<nu> \<down> False)"
-| rNotT:"([\<phi>]\<nu> \<down> False) \<Longrightarrow> ([(\<not>\<phi>)]\<nu> \<down> True)"
-| rNotF:"([\<phi>]\<nu> \<down> True) \<Longrightarrow> ([(\<not>\<phi>)]\<nu> \<down> False)"
+  rLeT:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> r\<^sub>1 < r\<^sub>2 \<Longrightarrow> ([Le \<theta>\<^sub>1 \<theta>\<^sub>2] \<nu> \<downharpoonright> True)"
+| rLeF:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> r\<^sub>1 \<ge> r\<^sub>2 \<Longrightarrow> ([Le \<theta>\<^sub>1 \<theta>\<^sub>2] \<nu> \<downharpoonright> False)"
+| rLeqT:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> r\<^sub>1 \<le> r\<^sub>2 \<Longrightarrow> ([Leq \<theta>\<^sub>1 \<theta>\<^sub>2] \<nu> \<downharpoonright> True)"
+| rLeqF:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> r\<^sub>1 > r\<^sub>2 \<Longrightarrow> ([Leq \<theta>\<^sub>1 \<theta>\<^sub>2] \<nu> \<downharpoonright> False)"
+| rEqualsT:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> r\<^sub>1 = r\<^sub>2 \<Longrightarrow> ([Equals \<theta>\<^sub>1 \<theta>\<^sub>2] \<nu> \<downharpoonright> True)"
+| rEqualsF:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> r\<^sub>1 \<noteq> r\<^sub>2 \<Longrightarrow> ([Equals \<theta>\<^sub>1 \<theta>\<^sub>2] \<nu> \<downharpoonright> False)"
+| rAndT:"\<lbrakk>([\<phi>]\<nu> \<downharpoonright> True); ([\<psi>]\<nu> \<downharpoonright> True)\<rbrakk> \<Longrightarrow> ([And \<phi> \<psi>]\<nu> \<downharpoonright> True)"
+| rAndF1:"([\<phi>]\<nu> \<downharpoonright> False) \<Longrightarrow> ([And \<phi> \<psi>]\<nu> \<downharpoonright> False)"
+| rAndF2:"([\<psi>]\<nu> \<downharpoonright> False) \<Longrightarrow> ([And \<phi> \<psi>]\<nu> \<downharpoonright> False)"
+| rOrT1:"([\<phi>]\<nu> \<downharpoonright> True) \<Longrightarrow> ([Or \<phi> \<psi>]\<nu> \<downharpoonright> True)"
+| rOrT2:"([\<psi>]\<nu> \<downharpoonright> True) \<Longrightarrow> ([Or \<phi> \<psi>]\<nu> \<downharpoonright> True)"
+| rOrF:"\<lbrakk>([\<phi>]\<nu> \<downharpoonright> False) ;([\<psi>]\<nu> \<downharpoonright> False)\<rbrakk> \<Longrightarrow> ([And \<phi> \<psi>]\<nu> \<downharpoonright> False)"
+| rNotT:"([\<phi>]\<nu> \<downharpoonright> False) \<Longrightarrow> ([(Not \<phi>)]\<nu> \<downharpoonright> True)"
+| rNotF:"([\<phi>]\<nu> \<downharpoonright> True) \<Longrightarrow> ([(Not \<phi>)]\<nu> \<downharpoonright> False)"
 
 inductive_simps
-    rfsem_Gr_simps[simp]: "([\<theta>\<^sub>1 < \<theta>\<^sub>2]\<nu> \<down> b)"
-and rfsem_Leq_simps[simp]: "([Leq \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> b)"
-and rfsem_Equals_simps[simp]: "([Equals \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> b)"
-and rfsem_And_simps[simp]: "([\<phi> & \<psi>]\<nu> \<down> b)"
-and rfsem_Or_simps[simp]: "([(Or \<phi> \<psi>)]\<nu> \<down> b)"
-and rfsem_Not_simps[simp]: "([\<not>\<phi>]\<nu> \<down> b)"
+    rfsem_Gr_simps[simp]: "([Le \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<downharpoonright> b)"
+and rfsem_Leq_simps[simp]: "([Leq \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<downharpoonright> b)"
+and rfsem_Equals_simps[simp]: "([Equals \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<downharpoonright> b)"
+and rfsem_And_simps[simp]: "([And \<phi>  \<psi>]\<nu> \<downharpoonright> b)"
+and rfsem_Or_simps[simp]: "([(Or \<phi> \<psi>)]\<nu> \<downharpoonright> b)"
+and rfsem_Not_simps[simp]: "([Not \<phi>]\<nu> \<downharpoonright> b)"
 
-inductive rpsem :: "hp \<Rightarrow> rstate \<Rightarrow> rstate \<Rightarrow> bool" ("([_]_) \<down> _" 20)
+inductive rpsem :: "('sf,'sc,'sz)hp \<Rightarrow> 'sz rstate \<Rightarrow> 'sz rstate \<Rightarrow> bool" ("([_]_) \<downharpoonleft> _" 20)
 where
-  rTest[simp]:"\<lbrakk>([\<phi>]\<nu> \<down> True); \<nu> = \<omega>\<rbrakk> \<Longrightarrow> ([? \<phi>]\<nu> \<down> \<omega>)"
-| rSeq[simp]:"\<lbrakk>([\<alpha>]\<nu> \<down> \<mu>); ([\<beta>]\<mu> \<down> \<omega>)\<rbrakk> \<Longrightarrow> ([\<alpha>; \<beta>]\<nu> \<down> \<omega>)"
-| rAssign[simp]:"\<lbrakk>([\<theta>]\<nu> \<down> r); \<omega> = (\<nu> (x := r))\<rbrakk> \<Longrightarrow> ([x <- \<theta>]\<nu> \<down> \<omega>)"
-| rChoice1[simp]:"([\<alpha>]\<nu> \<down> \<omega>) \<Longrightarrow> ([Choice \<alpha> \<beta>]\<nu> \<down> \<omega>)"
-| rChoice2[simp]:"([\<beta>]\<nu> \<down> \<omega>) \<Longrightarrow> ([Choice \<alpha> \<beta>]\<nu> \<down> \<omega>)"
+  rTest[simp]:"\<lbrakk>([\<phi>]\<nu> \<downharpoonright> True); \<nu> = \<omega>\<rbrakk> \<Longrightarrow> ([? \<phi>]\<nu> \<downharpoonleft> \<omega>)"
+| rSeq[simp]:"\<lbrakk>([\<alpha>]\<nu> \<downharpoonleft> \<mu>); ([\<beta>]\<mu> \<downharpoonleft> \<omega>)\<rbrakk> \<Longrightarrow> ([\<alpha>;; \<beta>]\<nu> \<downharpoonleft> \<omega>)"
+| rAssign[simp]:"\<lbrakk>([\<theta>]\<nu> \<down> r); \<omega> = (\<nu> (x := r))\<rbrakk> \<Longrightarrow> ([Assign x \<theta>]\<nu> \<downharpoonleft> \<omega>)"
+| rChoice1[simp]:"([\<alpha>]\<nu> \<downharpoonleft> \<omega>) \<Longrightarrow> ([Choice \<alpha> \<beta>]\<nu> \<downharpoonleft> \<omega>)"
+| rChoice2[simp]:"([\<beta>]\<nu> \<downharpoonleft> \<omega>) \<Longrightarrow> ([Choice \<alpha> \<beta>]\<nu> \<downharpoonleft> \<omega>)"
 
 inductive_simps
-    rpsem_Test_simps[simp]: "([? \<phi>]\<nu> \<down> b)"
-and rpsem_Seq_simps[simp]: "([\<alpha>; \<beta>]\<nu> \<down> b)"
-and rpsem_Assign_simps[simp]: "([x <- \<theta>]\<nu> \<down> b)"
-and rpsem_Choice_simps[simp]: "([Choice \<alpha> \<beta>]\<nu> \<down> b)"
+    rpsem_Test_simps[simp]: "([? \<phi>]\<nu> \<downharpoonleft> b)"
+and rpsem_Seq_simps[simp]: "([\<alpha>;; \<beta>]\<nu> \<downharpoonleft> b)"
+and rpsem_Assign_simps[simp]: "([Assign x \<theta>]\<nu> \<downharpoonleft> b)"
+and rpsem_Choice_simps[simp]: "([Choice \<alpha> \<beta>]\<nu> \<downharpoonleft> b)"
 
 
 lemma int_not_posinf:
@@ -4090,9 +4090,9 @@ lemma wleq_lemma:"w\<^sub>1 \<equiv>\<^sub>U (r\<^sub>1::real) \<Longrightarrow>
     qed
   done
 
-fun wtsemU :: "trm \<Rightarrow> wstate \<Rightarrow>  word * word " ("([_]<>_)" 20)
-where "([r \<in> \<R>]<>\<nu>) = (Rep_bword r::word, Rep_bword r)"
-| wVarU:"([x \<in> \<V>]<>\<nu>) = (\<nu> (Inl x), \<nu> (Inr x))"
+fun wtsemU :: "('sf,'sz) trm \<Rightarrow> 'sz wstate \<Rightarrow>  word * word " ("([_]<>_)" 20)
+where "([Const r]<>\<nu>) = (Rep_bword r::word, Rep_bword r)"
+| wVarU:"([Var x]<>\<nu>) = (\<nu> (Inl x), \<nu> (Inr x))"
 | wPlusU:"([Plus \<theta>\<^sub>1 \<theta>\<^sub>2]<> \<nu>) = 
   (let (l1, u1) = [\<theta>\<^sub>1]<> \<nu> in 
    let (l2, u2) = [\<theta>\<^sub>2]<> \<nu> in
@@ -4105,17 +4105,19 @@ where "([r \<in> \<R>]<>\<nu>) = (Rep_bword r::word, Rep_bword r)"
   (let (l1, u1) = [\<theta>\<^sub>1]<> \<nu> in 
    let (l2, u2) = [\<theta>\<^sub>2]<> \<nu> in
   (wmax l1 l2, wmax u1 u2))"
-| wMinU:"([(Min \<theta>\<^sub>1 \<theta>\<^sub>2)]<> \<nu>) = 
+lemma wNegU:"([(Neg \<theta>)]<> \<nu>) = 
+  (let (l, u) = [\<theta>]<> \<nu> in
+   (wneg u, wneg l))"
+  sorry
+lemma  wMinU:"([(Min \<theta>\<^sub>1 \<theta>\<^sub>2)]<> \<nu>) = 
   (let (l1, u1) = [\<theta>\<^sub>1]<> \<nu> in 
    let (l2, u2) = [\<theta>\<^sub>2]<> \<nu> in
   (wmin l1 l2, wmin u1 u2))"
-| wNegU:"([(Neg \<theta>)]<> \<nu>) = 
-  (let (l, u) = [\<theta>]<> \<nu> in
-   (wneg u, wneg l))"
+  sorry
 
-inductive wfsem :: " fml \<Rightarrow> wstate \<Rightarrow> bool \<Rightarrow> bool" ("([[_]]_ \<down> _)" 20)
+inductive wfsem :: "('sf,'sc,'sz) formula \<Rightarrow> 'sz wstate \<Rightarrow> bool \<Rightarrow> bool" ("([[_]]_ \<down> _)" 20)
 where 
-  wLeT:"wle (snd ([\<theta>\<^sub>1]<> \<nu>)) (fst ([\<theta>\<^sub>2]<>\<nu>)) \<Longrightarrow>  ([[(Le \<theta>\<^sub>1 \<theta>\<^sub>2)]]\<nu> \<down> True)"
+  wLeT:"wle (snd ([\<theta>\<^sub>1]<>\<nu>)) (fst ([\<theta>\<^sub>2]<>\<nu>)) \<Longrightarrow>  ([[(Le \<theta>\<^sub>1 \<theta>\<^sub>2)]]\<nu> \<down> True)"
 | wLeF:"wleq (snd ([\<theta>\<^sub>2]<>\<nu>)) (fst ([\<theta>\<^sub>1]<>\<nu>)) \<Longrightarrow>  ([[(Le \<theta>\<^sub>1 \<theta>\<^sub>2)]]\<nu> \<down> False)"
 | wLeqT:"wleq (snd ([\<theta>\<^sub>1]<> \<nu>)) (fst ([\<theta>\<^sub>2]<>\<nu>)) \<Longrightarrow>  ([[(Leq \<theta>\<^sub>1 \<theta>\<^sub>2)]]\<nu> \<down> True)"
 | wLeqF:"wle (snd ([\<theta>\<^sub>2]<>\<nu>)) (fst ([\<theta>\<^sub>1]<>\<nu>)) \<Longrightarrow>  ([[(Leq \<theta>\<^sub>1 \<theta>\<^sub>2)]]\<nu> \<down> False)"
@@ -4132,27 +4134,27 @@ where
 | wNotF:"([[\<phi>]]\<nu> \<down> True) \<Longrightarrow> ([[Not \<phi>]]\<nu> \<down> False)"
 
 inductive_simps
-    wfsem_Gr_simps[simp]: "([[\<theta>\<^sub>1 < \<theta>\<^sub>2]]\<nu> \<down> b)"
-and wfsem_And_simps[simp]: "([[\<phi> & \<psi>]]\<nu> \<down> b)"
+    wfsem_Gr_simps[simp]: "([[Le \<theta>\<^sub>1 \<theta>\<^sub>2]]\<nu> \<down> b)"
+and wfsem_And_simps[simp]: "([[And \<phi> \<psi>]]\<nu> \<down> b)"
 and wfsem_Or_simps[simp]: "([[Or \<phi> \<psi>]]\<nu> \<down> b)"
-and wfsem_Not_simps[simp]: "([[\<not>\<phi>]]\<nu> \<down> b)"
+and wfsem_Not_simps[simp]: "([[Not \<phi>]]\<nu> \<down> b)"
 and wfsem_Equals_simps[simp]: "([[Equals \<theta>\<^sub>1 \<theta>\<^sub>2]]\<nu> \<down> b)"
 
-inductive wpsem :: " hp \<Rightarrow> wstate \<Rightarrow> wstate \<Rightarrow> bool" ("([[_]]_ \<down> _)" 20)
+inductive wpsem :: "('sf,'sc,'sz) hp \<Rightarrow> 'sz wstate \<Rightarrow> 'sz wstate \<Rightarrow> bool" ("([[_]]_ \<down> _)" 20)
 where
   wTest:"([[\<phi>]]\<nu> \<down> True) \<Longrightarrow> \<nu> = \<omega> \<Longrightarrow> ([[? \<phi>]] \<nu> \<down> \<omega>)"
-| wSeq:"([[\<alpha>]]\<nu> \<down> \<mu>) \<Longrightarrow> ([[\<beta>]] \<mu> \<down> \<omega>) \<Longrightarrow> ([[\<alpha>; \<beta>]] \<nu> \<down> \<omega>)"
-| wAssign:"\<omega> = ((\<nu> ((Inr x) := snd([\<theta>]<>\<nu>))) ((Inl x) := fst([\<theta>]<>\<nu>))) \<Longrightarrow> ([[x <- \<theta>]] \<nu> \<down> \<omega>)"
+| wSeq:"([[\<alpha>]]\<nu> \<down> \<mu>) \<Longrightarrow> ([[\<beta>]] \<mu> \<down> \<omega>) \<Longrightarrow> ([[\<alpha>;; \<beta>]] \<nu> \<down> \<omega>)"
+| wAssign:"\<omega> = ((\<nu> ((Inr x) := snd([\<theta>]<>\<nu>))) ((Inl x) := fst([\<theta>]<>\<nu>))) \<Longrightarrow> ([[Assign x \<theta>]] \<nu> \<down> \<omega>)"
 | wChoice1[simp]:"([[\<alpha>]]\<nu> \<down> \<omega>) \<Longrightarrow> ([[Choice \<alpha> \<beta>]]\<nu> \<down> \<omega>)"
 | wChoice2[simp]:"([[\<beta>]]\<nu> \<down> \<omega>) \<Longrightarrow> ([[Choice \<alpha> \<beta>]]\<nu> \<down> \<omega>)"
 
 inductive_simps
-    wpsem_Test_simps[simp]: "([[? \<phi>]]\<nu> \<down> b)"
-and wpsem_Seq_simps[simp]: "([[\<alpha>; \<beta>]]\<nu> \<down> b)"
-and wpsem_Assign_simps[simp]: "([[x <- \<theta>]]\<nu> \<down> b)"
+    wpsem_Test_simps[simp]: "([[Test \<phi>]]\<nu> \<down> b)"
+and wpsem_Seq_simps[simp]: "([[\<alpha>;; \<beta>]]\<nu> \<down> b)"
+and wpsem_Assign_simps[simp]: "([[Assign x \<theta>]]\<nu> \<down> b)"
 and wpsem_Choice_simps[simp]: "([[Choice \<alpha> \<beta>]]\<nu> \<down> b)"
 
-inductive represents_state::"wstate \<Rightarrow> rstate \<Rightarrow> bool" (infix "REP" 10)
+inductive represents_state::"'sz wstate \<Rightarrow> 'sz rstate \<Rightarrow> bool" (infix "REP" 10)
 where REPI:"(\<And>x. (\<nu> (Inl x) \<equiv>\<^sub>L \<nu>' x) \<and> (\<nu> (Inr x) \<equiv>\<^sub>U \<nu>' x)) \<Longrightarrow> (\<nu> REP \<nu>')"
 
 lemmas real_max_mono =  Lattices.linorder_class.max.mono  
@@ -4160,22 +4162,24 @@ lemmas real_minus_le_minus = Groups.ordered_ab_group_add_class.neg_le_iff_le
 
 inductive_simps repstate_simps:"\<nu> REP \<nu>'"
 
-lemma trm_sound:"([\<theta>]\<nu>' \<down> r) \<Longrightarrow> (\<nu> REP \<nu>') \<Longrightarrow>   ([\<theta>]<>\<nu>) \<equiv>\<^sub>P r"
+lemma trm_sound:
+  fixes \<theta>::"('sf,'sz)trm"
+  shows "([\<theta>]\<nu>' \<down> r) \<Longrightarrow> (\<nu> REP \<nu>') \<Longrightarrow>   ([\<theta>]<>\<nu>) \<equiv>\<^sub>P r"
 proof (induction rule: rtsem.induct)
  case 1 
    fix w r \<nu>'
-   show "Rep_bword w \<equiv>\<^sub>E r \<Longrightarrow> \<nu> REP \<nu>' \<Longrightarrow> [w \<in> \<R>]<>\<nu> \<equiv>\<^sub>P r"
+   show "Rep_bword w \<equiv>\<^sub>E r \<Longrightarrow> \<nu> REP \<nu>' \<Longrightarrow> [Const w]<>\<nu> \<equiv>\<^sub>P r"
    using pu_lemma tu_lemma wmax_lemma wmin_lemma  wneg_lemma repU_def repL_def repP_def repe.simps rep_simps repstate_simps order_refl wtsemU.simps(1)
  represents_state.cases by auto
 next
  case 2
    fix x \<nu>'
-   show "\<nu> REP \<nu>' \<Longrightarrow> [x \<in> \<V>]<>\<nu> \<equiv>\<^sub>P \<nu>' x"
-   using pu_lemma tu_lemma wmax_lemma wmin_lemma  wneg_lemma repU_def repL_def repP_def repe.simps rep_simps repstate_simps order_refl wtsemU.simps(1)
- represents_state.cases by auto
+   show "\<nu> REP \<nu>' \<Longrightarrow> [Var x]<>\<nu> \<equiv>\<^sub>P \<nu>' x"
+     by(auto simp add: Interval_Arithmetic.wVarU case_prod_conv pu_lemma tu_lemma wmax_lemma wmin_lemma  wneg_lemma repU_def repL_def repP_def repe.simps rep_simps repstate_simps order_refl wtsemU.simps(1)
+     represents_state.cases)
 next
  case 3
-   fix \<theta>\<^sub>1 :: trm and \<nu>' r\<^sub>1 and \<theta>\<^sub>2 :: trm and  r\<^sub>2
+   fix \<theta>\<^sub>1 :: "('sf,'sz) trm" and \<nu>':: "'sz rstate" and r\<^sub>1 and \<theta>\<^sub>2 :: "('sf,'sz) trm" and  r\<^sub>2
    assume rep:"\<nu> REP \<nu>'"
    assume eval1:"[\<theta>\<^sub>1]\<nu>' \<down> r\<^sub>1"
    assume "(\<nu> REP \<nu>' \<Longrightarrow> [\<theta>\<^sub>1]<>\<nu> \<equiv>\<^sub>P r\<^sub>1)"
@@ -4195,7 +4199,7 @@ next
   have u1:"u1 \<equiv>\<^sub>U r\<^sub>1" using IH1 lu1 unfolding repP_def by auto
   have l2:"l2 \<equiv>\<^sub>L r\<^sub>2" using IH2 lu2 unfolding repP_def by auto
   have u2:"u2 \<equiv>\<^sub>U r\<^sub>2" using IH2 lu2 unfolding repP_def by auto
-  then have "([(\<theta>\<^sub>1 + \<theta>\<^sub>2)]<>\<nu>) = (pl l1 l2, pu u1 u2)"  
+  then have "([(Plus \<theta>\<^sub>1 \<theta>\<^sub>2)]<>\<nu>) = (pl l1 l2, pu u1 u2)"  
    using lu1' lu2' by auto
   have lBound:"(pl l1 l2 \<equiv>\<^sub>L r\<^sub>1 + r\<^sub>2)"
     using l1 l2 pl_lemma by auto
@@ -4203,11 +4207,11 @@ next
     using pu_lemma[OF u1 u2] by auto
   have "(pl l1 l2, pu u1 u2) \<equiv>\<^sub>P (r\<^sub>1 + r\<^sub>2)"
     unfolding repP_def Let_def using lBound uBound by auto
-  then show"[\<theta>\<^sub>1 + \<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>1 + r\<^sub>2"
+  then show"[Plus \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>1 + r\<^sub>2"
     using lu1' lu2' by auto
 next
  case 4
-   fix \<theta>\<^sub>1 :: trm and \<nu>' r\<^sub>1 and \<theta>\<^sub>2 :: trm and r\<^sub>2
+   fix \<theta>\<^sub>1 :: "('sf,'sz) trm" and \<nu>' r\<^sub>1 and \<theta>\<^sub>2 :: "('sf,'sz) trm" and r\<^sub>2
    assume eval1:"[\<theta>\<^sub>1]\<nu>' \<down> r\<^sub>1"
    assume eval2:"[\<theta>\<^sub>2]\<nu>' \<down> r\<^sub>2"
    assume rep:"\<nu> REP \<nu>'"
@@ -4223,7 +4227,7 @@ next
   have u1:"u1 \<equiv>\<^sub>U r\<^sub>1" using IH1 lu1 unfolding repP_def by auto
   have l2:"l2 \<equiv>\<^sub>L r\<^sub>2" using IH2 lu2 unfolding repP_def by auto
   have u2:"u2 \<equiv>\<^sub>U r\<^sub>2" using IH2 lu2 unfolding repP_def by auto
-  then have "([(\<theta>\<^sub>1 * \<theta>\<^sub>2)]<>\<nu>) = (tl l1 u1 l2 u2, tu l1 u1 l2 u2)"  
+  then have "([(Times \<theta>\<^sub>1  \<theta>\<^sub>2)]<>\<nu>) = (tl l1 u1 l2 u2, tu l1 u1 l2 u2)"  
    using lu1 lu2 unfolding wTimesU Let_def by auto 
   have lBound:"(tl l1 u1 l2 u2 \<equiv>\<^sub>L r\<^sub>1 * r\<^sub>2)"
     using l1 u1 l2 u2 tl_lemma by auto
@@ -4231,11 +4235,11 @@ next
     using l1 u1 l2 u2 tu_lemma by auto
   have "(tl l1 u1 l2 u2, tu l1 u1 l2 u2) \<equiv>\<^sub>P (r\<^sub>1 * r\<^sub>2)"
     unfolding repP_def Let_def using lBound uBound by auto
-  then show "[\<theta>\<^sub>1 * \<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>1 * r\<^sub>2"
+  then show "[Times \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>1 * r\<^sub>2"
     using lu1 lu2 by auto
 next
  case 5
-   fix \<theta>\<^sub>1 :: trm and \<nu>' r\<^sub>1 and \<theta>\<^sub>2 :: trm and  r\<^sub>2
+   fix \<theta>\<^sub>1 :: "('sf,'sz) trm" and \<nu>' r\<^sub>1 and \<theta>\<^sub>2 :: "('sf,'sz) trm" and  r\<^sub>2
    assume eval1:"([\<theta>\<^sub>1]\<nu>' \<down> r\<^sub>1)"
    assume eval2:"([\<theta>\<^sub>2]\<nu>' \<down> r\<^sub>2)"
    assume rep:"\<nu> REP \<nu>'"
@@ -4266,7 +4270,7 @@ next
     using lbound ubound lu1 lu2 by auto
 next
   case 6
-    fix \<theta>\<^sub>1 :: trm and \<nu>' r\<^sub>1 and \<theta>\<^sub>2 :: trm and  r\<^sub>2
+    fix \<theta>\<^sub>1 :: "('sf,'sz) trm" and \<nu>' r\<^sub>1 and \<theta>\<^sub>2 :: "('sf,'sz) trm" and  r\<^sub>2
    assume eval1:"([\<theta>\<^sub>1]\<nu>' \<down> r\<^sub>1)"
    assume eval2:"([\<theta>\<^sub>2]\<nu>' \<down> r\<^sub>2)"
    assume rep:"\<nu> REP \<nu>'"
@@ -4289,13 +4293,13 @@ next
      by (metis fst_conv lrep1 lrep2 lu1 lu2 min.mono repL_def wmin_lemma)
    have ubound:"wmin u1 u2 \<equiv>\<^sub>U min r\<^sub>1 r\<^sub>2"     
      using lu1 lu2 min_le_iff_disj repU_def urep1 urep2 by auto
-   have "([trm.Min \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu>) = (wmin l1 l2, wmin u1 u2)"
-     using lu1 lu2 unfolding wMaxU Let_def by (simp)
-  then show "[trm.Min \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P min r\<^sub>1 r\<^sub>2"
+   have "([Min \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu>) = (wmin l1 l2, wmin u1 u2)"
+     using lu1 lu2 unfolding wMinU Let_def by auto
+  then show "[Min \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P min r\<^sub>1 r\<^sub>2"
     unfolding repP_def
     using lbound ubound lu1 lu2 by auto
 next
-  fix \<theta> :: trm and \<nu>' r
+  fix \<theta> :: "('sf,'sz) trm" and \<nu>' r
   assume eval:"[\<theta>]\<nu>' \<down> r"
   assume rep:"\<nu> REP \<nu>'"
   assume "(\<nu> REP \<nu>' \<Longrightarrow> [\<theta>]<>\<nu> \<equiv>\<^sub>P r)"
@@ -4313,8 +4317,9 @@ next
   have lbound:"((wneg l1) \<equiv>\<^sub>U (uminus r))"
     using real_minus_le_minus lu repU_def lrep wneg_lemma
     by (metis fst_conv)
-  show "[- \<theta>]<>\<nu> \<equiv>\<^sub>P - r"
-    unfolding repP_def Let_def using ubound lbound by (simp add:  lu)
+  show "[Neg \<theta>]<>\<nu> \<equiv>\<^sub>P - r"
+    unfolding repP_def Let_def using ubound lbound lu 
+    by (auto simp add:  lu wNegU)
 qed
 
 lemma word_rep:"\<And>bw::bword. \<exists>r::real. Rep_bword bw \<equiv>\<^sub>E r"
@@ -4345,20 +4350,25 @@ proof -
   using intCase by auto
   qed
     
-lemma eval_tot:"(\<exists>r. ([\<theta>::trm]\<nu>' \<down> r))"
-  by(induction "\<theta>", auto simp add: word_rep)
+lemma eval_tot:"dexec \<theta> \<Longrightarrow> (\<exists>r. ([\<theta>::('sf,'sz) trm]\<nu>' \<down> r))"
+proof (induction rule: dexec.induct)
+qed (auto simp add: Min_def Neg_def word_rep bword_neg_one_def, blast?)
   
-lemma fml_sound:" ([[\<phi>]]\<nu> \<down> b) \<Longrightarrow> (\<nu> REP \<nu>') \<Longrightarrow> ([\<phi>] \<nu>' \<down> b)"
-apply (induction arbitrary: \<nu>' rule: wfsem.induct)
+lemma fml_sound:
+  fixes \<phi>::"('sf,'sc,'sz) formula" and \<nu>::"'sz wstate"
+  shows "(wfsem \<phi> \<nu>  b) \<Longrightarrow> fexec \<phi> \<Longrightarrow> (\<nu> REP \<nu>') \<Longrightarrow> (rfsem \<phi> \<nu>'  b)"
+  apply (induction arbitrary: \<nu>' rule: wfsem.induct)
 subgoal for t1 v t2 w
   proof -
   assume wle:"wle (snd ([t1]<>v)) (fst ([t2]<>v))"
   assume rep:"v REP w" 
+  assume fex:"fexec (Le t1 t2)"
   obtain r\<^sub>1 and r\<^sub>2 where eval1:"[t1]w \<down> r\<^sub>1" and  eval2:"[t2]w \<down> r\<^sub>2"
-    using eval_tot[of t1 w] eval_tot[of t2 w] by auto
+    using eval_tot[of t1 w] eval_tot[of t2 w] fex apply (auto simp add: Le_def)
+    by (metis Less_def fexec_And_simps fexec_Geq_simps)
   have rep1:"[t1]<>v \<equiv>\<^sub>P r\<^sub>1" by (rule trm_sound[of t1 w r\<^sub>1, where \<nu>=v, OF eval1 rep])
   have rep2:"[t2]<>v \<equiv>\<^sub>P r\<^sub>2" by (rule trm_sound[of t2 w r\<^sub>2, where \<nu>=v, OF eval2 rep])
-  show "[t1 < t2]w \<down> True"
+  show "[Le t1 t2]w \<downharpoonright> True"
     apply(rule rLeT[where r\<^sub>1 = r\<^sub>1, where r\<^sub>2 = r\<^sub>2]) 
     prefer 3
     apply(rule wle_lemma[where w\<^sub>1="snd([t1]<> v)", where w\<^sub>2="fst([t2]<> v)"])
@@ -4367,51 +4377,62 @@ subgoal for t1 v t2 w
   qed
 subgoal for t2 v t1 v'
   proof -
-  assume "wleq (snd ([t2]<>v)) (fst ([t1]<>v))"
+  assume wl:"wleq (snd ([t2]<>v)) (fst ([t1]<>v))"
   assume rep:"v REP v'"
+  assume fex:"fexec (Le t1 t2)"
   obtain r\<^sub>1 r\<^sub>2:: real
   where eval1:"(rtsem t1 v' r\<^sub>1)" and  
     eval2:"rtsem t2 v'  r\<^sub>2"
-    using eval_tot[of t1 v'] eval_tot[of t2 v'] by auto
+    using eval_tot[of t1 v'] eval_tot[of t2 v'] fex apply (auto simp add: Le_def)
+    by (metis Less_def fexec_And_simps fexec_Geq_simps)
   have rep1:"[t1]<>v \<equiv>\<^sub>P r\<^sub>1" by (rule trm_sound[of t1 v' r\<^sub>1, where \<nu>=v, OF eval1 rep])
   have rep2:"[t2]<>v \<equiv>\<^sub>P r\<^sub>2" by (rule trm_sound[of t2 v' r\<^sub>2, where \<nu>=v, OF eval2 rep])
-  show "[t1 < t2]v' \<down> False"
-  using wleq_lemma eval1 eval2 rep1 rep2 unfolding repP_def Let_def
-  using  wle_lemma rLeF 
-  using \<open>wleq (snd ([t2]<>v)) (fst ([t1]<>v))\<close> prod.case_eq_if by auto 
+  show "[Le t1 t2]v' \<downharpoonright> False"
+    apply(rule rLeF [of t1 v' r\<^sub>1 t2 r\<^sub>2])
+    apply(rule eval1)
+    apply(rule eval2)
+    using wle_lemma wl rep  unfolding repP_def Let_def 
+    using rep1 rep2 repP_def wleq_lemma by auto
   qed
 subgoal for t1 v t2 v'
 proof -
   assume "wleq (snd ([t1]<>v)) (fst ([t2]<>v))"
   assume rep:"v REP v'"
+  assume fex:"fexec (Leq t1 t2)"
   obtain r\<^sub>1 r\<^sub>2:: real
   where eval1:"(rtsem t1 v' r\<^sub>1)" and  
     eval2:"rtsem t2 v'  r\<^sub>2"
-    using eval_tot[of t1 v'] eval_tot[of t2 v'] by auto
+    using eval_tot[of t1 v'] eval_tot[of t2 v'] fex by (auto simp add: Leq_def Le_def)
   have rep1:"[t1]<>v \<equiv>\<^sub>P r\<^sub>1" by (rule trm_sound[of t1 v' r\<^sub>1, where \<nu>=v, OF eval1 rep])
   have rep2:"[t2]<>v \<equiv>\<^sub>P r\<^sub>2" by (rule trm_sound[of t2 v' r\<^sub>2, where \<nu>=v, OF eval2 rep])
-  show "[Leq t1 t2]v' \<down> True"
+  show "[Leq t1 t2]v' \<downharpoonright> True"
+    apply(rule rLeqT)
+      apply(rule eval1)
+    apply(rule eval2)
   using wleq_lemma eval1 eval2 rep1 rep2 unfolding repP_def Let_def
-  using  wle_lemma rLeF 
-   prod.case_eq_if  \<open>wleq (snd ([t1]<>v)) (fst ([t2]<>v))\<close> rLeqT by auto
+  using  wle_lemma prod.case_eq_if  \<open>wleq (snd ([t1]<>v)) (fst ([t2]<>v))\<close>
+  by auto
   qed
 subgoal  for t2 v t1 v'
 proof -
   assume "wle (snd ([t2]<>v)) (fst ([t1]<>v))"
   assume rep:"v REP v'"
+  assume fex:"fexec (Leq t1 t2)"
   obtain r\<^sub>1 r\<^sub>2:: real
   where eval1:"(rtsem t1 v' r\<^sub>1)" and  
     eval2:"rtsem t2 v'  r\<^sub>2"
-    using eval_tot[of t1 v'] eval_tot[of t2 v'] by auto
+    using eval_tot[of t1 v'] eval_tot[of t2 v'] fex by (auto simp add: Leq_def Le_def)
   have rep1:"[t1]<>v \<equiv>\<^sub>P r\<^sub>1" by (rule trm_sound[of t1 v' r\<^sub>1, where \<nu>=v, OF eval1 rep])
   have rep2:"[t2]<>v \<equiv>\<^sub>P r\<^sub>2" by (rule trm_sound[of t2 v' r\<^sub>2, where \<nu>=v, OF eval2 rep])
-  show "[Leq t1 t2]v' \<down> False"
+  show "[Leq t1 t2]v' \<downharpoonright> False"
+    apply(rule rLeqF, rule eval1, rule eval2)
   using wleq_lemma eval1 eval2 rep1 rep2 unfolding repP_def Let_def
   using  wle_lemma rLeF  prod.case_eq_if \<open>wle (snd ([t2]<>v)) (fst ([t1]<>v))\<close> rLeqF by auto
   qed
 subgoal for t2 v t1 v'
 proof -
 let ?x = "fst ([t2]<>v)"
+ assume fex:"fexec (Equals t1 t2)"
 assume eq1:"fst ([t2]<>v) = snd ([t2]<>v)"
 assume eq2:"snd ([t2]<>v) = snd ([t1]<>v)"
 assume eq3:"snd ([t1]<>v) = fst ([t1]<>v)"
@@ -4421,12 +4442,11 @@ assume neq2:"?x \<noteq> POS_INF"
 obtain r\<^sub>1 r\<^sub>2:: real
   where eval1:"(rtsem t1 v' r\<^sub>1)" and  
     eval2:"rtsem t2 v'  r\<^sub>2"
-    using eval_tot[of t1 v'] eval_tot[of t2 v'] by auto
+    using eval_tot[of t1 v'] eval_tot[of t2 v']  fex by (auto simp add: Equals_def Leq_def Le_def)
   have rep1:"[t1]<>v \<equiv>\<^sub>P r\<^sub>1" by (rule trm_sound[of t1 v' r\<^sub>1, where \<nu>=v, OF eval1 rep])
   have rep2:"[t2]<>v \<equiv>\<^sub>P r\<^sub>2" by (rule trm_sound[of t2 v' r\<^sub>2, where \<nu>=v, OF eval2 rep])
-  show "[Equals t1 t2]v' \<down> True"
-  using eq1 eq2 eq3 apply auto
-  apply(rule exI[where x= "r\<^sub>1"])
+  show "[Equals t1 t2]v' \<downharpoonright> True"
+    apply(rule rEqualsT, rule eval1, rule eval2)
   using eq1 eq2 eq3 eval1 eval2 rep1 rep2 unfolding repP_def Let_def repL_def repU_def repe.simps
   using neq1 neq2 by (auto simp add: POS_INF_def NEG_INF_def)
 qed
@@ -4434,13 +4454,15 @@ subgoal for t1 v t2 v'
 proof -
 assume wle:"wle (snd ([t1]<>v)) (fst ([t2]<>v))"
 assume rep:"v REP v'"
+ assume fex:"fexec (Equals t1 t2)"
 obtain r\<^sub>1 r\<^sub>2:: real
   where eval1:"(rtsem t1 v' r\<^sub>1)" and  
     eval2:"rtsem t2 v'  r\<^sub>2"
-    using eval_tot[of t1 v'] eval_tot[of t2 v'] by auto
-  have rep1:"[t1]<>v \<equiv>\<^sub>P r\<^sub>1" by (rule trm_sound[of t1 v' r\<^sub>1, where \<nu>=v, OF eval1 rep])
-  have rep2:"[t2]<>v \<equiv>\<^sub>P r\<^sub>2" by (rule trm_sound[of t2 v' r\<^sub>2, where \<nu>=v, OF eval2 rep])
-show "[Equals t1 t2]v' \<down> False"
+    using eval_tot[of t1 v'] eval_tot[of t2 v']  fex by (auto simp add: Equals_def Leq_def Le_def)
+  have rep1:"[t1]<>v \<equiv>\<^sub>P r\<^sub>1" by (rule  trm_sound[of t1 v' r\<^sub>1, where \<nu>=v, OF eval1 rep])
+  have rep2:"[t2]<>v \<equiv>\<^sub>P r\<^sub>2" by (rule  trm_sound[of t2 v' r\<^sub>2, where \<nu>=v, OF eval2 rep])
+show "[Equals t1 t2]v' \<downharpoonright> False"
+    apply(rule rEqualsF, rule eval1, rule eval2)
   using wleq_lemma eval1 eval2 rep1 rep2 unfolding repP_def Let_def
   using  wle_lemma rLeF  prod.case_eq_if wle 
   by (metis (no_types, lifting) less_irrefl rEqualsF) 
@@ -4449,42 +4471,55 @@ subgoal for t2 v t1 v'
 proof -
   assume wle:"wle (snd ([t2]<>v)) (fst ([t1]<>v))"
   assume rep:"v REP v'"
+ assume fex:"fexec (Equals t1 t2)"
   obtain r\<^sub>1 r\<^sub>2:: real
   where eval1:"(rtsem t1 v' r\<^sub>1)" and  
     eval2:"rtsem t2 v'  r\<^sub>2"
-    using eval_tot[of t1 v'] eval_tot[of t2 v'] by auto
-  have rep1:"[t1]<>v \<equiv>\<^sub>P r\<^sub>1" by (rule trm_sound[of t1 v' r\<^sub>1, where \<nu>=v, OF eval1 rep])
-  have rep2:"[t2]<>v \<equiv>\<^sub>P r\<^sub>2" by (rule trm_sound[of t2 v' r\<^sub>2, where \<nu>=v, OF eval2 rep])
-  show "[Equals t1 t2]v' \<down> False"
+    using eval_tot[of t1 v'] eval_tot[of t2 v']  fex by (auto simp add: Equals_def Leq_def Le_def)
+  have rep1:"[t1]<>v \<equiv>\<^sub>P r\<^sub>1" by (rule  trm_sound[of t1 v' r\<^sub>1, where \<nu>=v, OF eval1 rep])
+  have rep2:"[t2]<>v \<equiv>\<^sub>P r\<^sub>2" by (rule  trm_sound[of t2 v' r\<^sub>2, where \<nu>=v, OF eval2 rep])
+  show "[Equals t1 t2]v' \<downharpoonright> False"
+    apply(rule rEqualsF, rule eval1, rule eval2)
     using wleq_lemma eval1 eval2 rep1 rep2  wle_lemma rLeF  prod.case_eq_if wle
     unfolding repP_def Let_def
     by (metis (no_types, lifting) less_irrefl rEqualsF)
   qed
-by auto
+         apply auto
+  by (metis Or_def fexec_And_simps fexec_Not_simps)+
 
-lemma rep_upd:"\<omega> = (\<nu>(Inr x := snd([\<theta>]<>\<nu>)))(Inl x := fst([\<theta>]<>\<nu>)) \<Longrightarrow> \<nu> REP \<nu>' \<Longrightarrow> ([\<theta>::trm]\<nu>' \<down> r) \<Longrightarrow> \<omega> REP \<nu>'(x := r)"
+lemma rep_upd:"\<omega> = (\<nu>(Inr x := snd([\<theta>]<>\<nu>)))(Inl x := fst([\<theta>]<>\<nu>)) \<Longrightarrow> \<nu> REP \<nu>' \<Longrightarrow> ([\<theta>::('sf,'sz) trm]\<nu>' \<down> r) \<Longrightarrow> \<omega> REP \<nu>'(x := r)"
   apply(rule REPI)
-  using trm_sound  represents_state.cases 
-  by (simp add: prod.case_eq_if repP_def repstate_simps) 
+  apply(rule conjI)
+  apply(unfold repL_def)
+  using trm_sound  prod.case_eq_if repP_def repstate_simps repL_def 
+  apply (metis (no_types, lifting) Inl_Inr_False fun_upd_apply sum.inject(1))
+  apply(unfold repU_def)
+  using trm_sound  prod.case_eq_if repP_def repstate_simps repU_def
+  using  Inl_Inr_False fun_upd_apply sum.inject(1) sum.inject(2) 
+  by fastforce
+  
   
 (* TODO: Could also prove extra lemma and show that \<nu> REP \<nu>' always holds for some \<nu>' *)
 theorem fixed_point_sound:
-"([[\<alpha>::hp]] \<nu> \<down> \<omega>) \<Longrightarrow> \<nu> REP \<nu>' \<Longrightarrow> (\<exists>\<omega>'. (\<omega> REP \<omega>') \<and> ([\<alpha>::hp] \<nu>' \<down> \<omega>'))"
+  fixes \<alpha>::"('sf,'sc,'sz)hp"
+  shows "([[\<alpha>]] \<nu> \<down> \<omega>) \<Longrightarrow> hpexec \<alpha> \<Longrightarrow> \<nu> REP \<nu>' \<Longrightarrow> (\<exists>\<omega>'. (\<omega> REP \<omega>') \<and> ([\<alpha>] \<nu>' \<downharpoonleft> \<omega>'))"
 proof (induction arbitrary: \<nu>' rule: wpsem.induct)
   case (wTest \<phi> \<nu> \<omega> \<nu>') 
     assume sem:"[[\<phi>]]\<nu> \<down> True"
     and eq:"\<nu> = \<omega>"
     and rep:"\<nu> REP \<nu>'"
+    and hpexec:"hpexec (? \<phi>)"
     show ?case 
       apply(rule exI[where x=\<nu>'])
-      using sem rep by (auto simp add: eq fml_sound rep)
+      using sem rep hpexec by (auto simp add: eq fml_sound rep)
 next
   case (wSeq \<alpha> \<nu> \<mu> \<beta> \<omega> \<nu>') then show ?case by (simp, blast)
 next
   case (wAssign \<omega> \<nu> x \<theta> \<nu>') 
     assume eq:"\<omega> = \<nu>(Inr x := snd ([\<theta>]<>\<nu>), Inl x := fst ([\<theta>]<>\<nu>))"
     and rep:"\<nu> REP \<nu>'"
-    obtain r::real where eval:"([\<theta>::trm]\<nu>' \<down> r)" using eval_tot by auto
+    and hpexec:"hpexec (x := \<theta>)"
+    obtain r::real where eval:"([\<theta>::('sf,'sz) trm]\<nu>' \<down> r)" using eval_tot hpexec by auto
     show ?case 
       apply(rule exI[where x="\<nu>'(x := r)"])
       apply(rule conjI)
@@ -4499,7 +4534,7 @@ qed
 
 code_pred "wfsem".  
 
-export_code wfsem in SML
+(*export_code wfsem in SML*)
 
 
 
