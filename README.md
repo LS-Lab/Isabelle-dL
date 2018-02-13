@@ -1,27 +1,13 @@
-# dl-fml
-Formalization of differential dynamic logic in Isabelle/HOL, including soundness theorem for uniform substitution calculus.
-The results in this formalization are described in the paper:
+# Integer Interval Arithmetic for Computational Differential Dynamic Logic
 
-1. Brandon Bohrer, Vincent Rahli, Ivana Vukotic, Marcus Völp and André Platzer.
-[Formally verified differential dynamic logic](http://dx.doi.org/10.1145/3018610.3018616).
-ACM SIGPLAN Conference on Certified Programs and Proofs, CPP 2017, Jan 16-17, 2017, Paris, France, pages 208-221, ACM, 2017.
+This Isabelle theory defines the deep embedding of a fragment of Differential Dynamic Logic (dL), defines a real-valued and integer interval-valued semantics for dL, and shows the interval semantics is a sound overapproximation of the real semantics.
 
+Notes to reviewer:
+- This proof uses Isabelle2016. I tested it with a copy of Isabelle2016 obtained through the seL4 installation process, but it should work with the vanilla version as well.
+   http://isabelle.in.tum.de/
 
-Requirements:
+- The directory Word_Lib is *NOT* a contribution of this paper. It is part of seL4, and I have included it in the review packet so that you do not have to install and build seL4 just for one silly library.
 
-Isabelle/HOL 2017:
-  https://isabelle.in.tum.de/
-  http://isabelle.in.tum.de/repos/isabelle/file/0d31dfa96aba/README_REPOSITORY
-
-Archive of Formal Proofs (AFP) 2017 version:
-    http://isabelle.in.tum.de/repos/isabelle/
-
-This formalization relies primarily on the formalization of ordinary
-differential equations given in the AFP, which differs from that in published work.
-You will want to run Isabelle with the ODE heap image for faster proof-checking times:
-
-$ <isabelle-root>/bin/isabelle jedit -d <afp-root>/thys/  -l HOL-ODE
-
-You will need to build the HOL-ODE image first:
-
-$ <isabelle-root>/bin/isabelle build -d <afp-root>/thys/ -b HOL-ODE 
+- The file Interval_Arithmetic.thy contains all of the new Isabelle code written for this paper. To check it, open it in Isabelle2016, e.g. launch the IDE with
+ $<path-to-isabelle>/bin/isabelle jedit -l HOL and then open it in the GUI.
+Scroll to the bottom and you should see the colored bar next to the right-hand side vertical scrollbar start to change. If it gets all the way to the bottom without any red appearing, the proof has checked successfully. This takes 2-3 minutes on my workstation; it is a relatively fast workstation. Purple means it's doing work and orange simply means there is a warning because it used type information to assist with parsing, which happens on almost every line of this proof.
