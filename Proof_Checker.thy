@@ -1746,6 +1746,9 @@ next
   case (Times \<theta>1 \<theta>2)
   then show ?case by auto
 next
+  case (Max \<theta>1 \<theta>2)
+  then show ?case by auto
+next
   case (DiffVar x)
   then show ?case by auto
 next

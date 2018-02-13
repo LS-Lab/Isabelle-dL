@@ -1,6 +1,6 @@
 theory "Uniform_Renaming" 
 imports
-  "$AFP/Ordinary_Differential_Equations/ODE_Analysis"
+  Ordinary_Differential_Equations.ODE_Analysis
   "./Ids"
   "./Lib"
   "./Syntax"
@@ -26,26 +26,54 @@ where
 | "TUrename x y (DiffVar z) = DiffVar (swap x y z)"
 | "TUrename x y (Const r) = (Const r)"
 | "TUrename x y (Function f args) = Function f (\<lambda>i. TUrename x y (args i))"
+| "TUrename x y ($$F f) = undefined"
 | "TUrename x y (Plus \<theta>1 \<theta>2) = Plus (TUrename x y \<theta>1) (TUrename x y \<theta>2)"
 | "TUrename x y (Times \<theta>1 \<theta>2) = Times (TUrename x y \<theta>1) (TUrename x y \<theta>2)"
 | "TUrename x y (Differential \<theta>) = Differential (TUrename x y \<theta>)"
-  
+
+inductive TRadmit :: "('sf, 'sz) trm \<Rightarrow> bool"
+where
+  TRadmit_Var:"TRadmit (Var z)"
+| TRadmit_DiffVar:"TRadmit (DiffVar z)"
+| TRadmit_Const:"TRadmit  (Const c)"
+| TRadmit_Function:"(\<forall>i. (TRadmit (args i))) \<Longrightarrow> TRadmit (Function f args)"
+| TRadmit_Plus:"TRadmit t1 \<Longrightarrow> TRadmit t2 \<Longrightarrow> TRadmit (Plus t1 t2)"
+| TRadmit_Times:"TRadmit t1 \<Longrightarrow> TRadmit t2 \<Longrightarrow> TRadmit (Times t1 t2)"
+| TRadmit_Differential:"TRadmit t \<Longrightarrow> dfree t \<Longrightarrow> TRadmit (Differential t)"
+
+inductive_simps
+    TRadmit_var_simps[simp]: "TRadmit (Var z)"
+and TRadmit_diffvar_simps[simp]: "TRadmit (DiffVar z)"
+and TRadmit_const_simps[simp]: "TRadmit (Const c)"
+and TRadmit_function_simps[simp]: "TRadmit (Function f args)"
+and TRadmit_functional_simps[simp]: "TRadmit (Functional f)"
+and TRadmit_plus_simps[simp]: "TRadmit (Plus t1 t2)"
+and TRadmit_times_simps[simp]: "TRadmit (Times t1 t2)"
+and TRadmit_differential_simps[simp]: "TRadmit (Differential t)"
+
 primrec OUrename :: "'sz \<Rightarrow> 'sz \<Rightarrow> ('sf, 'sz) ODE \<Rightarrow> ('sf, 'sz) ODE"
 where
-  "OUrename x y (OVar c) = undefined"
+  "OUrename x y (OVar c sp) = undefined"
 | "OUrename x y (OSing z \<theta>) = OSing (swap x y z) (TUrename x y \<theta>)"
 | "OUrename x y (OProd ODE1 ODE2) = OProd (OUrename x y ODE1) (OUrename x y ODE2)"
-  
+
+
 inductive ORadmit :: "('sf, 'sz) ODE \<Rightarrow> bool"
 where
-  ORadmit_Sing:"ORadmit (OSing x \<theta>)"
+  ORadmit_Sing:"TRadmit \<theta> \<Longrightarrow> dfree \<theta> \<Longrightarrow> ORadmit (OSing x \<theta>)"
 | ORadmit_Prod:"ORadmit ODE1 \<Longrightarrow> ORadmit ODE2 \<Longrightarrow> ORadmit (OProd ODE1 ODE2)"
-  
+
+inductive_simps
+    ORadmit_var_simps[simp]: "ORadmit (OVar z sp)"
+and ORadmit_sing_simps[simp]: "ORadmit (OSing z t)"
+and ORadmit_prod_simps[simp]: "ORadmit (OProd o1 o2)"
+
 primrec PUrename :: "'sz \<Rightarrow> 'sz \<Rightarrow> ('sf, 'sc, 'sz) hp \<Rightarrow> ('sf, 'sc, 'sz) hp"
   and   FUrename :: "'sz \<Rightarrow> 'sz \<Rightarrow> ('sf, 'sc, 'sz) formula \<Rightarrow> ('sf, 'sc, 'sz) formula"
 where
   "PUrename x y (Pvar a) = undefined"
 | "PUrename x y (Assign z \<theta>) = Assign (swap x y z) (TUrename x y \<theta>)"
+| "PUrename x y (AssignAny z) = AssignAny (swap x y z) "
 | "PUrename x y (DiffAssign z \<theta>) = DiffAssign (swap x y z) (TUrename x y \<theta>)"
 | "PUrename x y (Test \<phi>) = Test (FUrename x y \<phi>)"
 | "PUrename x y (EvolveODE ODE \<phi>) = EvolveODE (OUrename x y ODE) (FUrename x y \<phi>)"
@@ -61,21 +89,25 @@ where
 | "FUrename x y (Diamond \<alpha> \<phi>) = Diamond (PUrename x y \<alpha>) (FUrename x y \<phi>)"
 | "FUrename x y (InContext C \<phi>) = undefined"
 
+fun SUrename :: " 'sz \<Rightarrow> 'sz \<Rightarrow> ('sf,'sc,'sz) sequent \<Rightarrow> ('sf,'sc,'sz) sequent"
+  where "SUrename  x y (A,S) = (map (FUrename x y) A, map (FUrename x y) S)"
+
 subsection \<open>Uniform Renaming Admissibility\<close>
 
 inductive PRadmit :: "('sf, 'sc, 'sz) hp \<Rightarrow> bool"
   and     FRadmit ::"('sf, 'sc, 'sz) formula \<Rightarrow> bool"
 where
-  PRadmit_Assign:"PRadmit (Assign x \<theta>)"
-| PRadmit_DiffAssign:"PRadmit (DiffAssign x \<theta>)"
+  PRadmit_Assign:"TRadmit \<theta> \<Longrightarrow> PRadmit (Assign x \<theta>)"
+| PRadmit_AssignAny:"PRadmit (AssignAny x)"
+| PRadmit_DiffAssign:"TRadmit \<theta> \<Longrightarrow>  PRadmit (DiffAssign x \<theta>)"
 | PRadmit_Test:"FRadmit \<phi> \<Longrightarrow> PRadmit (Test \<phi>)"
 | PRadmit_EvolveODE:"ORadmit ODE \<Longrightarrow> FRadmit \<phi> \<Longrightarrow> PRadmit (EvolveODE ODE \<phi>)"
 | PRadmit_Choice:"PRadmit a \<Longrightarrow> PRadmit b \<Longrightarrow> PRadmit (Choice a b)"
 | PRadmit_Sequence:"PRadmit a \<Longrightarrow> PRadmit b \<Longrightarrow> PRadmit (Sequence a b)"
 | PRadmit_Loop:"PRadmit a \<Longrightarrow> PRadmit (Loop a)"
 
-| FRadmit_Geq:"FRadmit (Geq \<theta>1 \<theta>2)"
-| FRadmit_Prop:"FRadmit (Prop p args)"
+| FRadmit_Geq:"TRadmit \<theta>1 \<Longrightarrow> TRadmit \<theta>2 \<Longrightarrow> FRadmit (Geq \<theta>1 \<theta>2)"
+| FRadmit_Prop:"(\<forall>i. TRadmit (args i)) \<Longrightarrow> FRadmit (Prop p args)"
 | FRadmit_Not:"FRadmit \<phi> \<Longrightarrow> FRadmit (Not \<phi>)"
 | FRadmit_And:"FRadmit \<phi> \<Longrightarrow> FRadmit \<psi> \<Longrightarrow> FRadmit (And \<phi> \<psi>)"
 | FRadmit_Exists:"FRadmit \<phi> \<Longrightarrow> FRadmit (Exists x \<phi>)"
@@ -83,7 +115,23 @@ where
 
 inductive_simps
     FRadmit_box_simps[simp]: "FRadmit (Box a f)"
-and PRadmit_box_simps[simp]: "PRadmit (Assign x e)"
+and FRadmit_Geq_simps[simp]: "FRadmit (Geq \<theta>1 \<theta>2)"
+and FRadmit_Prop_simps[simp]: "FRadmit (Prop p args)"
+and FRadmit_Not_simps[simp]: "FRadmit (Not \<phi>)"
+and FRadmit_And_simps[simp]: "FRadmit (And \<phi> \<psi>)"
+and FRadmit_Exists_simps[simp]: "FRadmit (Exists x \<phi>)"
+and FRadmit_Diamond_simps[simp]: "FRadmit (Diamond \<alpha> \<phi>)"
+and FRadmit_InContext_simps[simp]: "FRadmit (InContext \<alpha> \<phi>)"
+
+and PRadmit_diffassign_simps[simp]: "PRadmit (DiffAssign x \<theta>)"
+and PRadmit_assignany_simps[simp]: "PRadmit (AssignAny x)"
+and PRadmit_test_simps[simp]: "PRadmit (Test \<phi>)"
+and PRadmit_evolveode_simps[simp]: "PRadmit (EvolveODE ODE \<phi>)"
+and PRadmit_choice_simps[simp]: "PRadmit (Choice a b)"
+and PRadmit_sequence_simps[simp]: "PRadmit (Sequence a b)"
+and PRadmit_loop_simps[simp]: "PRadmit (Loop a)"
+and PRadmit_assign_simps[simp]: "PRadmit (Assign x e)"
+and PRadmit_Pvar_simps[simp]: "PRadmit (Pvar a)"
 
 definition RSadj :: "'sz \<Rightarrow> 'sz \<Rightarrow> 'sz simple_state \<Rightarrow> 'sz simple_state"
 where "RSadj x y \<nu> = (\<chi> z. \<nu> $ (swap x y z))" 
@@ -91,9 +139,11 @@ where "RSadj x y \<nu> = (\<chi> z. \<nu> $ (swap x y z))"
 definition Radj :: "'sz \<Rightarrow> 'sz \<Rightarrow> 'sz state \<Rightarrow> 'sz state"
 where "Radj x y \<nu> = (RSadj x y (fst \<nu>), RSadj x y (snd \<nu>))" 
 
-lemma SUren: "sterm_sem I (TUrename x y \<theta>) \<nu> = sterm_sem I \<theta> (RSadj x y \<nu>)"
-  by (induction \<theta>, auto simp add: RSadj_def)
-
+lemma SUren: "dfree \<theta> \<Longrightarrow> sterm_sem I (TUrename x y \<theta>) \<nu> = sterm_sem I \<theta> (RSadj x y \<nu>)"
+  apply (induction \<theta>, auto simp add: RSadj_def)
+  using dfree.cases
+  by blast
+   
 lemma ren_preserves_dfree:"dfree \<theta> \<Longrightarrow> dfree (TUrename x y \<theta>)"
   by(induction rule: dfree.induct, auto intro: dfree.intros)
 
@@ -147,14 +197,14 @@ lemma RSadj_snd:"RSadj x y (snd \<nu>) = snd (Radj x y \<nu>)"
 
 lemma TUren:
   assumes good_interp:"is_interp I"
-  shows "dsafe \<theta> \<Longrightarrow> dterm_sem I (TUrename x y \<theta>) \<nu> = dterm_sem I \<theta> (Radj x y \<nu>)"
-proof (induction rule: dsafe.induct)
-  case (dsafe_Diff \<theta>)
+  shows "TRadmit \<theta> \<Longrightarrow> dterm_sem I (TUrename x y \<theta>) \<nu> = dterm_sem I \<theta> (Radj x y \<nu>)"
+proof (induction rule: TRadmit.induct)
+  case (TRadmit_Differential \<theta>)
   assume free:"dfree \<theta>"
   show ?case 
     apply (auto simp add: directional_derivative_def)
     using TUren_frechet[OF good_interp free, of x y "fst \<nu>" "snd \<nu>"]
-     by (auto simp add: RSadj_fst RSadj_snd)
+    by (auto simp add: RSadj_fst RSadj_snd)
 qed (auto simp add: Radj_def RSadj_def)
 
 lemma adj_sum:"RSadj x y (\<nu>1 + \<nu>2) = (RSadj x y \<nu>1) + (RSadj x y \<nu>2)"
@@ -169,11 +219,15 @@ lemma OUren: "ORadmit ODE \<Longrightarrow> ODE_sem I (OUrename x y ODE) \<nu> =
 proof (induction rule: ORadmit.induct)
   case (ORadmit_Prod ODE1 ODE2)
   then show ?case 
-    using adj_sum by auto
+    using adj_sum ODE_sem_assoc[of I "OUrename x y ODE1" "OUrename x y ODE2"] 
+    by auto
 next
-  case (ORadmit_Sing z \<theta>)
+  case (ORadmit_Sing \<theta> z)
+  assume admit:"TRadmit \<theta>"
+  assume free:"dfree \<theta>"
   then show ?case 
-    by (rule vec_extensionality | auto simp add: SUren RSadj_def)+   
+    apply(auto)
+    by(rule vec_extensionality |auto simp add: RSadj_def SUren)+
 qed
 
 lemma state_eq: 
@@ -351,7 +405,8 @@ lemma OUrename_preserves_ODE_vars:"ORadmit ODE \<Longrightarrow> {z. (swap x y z
           {z. swap x y z \<in> (ODE_vars I ODE1 \<union> ODE_vars I ODE2)}" by auto
     moreover have "... = {z. swap x y z \<in> (ODE_vars I ODE1)} \<union> {z. swap x y z \<in> (ODE_vars I ODE2)}" by auto
     moreover have "... = ODE_vars I (OUrename x y ODE1) \<union> ODE_vars I (OUrename x y ODE2)" using IH1 IH2 by auto
-    moreover have "... = ODE_vars I (OUrename x y (OProd ODE1 ODE2))" by auto
+    moreover have "... = ODE_vars I (OUrename x y (OProd ODE1 ODE2))"
+      by (simp add: ODE_vars_assoc)
     ultimately show "{z. swap x y z \<in> ODE_vars I (OProd ODE1 ODE2)} = ODE_vars I (OUrename x y (OProd ODE1 ODE2))"
       by blast
   qed
@@ -661,7 +716,8 @@ next
     done
   then show ?case by auto 
 next
-  case (PRadmit_Assign z \<theta>)
+  case (PRadmit_Assign \<theta> z)
+  assume admit:"TRadmit \<theta>"
   have "hpsafe (Assign z \<theta>) \<Longrightarrow>  (\<And>\<nu> \<omega>. ((\<nu>, \<omega>)  \<in> prog_sem I (PUrename x y (Assign z \<theta>))) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I (Assign z \<theta>)))"
     apply (cases "z = x")
      subgoal for \<nu> \<omega>
@@ -670,7 +726,7 @@ next
        assume zx:"z = x"
        from fsafe have dsafe:"dsafe \<theta>" by auto
        have IH':"(\<And>\<nu>. dterm_sem I (TUrename x y \<theta>) \<nu> = dterm_sem I \<theta> (Radj x y \<nu>))"
-         subgoal for \<nu> using TUren[OF good_interp dsafe , of x y \<nu>] by auto done
+         subgoal for \<nu> using TUren[OF good_interp admit , of x y \<nu>] by auto done
        have "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (Assign z \<theta>))) = ((\<nu>, \<omega>) \<in> prog_sem I (Assign y (TUrename x y \<theta>)))"  using zx by auto
        moreover have "... = (\<omega> = repv \<nu> y (dterm_sem I (TUrename x y \<theta>) \<nu>))" by auto
        moreover have "... = (\<omega> = repv \<nu> y (dterm_sem I \<theta> (Radj x y \<nu>)))" using IH' by auto
@@ -689,7 +745,7 @@ next
        assume zy:"z = y"
        from fsafe have dsafe:"dsafe \<theta>" by auto
        have IH':"(\<And>\<nu>. dterm_sem I (TUrename x y \<theta>) \<nu> = dterm_sem I \<theta> (Radj x y \<nu>))"
-         subgoal for \<nu> using TUren[OF good_interp dsafe , of x y \<nu>] by auto done
+         subgoal for \<nu> using TUren[OF good_interp admit , of x y \<nu>] by auto done
        have "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (Assign z \<theta>))) = ((\<nu>, \<omega>) \<in> prog_sem I (Assign x (TUrename x y \<theta>)))"  using zy by auto
        moreover have "... = (\<omega> = repv \<nu> x (dterm_sem I (TUrename x y \<theta>) \<nu>))" by auto
        moreover have "... = (\<omega> = repv \<nu> x (dterm_sem I \<theta> (Radj x y \<nu>)))" using IH' by auto
@@ -707,7 +763,7 @@ next
       assume zx:"z \<noteq> x" and zy:"z \<noteq> y"
       from fsafe have dsafe:"dsafe \<theta>" by auto
       have IH':"(\<And>\<nu>. dterm_sem I (TUrename x y \<theta>) \<nu> = dterm_sem I \<theta> (Radj x y \<nu>))"
-        subgoal for \<nu> using TUren[OF good_interp dsafe , of x y \<nu>] by auto done
+        subgoal for \<nu> using TUren[OF good_interp admit, of x y \<nu>] by auto done
       have "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (Assign z \<theta>))) = ((\<nu>, \<omega>) \<in> prog_sem I (Assign z (TUrename x y \<theta>)))"  using zx zy by auto
       moreover have "... = (\<omega> = repv \<nu> z (dterm_sem I (TUrename x y \<theta>) \<nu>))" by auto
       moreover have "... = (\<omega> = repv \<nu> z (dterm_sem I \<theta> (Radj x y \<nu>)))" using IH' by auto
@@ -721,7 +777,86 @@ next
     done
   then show ?case by auto
 next
-  case (PRadmit_DiffAssign z \<theta>)
+  case (PRadmit_AssignAny z)
+  have "hpsafe (AssignAny z) \<Longrightarrow>  (\<And>\<nu> \<omega>. ((\<nu>, \<omega>)  \<in> prog_sem I (PUrename x y (AssignAny z))) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I (AssignAny z)))"
+    apply (cases "z = x")
+     subgoal for \<nu> \<omega>
+     proof -
+       assume fsafe:"hpsafe (AssignAny z)"
+       assume zx:"z = x"
+(*       from fsafe have dsafe:"dsafe \<theta>" by auto*)
+(*       have IH':"(\<And>\<nu>. dterm_sem I (TUrename x y \<theta>) \<nu> = dterm_sem I \<theta> (Radj x y \<nu>))"
+         subgoal for \<nu> using TUren[OF good_interp admit , of x y \<nu>] by auto done*)
+       have "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (AssignAny z))) = ((\<nu>, \<omega>) \<in> prog_sem I (AssignAny y))"  using zx by auto
+       moreover have "... = (\<exists>r. (\<omega> = repv \<nu> y r))" 
+         apply(auto) apply(rule exI[where x="fst \<nu>"],auto) subgoal for r by(rule exI[where x=r], rule vec_extensionality,auto) done
+(*       moreover have "... = (\<exists>r. (\<omega> = repv \<nu> y r))" using IH' by auto*)
+       moreover have "... = (\<exists>r. (Radj x y \<omega> = Radj x y (repv \<nu> y r)))" using Radj_eq_iff by auto
+       moreover have "... = (\<exists>r. (Radj x y \<omega> = repv (Radj x y \<nu>) x r))" using Radj_repv1 by auto
+       moreover have "... = (\<exists>r. (Radj x y \<omega> = repv (Radj x y \<nu>) z r))" using zx by auto
+       moreover have "... = (((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem  I (AssignAny z)))"
+         apply(auto)
+         subgoal for r 
+           apply(rule exI[where x="fst (Radj x y \<nu>)"], rule conjI)
+           subgoal unfolding Radj_def by auto
+           by(rule exI[where x=r],rule vec_extensionality,auto)
+         subgoal for b aa r by(rule exI[where x=r], rule vec_extensionality,auto) done
+       ultimately 
+       show "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (AssignAny z))) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem  I (AssignAny z))"
+         by auto
+     qed
+    apply (cases "z = y")
+     subgoal for \<nu> \<omega>
+     proof -
+       assume fsafe:"hpsafe (AssignAny z)"
+       assume zy:"z = y"
+(*       from fsafe have dsafe:"dsafe \<theta>" by auto*)
+(*       have IH':"(\<And>\<nu>. dterm_sem I (TUrename x y \<theta>) \<nu> = dterm_sem I \<theta> (Radj x y \<nu>))"
+         subgoal for \<nu> using TUren[OF good_interp admit , of x y \<nu>] by auto done*)
+       have "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (AssignAny z))) = ((\<nu>, \<omega>) \<in> prog_sem I (AssignAny x))"  using zy by auto
+       moreover have "... = (\<exists>r.(\<omega> = repv \<nu> x r))" apply auto subgoal for r by(rule exI[where x = "fst \<nu>"],auto,rule exI[where x=r],rule vec_extensionality,auto) done
+(*       moreover have "... = (\<omega> = repv \<nu> x (dterm_sem I \<theta> (Radj x y \<nu>)))" using IH' by auto*)
+       moreover have "... = (\<exists>r.(Radj x y \<omega> = Radj x y (repv \<nu> x r)))" using Radj_eq_iff by auto
+       moreover have "... = (\<exists>r.(Radj x y \<omega> = repv (Radj x y \<nu>) y r))" using Radj_repv2 by auto
+       moreover have "... = (\<exists>r. (Radj x y \<omega> = repv (Radj x y \<nu>) z r))" using zy by auto
+       moreover have "... = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem  I (AssignAny z))" 
+         apply(auto)
+         subgoal for r 
+           apply(rule exI[where x="fst (Radj x y \<nu>)"], rule conjI)
+           subgoal unfolding Radj_def by auto
+           by(rule exI[where x=r],rule vec_extensionality,auto)
+         subgoal for b aa r by(rule exI[where x=r], rule vec_extensionality,auto) done
+       ultimately 
+       show "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (AssignAny z))) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem  I (AssignAny z))"
+         by auto
+     qed
+    subgoal for \<nu> \<omega>
+    proof -
+      assume fsafe:"hpsafe (AssignAny z)"
+      assume zx:"z \<noteq> x" and zy:"z \<noteq> y"
+(*      from fsafe have dsafe:"dsafe \<theta>" by auto*)
+(*      have IH':"(\<And>\<nu>. dterm_sem I (TUrename x y \<theta>) \<nu> = dterm_sem I \<theta> (Radj x y \<nu>))"
+        subgoal for \<nu> using TUren[OF good_interp admit, of x y \<nu>] by auto done*)
+      have "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (AssignAny z))) = ((\<nu>, \<omega>) \<in> prog_sem I (AssignAny z))"  using zx zy by auto
+      moreover have "... = (\<exists>r. (\<omega> = repv \<nu> z r))" apply auto subgoal for r by(rule exI[where x = "fst \<nu>"],auto,rule exI[where x=r],rule vec_extensionality,auto) done
+      moreover have "... = (\<exists>r. (Radj x y \<omega> = Radj x y (repv \<nu> z r)))" using Radj_eq_iff by auto
+      moreover have "... = (\<exists>r. (Radj x y \<omega> = repv (Radj x y \<nu>) z r))" using Radj_repv3[OF zx zy] by auto
+      moreover have "... = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem  I (AssignAny z))" 
+         apply(auto)
+         subgoal for r 
+           apply(rule exI[where x="fst (Radj x y \<nu>)"], rule conjI)
+           subgoal unfolding Radj_def by auto
+           by(rule exI[where x=r],rule vec_extensionality,auto)
+         subgoal for b aa r by(rule exI[where x=r], rule vec_extensionality,auto) done
+      ultimately 
+      show "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (AssignAny z))) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem  I (AssignAny z))"
+        by auto
+    qed
+    done
+  then show ?case by auto
+next
+  case (PRadmit_DiffAssign \<theta> z)
+  assume admit:"TRadmit \<theta>"
   have "hpsafe (DiffAssign z \<theta>) \<Longrightarrow>  (\<And>\<nu> \<omega>. ((\<nu>, \<omega>)  \<in> prog_sem I (PUrename x y (DiffAssign z \<theta>))) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem I (DiffAssign z \<theta>)))"
     apply (cases "z = x")
      subgoal for \<nu> \<omega>
@@ -730,7 +865,7 @@ next
        assume zx:"z = x"
        from fsafe have dsafe:"dsafe \<theta>" by auto
        have IH':"(\<And>\<nu>. dterm_sem I (TUrename x y \<theta>) \<nu> = dterm_sem I \<theta> (Radj x y \<nu>))"
-         subgoal for \<nu> using TUren[OF good_interp dsafe , of x y \<nu>] by auto done
+         subgoal for \<nu> using TUren[OF good_interp admit, of x y \<nu>] by auto done
        have "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (DiffAssign z \<theta>))) = ((\<nu>, \<omega>) \<in> prog_sem I (DiffAssign y (TUrename x y \<theta>)))"  using zx by auto
        moreover have "... = (\<omega> = repd \<nu> y (dterm_sem I (TUrename x y \<theta>) \<nu>))" by auto
        moreover have "... = (\<omega> = repd \<nu> y (dterm_sem I \<theta> (Radj x y \<nu>)))" using IH' by auto
@@ -749,7 +884,7 @@ next
        assume zy:"z = y"
        from fsafe have dsafe:"dsafe \<theta>" by auto
        have IH':"(\<And>\<nu>. dterm_sem I (TUrename x y \<theta>) \<nu> = dterm_sem I \<theta> (Radj x y \<nu>))"
-         subgoal for \<nu> using TUren[OF good_interp dsafe , of x y \<nu>] by auto done
+         subgoal for \<nu> using TUren[OF good_interp admit , of x y \<nu>] by auto done
        have "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (DiffAssign z \<theta>))) = ((\<nu>, \<omega>) \<in> prog_sem I (DiffAssign x (TUrename x y \<theta>)))"  using zy by auto
        moreover have "... = (\<omega> = repd \<nu> x (dterm_sem I (TUrename x y \<theta>) \<nu>))" by auto
        moreover have "... = (\<omega> = repd \<nu> x (dterm_sem I \<theta> (Radj x y \<nu>)))" using IH' by auto
@@ -767,7 +902,7 @@ next
     assume zx:"z \<noteq> x" and zy:"z \<noteq> y"
     from fsafe have dsafe:"dsafe \<theta>" by auto
     have IH':"(\<And>\<nu>. dterm_sem I (TUrename x y \<theta>) \<nu> = dterm_sem I \<theta> (Radj x y \<nu>))"
-      subgoal for \<nu> using TUren[OF good_interp dsafe , of x y \<nu>] by auto done
+      subgoal for \<nu> using TUren[OF good_interp admit, of x y \<nu>] by auto done
     have "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (DiffAssign z \<theta>))) = ((\<nu>, \<omega>) \<in> prog_sem I (DiffAssign z (TUrename x y \<theta>)))"  using zx zy by auto
     moreover have "... = (\<omega> = repd \<nu> z (dterm_sem I (TUrename x y \<theta>) \<nu>))" by auto
     moreover have "... = (\<omega> = repd \<nu> z (dterm_sem I \<theta> (Radj x y \<nu>)))" using IH' by auto
@@ -800,14 +935,16 @@ next
     qed
   then show ?case by auto
 next
-  case (FRadmit_Prop p args) then
+  case (FRadmit_Prop args p) 
+  assume "\<forall>i. TRadmit (args i)"
+  then have admit:"\<And>i. TRadmit(args i)" by auto
   have "fsafe (Prop p args) \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (FUrename x y (Prop p args))) = ((Radj x y \<nu>) \<in> fml_sem I (Prop p args)))"
   proof -
     assume fsafe:"fsafe (Prop p args)"
     fix \<nu>
     from fsafe have dsafes:"\<And>i. dsafe (args i)" using dfree_is_dsafe by auto
     have IH:"\<And>i \<nu>. dterm_sem I (TUrename x y (args i)) \<nu> = dterm_sem I (args i) (Radj x y \<nu>)"
-      using TUren[OF good_interp dsafes] by auto
+      using TUren[OF good_interp admit] by auto
     have "(\<nu> \<in> fml_sem I (FUrename x y (Prop p args))) = (\<nu> \<in> fml_sem I (Prop p (\<lambda>i . TUrename x y (args i))))" by auto
     moreover have "... = (Predicates I p (\<chi> i. dterm_sem I (TUrename x y (args i)) \<nu>))" by auto
     moreover have "... = (Predicates I p (\<chi> i. dterm_sem I (args i) (Radj x y \<nu>)))" using IH by auto
@@ -1007,20 +1144,148 @@ qed (auto simp add: Radj_def)
 lemma FUren:"is_interp I \<Longrightarrow> FRadmit \<phi> \<Longrightarrow> fsafe \<phi> \<Longrightarrow> (\<And>\<nu>. (\<nu> \<in> fml_sem I (FUrename x y \<phi>)) = (Radj x y \<nu> \<in> fml_sem I \<phi>))"
   using PUren_FUren by blast
 
+
 subsection \<open>Uniform Renaming Rule Soundness\<close>
+
+lemma URename_local_sound:
+  assumes good_interp:"is_interp I"
+  assumes admit:"FRadmit \<phi>"
+  assumes fssafe:"fsafe \<phi>"
+  assumes foo:"(\<And>\<nu> .  \<nu> \<in> fml_sem I \<phi>)"
+  shows "\<And>\<nu>. \<nu> \<in> fml_sem I (FUrename x y \<phi>)"
+proof -
+  fix \<nu>
+  show "?thesis \<nu>"
+  using foo apply(auto)
+  using foo  unfolding valid_def using FUren[OF good_interp admit fssafe] 
+  using good_interp admit fssafe  by auto
+qed
 lemma URename_sound:"FRadmit \<phi> \<Longrightarrow> fsafe \<phi> \<Longrightarrow> valid \<phi> \<Longrightarrow> valid (FUrename x y \<phi>)"
   unfolding valid_def using FUren by blast
-
+(*
+lemma SURename_sound:"FRadmit (seq2fml (A,S)) \<Longrightarrow> fsafe (seq2fml (A,S)) \<Longrightarrow> seq_valid (A,S) \<Longrightarrow> seq_valid (SUrename x y (A,S))"
+  unfolding seq_valid_def  apply auto
+  subgoal for I v vv
+    apply(erule allE | erule impE)+
+    apply(auto)
+  using URename_sound[of "seq2fml (A,S)" x y] FUren[of I "seq2fml (A,S)" "(v,vv)" x y]  
+*)
 subsection \<open>Bound Renaming Rule Soundness\<close>
-lemma BRename_sound:
+fun FBrename :: " 'sz \<Rightarrow> 'sz \<Rightarrow>  ('sf,'sc,'sz) formula \<Rightarrow> ('sf,'sc,'sz) formula"
+  where "FBrename x y (Not (Diamond(Assign z \<theta>) (Not \<phi>))) = 
+    (if(x = z) then  
+       (Box(Assign y \<theta>)  (FUrename x y \<phi>)) 
+    else if (y = z) then 
+      (Box(Assign x \<theta>)  (FUrename x y \<phi>))
+    else (Box(Assign z \<theta>) \<phi>))"
+  | "FBrename x y (Not (Exists  z (Not \<phi>))) = 
+    (if(x = z) then  
+       (Forall y (FUrename x y \<phi>)) 
+    else if (y = z) then 
+      (Forall x (FUrename x y \<phi>))
+    else (Forall z  \<phi>))"
+  | "FBrename x y f = f"
+
+fun SBrename :: " 'sz \<Rightarrow> 'sz \<Rightarrow> ('sf,'sc,'sz) sequent \<Rightarrow> ('sf,'sc,'sz) sequent"
+  where "SBrename  x y (A,S) = (map (FBrename x y) A, map (FBrename x y) S)"
+
+
+lemma BRename_forall_local_sound_neq:
+  fixes \<nu>
+(*  assumes TRA:"TRadmit \<theta>"*)
+  assumes FRA:"FRadmit(Forall x \<phi>)"
+(* TODO: Is this derivable *)
+  assumes FRA':"FRadmit \<phi>"
+  assumes fsafe:"fsafe (Forall x \<phi>)"
+  assumes fsem:"\<nu> \<in> fml_sem I (Forall x \<phi>)"
+  assumes FVF:"{Inl y, Inr y, Inr x} \<inter> FVF (Forall x \<phi>) = {}"
+  assumes good_interp:"is_interp I"
+  assumes neq: "x \<noteq> y"
+  shows "\<nu> \<in> fml_sem I (Forall y (FUrename x y \<phi>))"
+proof -
+  have fsafe':"fsafe \<phi>" using fsafe  by (simp add: Box_def Forall_def)
+(*  have dsafe:"dsafe \<theta>" using fsafe by (simp add: Box_def Forall_def)*)
+  have "\<nu> \<in> fml_sem I (Forall y (FUrename x y \<phi>))"
+  proof -
+    from FVF have sub:"FVF \<phi> \<subseteq> -{Inl y, Inr y, Inr x}" using neq by (auto simp add: Box_def  Forall_def)
+    have "\<And>r. Vagree (repv (Radj x y \<nu>) x r) (repv \<nu> x r) (-{Inl y, Inr y, Inr x})"
+      unfolding Vagree_def using FVF unfolding Radj_def RSadj_def by auto
+    then have agree:"\<And>r. Vagree (repv (Radj x y \<nu>) x r) (repv \<nu> x r) (FVF \<phi>)"
+      using agree_sub[OF sub] by auto
+    have fml_sem_eq:"\<And>r. (repv (Radj x y \<nu>) x r \<in> fml_sem I \<phi>) = (repv \<nu> x r \<in> fml_sem I \<phi>)"
+      using coincidence_formula[OF fsafe' good_interp good_interp Iagree_refl agree] by auto
+    have " (\<nu> \<in> fml_sem I (Forall y (FUrename x y \<phi>)) ) = (\<forall>r. (repv \<nu> y r \<in> fml_sem I (FUrename x y \<phi>)))"
+      by auto
+    moreover have "... = (\<forall>r. (Radj x y (repv \<nu> y r) \<in> fml_sem I \<phi>))"
+      using FUren[OF good_interp FRA' fsafe'] by auto
+    moreover have "... = (\<forall>r. (repv (Radj x y \<nu>) x r \<in> fml_sem I \<phi>))"
+      using Radj_repv1 by auto
+    moreover have "... = (\<nu> \<in> fml_sem I (Forall x \<phi>))"
+      using fml_sem_eq by auto
+    moreover have "... = True"  using fsem unfolding valid_def using good_interp by(auto)
+    ultimately
+    show "\<nu> \<in> fml_sem I (Forall y (FUrename x y \<phi>))"
+      by blast
+  qed
+  then
+  show ?thesis by(auto)
+qed
+
+lemma BRename_local_sound_neq:
+  fixes \<nu>
+  assumes TRA:"TRadmit \<theta>"
   assumes FRA:"FRadmit([[Assign x \<theta>]]\<phi>)"
+(* TODO: Is this derivable *)
+  assumes FRA':"FRadmit \<phi>"
+  assumes fsafe:"fsafe ([[Assign x \<theta>]]\<phi>)"
+  assumes fsem:"\<nu> \<in> fml_sem I ([[Assign x \<theta>]]\<phi>)"
+  assumes FVF:"{Inl y, Inr y, Inr x} \<inter> FVF ([[Assign x \<theta>]]\<phi>) = {}"
+  assumes good_interp:"is_interp I"
+  assumes neq: "x \<noteq> y"
+  shows "\<nu> \<in> fml_sem I ([[Assign y \<theta>]]FUrename x y \<phi>)"
+proof -
+  have fsafe':"fsafe \<phi>" using fsafe  by (simp add: Box_def)
+  have dsafe:"dsafe \<theta>" using fsafe by (simp add: Box_def)
+  have "\<nu> \<in> fml_sem I ([[y := \<theta>]]FUrename x y \<phi>)"
+  proof -
+    from FVF have sub:"FVF \<phi> \<subseteq> -{Inl y, Inr y, Inr x}" using neq by (auto simp add: Box_def )
+    have "Vagree (repv (Radj x y \<nu>) x (dterm_sem I \<theta> \<nu>)) (repv \<nu> x (dterm_sem I \<theta> \<nu>)) (-{Inl y, Inr y, Inr x})"
+      unfolding Vagree_def using FVF unfolding Radj_def RSadj_def by auto
+    then have agree:"Vagree (repv (Radj x y \<nu>) x (dterm_sem I \<theta> \<nu>)) (repv \<nu> x (dterm_sem I \<theta> \<nu>)) (FVF \<phi>)"
+      using agree_sub[OF sub] by auto
+    have fml_sem_eq:"(repv (Radj x y \<nu>) x (dterm_sem I \<theta> \<nu>) \<in> fml_sem I \<phi>) = (repv \<nu> x (dterm_sem I \<theta> \<nu>) \<in> fml_sem I \<phi>)"
+      using coincidence_formula[OF fsafe' good_interp good_interp Iagree_refl agree] by auto
+    have "(\<nu> \<in> fml_sem I ([[y := \<theta>]]FUrename x y \<phi>)) = (repv \<nu> y (dterm_sem I \<theta> \<nu>) \<in> fml_sem I (FUrename x y \<phi>))"
+      by auto
+    moreover have "... = (Radj x y (repv \<nu> y (dterm_sem I \<theta> \<nu>)) \<in> fml_sem I \<phi>)"
+      using FUren[OF good_interp FRA' fsafe'] by auto
+    moreover have "... = (repv (Radj x y \<nu>) x (dterm_sem I \<theta> \<nu>) \<in> fml_sem I \<phi>)"
+      using Radj_repv1 by auto
+    moreover have "... = (\<nu> \<in> fml_sem I ([[x := \<theta>]]\<phi>))"
+      using fml_sem_eq by auto
+    moreover have "... = True"  using fsem unfolding valid_def using good_interp by(auto)
+    ultimately
+    show "\<nu> \<in> fml_sem I ([[y := \<theta>]]FUrename x y \<phi>)"
+      by blast
+  qed
+  then
+  show ?thesis by(auto)
+qed
+
+lemma BRename_sound:
+  assumes TRA:"TRadmit \<theta>"
+  assumes FRA:"FRadmit([[Assign x \<theta>]]\<phi>)"
+(* TODO: Is this derivable *)
+  assumes FRA':"FRadmit \<phi>"
   assumes fsafe:"fsafe ([[Assign x \<theta>]]\<phi>)"
   assumes valid:"valid ([[Assign x \<theta>]]\<phi>)"
   assumes FVF:"{Inl y, Inr y, Inr x} \<inter> FVF \<phi> = {}"
   shows "valid([[Assign y \<theta>]]FUrename x y \<phi>)"
 proof -
-  have FRA':"FRadmit \<phi>" using FRA 
-    by (metis (no_types, lifting) Box_def FRadmit.cases formula.distinct(15) formula.distinct(21) formula.distinct(27) formula.distinct(29) formula.distinct(3) formula.distinct(31) formula.distinct formula.distinct(9) formula.inject(3) formula.inject(6))
+(*  have FRA':"FRadmit \<phi>" (using FRA TRA apply(auto simp add: FRadmit.cases Box_def)*)
+(*    using FRadmit.cases formula.distinct formula.inject apply(fastforce )
+    by (smt FRadmit.cases formula.distinct(13) formula.distinct(19) formula.distinct(23) formula.distinct(25) formula.distinct(27) formula.distinct(3) formula.distinct(33) formula.distinct(37) formula.distinct(9) formula.inject(3) formula.inject(6))*)
+
   have fsafe':"fsafe \<phi>" using fsafe  by (simp add: Box_def)
   have dsafe:"dsafe \<theta>" using fsafe by (simp add: Box_def)
   have "\<And>I \<nu>. is_interp I \<Longrightarrow> \<nu> \<in> fml_sem I ([[y := \<theta>]]FUrename x y \<phi>)"
@@ -1033,7 +1298,7 @@ proof -
     then have agree:"Vagree (repv (Radj x y \<nu>) x (dterm_sem I \<theta> \<nu>)) (repv \<nu> x (dterm_sem I \<theta> \<nu>)) (FVF \<phi>)"
       using agree_sub[OF sub] by auto
     have fml_sem_eq:"(repv (Radj x y \<nu>) x (dterm_sem I \<theta> \<nu>) \<in> fml_sem I \<phi>) = (repv \<nu> x (dterm_sem I \<theta> \<nu>) \<in> fml_sem I \<phi>)"
-      using coincidence_formula[OF fsafe' Iagree_refl agree] by auto
+      using coincidence_formula[OF fsafe' good_interp good_interp Iagree_refl agree] by auto
     have "(\<nu> \<in> fml_sem I ([[y := \<theta>]]FUrename x y \<phi>)) = (repv \<nu> y (dterm_sem I \<theta> \<nu>) \<in> fml_sem I (FUrename x y \<phi>))"
       by auto
     moreover have "... = (Radj x y (repv \<nu> y (dterm_sem I \<theta> \<nu>)) \<in> fml_sem I \<phi>)"

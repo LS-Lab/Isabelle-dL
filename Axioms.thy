@@ -65,12 +65,12 @@ lemma constFcong_valid:"valid constFcongAxiom"
 proof (simp add: constFcongAxiom_def valid_def, rule allI, rule impI, rule allI, rule allI, rule impI, unfold empty_def)
   fix I::"('sf,'sc,'sz) interp" and a b
   assume good_interp:"is_interp I"
-  assume fn:"Functions I fid1 (\<chi> i. dterm_sem I (Const (Abs_bword 0)) (a, b)) = Functions I fid2 (\<chi> i. dterm_sem I (Const (Abs_bword 0)) (a, b))" 
-  have vec_eq:"(\<chi> i. dterm_sem I (if i = vid1 then $f fid1 (\<lambda>i. Const (Abs_bword 0)) else Const (Abs_bword 0)) (a, b)) = (\<chi> i. dterm_sem I (if i = vid1 then $f fid2 (\<lambda>i. Const (Abs_bword 0)) else Const (Abs_bword 0)) (a, b))"
+  assume fn:"Functions I fid1 (\<chi> i. dterm_sem I (Const (bword_zero)) (a, b)) = Functions I fid2 (\<chi> i. dterm_sem I (Const (bword_zero)) (a, b))" 
+  have vec_eq:"(\<chi> i. dterm_sem I (if i = vid1 then $f fid1 (\<lambda>i. Const (bword_zero)) else Const (bword_zero)) (a, b)) = (\<chi> i. dterm_sem I (if i = vid1 then $f fid2 (\<lambda>i. Const (bword_zero)) else Const (bword_zero)) (a, b))"
     apply(rule vec_extensionality)
     using fn by (auto simp add: empty_def)
-  then show "Predicates I vid1 (\<chi> i. dterm_sem I (if i = vid1 then $f fid1 (\<lambda>i. Const (Abs_bword 0))  else Const (Abs_bword 0)) (a, b)) =
-             Predicates I vid1 (\<chi> i. dterm_sem I (if i = vid1 then $f fid2 (\<lambda>i. Const (Abs_bword 0))  else Const (Abs_bword 0)) (a, b))"
+  then show "Predicates I vid1 (\<chi> i. dterm_sem I (if i = vid1 then $f fid1 (\<lambda>i. Const (bword_zero))  else Const (bword_zero)) (a, b)) =
+             Predicates I vid1 (\<chi> i. dterm_sem I (if i = vid1 then $f fid2 (\<lambda>i. Const (bword_zero))  else Const (bword_zero)) (a, b))"
     by auto
 qed
 
@@ -137,11 +137,11 @@ proof (unfold allInstAxiom_def, unfold valid_def, rule allI, rule allI, rule imp
   let ?fs = "dterm_sem I ?f \<nu>"
   assume "is_interp I"
   assume pre:"(\<forall>r. Predicates I vid1
-                 (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const (Abs_bword 0)) (\<chi> y. if vid1 = y then r else fst \<nu> $ y, snd \<nu>)))"
-  have arg_eq:"(\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const (Abs_bword 0)) (\<chi> y. if vid1 = y then ?fs else fst \<nu> $ y, snd \<nu>))
-                  = (\<chi> i. dterm_sem I (if i = vid1 then ?f else Const (Abs_bword 0)) (fst \<nu> , snd \<nu>))"
+                 (\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const (bword_zero)) (\<chi> y. if vid1 = y then r else fst \<nu> $ y, snd \<nu>)))"
+  have arg_eq:"(\<chi> i. dterm_sem I (if i = vid1 then trm.Var vid1 else Const (bword_zero)) (\<chi> y. if vid1 = y then ?fs else fst \<nu> $ y, snd \<nu>))
+                  = (\<chi> i. dterm_sem I (if i = vid1 then ?f else Const (bword_zero)) (fst \<nu> , snd \<nu>))"
     by(rule vec_extensionality,auto)
-  show "Predicates I vid1 (\<chi> i. dterm_sem I (if i = vid1 then ?f else Const (Abs_bword 0)) \<nu>)"
+  show "Predicates I vid1 (\<chi> i. dterm_sem I (if i = vid1 then ?f else Const (bword_zero)) \<nu>)"
     using spec[OF pre, of ?fs] arg_eq by auto
 qed
 
@@ -211,7 +211,7 @@ proof (unfold CEaxrule_def,rule soundI)
   assume pres:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [([], [Pc pid1 \<leftrightarrow> Pc pid2])] \<Longrightarrow> seq_sem I ([([], [Pc pid1 \<leftrightarrow> Pc pid2])] ! i) = UNIV)"
   have pre:"fml_sem I (Pc pid1) = fml_sem I (Pc pid2)"
     using pres[of 0] 
-    by(auto simp add: Equiv_def Or_def TT_def FF_def POS_INF_def NEG_INF_def Abs_bword_inverse)
+    by(auto simp add: Equiv_def Or_def TT_def FF_def POS_INF_def NEG_INF_def Abs_bword_inverse bword_zero_def bword_one_def)
   show "seq_sem I ([], [InContext pid3 (Pc pid1) \<leftrightarrow> InContext pid3 (Pc pid2)]) = UNIV"
     using pre by(auto simp add: pre)
 qed
@@ -231,12 +231,12 @@ proof (unfold CQaxrule_def,rule soundI)
   assume pres:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [([], [Equals ($$F fid1) ($$F fid2)])] \<Longrightarrow> seq_sem I ([([], [Equals ($$F fid1) ($$F fid2)])] ! i) = UNIV)"
   have pre:"fml_sem I (Equals ($$F fid1) ($$F fid2)) = UNIV"
     using pres[of 0]  
-    by(auto simp add: Equiv_def Or_def TT_def FF_def POS_INF_def NEG_INF_def Abs_bword_inverse)
+    by(auto simp add: Equiv_def Or_def TT_def FF_def POS_INF_def NEG_INF_def Abs_bword_inverse bword_zero_def bword_one_def)
   then have pre2:"dterm_sem I ($$F fid1) = dterm_sem I ($$F fid2)"
     using pres[of 0] apply(auto simp add: Equiv_def Or_def TT_def FF_def pres[of 0])
     apply(rule ext)
     using pre by auto
-  have vec_eq:"\<And>a b. (\<chi> i. dterm_sem I (if i = vid1 then $$F fid1 else Const (Abs_bword 0)) (a, b)) = (\<chi> i. dterm_sem I (if i = vid1 then $$F fid2 else Const (Abs_bword 0)) (a, b))"
+  have vec_eq:"\<And>a b. (\<chi> i. dterm_sem I (if i = vid1 then $$F fid1 else Const (bword_zero)) (a, b)) = (\<chi> i. dterm_sem I (if i = vid1 then $$F fid2 else Const (bword_zero)) (a, b))"
     apply(rule vec_extensionality)
     using pre2 by(auto)
   show "seq_sem I ([], [Equiv(Prop vid3 (singleton ($$F fid1)))(Prop vid3 (singleton ($$F fid2)))]) = UNIV"
@@ -252,7 +252,7 @@ proof (unfold Gaxrule_def,rule soundI)
   assume good_interp:"is_interp I"
   assume pres:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [([], [P pid1])] \<Longrightarrow> seq_sem I ([([], [P pid1])] ! i) = UNIV)"
   then have pre:"(\<And>\<nu>. \<nu> \<in> fml_sem I (P pid1))" using pres[of 0] 
-    by(auto simp add: Equiv_def Or_def TT_def FF_def Implies_def POS_INF_def NEG_INF_def Abs_bword_inverse)
+    by(auto simp add: Equiv_def Or_def TT_def FF_def Implies_def POS_INF_def NEG_INF_def Abs_bword_inverse bword_zero_def bword_one_def)
   show "seq_sem I ([], [([[$\<alpha> vid1]]P pid1)]) = UNIV"
     by(auto simp add: pre)
 qed
@@ -267,7 +267,7 @@ proof (unfold monbrule_def,rule soundI)
   assume pres:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [([P pid1], [P pid2])] \<Longrightarrow> seq_sem I ([([P pid1], [P pid2])] ! i) = UNIV)"
   then have pre:"\<And>\<nu>. \<nu> \<in> fml_sem I (P pid1) \<Longrightarrow> \<nu> \<in> fml_sem I (P pid2)"
     using pres[of 0] 
-    by(auto simp add: Equiv_def Or_def TT_def FF_def POS_INF_def NEG_INF_def Abs_bword_inverse Implies_def)
+    by(auto simp add: Equiv_def Or_def TT_def FF_def POS_INF_def NEG_INF_def Abs_bword_inverse Implies_def bword_zero_def bword_one_def)
   then show "seq_sem I ([([[$\<alpha> vid1]]P pid1)], [([[$\<alpha> vid1]]P pid2)]) = UNIV"
     by(auto simp add: FF_def TT_def Implies_def Or_def)
 qed
@@ -279,18 +279,18 @@ theorem test_valid: "valid test_axiom"
   by (auto simp add: valid_def test_axiom_def)  
 
 lemma assign_lem1:
-"dterm_sem I (if i = vid1 then Var vid1 else (Const (Abs_bword 0)))
+"dterm_sem I (if i = vid1 then Var vid1 else (Const (bword_zero)))
                    (vec_lambda (\<lambda>y. if vid1 = y then Functions I fid1
   (vec_lambda (\<lambda>i. dterm_sem I (empty i) \<nu>)) else  vec_nth (fst \<nu>) y), snd \<nu>)
 =
- dterm_sem I (if i = vid1 then $f fid1 empty else (Const (Abs_bword 0))) \<nu>"
+ dterm_sem I (if i = vid1 then $f fid1 empty else (Const (bword_zero))) \<nu>"
   by (cases "i = vid1") (auto simp: proj_sing1)
 
 lemma diff_assign_lem1:
-"dterm_sem I (if i = vid1 then DiffVar vid1 else (Const (Abs_bword 0)))
+"dterm_sem I (if i = vid1 then DiffVar vid1 else (Const (bword_zero)))
                    (fst \<nu>, vec_lambda (\<lambda>y. if vid1 = y then Functions I fid1 (vec_lambda (\<lambda>i. dterm_sem I (empty i) \<nu>)) else  vec_nth (snd \<nu>) y))
 =
- dterm_sem I (if i = vid1 then $f fid1 empty else (Const (Abs_bword 0))) \<nu>
+ dterm_sem I (if i = vid1 then $f fid1 empty else (Const (bword_zero))) \<nu>
 "
   by (cases "i = vid1") (auto simp: proj_sing1)
 
@@ -459,16 +459,16 @@ theorem MP_sound: "MP_holds \<phi> \<psi>"
 
 lemma CT_lemma:"\<And>I::('sf::finite, 'sc::finite, 'sz::{finite,linorder}) interp. \<And> a::(real, 'sz) vec. \<And> b::(real, 'sz) vec. \<forall>I::('sf,'sc,'sz) interp. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b)) \<Longrightarrow>
              is_interp I \<Longrightarrow>
-             Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = vid1 then \<theta> else  (Const (Abs_bword 0))) (a, b))) =
-             Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = vid1 then \<theta>' else (Const (Abs_bword 0))) (a, b)))"
+             Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = vid1 then \<theta> else  (Const (bword_zero))) (a, b))) =
+             Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = vid1 then \<theta>' else (Const (bword_zero))) (a, b)))"
 proof -
   fix I :: "('sf::finite, 'sc::finite, 'sz::{finite,linorder}) interp" and a :: "(real, 'sz) vec" and b :: "(real, 'sz) vec"
   assume a1: "is_interp I"
   assume "\<forall>I::('sf,'sc,'sz) interp. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b))"
-  then have "\<forall>i. dterm_sem I (if i = vid1 then \<theta>' else (Const (Abs_bword 0))) (a, b) = dterm_sem I (if i = vid1 then \<theta> else (Const (Abs_bword 0))) (a, b)"
+  then have "\<forall>i. dterm_sem I (if i = vid1 then \<theta>' else (Const (bword_zero))) (a, b) = dterm_sem I (if i = vid1 then \<theta> else (Const (bword_zero))) (a, b)"
     using a1 by presburger
-  then show "Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = vid1 then \<theta> else (Const (Abs_bword 0))) (a, b)))
-           = Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = vid1 then \<theta>' else (Const (Abs_bword 0))) (a, b)))"
+  then show "Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = vid1 then \<theta> else (Const (bword_zero))) (a, b)))
+           = Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = vid1 then \<theta>' else (Const (bword_zero))) (a, b)))"
     by presburger
 qed
 
@@ -486,7 +486,7 @@ proof (auto simp only: CQ_holds_def valid_def equals_sem vec_extensionality vec_
   assume good:"is_interp I"
   have sem_eq:"dterm_sem I \<theta> (a,b) = dterm_sem I \<theta>' (a,b)"
     using sem good by auto
-  have feq:"(\<chi> i. dterm_sem I (if i = vid1 then \<theta> else Const (Abs_bword 0)) (a, b)) = (\<chi> i. dterm_sem I (if i = vid1 then \<theta>' else Const (Abs_bword 0)) (a, b))"  
+  have feq:"(\<chi> i. dterm_sem I (if i = vid1 then \<theta> else Const (bword_zero)) (a, b)) = (\<chi> i. dterm_sem I (if i = vid1 then \<theta>' else Const (bword_zero)) (a, b))"  
     apply(rule vec_extensionality)
     using sem_eq by auto
   then show "(a, b) \<in> fml_sem I ($\<phi> var (singleton \<theta>) \<leftrightarrow> $\<phi> var (singleton \<theta>'))"

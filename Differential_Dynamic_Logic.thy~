@@ -19,6 +19,7 @@ imports
   "./Uniform_Renaming"
   "./Proof_Checker"
   "./Scratch"
+  "./Interval_Arithmetic"
 
 begin
 end 

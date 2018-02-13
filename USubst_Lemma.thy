@@ -745,6 +745,12 @@ lemma SIGT_times1:"Vagree \<nu> \<omega> (SigSet \<sigma> (Times t1 t2)) \<Longr
 lemma SIGT_times2:"Vagree \<nu> \<omega> (SigSet \<sigma> (Times t1 t2)) \<Longrightarrow> Vagree \<nu> \<omega> (SigSet \<sigma> t2)"
   unfolding Vagree_def SigSet_def by auto
 
+lemma SIGT_max1:"Vagree \<nu> \<omega> (SigSet \<sigma>(Max t1 t2)) \<Longrightarrow> Vagree \<nu> \<omega> (SigSet \<sigma> t1)"
+  unfolding Vagree_def SigSet_def by auto
+
+lemma SIGT_max2:"Vagree \<nu> \<omega> (SigSet \<sigma> (Max t1 t2)) \<Longrightarrow> Vagree \<nu> \<omega> (SigSet \<sigma> t2)"
+  unfolding Vagree_def SigSet_def by auto
+
 lemma uadmit_sterm_adjoint':
 (* ((\<Union>i\<in>SIGT \<theta>. case SFunctions \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {})\<union>(\<Union>i\<in>SIGT \<theta>. case SFunls \<sigma> i of Some x \<Rightarrow> FVT x | None \<Rightarrow> {}))*)
   assumes dsafe:"\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dsafe f'"
@@ -932,6 +938,15 @@ next
   assume safe:"dsafe (Times \<theta>1 \<theta>2)"
   then show ?case
     using IH1[OF SIGT_times1[OF VA]] IH2[OF SIGT_times2[OF VA]] by auto
+next
+  let ?Set = "SigSet \<sigma>"
+  case (Max \<theta>1 \<theta>2)
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (?Set \<theta>1) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>1 = dterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>1"
+  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (?Set \<theta>2) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>2 = dterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>2"
+  assume VA:"Vagree \<nu> \<omega> (?Set (Max \<theta>1 \<theta>2))"
+  assume safe:"dsafe (Max \<theta>1 \<theta>2)"
+  then show ?case
+    using IH1[OF SIGT_max1[OF VA]] IH2[OF SIGT_max2[OF VA]] by auto
 next 
   let ?Set = "SigSet \<sigma>"
   case (Functional f)
@@ -1091,6 +1106,17 @@ next
     and VA2:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>2}. FVT (\<sigma> i))"
     unfolding Vagree_def by auto
   assume safe:"dsafe (Times \<theta>1 \<theta>2)"
+  show ?case 
+    using IH1[OF VA1] IH2[OF VA2] safe by auto
+next
+  case (Max \<theta>1 \<theta>2 \<nu> \<omega>)
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>1 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>1"
+  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>2}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>2 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>2"
+  assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT (Max \<theta>1 \<theta>2)}. FVT (\<sigma> i))"
+  then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
+    and VA2:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>2}. FVT (\<sigma> i))"
+    unfolding Vagree_def by auto
+  assume safe:"dsafe (Max \<theta>1 \<theta>2)"
   show ?case 
     using IH1[OF VA1] IH2[OF VA2] safe by auto
 next

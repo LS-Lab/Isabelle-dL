@@ -27,7 +27,7 @@ text \<open>This section proves coincidence: semantics of terms, odes, formulas 
   \<close>
 
 context ids begin
-subsection \<open>Term Coincidence Theorems\<close>
+subsection \<open>Term Coincidence Theorems\<close>               
 lemma coincidence_sterm:"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> sterm_sem I  \<theta> (fst \<nu>) = sterm_sem I \<theta> (fst \<nu>')"
   apply(induct "\<theta>") (* 7 subgoals *)
   apply(auto simp add: Vagree_def)
@@ -347,6 +347,22 @@ next
     unfolding Vagree_def by auto
   have subs:"{Inl x |x. x \<in> SIGT \<theta>\<^sub>1} \<subseteq> {Inl x |x. x \<in> SIGT (Times \<theta>\<^sub>1 \<theta>\<^sub>2)}" 
     "{Inl x |x. x \<in> SIGT \<theta>\<^sub>2} \<subseteq> {Inl x |x. x \<in> SIGT (Times \<theta>\<^sub>1 \<theta>\<^sub>2)}"by auto
+  from IA have IA1:"Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>1}" and IA2:"Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>2}"
+    using Iagree_sub subs by auto
+  then show ?case 
+    using IH1[OF VA1 IA1] IH2[OF VA2 IA2] by auto  
+next
+case (dsafe_Max \<theta>\<^sub>1 \<theta>\<^sub>2) then
+  have safe:"dsafe \<theta>\<^sub>1" "dsafe \<theta>\<^sub>2"
+    and IH1:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>1) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>1} \<Longrightarrow> dterm_sem I \<theta>\<^sub>1 \<nu> = dterm_sem J \<theta>\<^sub>1 \<nu>'"
+    and IH2:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>2) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>2} \<Longrightarrow> dterm_sem I \<theta>\<^sub>2 \<nu> = dterm_sem J \<theta>\<^sub>2 \<nu>'"
+    and VA:"Vagree \<nu> \<nu>' (FVT (trm.Max \<theta>\<^sub>1 \<theta>\<^sub>2))"
+    and IA:"Iagree I J {Inl x |x. x \<in> SIGT (trm.Max \<theta>\<^sub>1 \<theta>\<^sub>2)}"
+    by auto
+  from VA have VA1:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>1)" and VA2:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>2)" 
+    unfolding Vagree_def by auto
+  have subs:"{Inl x |x. x \<in> SIGT \<theta>\<^sub>1} \<subseteq> {Inl x |x. x \<in> SIGT (Max \<theta>\<^sub>1 \<theta>\<^sub>2)}" 
+    "{Inl x |x. x \<in> SIGT \<theta>\<^sub>2} \<subseteq> {Inl x |x. x \<in> SIGT (Max \<theta>\<^sub>1 \<theta>\<^sub>2)}"by auto
   from IA have IA1:"Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>1}" and IA2:"Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>2}"
     using Iagree_sub subs by auto
   then show ?case 

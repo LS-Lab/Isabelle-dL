@@ -184,6 +184,7 @@ where
 | "sterm_sem I ($' c) v = undefined"
 | "sterm_sem I ($$F f) v = undefined"
 | "sterm_sem I (Differential d) v = undefined"
+| "sterm_sem I (Max _ _ ) v = undefined"
   
 (* frechet I \<theta> \<nu> syntactically computes the frechet derivative of the term \<theta> in the interpretation
  * I at state \<nu> (containing only the unprimed variables). The frechet derivative is a
@@ -218,6 +219,7 @@ where
 | "dterm_sem I (Differential t) = (\<lambda>v. directional_derivative I t v)"
 | "dterm_sem I ($$F f) = (\<lambda>v. Funls I f v)"
 | "dterm_sem I (Const b) = (\<lambda>v. sint (Rep_bword b))"
+| "dterm_sem I (Max t1 t2) = (\<lambda>v. max (dterm_sem I t1 v) (dterm_sem I t2 v))"
 
 text\<open> The semantics of an ODE is the vector field at a given point. ODE's are all time-independent
   so no time variable is necessary. Terms on the RHS of an ODE must be differential-free, so
@@ -398,7 +400,7 @@ lemma diamond_sem [simp]: "fml_sem I (Diamond \<alpha> \<phi>)
 lemma tt_sem [simp]:"fml_sem I TT = UNIV" unfolding TT_def by auto
 lemma ff_sem [simp]:"fml_sem I FF = {}" 
   using Abs_bword_inverse[of 0] Abs_bword_inverse[of 1]  
-  unfolding FF_def POS_INF_def NEG_INF_def by (auto)
+  unfolding FF_def POS_INF_def NEG_INF_def bword_zero_def bword_one_def by (auto)
 
 lemma iff_to_impl: "((\<nu> \<in> fml_sem I A) \<longleftrightarrow> (\<nu> \<in> fml_sem I B))
   \<longleftrightarrow> (((\<nu> \<in> fml_sem I A) \<longrightarrow> (\<nu> \<in> fml_sem I B))

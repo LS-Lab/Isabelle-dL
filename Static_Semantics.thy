@@ -31,6 +31,7 @@ where
 | "SIGT (Functional var) = {var}"
 | "SIGT (Plus t1 t2) = SIGT t1 \<union> SIGT t2"
 | "SIGT (Times t1 t2) = SIGT t1 \<union> SIGT t2"
+| "SIGT (Max t1 t2) = SIGT t1 \<union> SIGT t2"
 | "SIGT (DiffVar x) = {}"
 | "SIGT (Differential t) = SIGT t"
 
@@ -85,6 +86,7 @@ where
 | "FVT (Functional f) = UNIV"
 | "FVT (Plus f g) = FVT f \<union> FVT g"
 | "FVT (Times f g) = FVT f \<union> FVT g"
+| "FVT (Max f g) = FVT f \<union> FVT g"
 | "FVT (Differential f) = (\<Union>x \<in> (FVT f). primify x)"
 | "FVT (DiffVar x) = {Inr x}"
 
