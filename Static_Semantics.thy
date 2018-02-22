@@ -29,6 +29,7 @@ where
 | "SIGT (Const r) = {}"
 | "SIGT (Function var f) = {var} \<union> (\<Union>i. SIGT (f i))"
 | "SIGT (Functional var) = {var}"
+| "SIGT (Neg t1) = SIGT t1"
 | "SIGT (Plus t1 t2) = SIGT t1 \<union> SIGT t2"
 | "SIGT (Times t1 t2) = SIGT t1 \<union> SIGT t2"
 | "SIGT (Max t1 t2) = SIGT t1 \<union> SIGT t2"
@@ -80,15 +81,16 @@ text\<open>
 text\<open>Free variables of a term \<close>
 primrec FVT :: "('a, 'c) trm \<Rightarrow> ('c + 'c) set"
 where
-  "FVT (Var x) = {Inl x}"
-| "FVT (Const x) = {}"
-| "FVT (Function f args) = (\<Union>i. FVT (args i))"
-| "FVT (Functional f) = UNIV"
-| "FVT (Plus f g) = FVT f \<union> FVT g"
-| "FVT (Times f g) = FVT f \<union> FVT g"
-| "FVT (Max f g) = FVT f \<union> FVT g"
-| "FVT (Differential f) = (\<Union>x \<in> (FVT f). primify x)"
-| "FVT (DiffVar x) = {Inr x}"
+  FVT_Var:"FVT (Var x) = {Inl x}"
+| FVT_Const:"FVT (Const x) = {}"
+| FVT_Fun:"FVT (Function f args) = (\<Union>i. FVT (args i))"
+| FVT_Funl:"FVT (Functional f) = UNIV"
+| FVT_Neg:"FVT (Neg f) = FVT f"
+| FVT_Plus:"FVT (Plus f g) = FVT f \<union> FVT g"
+| FVT_Times:"FVT (Times f g) = FVT f \<union> FVT g"
+| FVT_Max:"FVT (Max f g) = FVT f \<union> FVT g"
+| FVT_Diff:"FVT (Differential f) = (\<Union>x \<in> (FVT f). primify x)"
+| FVT_DiffVar:"FVT (DiffVar x) = {Inr x}"
 
 fun FVDiff :: "('a, 'c) trm \<Rightarrow> ('c + 'c) set"
 where "FVDiff f = (\<Union>x \<in> (FVT f). primify x)"
@@ -196,6 +198,17 @@ lemma fvdiff_plus1:"FVDiff (Plus t1 t2) = FVDiff t1 \<union> FVDiff t2"
 
 lemma agree_func_fvt:"Vagree \<nu> \<nu>' (FVT (Function f args)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVT (args i))"
   by (auto simp add: Set.Un_upper1 agree_supset Vagree_def)
+
+lemma agree_neg:"Vagree \<nu> \<nu>' (FVDiff (Neg t1 )) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t1)"
+proof -
+  assume agree:"Vagree \<nu> \<nu>' (FVDiff (Neg t1))"
+  have agree':"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i) )"
+    using  FVDiff.simps agree by (auto)
+  have agreeL:"Vagree \<nu> \<nu>' ((\<Union>i\<in>FVT t1. primify i))"
+    using agree' agree_supset Set.Un_upper1 by (blast)
+  show "Vagree \<nu> \<nu>' (FVDiff t1)" using agreeL by (auto)
+qed
+
 
 lemma agree_plus1:"Vagree \<nu> \<nu>' (FVDiff (Plus t1 t2)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff t1)"
 proof -

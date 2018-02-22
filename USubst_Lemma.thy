@@ -37,6 +37,7 @@ where
              (\<lambda>\<nu>'. \<chi> ia. extendf_deriv I g (args ia) \<nu> x \<nu>')
   | Inr ff \<Rightarrow> (\<lambda> \<nu>'. \<nu>' $ ff))"
 | "extendf_deriv I g (Plus t1 t2) \<nu> x = (\<lambda>\<nu>'. (extendf_deriv I g t1 \<nu> x \<nu>') + (extendf_deriv I g t2 \<nu> x \<nu>'))"
+| "extendf_deriv I g (Neg t1 ) \<nu> x = (\<lambda>\<nu>'. - (extendf_deriv I g t1 \<nu> x \<nu>'))"
 | "extendf_deriv I g (Times t1 t2) \<nu> x = 
    (\<lambda>\<nu>'. ((dterm_sem (extendf I x) t1 \<nu> * (extendf_deriv I g t2 \<nu> x \<nu>'))) 
        + (extendf_deriv I g t1 \<nu> x \<nu>') * (dterm_sem (extendf I x) t2 \<nu>))"
@@ -97,8 +98,11 @@ next
   case (4 \<theta>\<^sub>1 \<theta>\<^sub>2)
   then show ?case apply auto
     using bounded_linear_add by blast
+  case (5 \<theta>\<^sub>1)
+  then show ?case apply auto
+    using bounded_linear_minus by blast
 next
-  case (5 \<theta>\<^sub>1 \<theta>\<^sub>2)
+  case (6 \<theta>\<^sub>1 \<theta>\<^sub>2)
   then show ?case apply auto
     apply(rule bounded_linear_add)
      apply(rule bounded_linear_const_mult)
@@ -239,7 +243,29 @@ next
     apply simp
     using eq by presburger
 next
-  case (5 \<theta>\<^sub>1 \<theta>\<^sub>2)
+  case (5 \<theta>\<^sub>1)
+  assume free1:"dfree \<theta>\<^sub>1"
+  assume IH1:"continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i \<theta>\<^sub>1 \<nu> x))"
+  have bound:"\<And>x. bounded_linear  (\<lambda>a. - extendf_deriv I i \<theta>\<^sub>1 \<nu> x a )"
+    using extendf_deriv_bounded[OF free1 good_interp]
+    by (simp add: bounded_linear_minus)
+  have eq:"(\<lambda>x. Blinfun (\<lambda>a. - extendf_deriv I i \<theta>\<^sub>1 \<nu> x a )) = (\<lambda>x. - Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>1 \<nu> x a) )"
+    apply(rule ext)
+    apply(rule blinfun_eqI)
+    subgoal for x j
+      using bound[of x] extendf_deriv_bounded[OF free1 good_interp] 
+      bounded_linear_Blinfun_apply[of "(extendf_deriv I i \<theta>\<^sub>1 \<nu> x)"]
+      using  bounded_linear_Blinfun_apply
+      by (simp add: bounded_linear_Blinfun_apply uminus_blinfun.rep_eq)
+    done
+  have "continuous_on UNIV (\<lambda>x. - Blinfun (\<lambda>a. extendf_deriv I i \<theta>\<^sub>1 \<nu> x a) )"
+    apply(rule continuous_intros)
+    using IH1  by auto
+  then show ?case
+    apply simp
+    using eq by presburger
+next
+  case (6 \<theta>\<^sub>1 \<theta>\<^sub>2)
   assume free1:"dfree \<theta>\<^sub>1"
   assume free2:"dfree \<theta>\<^sub>2"
   assume IH1:"continuous_on UNIV (\<lambda>x. Blinfun (extendf_deriv I i \<theta>\<^sub>1 \<nu> x))"
@@ -739,6 +765,9 @@ lemma SIGT_plus1:"Vagree \<nu> \<omega> (SigSet \<sigma> (Plus t1 t2)) \<Longrig
 lemma SIGT_plus2:"Vagree \<nu> \<omega> (SigSet \<sigma> (Plus t1 t2)) \<Longrightarrow> Vagree \<nu> \<omega> (SigSet \<sigma> t2)"
   unfolding Vagree_def SigSet_def by auto
 
+lemma SIGT_neg:"Vagree \<nu> \<omega> (SigSet \<sigma> (Neg t1)) \<Longrightarrow> Vagree \<nu> \<omega> (SigSet \<sigma> t1)"
+  unfolding Vagree_def SigSet_def by auto
+
 lemma SIGT_times1:"Vagree \<nu> \<omega> (SigSet \<sigma> (Times t1 t2)) \<Longrightarrow> Vagree \<nu> \<omega> (SigSet \<sigma> t1)"
   unfolding Vagree_def SigSet_def by auto
 
@@ -774,6 +803,13 @@ next
   assume VA:"Vagree \<nu> \<omega> (?Set (Times \<theta>1 \<theta>2))"    
   then show ?case
     using IH1[OF SIGT_times1[OF VA]] IH2[OF SIGT_times2[OF VA]] by auto
+next
+  let ?Set = "SigSet \<sigma>"
+  case (Neg t)
+  assume IH1:"Vagree \<nu> \<omega> (?Set t) \<Longrightarrow> sterm_sem (local.adjoint I \<sigma> \<nu>) t = sterm_sem (local.adjoint I \<sigma> \<omega>) t"
+  assume VA:"Vagree \<nu> \<omega> (?Set (Neg t))"    
+  then show ?case
+    using IH1[OF SIGT_neg[OF VA]]  by auto
 next
   let ?Set = "SigSet \<sigma>"
   case (Function x1a x2a)
@@ -838,6 +874,14 @@ lemma uadmit_sterm_ntadjoint':
   assumes dsafe:"\<And>i. dsafe (\<sigma> i)"
   shows  "Vagree \<nu> \<omega> ((\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>}. FVT (\<sigma> i))) \<Longrightarrow> sterm_sem (adjointFO I \<sigma> \<nu>) \<theta> = sterm_sem (adjointFO I \<sigma> \<omega>) \<theta>"
 proof (induct "\<theta>")
+  case (Neg \<theta>1)
+  assume IH1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> sterm_sem (adjointFO I \<sigma> \<nu>) \<theta>1 = sterm_sem (adjointFO I \<sigma> \<omega>) \<theta>1"
+  assume VA:"Vagree \<nu> \<omega> ((\<Union> i\<in>{i. Inr i \<in> SIGT (Neg \<theta>1)}. FVT (\<sigma> i)))"
+  from VA 
+    have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"unfolding Vagree_def by auto
+  then show ?case
+    using IH1[OF VA1]  by auto
+next
   case (Plus \<theta>1 \<theta>2)
   assume IH1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> sterm_sem (adjointFO I \<sigma> \<nu>) \<theta>1 = sterm_sem (adjointFO I \<sigma> \<omega>) \<theta>1"
   assume IH2:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>2}. FVT (\<sigma> i)) \<Longrightarrow> sterm_sem (adjointFO I \<sigma> \<nu>) \<theta>2 = sterm_sem (adjointFO I \<sigma> \<omega>) \<theta>2"
@@ -921,6 +965,14 @@ lemma uadmit_dterm_adjoint':
   shows  "\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (SigSet \<sigma> \<theta>) \<Longrightarrow> dsafe \<theta> \<Longrightarrow> 
          dterm_sem (adjoint I \<sigma> \<nu>) \<theta> = dterm_sem (adjoint I \<sigma> \<omega>) \<theta>"
 proof (induct "\<theta>")
+  let ?Set = "SigSet \<sigma>"
+  case (Neg \<theta>1)
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (?Set \<theta>1) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>1 = dterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>1"
+  assume VA:"Vagree \<nu> \<omega> (?Set (Neg \<theta>1))"
+  assume safe:"dsafe (Neg \<theta>1)"
+  then show ?case
+    using IH1[OF SIGT_neg[OF VA]] by auto
+next
   let ?Set = "SigSet \<sigma>"
   case (Plus \<theta>1 \<theta>2)
   assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (?Set \<theta>1) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>1 = dterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>1"
@@ -1102,7 +1154,8 @@ next
   assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>1 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>1"
   assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>2}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>2 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>2"
   assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT (Times \<theta>1 \<theta>2)}. FVT (\<sigma> i))"
-  then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
+  then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i
+ \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
     and VA2:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>2}. FVT (\<sigma> i))"
     unfolding Vagree_def by auto
   assume safe:"dsafe (Times \<theta>1 \<theta>2)"

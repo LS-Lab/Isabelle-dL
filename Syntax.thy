@@ -70,6 +70,7 @@ datatype ('a, 'c) trm =
 (*| DFunctional 'a ("$$F'")*)
 | Plus "('a, 'c) trm" "('a, 'c) trm"
 | Times "('a, 'c) trm" "('a, 'c) trm"
+| Neg "('a, 'c) trm"
 | Max "('a, 'c) trm" "('a, 'c) trm"
 (* A (real-valued) variable standing for a differential, such as x', given meaning by the state
  * and modified by programs. *)
@@ -154,11 +155,8 @@ definition DFunl :: "'a \<Rightarrow> ('a,'c) trm"
 definition DPredl :: "'c \<Rightarrow> ('a,'b,'c) formula"
   where "DPredl fid = Prop fid Var"
 
-definition Neg :: "('a,'c) trm \<Rightarrow> ('a,'c) trm" 
-  where "Neg \<theta> = Times \<theta>  (Const (bword_neg_one))"
-
 definition Minus :: "('a,'c) trm \<Rightarrow> ('a,'c) trm \<Rightarrow> ('a,'c) trm" 
-  where "Minus \<theta>\<^sub>1 \<theta>\<^sub>2= Plus \<theta>\<^sub>1 (Times \<theta>\<^sub>2  (Const (bword_neg_one)))"
+  where "Minus \<theta>\<^sub>1 \<theta>\<^sub>2 = Plus \<theta>\<^sub>1 (Neg \<theta>\<^sub>2)"
 
 definition Or :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" (infixl "||" 7)
 where "Or P Q = Not (And (Not P) (Not Q))"
@@ -294,6 +292,7 @@ where
 | dfree_Const: "dfree (Const r)"
 | dfree_Fun: "(\<forall>i. dfree (args i)) \<Longrightarrow> dfree (Function i args)"
 | dfree_Plus: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
+| dfree_Neg: "dfree \<theta> \<Longrightarrow> dfree (Neg \<theta>)"
 | dfree_Times: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
 (* regular functionals are not dfree because they can depend on differential state, that's what dfunctionals are for *)
 (*| dfree_DFunctional: "dfree ($$F' fid)"*)
@@ -305,6 +304,7 @@ where
 | dsafe_Fun: "(\<forall>i. dsafe (args i)) \<Longrightarrow> dsafe (Function i args)"
 (* | dsafe_DFunl: "dsafe ($$F' i)" *)
 | dsafe_Funl: "dsafe ($$F i)"
+| dsafe_Neg: "dsafe \<theta> \<Longrightarrow> dsafe (Neg \<theta>)"
 | dsafe_Plus: "dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dsafe_Times: "dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dsafe_Diff: "dfree \<theta> \<Longrightarrow> dsafe (Differential \<theta>)"
@@ -315,6 +315,7 @@ inductive dexec :: "('a, 'c) trm \<Rightarrow> bool"
 where
   dexec_Var: "dexec (Var i)"
 | dexec_Const: "dexec (Const r)"
+| dexec_Neg: "dexec \<theta> \<Longrightarrow> dexec (Neg \<theta>)"
 | dexec_Plus: "dexec \<theta>\<^sub>1 \<Longrightarrow> dexec \<theta>\<^sub>2 \<Longrightarrow> dexec (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dexec_Times: "dexec \<theta>\<^sub>1 \<Longrightarrow> dexec \<theta>\<^sub>2 \<Longrightarrow> dexec (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dexec_Max :"dexec \<theta>\<^sub>1 \<Longrightarrow> dexec \<theta>\<^sub>2 \<Longrightarrow> dexec (Max \<theta>\<^sub>1 \<theta>\<^sub>2)"
@@ -416,6 +417,7 @@ where
 (* Auto-generated simplifier rules for safety predicates *)  
 inductive_simps
       dfree_Plus_simps[simp]: "dfree (Plus a b)"
+  and dfree_Neg_simps[simp]: "dfree (Neg a)"
   and dfree_Times_simps[simp]: "dfree (Times a b)"
   and dfree_Max_simps[simp]: "dfree (Max a b)"
   and dfree_Var_simps[simp]: "dfree (Var x)"
@@ -427,6 +429,7 @@ inductive_simps
 
 inductive_simps
       dsafe_Plus_simps[simp]: "dsafe (Plus a b)"
+  and dsafe_Neg_simps[simp]: "dsafe (Neg a)"
   and dsafe_Times_simps[simp]: "dsafe (Times a b)"
   and dsafe_Max_simps[simp]: "dsafe (Max a b)"
   and dsafe_Var_simps[simp]: "dsafe (Var x)"
@@ -438,6 +441,7 @@ inductive_simps
 
 inductive_simps
       dexec_Plus_simps[simp]: "dexec (Plus a b)"
+  and dexec_Neg_simps[simp]: "dexec (Neg a)"
   and dexec_Times_simps[simp]: "dexec (Times a b)"
   and dexec_Max_simps[simp]: "dexec (Max a b)"
   and dexec_Var_simps[simp]: "dexec (Var x)"

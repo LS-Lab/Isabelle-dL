@@ -177,10 +177,10 @@ primrec sterm_sem :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> 
 where
   "sterm_sem I (Var x) v = v $ x"
 | "sterm_sem I (Function f args) v = Functions I f (\<chi> i. sterm_sem I (args i) v)"
+| "sterm_sem I (Neg t) v = - sterm_sem I t v"
 | "sterm_sem I (Plus t1 t2) v = sterm_sem I t1 v + sterm_sem I t2 v"
 | "sterm_sem I (Times t1 t2) v = sterm_sem I t1 v * sterm_sem I t2 v"
 | "sterm_sem I (Const b) v = sint (Rep_bword b)"
-(*| "sterm_sem I ($$F' f) v = DFunls I f v"*)
 | "sterm_sem I ($' c) v = undefined"
 | "sterm_sem I ($$F f) v = undefined"
 | "sterm_sem I (Differential d) v = undefined"
@@ -192,17 +192,18 @@ where
  *)
 primrec frechet :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'c) trm \<Rightarrow> 'c simple_state \<Rightarrow> 'c simple_state \<Rightarrow> real"
 where
-  "frechet I (Var x) v = (\<lambda>v'. v' \<bullet> axis x 1)"
-| "frechet I (Function f args) v =
+  Frechet_Var:"frechet I (Var x) v = (\<lambda>v'. v' \<bullet> axis x 1)"
+| Frechet_Fun:"frechet I (Function f args) v =
     (\<lambda>v'. FunctionFrechet I f (\<chi> i. sterm_sem I (args i) v) (\<chi> i. frechet I (args i) v v'))"
-| "frechet I (Plus t1 t2) v = (\<lambda>v'. frechet I t1 v v' + frechet I t2 v v')"
-| "frechet I (Times t1 t2) v =
+| Frechet_Neg:"frechet I (Neg t) v = (\<lambda>v'. - frechet I t v v')"
+| Frechet_Plus:"frechet I (Plus t1 t2) v = (\<lambda>v'. frechet I t1 v v' + frechet I t2 v v')"
+| Frechet_Times:"frechet I (Times t1 t2) v =
     (\<lambda>v'. sterm_sem I t1 v * frechet I t2 v v' + frechet I t1 v v' * sterm_sem I t2 v)"
-| "frechet I (Const r) v = (\<lambda>v'. 0)"
+| Frechet_Const:"frechet I (Const r) v = (\<lambda>v'. 0)"
 (*| "frechet I ($$F' f) v = DFunls I f v"*)
-| "frechet I ($' c) v = undefined"
-| "frechet I (Differential d) v = undefined"
-| "frechet I ($$F f) v = undefined"
+| Frechet_DiffVar:"frechet I ($' c) v = undefined"
+| Frechet_Diff:"frechet I (Differential d) v = undefined"
+| Frechet_Funl:"frechet I ($$F f) v = undefined"
 
 definition directional_derivative :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'c) trm \<Rightarrow> 'c state \<Rightarrow> real"
 where "directional_derivative I t = (\<lambda>v. frechet I t (fst v) (snd v))"
@@ -214,6 +215,7 @@ where
   "dterm_sem I (Var x) = (\<lambda>v. fst v $ x)"
 | "dterm_sem I (DiffVar x) = (\<lambda>v. snd v $ x)"
 | "dterm_sem I (Function f args) = (\<lambda>v. Functions I f (\<chi> i. dterm_sem I (args i) v))"
+| "dterm_sem I (Neg t) = (\<lambda>v. - (dterm_sem I t v) )"
 | "dterm_sem I (Plus t1 t2) = (\<lambda>v. (dterm_sem I t1 v) + (dterm_sem I t2 v))"
 | "dterm_sem I (Times t1 t2) = (\<lambda>v. (dterm_sem I t1 v) * (dterm_sem I t2 v))"
 | "dterm_sem I (Differential t) = (\<lambda>v. directional_derivative I t v)"

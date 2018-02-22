@@ -237,7 +237,12 @@ next
   case (dfree_Times \<theta>\<^sub>1 \<theta>\<^sub>2)
   then show ?case
     by (auto simp add: bounded_linear_add bounded_linear_const_mult bounded_linear_mult_const)
-qed
+next
+  case (dfree_Neg \<theta>)
+  then show ?case
+    apply(auto)
+    using bounded_linear_minus by blast
+qed 
 
 setup_lifting type_definition_good_interp
 
@@ -308,7 +313,9 @@ next
     apply(rule blinfun_eqI)
     apply auto
     using zero_blinfun.abs_eq zero_blinfun.rep_eq free
-    by (metis frechet.simps(5) mem_Collect_eq simple_term_inverse)
+    apply(auto simp add: frechet.simps(5) mem_Collect_eq simple_term_inverse)
+    using frechet.simps(5) mem_Collect_eq simple_term_inverse
+    by (smt blinfun.zero_left zero_blinfun_def)
   then show ?case by (metis cont)
 next
   case (dfree_Fun args f)
@@ -367,6 +374,22 @@ next
       by (metis (no_types) blinfun_apply_blinfun_compose bounded_linear_Blinfun_apply bounded_linears)
   qed
   then show ?case using cont best_eq by auto
+next
+  case (dfree_Neg \<theta>)
+  assume IH1:"continuous_on UNIV (blin_frechet (good_interp I) (simple_term \<theta>))"
+  assume free1:"dfree \<theta>"
+  have free:"dfree (Neg \<theta>)" using free1 by auto 
+  have bounded_linear:"\<And>v. bounded_linear (\<lambda>v'. - frechet I \<theta> v v' )" 
+    subgoal for v
+      using frechet_linear[OF good_interp free] by auto
+    done
+  have eq2:"(\<lambda>v. - blin_frechet (good_interp I) (simple_term \<theta>) v) = blin_frechet (good_interp I) (simple_term (Neg \<theta>))"
+    apply(rule ext)
+    apply(rule blinfun_eqI)
+    by (simp add: simple_term_inverse blinfun.minus_left blinfun.add_left free1  simple_term_inverse)
+  have cont:"continuous_on UNIV (\<lambda>v. - blin_frechet (good_interp I) (simple_term \<theta>) v)"
+    using continuous_on_minus dfree_Neg.IH by blast 
+  then show ?case using cont eq2 by metis 
 next
   case (dfree_Plus \<theta>\<^sub>1 \<theta>\<^sub>2)
   assume IH1:"continuous_on UNIV (blin_frechet (good_interp I) (simple_term \<theta>\<^sub>1))"

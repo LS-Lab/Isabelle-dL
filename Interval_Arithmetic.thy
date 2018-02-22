@@ -8,47 +8,6 @@ begin
 
 type_synonym word = "32 Word.word"
 
-(*definition NEG_INF::"word"
-where "NEG_INF = -((2 ^ 31) -1)"
-
-definition POS_INF::"word"
-where "POS_INF = (2^31) - 1"
-
-typedef bword = "{n::word. sint n \<ge> sint NEG_INF \<and> sint n \<le> sint POS_INF}"
-  apply(rule exI[where x=NEG_INF])
-  by (auto simp add: NEG_INF_def POS_INF_def)
-
-setup_lifting type_definition_bword*)
-
-
-(*export_code xCoord in Haskell module_name Example 
-definition *)
-
-(*
-(* To make running the proof easier, don't include ODEs yet *)
-datatype ('sf,'sz) trm =
-  Const bword     ("_ \<in> \<R>" 10)
-| Var id         ("_ \<in> \<V>" 10)
-| Plus ('sf,'sz) trm ('sf,'sz) trm  (infix "+" 10)
-| Times ('sf,'sz) trm ('sf,'sz) trm (infix "*" 10)
-| Max ('sf,'sz) trm ('sf,'sz) trm
-| Min ('sf,'sz) trm ('sf,'sz) trm
-| Neg ('sf,'sz) trm        ("-")
-
-datatype fml =
-  Le ('sf,'sz) trm ('sf,'sz) trm     ("_ < _")
-| Leq ('sf,'sz) trm ('sf,'sz) trm
-| Equals ('sf,'sz) trm ('sf,'sz) trm
-| And fml fml    ("_ & _")
-| Or fml fml    
-| Not fml        ("\<not>")
-
-datatype hp =
-  Test fml       ("?")
-| Seq hp hp      ("_ ; _")
-| Assign id ('sf,'sz) trm  ("_ <- _")
-| Choice hp hp
-*)
 type_synonym 'sz rstate = "'sz \<Rightarrow> real"
 type_synonym 'sz wstate = "('sz + 'sz) \<Rightarrow> word"
 
@@ -4105,15 +4064,15 @@ where "([Const r]<>\<nu>) = (Rep_bword r::word, Rep_bword r)"
   (let (l1, u1) = [\<theta>\<^sub>1]<> \<nu> in 
    let (l2, u2) = [\<theta>\<^sub>2]<> \<nu> in
   (wmax l1 l2, wmax u1 u2))"
-lemma wNegU:"([(Neg \<theta>)]<> \<nu>) = 
+| wNegU:"([(Neg \<theta>)]<> \<nu>) =
   (let (l, u) = [\<theta>]<> \<nu> in
    (wneg u, wneg l))"
-  sorry
+
 lemma  wMinU:"([(Min \<theta>\<^sub>1 \<theta>\<^sub>2)]<> \<nu>) = 
   (let (l1, u1) = [\<theta>\<^sub>1]<> \<nu> in 
    let (l2, u2) = [\<theta>\<^sub>2]<> \<nu> in
   (wmin l1 l2, wmin u1 u2))"
-  sorry
+  using Min_def sorry
 
 inductive wfsem :: "('sf,'sc,'sz) formula \<Rightarrow> 'sz wstate \<Rightarrow> bool \<Rightarrow> bool" ("([[_]]_ \<down> _)" 20)
 where 

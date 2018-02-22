@@ -141,6 +141,16 @@ next
   show  "?case"
     using agrees sterms frechets by (auto)
 next
+  case (dfree_Neg t) 
+  assume dfree1:"dfree t"
+  assume IH1:"(Vagree \<nu> \<nu>' (FVDiff t) \<Longrightarrow> frechet I t (fst \<nu>) (snd \<nu>) = frechet I t (fst \<nu>') (snd \<nu>'))"
+  assume agree:"Vagree \<nu> \<nu>' (FVDiff (Neg t))"
+  have agree1:"Vagree \<nu> \<nu>' (FVDiff t)" using agree agree_neg by (blast)
+  have IH1':"(frechet I t (fst \<nu>) (snd \<nu>) = frechet I t (fst \<nu>') (snd \<nu>'))"
+    using IH1 agree1 by (auto)
+  show "?case"
+    by (metis FVT.simps(4) IH1' UnCI Vagree_def coincidence_sterm frechet.simps(3) mem_Collect_eq)
+next
   case (dfree_Plus t1 t2) 
   assume dfree1:"dfree t1"
   assume IH1:"(Vagree \<nu> \<nu>' (FVDiff t1) \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet I t1 (fst \<nu>') (snd \<nu>'))"
@@ -154,7 +164,7 @@ next
   have IH2':"(frechet I t2 (fst \<nu>) (snd \<nu>) = frechet I t2 (fst \<nu>') (snd \<nu>'))"
     using IH2 agree2 by (auto)
   show "?case"
-    by (metis FVT.simps(4) IH1' IH2' UnCI Vagree_def coincidence_sterm frechet.simps(3) mem_Collect_eq)
+    by(metis FVT_Plus IH1' IH2' UnCI Vagree_def coincidence_sterm Frechet_Plus mem_Collect_eq)
 next
   case (dfree_Times t1 t2) 
   assume dfree1:"dfree t1"
@@ -216,6 +226,24 @@ next
     using IH[OF agrees IAs] agrees frees rangeI by blast
   show "?case"
     using agrees agrees' sterms frechets fEq by auto
+next
+  case (dfree_Neg t1) 
+  assume dfree1:"dfree t1"
+  assume IH1:"(Vagree \<nu> \<nu>' (FVDiff t1) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT t1} \<Longrightarrow> frechet I t1 (fst \<nu>) (snd \<nu>) = frechet J t1 (fst \<nu>') (snd \<nu>'))"
+  assume agree:"Vagree \<nu> \<nu>' (FVDiff (Neg t1))"
+  assume IA:"Iagree I J {Inl x |x. x \<in> SIGT (Neg t1)}"
+  have subs:"{Inl x |x. x \<in> SIGT t1} \<subseteq> {Inl x |x. x \<in> SIGT (Neg t1)}" 
+    by auto
+  from IA 
+    have IA1:"Iagree I J {Inl x |x. x \<in> SIGT t1}"
+    using Iagree_sub[OF subs(1)]  by auto
+  have agree1:"Vagree \<nu> \<nu>' (FVDiff t1)" using agree agree_neg by (blast)
+  have agree1':"Vagree \<nu> \<nu>' (FVT t1)" using agree1 primify_contains by (auto simp add: Vagree_def, metis)
+  have IH1':"(frechet I t1 (fst \<nu>) (snd \<nu>) = frechet J t1 (fst \<nu>') (snd \<nu>'))"
+    using IH1 agree1 IA1 by (auto)
+  show "?case"
+    using coincidence_sterm[OF agree1'] coincidence_sterm[OF agree1'] 
+    by (auto simp add: IH1' UnCI Vagree_def)
 next
   case (dfree_Plus t1 t2) 
   assume dfree1:"dfree t1"

@@ -1754,7 +1754,7 @@ next
 next
   case (Differential \<theta>)  
   then show ?case using brename_dfree by(auto simp add: brename_dfree)
-qed
+qed (auto)
 
 lemma brename_oadmit:"ORadmit ODE  \<Longrightarrow> ORadmit (OUrename what repl ODE)"
 proof(induction ODE)
