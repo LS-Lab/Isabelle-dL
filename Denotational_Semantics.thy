@@ -175,16 +175,18 @@ lemma Iagree_refl:"Iagree I I A"
  * and not the "x'" variables. *)
 primrec sterm_sem :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'c) trm \<Rightarrow> 'c simple_state \<Rightarrow> real"
 where
-  "sterm_sem I (Var x) v = v $ x"
-| "sterm_sem I (Function f args) v = Functions I f (\<chi> i. sterm_sem I (args i) v)"
-| "sterm_sem I (Neg t) v = - sterm_sem I t v"
-| "sterm_sem I (Plus t1 t2) v = sterm_sem I t1 v + sterm_sem I t2 v"
-| "sterm_sem I (Times t1 t2) v = sterm_sem I t1 v * sterm_sem I t2 v"
-| "sterm_sem I (Const b) v = sint (Rep_bword b)"
-| "sterm_sem I ($' c) v = undefined"
-| "sterm_sem I ($$F f) v = undefined"
-| "sterm_sem I (Differential d) v = undefined"
-| "sterm_sem I (Max _ _ ) v = undefined"
+  ssem_Var:"sterm_sem I (Var x) v = v $ x"
+| ssem_Fun:"sterm_sem I (Function f args) v = Functions I f (\<chi> i. sterm_sem I (args i) v)"
+| ssem_Neg:"sterm_sem I (Neg t) v = - sterm_sem I t v"
+| ssem_Plus:"sterm_sem I (Plus t1 t2) v = sterm_sem I t1 v + sterm_sem I t2 v"
+| ssem_Times:"sterm_sem I (Times t1 t2) v = sterm_sem I t1 v * sterm_sem I t2 v"
+| ssem_Const:"sterm_sem I (Const b) v = sint (Rep_bword b)"
+| ssem_DiffVar:"sterm_sem I ($' c) v = undefined"
+| ssem_Funl:"sterm_sem I ($$F f) v = undefined"
+| ssem_Diff:"sterm_sem I (Differential d) v = undefined"
+| ssem_Max:"sterm_sem I (Max _ _ ) v = undefined"
+| ssem_Min:"sterm_sem I (Min _ _ ) v = undefined"
+| ssem_Abs:"sterm_sem I (Abs _) v = undefined"
   
 (* frechet I \<theta> \<nu> syntactically computes the frechet derivative of the term \<theta> in the interpretation
  * I at state \<nu> (containing only the unprimed variables). The frechet derivative is a
@@ -222,6 +224,8 @@ where
 | "dterm_sem I ($$F f) = (\<lambda>v. Funls I f v)"
 | "dterm_sem I (Const b) = (\<lambda>v. sint (Rep_bword b))"
 | "dterm_sem I (Max t1 t2) = (\<lambda>v. max (dterm_sem I t1 v) (dterm_sem I t2 v))"
+| "dterm_sem I (Min t1 t2) = (\<lambda>v. min (dterm_sem I t1 v) (dterm_sem I t2 v))"
+| "dterm_sem I (Abs t1) = (\<lambda>v. abs (dterm_sem I t1 v))"
 
 text\<open> The semantics of an ODE is the vector field at a given point. ODE's are all time-independent
   so no time variable is necessary. Terms on the RHS of an ODE must be differential-free, so

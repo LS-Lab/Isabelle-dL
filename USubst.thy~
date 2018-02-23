@@ -44,6 +44,7 @@ where
 | TadmitFFO_Fun2:"(\<forall>i. TadmitFFO \<sigma> (args i)) \<Longrightarrow> dfree (\<sigma> f) \<Longrightarrow> TadmitFFO \<sigma> (Function (Inr f) args)"
 | TadmitFFO_Plus:"TadmitFFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFFO \<sigma> \<theta>2 \<Longrightarrow> TadmitFFO \<sigma> (Plus \<theta>1 \<theta>2)"
 | TadmitFFO_Times:"TadmitFFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFFO \<sigma> \<theta>2 \<Longrightarrow> TadmitFFO \<sigma> (Times \<theta>1 \<theta>2)"
+| TadmitFFO_Max:"TadmitFFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFFO \<sigma> \<theta>2 \<Longrightarrow> TadmitFFO \<sigma> (Max \<theta>1 \<theta>2)"
 | TadmitFFO_Var:"TadmitFFO \<sigma> (Var x)"
 | TadmitFFO_Const:"TadmitFFO \<sigma> (Const r)"
 
@@ -68,6 +69,7 @@ where
     | Inr f' \<Rightarrow> \<sigma> f')"  
 | "TsubstFO (Plus \<theta>1 \<theta>2) \<sigma> = Plus (TsubstFO \<theta>1 \<sigma>) (TsubstFO \<theta>2 \<sigma>)"  
 | "TsubstFO (Times \<theta>1 \<theta>2) \<sigma> = Times (TsubstFO \<theta>1 \<sigma>) (TsubstFO \<theta>2 \<sigma>)"  
+| "TsubstFO (Max \<theta>1 \<theta>2) \<sigma> = Max (TsubstFO \<theta>1 \<sigma>) (TsubstFO \<theta>2 \<sigma>)"  
 | "TsubstFO (Differential \<theta>) \<sigma> = Differential (TsubstFO \<theta> \<sigma>)"
 
 inductive TadmitFO :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'c) trm \<Rightarrow> bool"
@@ -77,6 +79,7 @@ where
 | TadmitFO_Funl:"TadmitFO \<sigma> ($$F (Inl f))"
 | TadmitFO_Plus:"TadmitFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFO \<sigma> \<theta>2 \<Longrightarrow> TadmitFO \<sigma> (Plus \<theta>1 \<theta>2)"
 | TadmitFO_Times:"TadmitFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFO \<sigma> \<theta>2 \<Longrightarrow> TadmitFO \<sigma> (Times \<theta>1 \<theta>2)"
+| TadmitFO_Max:"TadmitFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFO \<sigma> \<theta>2 \<Longrightarrow> TadmitFO \<sigma> (Max \<theta>1 \<theta>2)"
 | TadmitFO_DiffVar:"TadmitFO \<sigma> (DiffVar x)"
 | TadmitFO_Var:"TadmitFO \<sigma> (Var x)"
 | TadmitFO_Const:"TadmitFO \<sigma> (Const r)"
@@ -84,6 +87,7 @@ where
 inductive_simps
       TadmitFO_Plus_simps[simp]: "TadmitFO \<sigma> (Plus a b)"
   and TadmitFO_Times_simps[simp]: "TadmitFO \<sigma> (Times a b)"
+  and TadmitFO_Max_simps[simp]: "TadmitFO \<sigma> (Max a b)"
   and TadmitFO_Var_simps[simp]: "TadmitFO \<sigma> (Var x)"
   and TadmitFO_DiffVar_simps[simp]: "TadmitFO \<sigma> (DiffVar x)"
   and TadmitFO_Differential_simps[simp]: "TadmitFO \<sigma> (Differential \<theta>)"
@@ -100,6 +104,7 @@ where
 | "Tsubst ($$F f) \<sigma> = (case SFunls \<sigma> f of Some f' \<Rightarrow>  f' | None \<Rightarrow>  ($$F f))"  
 | "Tsubst (Plus \<theta>1 \<theta>2) \<sigma> = Plus (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"  
 | "Tsubst (Times \<theta>1 \<theta>2) \<sigma> = Times (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"  
+| "Tsubst (Max \<theta>1 \<theta>2) \<sigma> = Max (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"  
 | "Tsubst (Differential \<theta>) \<sigma> = Differential (Tsubst \<theta> \<sigma>)"
   
 primrec OsubstFO::"('a + 'b, 'c) ODE \<Rightarrow> ('b \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'c) ODE"
@@ -212,6 +217,7 @@ where
 (*| Tadmit_Funl2:"SFunls \<sigma> f = None \<Longrightarrow> Tadmit \<sigma> (Function f args)"*)
 | Tadmit_Plus:"Tadmit \<sigma> \<theta>1 \<Longrightarrow> Tadmit \<sigma> \<theta>2 \<Longrightarrow> Tadmit \<sigma> (Plus \<theta>1 \<theta>2)"
 | Tadmit_Times:"Tadmit \<sigma> \<theta>1 \<Longrightarrow> Tadmit \<sigma> \<theta>2 \<Longrightarrow> Tadmit \<sigma> (Times \<theta>1 \<theta>2)"
+| Tadmit_Max:"Tadmit \<sigma> \<theta>1 \<Longrightarrow> Tadmit \<sigma> \<theta>2 \<Longrightarrow> Tadmit \<sigma> (Max \<theta>1 \<theta>2)"
 | Tadmit_DiffVar:"Tadmit \<sigma> (DiffVar x)"
 | Tadmit_Var:"Tadmit \<sigma> (Var x)"
 | Tadmit_Const:"Tadmit \<sigma> (Const r)"
@@ -219,6 +225,7 @@ where
 inductive_simps
       Tadmit_Plus_simps[simp]: "Tadmit \<sigma> (Plus a b)"
   and Tadmit_Times_simps[simp]: "Tadmit \<sigma> (Times a b)"
+  and Tadmit_Max_simps[simp]: "Tadmit \<sigma> (Max a b)"
   and Tadmit_Var_simps[simp]: "Tadmit \<sigma> (Var x)"
   and Tadmit_DiffVar_simps[simp]: "Tadmit \<sigma> (DiffVar x)"
   and Tadmit_Differential_simps[simp]: "Tadmit \<sigma> (Differential \<theta>)"
@@ -235,6 +242,7 @@ where
 | TadmitF_Funl2:"SFunls \<sigma> f = None \<Longrightarrow> TadmitF \<sigma> ($$F f)"*)
 | TadmitF_Plus:"TadmitF \<sigma> \<theta>1 \<Longrightarrow> TadmitF \<sigma> \<theta>2 \<Longrightarrow> TadmitF \<sigma> (Plus \<theta>1 \<theta>2)"
 | TadmitF_Times:"TadmitF \<sigma> \<theta>1 \<Longrightarrow> TadmitF \<sigma> \<theta>2 \<Longrightarrow> TadmitF \<sigma> (Times \<theta>1 \<theta>2)"
+| TadmitF_Max:"TadmitF \<sigma> \<theta>1 \<Longrightarrow> TadmitF \<sigma> \<theta>2 \<Longrightarrow> TadmitF \<sigma> (Max \<theta>1 \<theta>2)"
 | TadmitF_DiffVar:"TadmitF \<sigma> (DiffVar x)"
 | TadmitF_Var:"TadmitF \<sigma> (Var x)"
 | TadmitF_Const:"TadmitF \<sigma> (Const r)"
@@ -242,6 +250,7 @@ where
 inductive_simps
       TadmitF_Plus_simps[simp]: "TadmitF \<sigma> (Plus a b)"
   and TadmitF_Times_simps[simp]: "TadmitF \<sigma> (Times a b)"
+  and TadmitF_Max_simps[simp]: "TadmitF \<sigma> (Max a b)"
   and TadmitF_Var_simps[simp]: "TadmitF \<sigma> (Var x)"
   and TadmitF_DiffVar_simps[simp]: "TadmitF \<sigma> (DiffVar x)"
   and TadmitF_Differential_simps[simp]: "TadmitF \<sigma> (Differential \<theta>)"

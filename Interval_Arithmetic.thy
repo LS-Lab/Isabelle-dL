@@ -43,19 +43,22 @@ definition repP ::"word * word \<Rightarrow> real \<Rightarrow> bool" (infix "\<
 where "repP w r \<equiv> let (w1, w2) = w in repL w1 r \<and> repU w2 r" 
 
 inductive rtsem :: "('sf, 'sz) trm \<Rightarrow> 'sz rstate \<Rightarrow> real  \<Rightarrow> bool"  ("([_]_ \<down> _)" 10)
-where "Rep_bword w \<equiv>\<^sub>E r \<Longrightarrow> ([Const w]\<nu> \<down> r)"
-| "([Var x]\<nu> \<down> \<nu> x)"
-| "\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> ([Plus \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> (r\<^sub>1 + r\<^sub>2))"
-| "\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> ([Times \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> (r\<^sub>1 * r\<^sub>2))"
-| "\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> ([Max \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> (max r\<^sub>1 r\<^sub>2))"
-| "\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> ([Min \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> (min r\<^sub>1 r\<^sub>2))"
-| "([\<theta>]\<nu> \<down> r) \<Longrightarrow> ([Neg \<theta>]\<nu> \<down> -r)"
+  where 
+  rtsem_Const:"Rep_bword w \<equiv>\<^sub>E r \<Longrightarrow> ([Const w]\<nu> \<down> r)"
+| rtsem_Var:"([Var x]\<nu> \<down> \<nu> x)"
+| rtsem_Plus:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> ([Plus \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> (r\<^sub>1 + r\<^sub>2))"
+| rtsem_Times:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> ([Times \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> (r\<^sub>1 * r\<^sub>2))"
+| rtsem_Max:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> ([Max \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> (max r\<^sub>1 r\<^sub>2))"
+| rtsem_Min:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> ([Min \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> (min r\<^sub>1 r\<^sub>2))"
+| rtsem_Abs:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1)\<rbrakk> \<Longrightarrow> ([Abs \<theta>\<^sub>1]\<nu> \<down> (abs r\<^sub>1))"
+| rtsem_Neg:"([\<theta>]\<nu> \<down> r) \<Longrightarrow> ([Neg \<theta>]\<nu> \<down> -r)"
 
 inductive_simps 
     rtsem_Const_simps[simp] : "([(Const w)]\<nu> \<down> r)"
 and rtsem_Var_simps[simp] : "([Var x]\<nu> \<down> r)"
 and rtsem_PlusU_simps[simp] : "([Plus \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> r)"
 and rtsem_TimesU_simps[simp] : "([Times \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> r)"
+and rtsem_Abs_simps[simp] : "([Abs \<theta>] \<nu> \<down> r)"
 and rtsem_Max_simps[simp] : "([Max \<theta>\<^sub>1 \<theta>\<^sub>2] \<nu> \<down> r)"
 and rtsem_Min_simps[simp] : "([Min \<theta>\<^sub>1 \<theta>\<^sub>2] \<nu> \<down> r)"
 and rtsem_Neg_simps[simp] : "([Neg \<theta>] \<nu> \<down> r)"
@@ -3996,6 +3999,7 @@ lemma wneg_lemma:
     qed
   done
 
+
 fun wle :: "word \<Rightarrow> word \<Rightarrow> bool"
 where "wle w\<^sub>1 w\<^sub>2 = (sint w\<^sub>1 < sint w\<^sub>2)"
 
@@ -4064,15 +4068,18 @@ where "([Const r]<>\<nu>) = (Rep_bword r::word, Rep_bword r)"
   (let (l1, u1) = [\<theta>\<^sub>1]<> \<nu> in 
    let (l2, u2) = [\<theta>\<^sub>2]<> \<nu> in
   (wmax l1 l2, wmax u1 u2))"
-| wNegU:"([(Neg \<theta>)]<> \<nu>) =
-  (let (l, u) = [\<theta>]<> \<nu> in
-   (wneg u, wneg l))"
-
-lemma  wMinU:"([(Min \<theta>\<^sub>1 \<theta>\<^sub>2)]<> \<nu>) = 
+| wMinU:"([(Min \<theta>\<^sub>1 \<theta>\<^sub>2)]<> \<nu>) = 
   (let (l1, u1) = [\<theta>\<^sub>1]<> \<nu> in 
    let (l2, u2) = [\<theta>\<^sub>2]<> \<nu> in
   (wmin l1 l2, wmin u1 u2))"
-  using Min_def sorry
+| wNegU:"([(Neg \<theta>)]<> \<nu>) =
+  (let (l, u) = [\<theta>]<> \<nu> in
+   (wneg u, wneg l))"
+| wAbsU:"([(Abs \<theta>\<^sub>1)]<> \<nu>) = 
+  (let (l1, u1) = [\<theta>\<^sub>1]<> \<nu> in 
+  (wmax l1 (wneg u1), wmax u1 (wneg l1))
+ )"
+(*  (wmin (wabs l1) (wabs u1), wmax (wabs l1) (wabs u1))*)
 
 inductive wfsem :: "('sf,'sc,'sz) formula \<Rightarrow> 'sz wstate \<Rightarrow> bool \<Rightarrow> bool" ("([[_]]_ \<down> _)" 20)
 where 
@@ -4125,19 +4132,19 @@ lemma trm_sound:
   fixes \<theta>::"('sf,'sz)trm"
   shows "([\<theta>]\<nu>' \<down> r) \<Longrightarrow> (\<nu> REP \<nu>') \<Longrightarrow>   ([\<theta>]<>\<nu>) \<equiv>\<^sub>P r"
 proof (induction rule: rtsem.induct)
- case 1 
+ case rtsem_Const 
    fix w r \<nu>'
    show "Rep_bword w \<equiv>\<^sub>E r \<Longrightarrow> \<nu> REP \<nu>' \<Longrightarrow> [Const w]<>\<nu> \<equiv>\<^sub>P r"
    using pu_lemma tu_lemma wmax_lemma wmin_lemma  wneg_lemma repU_def repL_def repP_def repe.simps rep_simps repstate_simps order_refl wtsemU.simps(1)
  represents_state.cases by auto
 next
- case 2
+ case rtsem_Var
    fix x \<nu>'
    show "\<nu> REP \<nu>' \<Longrightarrow> [Var x]<>\<nu> \<equiv>\<^sub>P \<nu>' x"
      by(auto simp add: Interval_Arithmetic.wVarU case_prod_conv pu_lemma tu_lemma wmax_lemma wmin_lemma  wneg_lemma repU_def repL_def repP_def repe.simps rep_simps repstate_simps order_refl wtsemU.simps(1)
      represents_state.cases)
 next
- case 3
+ case rtsem_Plus
    fix \<theta>\<^sub>1 :: "('sf,'sz) trm" and \<nu>':: "'sz rstate" and r\<^sub>1 and \<theta>\<^sub>2 :: "('sf,'sz) trm" and  r\<^sub>2
    assume rep:"\<nu> REP \<nu>'"
    assume eval1:"[\<theta>\<^sub>1]\<nu>' \<down> r\<^sub>1"
@@ -4169,7 +4176,7 @@ next
   then show"[Plus \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>1 + r\<^sub>2"
     using lu1' lu2' by auto
 next
- case 4
+ case rtsem_Times
    fix \<theta>\<^sub>1 :: "('sf,'sz) trm" and \<nu>' r\<^sub>1 and \<theta>\<^sub>2 :: "('sf,'sz) trm" and r\<^sub>2
    assume eval1:"[\<theta>\<^sub>1]\<nu>' \<down> r\<^sub>1"
    assume eval2:"[\<theta>\<^sub>2]\<nu>' \<down> r\<^sub>2"
@@ -4197,7 +4204,7 @@ next
   then show "[Times \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>1 * r\<^sub>2"
     using lu1 lu2 by auto
 next
- case 5
+ case rtsem_Max
    fix \<theta>\<^sub>1 :: "('sf,'sz) trm" and \<nu>' r\<^sub>1 and \<theta>\<^sub>2 :: "('sf,'sz) trm" and  r\<^sub>2
    assume eval1:"([\<theta>\<^sub>1]\<nu>' \<down> r\<^sub>1)"
    assume eval2:"([\<theta>\<^sub>2]\<nu>' \<down> r\<^sub>2)"
@@ -4228,7 +4235,7 @@ next
     unfolding repP_def
     using lbound ubound lu1 lu2 by auto
 next
-  case 6
+  case rtsem_Min
     fix \<theta>\<^sub>1 :: "('sf,'sz) trm" and \<nu>' r\<^sub>1 and \<theta>\<^sub>2 :: "('sf,'sz) trm" and  r\<^sub>2
    assume eval1:"([\<theta>\<^sub>1]\<nu>' \<down> r\<^sub>1)"
    assume eval2:"([\<theta>\<^sub>2]\<nu>' \<down> r\<^sub>2)"
@@ -4258,6 +4265,7 @@ next
     unfolding repP_def
     using lbound ubound lu1 lu2 by auto
 next
+  case rtsem_Neg
   fix \<theta> :: "('sf,'sz) trm" and \<nu>' r
   assume eval:"[\<theta>]\<nu>' \<down> r"
   assume rep:"\<nu> REP \<nu>'"
@@ -4279,6 +4287,40 @@ next
   show "[Neg \<theta>]<>\<nu> \<equiv>\<^sub>P - r"
     unfolding repP_def Let_def using ubound lbound lu 
     by (auto simp add:  lu wNegU)
+next
+  case rtsem_Abs
+  fix \<theta> :: "('sf,'sz) trm" and \<nu>' r
+  assume eval:"[\<theta>]\<nu>' \<down> r"
+  assume rep:"\<nu> REP \<nu>'"
+  assume "(\<nu> REP \<nu>' \<Longrightarrow> [\<theta>]<>\<nu> \<equiv>\<^sub>P r)"
+  then have IH:"[\<theta>]<>\<nu> \<equiv>\<^sub>P r" using rep by auto
+  obtain l1 u1  where 
+        lu:"([\<theta>]<> \<nu>) = (l1, u1)" 
+    using IH repP_def by auto
+  from IH 
+  obtain ub lb:: real 
+   where urep:"(ub \<ge> r) \<and> (snd ([\<theta>]<>\<nu>) \<equiv>\<^sub>E ub)" 
+   and   lrep:"(lb \<le> r) \<and> (fst ([\<theta>]<>\<nu>) \<equiv>\<^sub>E lb)" 
+    using prod.case_eq_if repP_def  repU_def repL_def by auto
+  have lbound:"wmax l1 (wneg u1) \<equiv>\<^sub>L (abs r)"
+    apply(simp only: repL_def)
+    apply(rule exI[where x="max lb (- ub)"])
+    apply(rule conjI)  
+    using lrep lu repL_def snd_conv   wmax_lemma real_minus_le_minus lu repL_def snd_conv urep wneg_lemma
+     apply linarith
+    using lrep lu repL_def snd_conv   wmax_lemma real_minus_le_minus lu repL_def snd_conv urep wneg_lemma
+    by simp  
+  have ubound:"(wmax u1 (wneg l1) \<equiv>\<^sub>U (abs r))"
+    apply(simp only: repU_def)
+    apply(rule exI[where x="max ub (- lb)"])
+    apply(rule conjI)  
+    using lrep lu repL_def snd_conv wmax_lemma real_minus_le_minus lu repL_def snd_conv urep wneg_lemma
+     apply linarith
+    using lrep lu repL_def snd_conv wmax_lemma real_minus_le_minus lu repL_def snd_conv urep wneg_lemma
+    by simp  
+  show "[Abs \<theta>]<>\<nu> \<equiv>\<^sub>P abs r"
+    using repP_def Let_def ubound lbound lu lu wAbsU 
+      by auto
 qed
 
 lemma word_rep:"\<And>bw::bword. \<exists>r::real. Rep_bword bw \<equiv>\<^sub>E r"
@@ -4492,8 +4534,6 @@ qed
 
 
 code_pred "wfsem".  
-
-(*export_code wfsem in SML*)
 
 
 

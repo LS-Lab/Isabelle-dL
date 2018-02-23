@@ -774,10 +774,20 @@ lemma SIGT_times1:"Vagree \<nu> \<omega> (SigSet \<sigma> (Times t1 t2)) \<Longr
 lemma SIGT_times2:"Vagree \<nu> \<omega> (SigSet \<sigma> (Times t1 t2)) \<Longrightarrow> Vagree \<nu> \<omega> (SigSet \<sigma> t2)"
   unfolding Vagree_def SigSet_def by auto
 
+
 lemma SIGT_max1:"Vagree \<nu> \<omega> (SigSet \<sigma>(Max t1 t2)) \<Longrightarrow> Vagree \<nu> \<omega> (SigSet \<sigma> t1)"
   unfolding Vagree_def SigSet_def by auto
 
 lemma SIGT_max2:"Vagree \<nu> \<omega> (SigSet \<sigma> (Max t1 t2)) \<Longrightarrow> Vagree \<nu> \<omega> (SigSet \<sigma> t2)"
+  unfolding Vagree_def SigSet_def by auto
+
+lemma SIGT_min1:"Vagree \<nu> \<omega> (SigSet \<sigma>(Min t1 t2)) \<Longrightarrow> Vagree \<nu> \<omega> (SigSet \<sigma> t1)"
+  unfolding Vagree_def SigSet_def by auto
+
+lemma SIGT_min2:"Vagree \<nu> \<omega> (SigSet \<sigma> (Min t1 t2)) \<Longrightarrow> Vagree \<nu> \<omega> (SigSet \<sigma> t2)"
+  unfolding Vagree_def SigSet_def by auto
+
+lemma SIGT_abs:"Vagree \<nu> \<omega> (SigSet \<sigma>(Abs t1)) \<Longrightarrow> Vagree \<nu> \<omega> (SigSet \<sigma> t1)"
   unfolding Vagree_def SigSet_def by auto
 
 lemma uadmit_sterm_adjoint':
@@ -997,8 +1007,25 @@ next
   assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (?Set \<theta>2) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>2 = dterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>2"
   assume VA:"Vagree \<nu> \<omega> (?Set (Max \<theta>1 \<theta>2))"
   assume safe:"dsafe (Max \<theta>1 \<theta>2)"
-  then show ?case
+  then show ?case      
     using IH1[OF SIGT_max1[OF VA]] IH2[OF SIGT_max2[OF VA]] by auto
+next
+  let ?Set = "SigSet \<sigma>"
+  case (Min \<theta>1 \<theta>2)
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (?Set \<theta>1) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>1 = dterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>1"
+  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (?Set \<theta>2) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>2 = dterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>2"
+  assume VA:"Vagree \<nu> \<omega> (?Set (Min \<theta>1 \<theta>2))"
+  assume safe:"dsafe (Min \<theta>1 \<theta>2)"
+  then show ?case
+    using IH1[OF SIGT_min1[OF VA]] IH2[OF SIGT_min2[OF VA]] by auto
+next
+  let ?Set = "SigSet \<sigma>"
+  case (Abs \<theta>1)
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (?Set \<theta>1) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>1 = dterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>1"
+  assume VA:"Vagree \<nu> \<omega> (?Set (Abs \<theta>1))"
+  assume safe:"dsafe (Abs \<theta>1)"
+  then show ?case
+    using IH1[OF SIGT_abs[OF VA]]by auto
 next 
   let ?Set = "SigSet \<sigma>"
   case (Functional f)
@@ -1172,6 +1199,26 @@ next
   assume safe:"dsafe (Max \<theta>1 \<theta>2)"
   show ?case 
     using IH1[OF VA1] IH2[OF VA2] safe by auto
+next
+  case (Min \<theta>1 \<theta>2 \<nu> \<omega>)
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>1 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>1"
+  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>2}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>2 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>2"
+  assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT (Min \<theta>1 \<theta>2)}. FVT (\<sigma> i))"
+  then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
+    and VA2:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>2}. FVT (\<sigma> i))"
+    unfolding Vagree_def by auto
+  assume safe:"dsafe (Min \<theta>1 \<theta>2)"
+  show ?case 
+    using IH1[OF VA1] IH2[OF VA2] safe by auto
+next
+  case (Abs \<theta>1 \<nu> \<omega>)
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>1 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>1"
+  assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT (Abs \<theta>1)}. FVT (\<sigma> i))"
+  then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
+    unfolding Vagree_def by auto
+  assume safe:"dsafe (Abs \<theta>1)"
+  show ?case 
+    using IH1[OF VA1] safe by auto
 next
   case (Functional F)
     assume safe:"dsafe ($$F F)"

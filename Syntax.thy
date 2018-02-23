@@ -72,6 +72,8 @@ datatype ('a, 'c) trm =
 | Times "('a, 'c) trm" "('a, 'c) trm"
 | Neg "('a, 'c) trm"
 | Max "('a, 'c) trm" "('a, 'c) trm"
+| Min "('a, 'c) trm" "('a, 'c) trm"
+| Abs "('a, 'c) trm"
 (* A (real-valued) variable standing for a differential, such as x', given meaning by the state
  * and modified by programs. *)
 | DiffVar 'c ("$'") 
@@ -187,12 +189,6 @@ definition Ge ::  "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'b
 
 definition Leq :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) formula"
   where "Leq \<theta> \<theta>' = (Geq \<theta>' \<theta>)"
-
-definition Min :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'c) trm"
-  where "Min \<theta> \<theta>' = Neg (Max (Neg \<theta>) (Neg \<theta>'))"
-
-definition Abs :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm "
-  where "Abs \<theta> = Max \<theta> (Neg \<theta>)"
 
 definition Box :: "('a, 'b, 'c) hp \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" ("([[_]]_)" 10)
 where "Box \<alpha> P = Not (Diamond \<alpha> (Not P))"
@@ -310,6 +306,8 @@ where
 | dsafe_Diff: "dfree \<theta> \<Longrightarrow> dsafe (Differential \<theta>)"
 | dsafe_DiffVar: "dsafe ($' i)"
 | dsafe_Max :"dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Max \<theta>\<^sub>1 \<theta>\<^sub>2)"
+| dsafe_Min :"dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Min \<theta>\<^sub>1 \<theta>\<^sub>2)"
+| dsafe_Abs :"dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe (Abs \<theta>\<^sub>1)"
 
 inductive dexec :: "('a, 'c) trm \<Rightarrow> bool"
 where
@@ -319,6 +317,8 @@ where
 | dexec_Plus: "dexec \<theta>\<^sub>1 \<Longrightarrow> dexec \<theta>\<^sub>2 \<Longrightarrow> dexec (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dexec_Times: "dexec \<theta>\<^sub>1 \<Longrightarrow> dexec \<theta>\<^sub>2 \<Longrightarrow> dexec (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dexec_Max :"dexec \<theta>\<^sub>1 \<Longrightarrow> dexec \<theta>\<^sub>2 \<Longrightarrow> dexec (Max \<theta>\<^sub>1 \<theta>\<^sub>2)"
+| dexec_Min :"dexec \<theta>\<^sub>1 \<Longrightarrow> dexec \<theta>\<^sub>2 \<Longrightarrow> dexec (Min \<theta>\<^sub>1 \<theta>\<^sub>2)"
+| dexec_Abs :"dexec \<theta>\<^sub>1 \<Longrightarrow> dexec (Abs \<theta>\<^sub>1)"
 
 
 (* Explictly-written variables that are bound by the ODE. Needed to compute whether
@@ -420,6 +420,8 @@ inductive_simps
   and dfree_Neg_simps[simp]: "dfree (Neg a)"
   and dfree_Times_simps[simp]: "dfree (Times a b)"
   and dfree_Max_simps[simp]: "dfree (Max a b)"
+  and dfree_Min_simps[simp]: "dfree (Min a b)"
+  and dfree_Abs_simps[simp]: "dfree (Abs a)"
   and dfree_Var_simps[simp]: "dfree (Var x)"
   and dfree_DiffVar_simps[simp]: "dfree (DiffVar x)"
   and dfree_Differential_simps[simp]: "dfree (Differential x)"
@@ -432,6 +434,8 @@ inductive_simps
   and dsafe_Neg_simps[simp]: "dsafe (Neg a)"
   and dsafe_Times_simps[simp]: "dsafe (Times a b)"
   and dsafe_Max_simps[simp]: "dsafe (Max a b)"
+  and dsafe_Min_simps[simp]: "dsafe (Min a b)"
+  and dsafe_Abs_simps[simp]: "dsafe (Abs a)"
   and dsafe_Var_simps[simp]: "dsafe (Var x)"
   and dsafe_DiffVar_simps[simp]: "dsafe (DiffVar x)"
   and dsafe_Fun_simps[simp]: "dsafe (Function i args)"

@@ -29,6 +29,7 @@ where
 | "TUrename x y ($$F f) = undefined"
 | "TUrename x y (Plus \<theta>1 \<theta>2) = Plus (TUrename x y \<theta>1) (TUrename x y \<theta>2)"
 | "TUrename x y (Times \<theta>1 \<theta>2) = Times (TUrename x y \<theta>1) (TUrename x y \<theta>2)"
+| "TUrename x y (Max \<theta>1 \<theta>2) = Max (TUrename x y \<theta>1) (TUrename x y \<theta>2)"
 | "TUrename x y (Differential \<theta>) = Differential (TUrename x y \<theta>)"
 
 inductive TRadmit :: "('sf, 'sz) trm \<Rightarrow> bool"
@@ -39,6 +40,7 @@ where
 | TRadmit_Function:"(\<forall>i. (TRadmit (args i))) \<Longrightarrow> TRadmit (Function f args)"
 | TRadmit_Plus:"TRadmit t1 \<Longrightarrow> TRadmit t2 \<Longrightarrow> TRadmit (Plus t1 t2)"
 | TRadmit_Times:"TRadmit t1 \<Longrightarrow> TRadmit t2 \<Longrightarrow> TRadmit (Times t1 t2)"
+| TRadmit_Max:"TRadmit t1 \<Longrightarrow> TRadmit t2 \<Longrightarrow> TRadmit (Max t1 t2)"
 | TRadmit_Differential:"TRadmit t \<Longrightarrow> dfree t \<Longrightarrow> TRadmit (Differential t)"
 
 inductive_simps
@@ -49,6 +51,7 @@ and TRadmit_function_simps[simp]: "TRadmit (Function f args)"
 and TRadmit_functional_simps[simp]: "TRadmit (Functional f)"
 and TRadmit_plus_simps[simp]: "TRadmit (Plus t1 t2)"
 and TRadmit_times_simps[simp]: "TRadmit (Times t1 t2)"
+and TRadmit_max_simps[simp]: "TRadmit (Max t1 t2)"
 and TRadmit_differential_simps[simp]: "TRadmit (Differential t)"
 
 primrec OUrename :: "'sz \<Rightarrow> 'sz \<Rightarrow> ('sf, 'sz) ODE \<Rightarrow> ('sf, 'sz) ODE"

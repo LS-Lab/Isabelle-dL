@@ -411,7 +411,8 @@ fun RightRule_result :: "('sf,'sc,'sz) rrule \<Rightarrow> nat \<Rightarrow> ('s
                 else (None)) | _ \<Rightarrow> None)"
 (*| Rstep_CohideR:"RightRule_result CohideR j (A,S) = Some [(A, [nth S j])]"*)
 | Rstep_CohideRR:"RightRule_result CohideRR j (A,S) = Some [([], [nth S j])]"
-| Rstep_TrueR:"RightRule_result TrueR j (A,S) = (case (nth S j) of (Geq (x) (y)) \<Rightarrow>(if (x = y & x = Const 0) then(Some []) else None) | _ \<Rightarrow> None)"
+| Rstep_TrueR:"RightRule_result TrueR j (A,S) = (case (nth S j) of (Geq (Const x) (Const y)) \<Rightarrow>
+    (if (x = y & (sint (Rep_bword x) = 0)) then(Some []) else None) | _ \<Rightarrow> None)"
 | Step_Skolem:"RightRule_result Skolem j (A,S) = (case (nth S j) of (Not (Exists x (Not p)))  \<Rightarrow> 
 (if ((Inl x) \<notin> FVSeq (A,S)) \<and> fsafe (foldr (&&) A TT) \<and> fsafe (foldr (||) (closeI S j) FF)then
   Some [(A, replaceI S j p)]
@@ -777,7 +778,7 @@ where
 (* Note: Used to ban no-op cohides because close function breaks if sequent unchanged by rule, but we should just get the close function right instead *)
 | RightRule_Cohide:"length (snd (nth SG i)) > j \<Longrightarrow> (*(length (snd (nth SG i)) \<noteq> 1) \<Longrightarrow>*) rrule_ok SG C i j CohideR"
 | RightRule_CohideRR:"length (snd (nth SG i)) > j  \<Longrightarrow> (* fst (nth SG i) \<noteq>  [] \<Longrightarrow>  length (snd (nth SG i)) \<noteq> 1 \<Longrightarrow>*) rrule_ok SG C i j CohideRR"
-| RightRule_True:"nth (snd (nth SG i)) j = Geq (Const 0) (Const 0) \<Longrightarrow> rrule_ok SG C i j TrueR"
+| RightRule_True:"nth (snd (nth SG i)) j = Geq (Const (bword_zero)) (Const (bword_zero)) \<Longrightarrow> rrule_ok SG C i j TrueR"
 
 (* | RightRule_Cohide:"length (snd (nth SG i)) > j \<Longrightarrow> (\<And>\<Gamma> q. (nth SG i) \<noteq> (\<Gamma>, [q])) \<Longrightarrow> rrule_ok SG C i j CohideR"
 *)  
@@ -791,10 +792,10 @@ and RightRule_TrueR_simps[prover]: "rrule_ok SG C i j TrueR"
 
 inductive sing_at::"('sz \<Rightarrow> ('sf,'sz) trm) \<Rightarrow> ('sf,'sz) trm \<Rightarrow> 'sz \<Rightarrow> bool"
   where sing_at_zero: "is_vid1 i \<Longrightarrow> f i = \<theta> \<Longrightarrow> sing_at f \<theta> i "
- |  sing_not_zero: "\<not>(is_vid1 i) \<Longrightarrow> f i = Const 0 \<Longrightarrow> sing_at f \<theta> i"
+ |  sing_not_zero: "\<not>(is_vid1 i) \<Longrightarrow> f i = Const (bword_zero) \<Longrightarrow> sing_at f \<theta> i"
 
 inductive is_singleton :: "('sz \<Rightarrow> ('sf,'sz) trm) \<Rightarrow> ('sf,'sz) trm \<Rightarrow> bool"
-  where Is_singleton: "(\<forall>i. sing_at (\<lambda>i. if is_vid1 i then \<theta> else Const 0) \<theta> i) \<Longrightarrow> is_singleton (\<lambda>i. if is_vid1 i then \<theta> else Const 0) \<theta> "
+  where Is_singleton: "(\<forall>i. sing_at (\<lambda>i. if is_vid1 i then \<theta> else Const (bword_zero)) \<theta> i) \<Longrightarrow> is_singleton (\<lambda>i. if is_vid1 i then \<theta> else Const (bword_zero)) \<theta> "
 
 subsection \<open>Soundness\<close>
 
@@ -836,27 +837,26 @@ lemma member_singD:"\<And>x P. P x \<Longrightarrow> (\<And>y. List.member [x] y
 lemma fst_neq:"A \<noteq> B \<Longrightarrow> (A,C) \<noteq> (B,D)"
   by auto
 
-lemma equiv_case_lem:"\<And>X. (case X of ! (! (PPPP && Q) && ! (! PP && ! QQ)) \<Rightarrow> PPPP = PP \<and> Q = QQ 
-                          | ! (! (PPPP && Q) && ! (! PP && _)) \<Rightarrow> False
-                          | ! (! (PPPP && Q) && ! (_ && formula2)) \<Rightarrow> False 
-                          | ! (! (PPPP && Q) && ! _) \<Rightarrow> False 
-                          | ! (! (PPPP && Q) && _) \<Rightarrow> False
-                          | ! (! _ && formula2) \<Rightarrow> False 
-                          | ! (_ && formula2) \<Rightarrow> False 
+lemma equiv_case_lem:"\<And>X. (case X of ! ((! (And PPPP Q)) && (! (And (! PP) (! QQ)))) \<Rightarrow>( PPPP = PP \<and> Q = QQ )
+                          | ! (! (And PPPP Q) && (! (And (! PP) _))) \<Rightarrow> False
+                          | ! (! (And PPPP Q) && (! (And _  formula2))) \<Rightarrow> False 
+                          | ! (! (And PPPP Q) && (! _)) \<Rightarrow> False 
+                          | ! (! (And PPPP Q) && _) \<Rightarrow> False
+                          | ! (And (! _) formula2) \<Rightarrow> False 
+                          | ! (And _ formula2) \<Rightarrow> False 
                           | ! _ \<Rightarrow> False 
-                          | _ \<Rightarrow> False) \<Longrightarrow> (\<exists> Q P. X = (Q \<leftrightarrow> P))"
+                          | _ \<Rightarrow> False) \<Longrightarrow> (\<exists> Q P. (X = (Q \<leftrightarrow> P)))"
   subgoal for X
     apply(cases "\<exists> PPPP PP Q QQ. X = (! (! (PPPP && Q) && ! (! PP && ! QQ)))")
     subgoal apply auto subgoal for PP  QQ by (simp add: Equiv_def Or_def) done
 proof -
   assume a0:"
-    case X of ! (! (PPPP && Q) && ! (! PP && ! QQ)) \<Rightarrow> PPPP = PP \<and> Q = QQ | ! (! (PPPP && Q) && ! (! PP && _)) \<Rightarrow> False
-    | ! (! (PPPP && Q) && ! (_ && xb)) \<Rightarrow> False 
-    | ! (! (PPPP && Q) && ! _) \<Rightarrow> False 
-    | ! (! (PPPP && Q) && _) \<Rightarrow> False 
-    | ! (! _ && xb) \<Rightarrow> False
-    | ! (_ && xb) \<Rightarrow> False 
-    (* next*)
+    case X of Not (Not (PPPP && Q) && Not (Not PP && Not QQ)) \<Rightarrow> PPPP = PP \<and> Q = QQ | ! (! (PPPP && Q) && ! (Not PP && _)) \<Rightarrow> False
+    | ! (Not (And PPPP Q) && Not (And _ xb)) \<Rightarrow> False 
+    | ! (Not (And PPPP Q) && Not _) \<Rightarrow> False 
+    | ! (Not (And PPPP Q) && _) \<Rightarrow> False 
+    | ! (And (Not _)  xb) \<Rightarrow> False
+    | ! (And _ xb) \<Rightarrow> False 
     | ! _ \<Rightarrow> False 
     | _ \<Rightarrow> False"
   assume a1:"\<nexists>PPPP PP Q QQ. X = ! (! (PPPP && Q) && ! (! PP && ! QQ))"
@@ -1746,6 +1746,9 @@ next
   case (Times \<theta>1 \<theta>2)
   then show ?case by auto
 next
+  case (Max \<theta>1 \<theta>2)
+  then show ?case by auto
+next
   case (DiffVar x)
   then show ?case by auto
 next
@@ -1979,7 +1982,15 @@ next
     using some L apply(cases " (*snd *)(SG ! i)(* ! j*)", auto simp add: L TT_def)
     subgoal for a b
       apply(cases "b ! j" ,auto)
-      subgoal for x11 x12 by(cases "x11 = x12 \<and> x11 = Const 0",auto) done done
+      subgoal for x11 x12 
+        apply(cases x11)
+               apply(cases "x11 = x12 \<and> x11 = Const (bword_zero)",auto)
+        apply(cases x12)
+               apply(cases "x11 = x12 \<and> x11 = Const (bword_zero)",auto)
+        subgoal for x2 x2a
+          apply(cases "x2 = x2a \<and> Rep_bword x2 = 0", auto)
+          by (metis Rep_bword_inverse bword_zero_def)
+        done done done 
   obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)"
     by (metis seq2fml.cases)
   have \<Gamma>:"(fst (SG ! i)) = \<Gamma>" using SG_dec by (cases "SG ! i", auto)
@@ -1992,7 +2003,12 @@ next
     using some L AIjeq apply(cases "SG ! i",auto)
     subgoal for a b
       using some L AIjeq  \<Gamma> \<Delta> eq apply(cases "b ! j",auto simp add: \<Gamma> \<Delta> eq)
-      subgoal for x11 x12 by(cases "x11 = x12 \<and> x11 = Const 0",auto) done done
+      subgoal for x11 x12 
+        apply(cases x11, auto) subgoal for x2
+          apply(cases x12, auto) subgoal for x2a
+            apply(cases "x2 = x2a \<and> Rep_bword x2 = 0")
+            apply(auto simp add: bword_zero_def Rep_bword_inverse)
+        done done done done done
   have big_sound:"sound ([], (\<Gamma>,\<Delta>))"
     apply(rule soundI')
     apply(rule seq_semI')
@@ -3710,24 +3726,24 @@ auto simp del: Rsubst.simps)
         proof (auto simp add: TT_def Implies_def soundPAS sound_def)
           fix I::"('sf,'sc,'sz) interp" and a b
           assume good:"is_interp I"
-          assume predl:"Predicates I vid3 (\<chi> i. dterm_sem I (if i = vid1 then $$F fid1 else Const 0) (a, b))"
+          assume predl:"Predicates I vid3 (\<chi> i. dterm_sem I (if i = vid1 then $$F fid1 else Const (bword_zero)) (a, b))"
             assume funls:" (Funls I fid1 (a, b) = Funls I fid2 (a, b))"
-            have vec_eq:"(\<chi> i. dterm_sem I (if i = vid1 then $$F fid1 else Const 0) (a, b)) = (\<chi> i. dterm_sem I (if i = vid1 then $$F fid2 else Const 0) (a, b))"
+            have vec_eq:"(\<chi> i. dterm_sem I (if i = vid1 then $$F fid1 else Const (bword_zero)) (a, b)) = (\<chi> i. dterm_sem I (if i = vid1 then $$F fid2 else Const (bword_zero)) (a, b))"
               apply(rule vec_extensionality)
               by(auto simp add: funls)
-            show " Predicates I vid3 (\<chi> i. dterm_sem I (if i = vid1 then $$F fid2 else Const 0) (a, b))"  
+            show " Predicates I vid3 (\<chi> i. dterm_sem I (if i = vid1 then $$F fid2 else Const (bword_zero)) (a, b))"  
               using soundPAS unfolding sound_def apply (auto simp add: TT_def Implies_def)
               apply(erule allE[where x=I])
               using predl funls good vec_eq by auto
           next
           fix I::"('sf,'sc,'sz) interp" and a b
           assume good:"is_interp I"
-          assume predl:"Predicates I vid3 (\<chi> i. dterm_sem I (if i = vid1 then $$F fid2 else Const 0) (a, b))"
+          assume predl:"Predicates I vid3 (\<chi> i. dterm_sem I (if i = vid1 then $$F fid2 else Const (bword_zero)) (a, b))"
           assume funls:" Funls I fid1 (a, b) = Funls I fid2 (a, b)"
-          have vec_eq:"(\<chi> i. dterm_sem I (if i = vid1 then $$F fid2 else Const 0) (a, b)) = (\<chi> i. dterm_sem I (if i = vid1 then $$F fid1 else Const 0) (a, b))"
+          have vec_eq:"(\<chi> i. dterm_sem I (if i = vid1 then $$F fid2 else Const (bword_zero)) (a, b)) = (\<chi> i. dterm_sem I (if i = vid1 then $$F fid1 else Const (bword_zero)) (a, b))"
             apply(rule vec_extensionality)
             by(auto simp add: funls)
-          show " Predicates I vid3 (\<chi> i. dterm_sem I (if i = vid1 then $$F fid1 else Const 0) (a, b))"  
+          show " Predicates I vid3 (\<chi> i. dterm_sem I (if i = vid1 then $$F fid1 else Const (bword_zero)) (a, b))"  
               using soundPAS unfolding sound_def apply (auto simp add: TT_def Implies_def)
               apply(erule allE[where x=I])
               using predl vec_eq by auto
@@ -4047,84 +4063,84 @@ section \<open>Example 2: Concrete Hybrid System\<close>
 definition SystemConcl::"('sf,'sc,'sz) sequent"
 where "SystemConcl = 
   ([],[
-  Implies (And (Geq (Var vid1) (Const 0)) (Geq (f0 fid1) (Const 0)))
-  ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (TT)]]Geq (Var vid1) (Const 0))
+  Implies (And (Geq (Var vid1) (Const (bword_zero))) (Geq (f0 fid1) (Const (bword_zero))))
+  ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (TT)]]Geq (Var vid1) (Const (bword_zero)))
   ])"
 
 definition SystemDICut :: "('sf,'sc,'sz) formula"
 where "SystemDICut =
   Implies
   (Implies TT ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]]
-     (Geq (Differential (Var vid1)) (Differential (Const 0)))))
+     (Geq (Differential (Var vid1)) (Differential (Const (bword_zero))))))
   (Implies
-     (Implies TT (Geq (Var vid1) (Const 0)))
-     ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]](Geq (Var vid1) (Const 0))))"
+     (Implies TT (Geq (Var vid1) (Const (bword_zero))))
+     ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]](Geq (Var vid1) (Const (bword_zero)))))"
 (*
-    (Implies (Geq (Var vid1) (Const 0)) 
+    (Implies (Geq (Var vid1) (Const (bword_zero))) 
       (Implies (And TT ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]]
-                  (Geq (Differential (Var vid1)) (Differential (Const 0)))
-   )) ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]](Geq (Var vid1) (Const 0)))))"
+                  (Geq (Differential (Var vid1)) (Differential (Const (bword_zero))))
+   )) ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]](Geq (Var vid1) (Const (bword_zero))))))"
 *)  
 definition SystemDCCut::"('sf,'sc,'sz) formula"
 where "SystemDCCut =
-(([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]](Geq (f0 fid1) (Const 0))) \<rightarrow>
-   (([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]]((Geq (Differential (Var vid1)) (Differential (Const 0))))) 
+(([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]](Geq (f0 fid1) (Const (bword_zero)))) \<rightarrow>
+   (([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]]((Geq (Differential (Var vid1)) (Differential (Const (bword_zero)))))) 
    \<leftrightarrow>  
-   ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const 0)))]](Geq (Differential (Var vid1)) (Differential (Const 0))))))"
+   ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const (bword_zero))))]](Geq (Differential (Var vid1)) (Differential (Const (bword_zero)))))))"
   
 definition SystemVCut::"('sf,'sc,'sz) formula"
 where "SystemVCut = 
-  Implies (Geq (f0 fid1) (Const 0)) ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const 0)))]](Geq (f0 fid1) (Const 0)))" 
+  Implies (Geq (f0 fid1) (Const (bword_zero))) ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const (bword_zero))))]](Geq (f0 fid1) (Const (bword_zero))))" 
 
 definition SystemVCut2::"('sf,'sc,'sz) formula"
 where "SystemVCut2 = 
-  Implies (Geq (f0 fid1) (Const 0)) ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]](Geq (f0 fid1) (Const 0)))" 
+  Implies (Geq (f0 fid1) (Const (bword_zero))) ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]](Geq (f0 fid1) (Const (bword_zero))))" 
 
 definition SystemDECut::"('sf,'sc,'sz) formula"
-where "SystemDECut = (([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const 0)))]] ((Geq (Differential (Var vid1)) (Differential (Const 0))))) \<leftrightarrow>
- ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const 0)))]]
-    [[DiffAssign vid1 (f0 fid1)]](Geq (Differential (Var vid1)) (Differential (Const 0)))))"
+where "SystemDECut = (([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const (bword_zero))))]] ((Geq (Differential (Var vid1)) (Differential (Const (bword_zero)))))) \<leftrightarrow>
+ ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const (bword_zero))))]]
+    [[DiffAssign vid1 (f0 fid1)]](Geq (Differential (Var vid1)) (Differential (Const (bword_zero))))))"
 
 definition SystemKCut::"('sf,'sc,'sz) formula"
 where "SystemKCut =
-  (Implies ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const 0)))]]
-                (Implies ((And TT (Geq (f0 fid1) (Const 0)))) ([[DiffAssign vid1 (f0 fid1)]](Geq (Differential (Var vid1)) (Differential (Const 0))))))
-      (Implies ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const 0)))]] ((And TT (Geq (f0 fid1) (Const 0)))))
-               ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const 0)))]] ([[DiffAssign vid1 (f0 fid1)]](Geq (Differential (Var vid1)) (Differential (Const 0)))))))"
+  (Implies ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const (bword_zero))))]]
+                (Implies ((And TT (Geq (f0 fid1) (Const (bword_zero))))) ([[DiffAssign vid1 (f0 fid1)]](Geq (Differential (Var vid1)) (Differential (Const (bword_zero)))))))
+      (Implies ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const (bword_zero))))]] ((And TT (Geq (f0 fid1) (Const (bword_zero))))))
+               ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const (bword_zero))))]] ([[DiffAssign vid1 (f0 fid1)]](Geq (Differential (Var vid1)) (Differential (Const (bword_zero))))))))"
 
 definition SystemEquivCut::"('sf,'sc,'sz) formula"
 where "SystemEquivCut =
-  (Equiv (Implies ((And TT (Geq (f0 fid1) (Const 0)))) ([[DiffAssign vid1 (f0 fid1)]](Geq (Differential (Var vid1)) (Differential (Const 0)))))
-         (Implies ((And TT (Geq (f0 fid1) (Const 0)))) ([[DiffAssign vid1 (f0 fid1)]](Geq (DiffVar vid1) (Const 0)))))"
+  (Equiv (Implies ((And TT (Geq (f0 fid1) (Const (bword_zero))))) ([[DiffAssign vid1 (f0 fid1)]](Geq (Differential (Var vid1)) (Differential (Const (bword_zero))))))
+         (Implies ((And TT (Geq (f0 fid1) (Const (bword_zero))))) ([[DiffAssign vid1 (f0 fid1)]](Geq (DiffVar vid1) (Const (bword_zero))))))"
 
 definition SystemDiffAssignCut::"('sf,'sc,'sz) formula"
 where "SystemDiffAssignCut =
-  (([[DiffAssign vid1  ($f fid1 empty)]] (Geq (DiffVar vid1) (Const 0)))
-\<leftrightarrow> (Geq ($f fid1 empty) (Const 0)))"
+  (([[DiffAssign vid1  ($f fid1 empty)]] (Geq (DiffVar vid1) (Const (bword_zero))))
+\<leftrightarrow> (Geq ($f fid1 empty) (Const (bword_zero))))"
   
 definition SystemCEFml1::"('sf,'sc,'sz) formula"
-where "SystemCEFml1 = Geq (Differential (Var vid1)) (Differential (Const 0))"
+where "SystemCEFml1 = Geq (Differential (Var vid1)) (Differential (Const (bword_zero)))"
 
 definition SystemCEFml2::"('sf,'sc,'sz) formula"
-where "SystemCEFml2 = Geq (DiffVar vid1) (Const 0)"
+where "SystemCEFml2 = Geq (DiffVar vid1) (Const (bword_zero))"
 
 
 (*
 definition diff_const_axiom :: "('sf, 'sc, 'sz) formula"
-  where [axiom_defs]:"diff_const_axiom \<equiv> Equals (Differential ($f fid1 empty)) (Const 0)"
+  where [axiom_defs]:"diff_const_axiom \<equiv> Equals (Differential ($f fid1 empty)) (Const (bword_zero))"
 
 definition diff_var_axiom :: "('sf, 'sc, 'sz) formula"
   where [axiom_defs]:"diff_var_axiom \<equiv> Equals (Differential (Var vid1)) (DiffVar vid1)"*)
 
   
 definition CQ1Concl::"('sf,'sc,'sz) formula"
-where "CQ1Concl = (Geq (Differential (Var vid1)) (Differential (Const 0)) \<leftrightarrow> Geq (DiffVar vid1) (Differential (Const 0)))"
+where "CQ1Concl = (Geq (Differential (Var vid1)) (Differential (Const (bword_zero))) \<leftrightarrow> Geq (DiffVar vid1) (Differential (Const (bword_zero))))"
 
 definition CQ2Concl::"('sf,'sc,'sz) formula"
-where "CQ2Concl = (Geq (DiffVar vid1) (Differential (Const 0)) \<leftrightarrow> Geq ($' vid1) (Const 0))"
+where "CQ2Concl = (Geq (DiffVar vid1) (Differential (Const (bword_zero))) \<leftrightarrow> Geq ($' vid1) (Const (bword_zero)))"
 
 definition CEReq::"('sf,'sc,'sz) formula"
-where "CEReq = (Geq (Differential (trm.Var vid1)) (Differential (Const 0)) \<leftrightarrow> Geq ($' vid1) (Const 0))"
+where "CEReq = (Geq (Differential (trm.Var vid1)) (Differential (Const (bword_zero))) \<leftrightarrow> Geq ($' vid1) (Const (bword_zero)))"
 
 definition CQRightSubst::"('sf,'sc,'sz) subst"
 where "CQRightSubst = 
@@ -4139,7 +4155,7 @@ where "CQRightSubst =
 definition CQLeftSubst::"('sf,'sc,'sz) subst"
 where "CQLeftSubst = 
   \<lparr> SFunctions = (\<lambda>_. None),
-    SPredicates = (\<lambda>p. (if p = vid1 then (Some (Geq  (Function  (Inr vid1)  empty) (Differential (Const 0)))) else None)),
+    SPredicates = (\<lambda>p. (if p = vid1 then (Some (Geq  (Function  (Inr vid1)  empty) (Differential (Const (bword_zero))))) else None)),
     SContexts = (\<lambda>_. None),
     SPrograms = (\<lambda>_. None),
     SODEs = (\<lambda>_. None)
@@ -4150,7 +4166,7 @@ where "CEProof = (([],[CEReq]), [
   (0, Cut CQ1Concl)
  ,(0, Cut CQ2Concl)
  ,(1, RightRule CohideRR 0)
- ,(Suc (Suc 0), CQ (Differential (Const 0)) (Const 0) CQRightSubst)
+ ,(Suc (Suc 0), CQ (Differential (Const (bword_zero))) (Const (bword_zero)) CQRightSubst)
  ,(1, RightRule CohideRR 0)
  ,(1, CQ (Differential (Var vid1)) (DiffVar vid1) CQLeftSubst)
  ,(0, RightRule EquivR 0)
@@ -4172,7 +4188,7 @@ lemma CE_result_correct:"proof_result CEProof = ([],([],[CEReq]))"
 
 definition DiffConstSubst::"('sf,'sc,'sz) subst"
 where "DiffConstSubst = \<lparr>
-    SFunctions = (\<lambda>f. (if f = fid1 then (Some (Const 0)) else None)),
+    SFunctions = (\<lambda>f. (if f = fid1 then (Some (Const (bword_zero))) else None)),
     SPredicates = (\<lambda>_. None),
     SContexts = (\<lambda>_. None),
     SPrograms = (\<lambda>_. None),
@@ -4180,10 +4196,10 @@ where "DiffConstSubst = \<lparr>
   \<rparr>"
 
 definition DiffConstProof::"('sf,'sc,'sz) pf"
-where "DiffConstProof = (([],[(Equals (Differential (Const 0)) (Const 0))]), [
+where "DiffConstProof = (([],[(Equals (Differential (Const (bword_zero))) (Const (bword_zero)))]), [
   (0, AxSubst AdConst DiffConstSubst)])"
 
-lemma diffconst_result_correct:"proof_result DiffConstProof = ([], ([],[Equals (Differential (Const 0)) (Const 0)]))"
+lemma diffconst_result_correct:"proof_result DiffConstProof = ([], ([],[Equals (Differential (Const (bword_zero))) (Const (bword_zero))]))"
   by(auto simp add: prover DiffConstProof_def)
 
 lemma diffconst_sound_lemma:"sound (proof_result DiffConstProof)"
@@ -4199,10 +4215,10 @@ lemma valid_of_sound:"sound ([], ([],[\<phi>])) \<Longrightarrow> valid \<phi>"
     by(auto)
   done
 
-lemma almost_diff_const_sound:"sound ([], ([], [Equals (Differential (Const 0)) (Const 0)]))"
+lemma almost_diff_const_sound:"sound ([], ([], [Equals (Differential (Const (bword_zero))) (Const (bword_zero))]))"
   using diffconst_result_correct diffconst_sound_lemma by simp
 
-lemma almost_diff_const:"valid (Equals (Differential (Const 0)) (Const 0))"
+lemma almost_diff_const:"valid (Equals (Differential (Const (bword_zero))) (Const (bword_zero)))"
   using almost_diff_const_sound valid_of_sound by auto
 
 (* Note: this is just unpacking the definition: the axiom is defined as literally this formula *)
@@ -4229,15 +4245,15 @@ lemma CE1pre:"sound ([], ([], [CEReq]))"
 lemma CE1pre_valid:"valid CEReq"
   by (rule sound_to_valid[OF CE1pre])
     
-lemma CE1pre_valid2:"valid (! (! (Geq (Differential (trm.Var vid1)) (Differential (Const 0)) && Geq ($' vid1) (Const 0)) &&
-              ! (! (Geq (Differential (trm.Var vid1)) (Differential (Const 0))) && ! (Geq ($' vid1) (Const 0))))) "
+lemma CE1pre_valid2:"valid (! (! (Geq (Differential (trm.Var vid1)) (Differential (Const (bword_zero))) && Geq ($' vid1) (Const (bword_zero))) &&
+              ! (! (Geq (Differential (trm.Var vid1)) (Differential (Const (bword_zero)))) && ! (Geq ($' vid1) (Const (bword_zero)))))) "
   using CE1pre_valid unfolding CEReq_def Equiv_def Or_def by auto
 
 definition SystemDISubst::"('sf,'sc,'sz) subst"
 where "SystemDISubst = 
   \<lparr> SFunctions = (\<lambda>f. 
     (     if f = fid1 then Some(Function (Inr vid1) empty)
-     else if f = fid2 then Some(Const 0)
+     else if f = fid2 then Some(Const (bword_zero))
      else None)),
     SPredicates = (\<lambda>p. if p = vid1 then Some TT else None),
     SContexts = (\<lambda>_. None),
@@ -4255,10 +4271,10 @@ where "SystemDISubst =
 (*
 Implies
   (Implies TT ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]]
-     (Geq (Differential (Var vid1)) (Differential (Const 0)))))
+     (Geq (Differential (Var vid1)) (Differential (Const (bword_zero))))))
   (Implies
-     (Implies TT (Geq (Var vid1) (Const 0)))
-     ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]](Geq (Var vid1) (Const 0))))
+     (Implies TT (Geq (Var vid1) (Const (bword_zero))))
+     ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) TT]](Geq (Var vid1) (Const (bword_zero)))))
 *)
 
 definition SystemDCSubst::"('sf,'sc,'sz) subst"
@@ -4270,9 +4286,9 @@ where "SystemDCSubst =
     if C = pid1 then
       Some TT
     else if C = pid2 then
-      Some (Geq (Differential (Var vid1)) (Differential (Const 0)))
+      Some (Geq (Differential (Var vid1)) (Differential (Const (bword_zero))))
     else if C = pid3 then
-      Some (Geq (Function fid1 empty) (Const 0)) 
+      Some (Geq (Function fid1 empty) (Const (bword_zero))) 
     else 
      None),
     SPrograms = (\<lambda>_. None),
@@ -4282,13 +4298,13 @@ where "SystemDCSubst =
 definition SystemVSubst::"('sf,'sc,'sz) subst"
 where "SystemVSubst = 
   \<lparr> SFunctions = (\<lambda>f.  None),
-    SPredicates = (\<lambda>p. if p = vid1 then Some (Geq (Function (Inl fid1) empty) (Const 0)) else None),
+    SPredicates = (\<lambda>p. if p = vid1 then Some (Geq (Function (Inl fid1) empty) (Const (bword_zero))) else None),
     SContexts = (\<lambda>_. None),
     SPrograms = (\<lambda>a. if a = vid1 then 
       Some (EvolveODE (OProd 
                          (OSing vid1 (Function fid1 empty)) 
                          (OSing vid2 (Var vid1))) 
-                      (And TT (Geq (Function fid1 empty) (Const 0)))) 
+                      (And TT (Geq (Function fid1 empty) (Const (bword_zero))))) 
                       else None),
     SODEs = (\<lambda>_. None)
   \<rparr>"
@@ -4296,7 +4312,7 @@ where "SystemVSubst =
 definition SystemVSubst2::"('sf,'sc,'sz) subst"
 where "SystemVSubst2 = 
   \<lparr> SFunctions = (\<lambda>f.  None),
-    SPredicates = (\<lambda>p. if p = vid1 then Some (Geq (Function (Inl fid1) empty) (Const 0)) else None),
+    SPredicates = (\<lambda>p. if p = vid1 then Some (Geq (Function (Inl fid1) empty) (Const (bword_zero))) else None),
     SContexts = (\<lambda>_. None),
     SPrograms = (\<lambda>a. if a = vid1 then 
       Some (EvolveODE (OProd 
@@ -4310,15 +4326,15 @@ where "SystemVSubst2 =
 definition SystemDESubst::"('sf,'sc,'sz) subst"
 where "SystemDESubst = 
   \<lparr> SFunctions = (\<lambda>f. if f = fid1 then Some(Function (Inl fid1) empty) else None),
-    SPredicates = (\<lambda>p. if p = vid2 then Some(And TT (Geq (Function (Inl fid1) empty) (Const 0))) else None),
-    SContexts = (\<lambda>C. if C = pid1 then Some(Geq (Differential (Var vid1)) (Differential (Const 0))) else None),
+    SPredicates = (\<lambda>p. if p = vid2 then Some(And TT (Geq (Function (Inl fid1) empty) (Const (bword_zero)))) else None),
+    SContexts = (\<lambda>C. if C = pid1 then Some(Geq (Differential (Var vid1)) (Differential (Const (bword_zero)))) else None),
     SPrograms = (\<lambda>_. None),
     SODEs = (\<lambda>_. None)
   \<rparr>"
 
-lemma systemdesubst_correct:"\<exists> ODE.(([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const 0)))]] ((Geq (Differential (Var vid1)) (Differential (Const 0))))) \<leftrightarrow>
- ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const 0)))]]
-    [[DiffAssign vid1 (f0 fid1)]](Geq (Differential (Var vid1)) (Differential (Const 0)))))
+lemma systemdesubst_correct:"\<exists> ODE.(([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const (bword_zero))))]] ((Geq (Differential (Var vid1)) (Differential (Const (bword_zero)))))) \<leftrightarrow>
+ ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (And TT (Geq (f0 fid1) (Const (bword_zero))))]]
+    [[DiffAssign vid1 (f0 fid1)]](Geq (Differential (Var vid1)) (Differential (Const (bword_zero))))))
     = Fsubst ((([[EvolveODE (OProd (OSing vid1 (f1 fid1 vid1)) ODE) (p1 vid2 vid1)]] (P pid1)) \<leftrightarrow>
           ([[EvolveODE ((OProd  (OSing vid1 (f1 fid1 vid1))) ODE) (p1 vid2 vid1)]]
                [[DiffAssign vid1 (f1 fid1 vid1)]]P pid1))) SystemDESubst"
@@ -4335,10 +4351,10 @@ definition SystemKSubst::"('sf,'sc,'sz) subst"
 where "SystemKSubst = \<lparr> SFunctions = (\<lambda>f.  None),
     SPredicates = (\<lambda>_. None),
     SContexts = (\<lambda>C. if C = pid1 then 
-        (Some (And (Geq (Const 0) (Const 0)) (Geq (Function fid1 empty) (Const 0)))) 
+        (Some (And (Geq (Const (bword_zero)) (Const (bword_zero))) (Geq (Function fid1 empty) (Const (bword_zero))))) 
       else if C = pid2 then 
-        (Some ([[DiffAssign vid1 (Function fid1 empty)]](Geq (Differential (Var vid1)) (Differential (Const 0))))) else None),
-    SPrograms = (\<lambda>c. if c = vid1 then Some (EvolveODE (OProd (OSing vid1 (Function fid1 empty)) (OSing vid2 (Var vid1))) (And (Geq (Const 0) (Const 0)) (Geq (Function fid1 empty) (Const 0)))) else None),
+        (Some ([[DiffAssign vid1 (Function fid1 empty)]](Geq (Differential (Var vid1)) (Differential (Const (bword_zero)))))) else None),
+    SPrograms = (\<lambda>c. if c = vid1 then Some (EvolveODE (OProd (OSing vid1 (Function fid1 empty)) (OSing vid2 (Var vid1))) (And (Geq (Const (bword_zero)) (Const (bword_zero))) (Geq (Function fid1 empty) (Const (bword_zero))))) else None),
     SODEs = (\<lambda>_. None)
   \<rparr>"
 
@@ -4360,7 +4376,7 @@ lemma pfsubst_imp_simp:"PFsubst (Implies p q) \<sigma> = (Implies (PFsubst p \<s
 definition SystemDWSubst::"('sf,'sc,'sz) subst"
 where "SystemDWSubst = \<lparr> SFunctions = (\<lambda>f.  None),
     SPredicates = (\<lambda>_. None),
-    SContexts = (\<lambda>C. if C = pid1 then Some (And (Geq (Const 0) (Const 0)) (Geq (Function fid1 empty) (Const 0))) else None),
+    SContexts = (\<lambda>C. if C = pid1 then Some (And (Geq (Const (bword_zero)) (Const (bword_zero))) (Geq (Function fid1 empty) (Const (bword_zero)))) else None),
     SPrograms = (\<lambda>_. None),
     SODEs = (\<lambda>c. if c = vid1 then Some (OProd (OSing vid1 (Function fid1 empty)) (OSing vid2 (Var vid1))) else None)
   \<rparr>"
@@ -4368,15 +4384,15 @@ where "SystemDWSubst = \<lparr> SFunctions = (\<lambda>f.  None),
 definition SystemCESubst::"('sf,'sc,'sz) subst"
 where "SystemCESubst = \<lparr> SFunctions = (\<lambda>f.  None),
     SPredicates = (\<lambda>_. None),
-    SContexts = (\<lambda>C. if C = pid1 then Some(Implies(And (Geq (Const 0) (Const 0)) (Geq (Function fid1 empty) (Const 0))) ([[DiffAssign vid1 (Function fid1 empty)]](Predicational (Inr ())))) else None),
+    SContexts = (\<lambda>C. if C = pid1 then Some(Implies(And (Geq (Const (bword_zero)) (Const (bword_zero))) (Geq (Function fid1 empty) (Const (bword_zero)))) ([[DiffAssign vid1 (Function fid1 empty)]](Predicational (Inr ())))) else None),
     SPrograms = (\<lambda>_. None),
     SODEs = (\<lambda>_. None)
   \<rparr>"
 
 lemma SystemCESubstOK:
   "step_ok 
-  ([([],[Equiv (Implies(And (Geq (Const 0) (Const 0)) (Geq (Function fid1 empty) (Const 0))) ([[DiffAssign vid1 (Function fid1 empty)]]( SystemCEFml1))) 
-         (Implies(And (Geq (Const 0) (Const 0)) (Geq (Function fid1 empty) (Const 0))) ([[DiffAssign vid1 (Function fid1 empty)]]( (SystemCEFml2))))
+  ([([],[Equiv (Implies(And (Geq (Const (bword_zero)) (Const (bword_zero))) (Geq (Function fid1 empty) (Const (bword_zero)))) ([[DiffAssign vid1 (Function fid1 empty)]]( SystemCEFml1))) 
+         (Implies(And (Geq (Const (bword_zero)) (Const (bword_zero))) (Geq (Function fid1 empty) (Const (bword_zero)))) ([[DiffAssign vid1 (Function fid1 empty)]]( (SystemCEFml2))))
          ])],
          ([],[]))
          
@@ -4397,7 +4413,7 @@ lemma SystemCESubstOK:
       \<leftrightarrow> Prop vid1 (singleton ($f fid1 empty))*)
 definition SystemDiffAssignSubst::"('sf,'sc,'sz) subst"
 where "SystemDiffAssignSubst = \<lparr> SFunctions = (\<lambda>f.  None),
-    SPredicates = (\<lambda>p. if p = vid1 then Some (Geq (Function (Inr vid1) empty) (Const 0)) else None),
+    SPredicates = (\<lambda>p. if p = vid1 then Some (Geq (Function (Inr vid1) empty) (Const (bword_zero))) else None),
     SContexts = (\<lambda>_. None),
     SPrograms = (\<lambda>_. None),
     SODEs = (\<lambda>_. None)
@@ -4479,8 +4495,8 @@ where "SystemProof =
   
 lemma system_result_correct:"proof_result SystemProof = 
   ([],
-  ([],[Implies (And (Geq (Var vid1) (Const 0)) (Geq (f0 fid1) (Const 0)))
-        ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (TT)]]Geq (Var vid1) (Const 0))]))"
+  ([],[Implies (And (Geq (Var vid1) (Const (bword_zero))) (Geq (f0 fid1) (Const (bword_zero))))
+        ([[EvolveODE (OProd (OSing vid1 (f0 fid1)) (OSing vid2 (Var vid1))) (TT)]]Geq (Var vid1) (Const (bword_zero)))]))"
   unfolding SystemProof_def SystemConcl_def Implies_def Or_def f0_def TT_def Equiv_def SystemDICut_def SystemDCCut_def
   proof_result.simps deriv_result.simps start_proof.simps  Box_def SystemDCSubst_def SystemVCut_def SystemDECut_def SystemKCut_def SystemEquivCut_def
   SystemDiffAssignCut_def SystemVCut2_def

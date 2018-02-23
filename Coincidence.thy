@@ -395,6 +395,36 @@ case (dsafe_Max \<theta>\<^sub>1 \<theta>\<^sub>2) then
     using Iagree_sub subs by auto
   then show ?case 
     using IH1[OF VA1 IA1] IH2[OF VA2 IA2] by auto  
+next
+case (dsafe_Min \<theta>\<^sub>1 \<theta>\<^sub>2) then
+  have safe:"dsafe \<theta>\<^sub>1" "dsafe \<theta>\<^sub>2"
+    and IH1:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>1) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>1} \<Longrightarrow> dterm_sem I \<theta>\<^sub>1 \<nu> = dterm_sem J \<theta>\<^sub>1 \<nu>'"
+    and IH2:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>2) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>2} \<Longrightarrow> dterm_sem I \<theta>\<^sub>2 \<nu> = dterm_sem J \<theta>\<^sub>2 \<nu>'"
+    and VA:"Vagree \<nu> \<nu>' (FVT (trm.Min \<theta>\<^sub>1 \<theta>\<^sub>2))"
+    and IA:"Iagree I J {Inl x |x. x \<in> SIGT (trm.Min \<theta>\<^sub>1 \<theta>\<^sub>2)}"
+    by auto
+  from VA have VA1:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>1)" and VA2:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>2)" 
+    unfolding Vagree_def by auto
+  have subs:"{Inl x |x. x \<in> SIGT \<theta>\<^sub>1} \<subseteq> {Inl x |x. x \<in> SIGT (Max \<theta>\<^sub>1 \<theta>\<^sub>2)}" 
+    "{Inl x |x. x \<in> SIGT \<theta>\<^sub>2} \<subseteq> {Inl x |x. x \<in> SIGT (Max \<theta>\<^sub>1 \<theta>\<^sub>2)}"by auto
+  from IA have IA1:"Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>1}" and IA2:"Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>2}"
+    using Iagree_sub subs by auto
+  then show ?case 
+    using IH1[OF VA1 IA1] IH2[OF VA2 IA2] by auto
+next
+case (dsafe_Abs \<theta>) then
+  have safe:"dsafe \<theta>"
+    and IH1:"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT \<theta>} \<Longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem J \<theta> \<nu>'"
+    and VA:"Vagree \<nu> \<nu>' (FVT (trm.Abs \<theta>))"
+    and IA:"Iagree I J {Inl x |x. x \<in> SIGT (trm.Abs \<theta>)}"
+    by auto
+  from VA have VA1:"Vagree \<nu> \<nu>' (FVT \<theta>)" 
+    unfolding Vagree_def by auto
+  have subs:"{Inl x |x. x \<in> SIGT \<theta>} \<subseteq> {Inl x |x. x \<in> SIGT (Abs \<theta>)}"  by auto
+  from IA have IA1:"Iagree I J {Inl x |x. x \<in> SIGT \<theta>}"
+    using Iagree_sub subs by auto
+  then show ?case 
+    using IH1[OF VA1 IA1] by auto  
 qed (auto simp: Vagree_def directional_derivative_def coincidence_frechet')
 
 subsection \<open>ODE Coincidence Theorems\<close>
