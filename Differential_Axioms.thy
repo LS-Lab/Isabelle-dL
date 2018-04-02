@@ -658,6 +658,14 @@ Implies
   ([[EvolveODE ODE (DPredl vid1)]](Geq \<theta>1 \<theta>2))
 "
 
+definition DIEqaxiom :: "('sf,'sz) ODE \<Rightarrow> ('sf,'sz) trm \<Rightarrow> ('sf,'sz) trm \<Rightarrow> ('sf, 'sc, 'sz) formula"
+where [axiom_defs]:"DIEqaxiom ODE \<theta>1 \<theta>2 = 
+Implies 
+  (Implies (DPredl vid1) (And (Equals \<theta>1 \<theta>2) 
+      ([[EvolveODE ODE (DPredl vid1)]](Equals (Differential \<theta>1) (Differential \<theta>2)))))
+  ([[EvolveODE ODE (DPredl vid1)]](Equals \<theta>1 \<theta>2))
+"
+
 
   (* 
 g(x) > h(x) \<rightarrow> [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c & p(x)]g(x) > h(x)
@@ -667,13 +675,12 @@ g(x) > h(x) \<rightarrow> [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [
 \<rightarrow>
 ([c&Q](f(x) > g(x))) <-> (Q \<rightarrow> (f(x) > g(x))
 *)
-definition DIGraxiom :: "('sf, 'sc, 'sz) formula"
-where [axiom_defs]:"DIGraxiom = 
+definition DIGraxiom :: "('sf,'sz) ODE \<Rightarrow> ('sf,'sz) trm \<Rightarrow> ('sf,'sz) trm \<Rightarrow> ('sf, 'sc, 'sz) formula"
+where [axiom_defs]:"DIGraxiom ODE \<theta>1 \<theta>2 = 
 Implies 
-  (Implies (Prop vid1 empty) ([[EvolveODE (OVar vid1 None) (Prop vid1 empty)]](Geq (Differential (f1 fid1 vid1)) (Differential (f1 fid2 vid1)))))
-  (Implies
-     (Implies(Prop vid1 empty) (Greater (f1 fid1 vid1) (f1 fid2 vid1)))
-     ([[EvolveODE (OVar vid1 None) (Prop vid1 empty)]](Greater (f1 fid1 vid1) (f1 fid2 vid1))))"
+  (Implies (DPredl vid1) (And (Greater \<theta>1 \<theta>2)
+    ([[EvolveODE ODE (DPredl vid1)]](Geq (Differential \<theta>1) (Differential \<theta>2)))))
+  ([[EvolveODE ODE (DPredl vid1)]](Greater \<theta>1 \<theta>2))"
 
 (* [{1' = 1(1) & 1(1)}]2(1) <->
    \<exists>2. [{1'=1(1), 2' = 2(1)*2 + 3(1) & 1(1)}]2(1)*)
@@ -1766,6 +1773,7 @@ lemma dterm_sterm_dfree:
 (*  
 g(x)\<ge> h(x) \<rightarrow>  [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c]g(x) \<ge> h(x)
 *)                        
+(* DIEqaxiom ODE \<theta>1 \<theta>2 *)
 lemma DIGeq_valid:
   fixes ODE::"('sf,'sz) ODE"  and \<theta>1 \<theta>2 ::"('sf,'sz)trm"
   assumes osafe:"osafe ODE"
@@ -1953,6 +1961,247 @@ next
       dterm_sterm_dfree[OF free1, of I "?\<phi>s t" "snd (?\<phi> t)"]
       by (simp add: f1_def)
 qed 
+
+lemma DIGr_valid:
+  fixes ODE::"('sf,'sz) ODE"  and \<theta>1 \<theta>2 ::"('sf,'sz)trm"
+  assumes osafe:"osafe ODE"
+  assumes free1:"dfree \<theta>1"
+  assumes free2:"dfree \<theta>2"
+  assumes BVO1:"FVT \<theta>1 \<subseteq> Inl ` ODE_dom ODE"
+  assumes BVO2:"FVT \<theta>2 \<subseteq> Inl ` ODE_dom ODE"
+  shows "valid (DIGraxiom ODE \<theta>1 \<theta>2)"
+  unfolding DIGraxiom_def
+  apply(unfold DIGraxiom_def valid_def impl_sem iff_sem)
+  apply(auto) (* 2 goals*)
+  proof -
+    fix I::"('sf,'sc,'sz) interp" and  b aa ba 
+      and sol::"real \<Rightarrow> 'sz simple_state" 
+      and t::real
+    assume good_interp:"is_interp I"
+    let ?ODE = "ODE"
+    let ?\<phi> = "(\<lambda>t. mk_v I (?ODE) (sol 0, b) (sol t))"
+    assume t:"0 \<le> t"
+      and sol:"(sol solves_ode (\<lambda>a b. ODE_sem I ODE b)) {0..t}
+      {x. mk_v I (ODE) (sol 0, b) x \<in> fml_sem I (DPredl vid1)}"
+      and notin:" (sol 0, b) \<notin> fml_sem I (DPredl vid1)"
+    have fsafe:"fsafe (DPredl vid1)" by (auto simp add: empty_def DPredl_def)
+    have VA:"Vagree (sol 0, b) (mk_v I (ODE) (sol 0, b) (sol 0)) (FVF (DPredl vid1))" 
+      using mk_v_agree[of I "?ODE" "(sol 0, b)" "sol 0"] unfolding Vagree_def DPredl_def apply auto 
+       by metis
+    from sol have "(?\<phi> 0)  \<in> fml_sem I (DPredl vid1)"
+      using t solves_ode_domainD[of sol "(\<lambda>a b. ODE_sem I ODE b  )" "{0..t}"] 
+        by auto
+    then have incon:"((sol 0, b))   \<in> fml_sem I (DPredl vid1)"
+      using coincidence_formula[OF fsafe good_interp good_interp Iagree_refl[of I], of "(sol 0, b)" "?\<phi> 0"] sol
+      VA by auto
+    show "dterm_sem I (\<theta>2)  (mk_v I (ODE) (sol 0, b) (sol t)) < dterm_sem I (\<theta>1) (mk_v I (ODE) (sol 0, b) (sol t))"
+      using notin incon by auto
+next
+    fix I::"('sf,'sc,'sz) interp" and  b aa ba 
+      and sol::"real \<Rightarrow> 'sz simple_state" 
+      and t::real
+    let ?ODE = "ODE"
+    let ?\<phi> = "(\<lambda>t. mk_v I (?ODE) (sol 0, b) (sol t))"
+    assume good_interp:"is_interp I"
+    assume aaba:"(aa, ba) = mk_v I (ODE) (sol 0, b) (sol t)"
+    assume t:"0 \<le> t"
+    assume sol:"(sol solves_ode (\<lambda>a b.  ODE_sem I ODE  b)) {0..t}
+        {x. mk_v I (ODE) (sol 0, b) x \<in> fml_sem I (DPredl vid1)}"
+    assume box:" \<forall>a ba. (\<exists>sola. sol 0 = sola 0 \<and>
+                      (\<exists>t. (a, ba) = mk_v I (ODE) (sola 0, b) (sola t) \<and>
+                           0 \<le> t \<and>
+                           (sola solves_ode (\<lambda>a b. ODE_sem I ODE b )) {0..t}
+                            {x. mk_v I (ODE) (sola 0, b) x \<in> fml_sem I (DPredl vid1)})) \<longrightarrow>
+              directional_derivative I (\<theta>2) (a, ba) \<le> directional_derivative I (\<theta>1) (a, ba)"
+    then have boxRule:" \<And>a ba. (\<exists>sola. sol 0 = sola 0 \<and>
+                      (\<exists>t. (a, ba) = mk_v I (ODE) (sola 0, b) (sola t) \<and>
+                           0 \<le> t \<and>
+                           (sola solves_ode (\<lambda>a b. ODE_sem I ODE b )) {0..t}
+                            {x. mk_v I (ODE) (sola 0, b) x \<in> fml_sem I (DPredl vid1)})) \<Longrightarrow>
+              directional_derivative I (\<theta>2) (a, ba) \<le> directional_derivative I (\<theta>1) (a, ba)"
+      using box by(simp)
+    assume geq0:"dterm_sem I (\<theta>2) (sol 0, b) < dterm_sem I (\<theta>1) (sol 0, b)"
+    note ffree1 = free2
+    note ffree2 = free1
+    from geq0 
+    have geq0':"sterm_sem I (\<theta>2) (sol 0) < sterm_sem I (\<theta>1) (sol 0)"
+      unfolding f1_def using dterm_sterm_dfree[OF ffree1, of I "sol 0" b] dterm_sterm_dfree[OF ffree2, of I "sol 0" b] 
+      by auto  
+    let ?\<phi>s = "\<lambda>x. fst (?\<phi> x)"
+    let ?\<phi>t = "\<lambda>x. snd (?\<phi> x)"
+    let ?df1 = "(\<lambda>t. dterm_sem I (\<theta>2) (?\<phi> t))"
+    let ?f1 = "(\<lambda>t. sterm_sem I (\<theta>2) (?\<phi>s t))"
+    let ?f1' = "(\<lambda> s t'. t' * frechet I (\<theta>2) (?\<phi>s s) (?\<phi>t s))"
+    have dfeq:"?df1 = ?f1" 
+      apply(rule ext)
+      subgoal for t
+        using dterm_sterm_dfree[OF ffree1, of I "?\<phi>s t" "snd (?\<phi> t)"] unfolding f1_def expand_singleton by auto
+      done
+    note free3 = free2
+    let ?df2 = "(\<lambda>t. dterm_sem I (\<theta>1) (?\<phi> t))"
+    let ?f2 = "(\<lambda>t. sterm_sem I (\<theta>1) (?\<phi>s t))"
+    let ?f2' = "(\<lambda>s t' . t' * frechet I (\<theta>1) (?\<phi>s s) (?\<phi>t s))"
+    let ?int = "{0..t}"
+    have bluh:"\<And>x i. (Functions I i has_derivative (THE f'. \<forall>x. (Functions I i has_derivative f' x) (at x)) x) (at x)"
+      using good_interp unfolding is_interp_def by auto
+    have blah:"(Functions I fid2 has_derivative (THE f'. \<forall>x. (Functions I fid2 has_derivative f' x) (at x)) (\<chi> i. sol t $ i)) (at (\<chi> i.  sol t $ i))"
+      using bluh by auto
+    have bigEx:"\<And>s. s \<in> {0..t} \<Longrightarrow>(\<exists>sola. sol 0 = sola 0 \<and>
+         (\<exists>ta. (fst (?\<phi> s),
+                snd (?\<phi> s)) =
+               mk_v I (ODE) (sola 0, b) (sola ta) \<and>
+               0 \<le> ta \<and>
+               (sola solves_ode (\<lambda>a b. ODE_sem I ODE b)) {0..ta}
+                {x.  (mk_v I (ODE) (sol 0, b) x) \<in> fml_sem I (DPredl vid1)}))"
+      subgoal for s
+        apply(rule exI[where x=sol])
+        apply(rule conjI)
+         subgoal by (rule refl)
+        apply(rule exI[where x=s])
+        apply(rule conjI)
+         subgoal by auto 
+        apply(rule conjI)
+         subgoal by auto
+        using sol
+        using atLeastAtMost_iff atLeastatMost_subset_iff order_refl solves_ode_on_subset
+        by (metis (no_types, lifting) subsetI)
+      done
+    have box':"\<And>s. s \<in> {0..t} \<Longrightarrow> directional_derivative I (\<theta>2) (?\<phi>s s, ?\<phi>t s) 
+                               \<le> directional_derivative I (\<theta>1) (?\<phi>s s, ?\<phi>t s)"
+      subgoal for s 
+        using bigEx[of s] box by metis
+    done 
+    have dsafe1:"dsafe (\<theta>2)" using dfree_is_dsafe[OF free2] by auto
+    have dsafe2:"dsafe (\<theta>1)" using dfree_is_dsafe[OF free1] by auto
+    have agree1:"Vagree (sol 0, b) (?\<phi> 0) (FVT (\<theta>2))"
+      using mk_v_agree[of I "(ODE)" "(sol 0, b)" "fst (?\<phi> 0)"]
+      unfolding f1_def Vagree_def expand_singleton   using BVO2
+      apply (auto simp add: DFunl_def)
+      by (metis (no_types, lifting) Compl_iff Vagree_def fst_conv mk_v_agree mk_xode.simps semBV.simps)
+    have agree2:"Vagree (sol 0, b) (?\<phi> 0) (FVT (\<theta>1))"
+      using mk_v_agree[of I "(OVar vid1 None)" "(sol 0, b)" "fst (?\<phi> 0)"]
+      unfolding f1_def Vagree_def expand_singleton    using BVO1
+      apply (auto simp add: DFunl_def)
+      by (metis (no_types, lifting) Compl_iff Vagree_def fst_conv mk_v_agree mk_xode.simps semBV.simps)
+    have sem_eq1:"dterm_sem I (\<theta>2) (sol 0, b) = dterm_sem I (\<theta>2) (?\<phi> 0)"
+      using coincidence_dterm[OF dsafe1 agree1] by auto
+    then have sem_eq1':"sterm_sem I (\<theta>2) (sol 0) = sterm_sem I (\<theta>2) (?\<phi>s 0)"
+      using dterm_sterm_dfree[OF free2, of I "sol 0" "b"] 
+            dterm_sterm_dfree[OF free2, of I "(?\<phi>s 0)" "snd (?\<phi> 0)"]
+      unfolding f1_def expand_singleton by auto
+    have sem_eq2:"dterm_sem I (\<theta>1) (sol 0, b) = dterm_sem I (\<theta>1) (?\<phi> 0)"
+      using coincidence_dterm[OF dsafe2 agree2] by auto
+    then have sem_eq2':"sterm_sem I (\<theta>1) (sol 0) = sterm_sem I (\<theta>1) (?\<phi>s 0)" 
+      using dterm_sterm_dfree[OF free1, of I "sol 0" "b"] dterm_sterm_dfree[OF free1, of I "(?\<phi>s 0)" "snd (?\<phi> 0)"]
+      unfolding f1_def expand_singleton by auto
+    have good_interp':"\<And>i x. (Functions I i has_derivative (THE f'. \<forall>x. (Functions I i has_derivative f' x) (at x)) x) (at x)"
+      using good_interp unfolding is_interp_def by auto
+    have chain :  
+      "\<And>f f' g g' x s.
+        (f has_derivative f') (at x within s) \<Longrightarrow>
+        (g has_derivative g') (at (f x) within f ` s) \<Longrightarrow> (g \<circ> f has_derivative g' \<circ> f') (at x within s)"
+      by(auto intro: derivative_intros)
+    have sol1:"(sol solves_ode (\<lambda>_. ODE_sem I (ODE))) {0..t} 
+        {x. mk_v I (ODE) (sol 0, b) x \<in> fml_sem I (DPredl vid1)}"
+      using sol unfolding p1_def singleton_def empty_def by auto
+    have sub_lem:"Inl ` ODE_dom ODE \<subseteq> semBV I ODE"
+     by(induction ODE,auto)
+     have FVTsub1:"FVT \<theta>2 \<subseteq> semBV I ODE"
+     using sub_lem BVO2 by auto
+    have FVTsub2:"FVT \<theta>1 \<subseteq> semBV I ODE"
+     using sub_lem BVO1 by auto
+    have deriv1:"\<And>s. s \<in> ?int \<Longrightarrow> (?f1 has_derivative (?f1' s)) (at s within {0..t})"
+      subgoal for s
+        using  rift_in_space_time[OF good_interp free2 osafe sol1 FVTsub1]
+        unfolding f1_def expand_singleton directional_derivative_def
+        by blast
+      done
+    have deriv2:"\<And>s. s \<in> ?int \<Longrightarrow> (?f2 has_derivative (?f2' s)) (at s within {0..t})"
+      subgoal for s
+        using rift_in_space_time[OF good_interp free1 osafe sol1 FVTsub2, of s] 
+        unfolding f1_def expand_singleton directional_derivative_def
+        by blast
+      done
+    have leq:"\<And>s . s \<in> ?int \<Longrightarrow> ?f1' s 1 \<le> ?f2' s 1"
+      subgoal for s using box'[of s] 
+        by (simp add: directional_derivative_def)
+      done
+    have preserve_agree1:"\<And>S. S \<subseteq> -(ODE_vars I ODE) \<Longrightarrow> VSagree (sol 0) (fst (mk_v I ODE (sol 0, b) (sol t))) S"
+      using mk_v_agree[of I "ODE" "(sol 0, b)" "sol t"]
+      unfolding Vagree_def VSagree_def
+      by auto
+    have "?f1 t < ?f2 t"
+      apply(cases "t = 0")
+       subgoal using geq0' sem_eq1' sem_eq2' by auto  
+      subgoal
+        subgoal
+          apply (rule MVT'_gr[OF deriv2 deriv1, of t]) (* 6 subgoals *)
+                 subgoal by auto
+                subgoal by auto
+               subgoal for s using deriv2[of s] using leq 
+                 by fastforce
+              using t leq geq0' sem_eq1' sem_eq2' by auto done done
+
+    then 
+    show "       dterm_sem I (\<theta>2) (mk_v I ODE (sol 0, b) (sol t))
+       < dterm_sem I (\<theta>1) (mk_v I ODE (sol 0, b) (sol t))
+"
+      using t 
+      dterm_sterm_dfree[OF free2, of I "?\<phi>s t" "snd (?\<phi> t)"]
+      dterm_sterm_dfree[OF free1, of I "?\<phi>s t" "snd (?\<phi> t)"]
+      f1_def
+      by simp
+qed 
+
+(*  
+g(x)\<ge> h(x) \<rightarrow>  [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [x'=f(x), c]g(x) \<ge> h(x)
+*)                        
+(* DIEqaxiom ODE \<theta>1 \<theta>2 *)
+lemma DIEq_valid:
+  fixes ODE::"('sf,'sz) ODE"  and \<theta>1 \<theta>2 ::"('sf,'sz)trm"
+  assumes osafe:"osafe ODE"
+  assumes free1:"dfree \<theta>1"
+  assumes free2:"dfree \<theta>2"
+  assumes BVO1:"FVT \<theta>1 \<subseteq> Inl ` ODE_dom ODE"
+  assumes BVO2:"FVT \<theta>2 \<subseteq> Inl ` ODE_dom ODE"
+  shows "valid (DIEqaxiom ODE \<theta>1 \<theta>2)"
+proof (auto simp only: valid_def DIEqaxiom_def iff_sem impl_sem equals_sem box_sem)
+  fix I::"('sf,'sc,'sz) interp" and a b aa ba
+  assume good_interp:"is_interp I"
+  assume s1:"((a, b), aa, ba) \<in> prog_sem I (EvolveODE ODE (DPredl vid1))"
+  assume s2:"(a, b) \<notin> fml_sem I (DPredl vid1)"
+  have arg1:"(a,b) \<in> fml_sem I (DPredl vid1 \<rightarrow> (Geq \<theta>1 \<theta>2 && [[EvolveODE ODE (DPredl vid1)]]Geq (Differential \<theta>1) (Differential \<theta>2)))"
+    using s1 s2 by auto
+  note ax1 = mp[OF spec[OF spec[OF DIGeq_valid[OF osafe free1 free2 BVO1 BVO2, unfolded DIGeqaxiom_def valid_def], where x="I"], where x="(a,b)"] good_interp]
+  have g1:"dterm_sem I \<theta>1 (aa, ba) \<ge> dterm_sem I \<theta>2 (aa, ba)"
+    using ax1 arg1 s1 by(auto)
+  have arg2:"(a,b) \<in> fml_sem I (DPredl vid1 \<rightarrow> (Geq \<theta>2 \<theta>1 && [[EvolveODE ODE (DPredl vid1)]]Geq (Differential \<theta>2) (Differential \<theta>1)))"
+    using s1 s2 by auto
+  note ax2 = mp[OF spec[OF spec[OF DIGeq_valid[OF osafe free2 free1 BVO2 BVO1, unfolded DIGeqaxiom_def valid_def], where x="I"], where x="(a,b)"] good_interp]
+  have g2:"dterm_sem I \<theta>2 (aa, ba) \<ge> dterm_sem I \<theta>1 (aa, ba)"
+    using ax2 arg2 s1 by(auto)
+  show "dterm_sem I \<theta>1 (aa, ba) = dterm_sem I \<theta>2 (aa, ba)"
+    using g1 g2 by auto
+next
+  fix I::"('sf,'sc,'sz) interp" and a b aa ba
+  assume good_interp:"is_interp I"
+  assume s1:"((a, b), aa, ba) \<in> prog_sem I (EvolveODE ODE (DPredl vid1))"
+  assume s2:"(a, b) \<in> fml_sem I (Equals \<theta>1 \<theta>2 && [[EvolveODE ODE (DPredl vid1)]]Equals (Differential \<theta>1) (Differential \<theta>2))"
+  note ax1 = mp[OF spec[OF spec[OF DIGeq_valid[OF osafe free1 free2 BVO1 BVO2, unfolded DIGeqaxiom_def valid_def], where x="I"], where x="(a,b)"] good_interp]
+  have g1:"(a, b) \<in> fml_sem I (Geq \<theta>1 \<theta>2 && [[EvolveODE ODE (DPredl vid1)]]Geq (Differential \<theta>1) (Differential \<theta>2))"
+    using s2 by(auto)
+  have o1:"dterm_sem I \<theta>1 (aa, ba) \<ge> dterm_sem I \<theta>2 (aa, ba)"
+    using ax1 g1 s1 s2 by auto
+  note ax2 = mp[OF spec[OF spec[OF DIGeq_valid[OF osafe free2 free1 BVO2 BVO1, unfolded DIGeqaxiom_def valid_def], where x="I"], where x="(a,b)"] good_interp]
+  have g2:"(a, b) \<in> fml_sem I (Geq \<theta>2 \<theta>1 && [[EvolveODE ODE (DPredl vid1)]]Geq (Differential \<theta>2) (Differential \<theta>1))"
+    using s2 by(auto)
+  have o2:"dterm_sem I \<theta>2 (aa, ba) \<ge> dterm_sem I \<theta>1 (aa, ba)"
+    using ax2 g2 s1 s2 by auto
+  show "dterm_sem I \<theta>1 (aa, ba) = dterm_sem I \<theta>2 (aa, ba)"
+      using o1 o2 by auto
+  qed
+
+
 (*
     
 lemma DIGr_valid:"valid DIGraxiom"

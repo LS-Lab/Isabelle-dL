@@ -101,7 +101,8 @@ datatype axiom =
 | ADW | ADE | ADC | ADS 
 |(* ADIGr | ADG |*) AEquivReflexive | ADiffEffectSys
 | AAllElim | ADiffLinear | ABoxSplit | AImpSelf | Acompose | AconstFcong | AdMinus | AassignEq | AallInst
-| AassignAny
+| AassignAny | AequalCommute
+
 
 datatype ('a,'b,'c) ruleApp =
   URename 'c 'c
@@ -112,6 +113,8 @@ datatype ('a,'b,'c) ruleApp =
 | Cohide2 nat nat
 | Cut "('a, 'b, 'c) formula"
 | DIGeqSchema "('a,'c) ODE" "('a,'c) trm" "('a,'c) trm"
+| DIGrSchema "('a,'c) ODE" "('a,'c) trm" "('a,'c) trm"
+| DIEqSchema "('a,'c) ODE" "('a,'c) trm" "('a,'c) trm"
 
 (*| ARApp "('a,'b,'c) axRule"*)
 
@@ -162,6 +165,7 @@ where
 | "get_axiom AassignEq = assignEqAxiom"
 | "get_axiom AallInst = allInstAxiom"
 | "get_axiom AassignAny = assignAnyAxiom"
+| "get_axiom AequalCommute = equalCommuteAxiom"
 
 fun get_axrule::"axRule \<Rightarrow> ('sf,'sc,'sz) rule"
   where  
@@ -288,6 +292,9 @@ next
 next
   case AassignAny
   then show ?thesis by (simp add: assignAny_valid)
+next
+  case AequalCommute
+  then show ?thesis by (simp add: equalCommute_valid)
 qed
 
 fun seq_to_string :: "('sf, 'sc, 'sz) sequent \<Rightarrow> char list"
@@ -691,8 +698,7 @@ fun rule_result :: "('sf, 'sc, 'sz) rule \<Rightarrow> (nat * ('sf, 'sc, 'sz) ru
  else
   (merge_rules (SG,C) ([([nth (fst(nth SG i)) j],[nth (snd(nth SG i)) k])], (nth SG i)) i))"
 | Step_DIGeq:"rule_result (SG,C) (i, DIGeqSchema ODE \<theta>1 \<theta>2) =
-(
-   let proved = 
+(  let proved = 
     ([],[Implies 
       (Implies (DPredl vid1) (And (Geq \<theta>1 \<theta>2) ([[EvolveODE ODE (DPredl vid1)]](Geq (Differential \<theta>1) (Differential \<theta>2)))))
       ([[EvolveODE ODE (DPredl vid1)]](Geq \<theta>1 \<theta>2))])
@@ -703,11 +709,40 @@ fun rule_result :: "('sf, 'sc, 'sz) rule \<Rightarrow> (nat * ('sf, 'sc, 'sz) ru
   dfree \<theta>1 \<and>
   dfree \<theta>2 \<and>
   FVT \<theta>1 \<subseteq> Inl ` ODE_dom ODE \<and>
-  FVT \<theta>2 \<subseteq> Inl ` ODE_dom ODE
-) then
+  FVT \<theta>2 \<subseteq> Inl ` ODE_dom ODE) then
       Some (closeI SG i,C)
-   else None
-)"
+   else None)"
+| Step_DIGr:"rule_result (SG,C) (i, DIGrSchema ODE \<theta>1 \<theta>2) =
+(  let proved = 
+    ([],[Implies 
+      (Implies (DPredl vid1) (And (Greater \<theta>1 \<theta>2) ([[EvolveODE ODE (DPredl vid1)]](Geq (Differential \<theta>1) (Differential \<theta>2)))))
+      ([[EvolveODE ODE (DPredl vid1)]](Greater \<theta>1 \<theta>2))])
+   in 
+   let wanted = nth SG i in
+   if (proved = wanted \<and>
+  osafe ODE \<and>
+  dfree \<theta>1 \<and>
+  dfree \<theta>2 \<and>
+  FVT \<theta>1 \<subseteq> Inl ` ODE_dom ODE \<and>
+  FVT \<theta>2 \<subseteq> Inl ` ODE_dom ODE) then
+      Some (closeI SG i,C)
+   else None)"
+| Step_DIEq:"rule_result (SG,C) (i, DIEqSchema ODE \<theta>1 \<theta>2) =
+(  let proved = 
+    ([],[Implies 
+      (Implies (DPredl vid1) (And (Equals \<theta>1 \<theta>2) ([[EvolveODE ODE (DPredl vid1)]](Equals (Differential \<theta>1) (Differential \<theta>2)))))
+      ([[EvolveODE ODE (DPredl vid1)]](Equals \<theta>1 \<theta>2))])
+   in 
+   let wanted = nth SG i in
+   if (proved = wanted \<and>
+  osafe ODE \<and>
+  dfree \<theta>1 \<and>
+  dfree \<theta>2 \<and>
+  FVT \<theta>1 \<subseteq> Inl ` ODE_dom ODE \<and>
+  FVT \<theta>2 \<subseteq> Inl ` ODE_dom ODE) then
+      Some (closeI SG i,C)
+   else None)
+"
 
 
 
@@ -3618,8 +3653,84 @@ qed
         [[EvolveODE ODE (DPredl vid1)]]Geq T1 T2])"
       using fml_to_seq[OF val] by auto
  show " sound (closeI SG i, A, S)" 
+   using closeI_valid_sound[OF ii sound ] sval seq_eq by simp
+qed
+  subgoal for SG A S ODE T1 T2 using sound some apply auto
+    apply(cases "([], [(DPredl vid1 \<rightarrow> (Greater T1 T2 && [[EvolveODE ODE (DPredl vid1)]]Geq (Differential T1) (Differential T2))) \<rightarrow>
+              [[EvolveODE ODE (DPredl vid1)]]Greater T1 T2]) =
+        SG ! i \<and>
+  osafe ODE \<and>
+  dfree T1 \<and>
+  dfree T2 \<and>
+  FVT T1 \<subseteq> Inl ` ODE_dom ODE \<and>
+  FVT T2 \<subseteq> Inl ` ODE_dom ODE", auto)
+  proof -
+    let ?C = "(A,S)"
+    assume PAS:"R1 = (SG, ?C)"
+    assume RA:"RA = DIGrSchema ODE T1 T2"
+    assume sound:"sound (SG, A, S)"
+    assume R2:"R2 = (closeI SG i, A, S)"
+    assume osafe:"osafe ODE"
+    assume free1:"dfree T1"
+    assume free2:"dfree T2"
+    assume BVO1:"FVT T1 \<subseteq> Inl ` ODE_dom ODE"
+    assume BVO2:"FVT T2 \<subseteq> Inl ` ODE_dom ODE"
+    have ii:"i < length SG" using i PAS by auto
+    assume seq_eq:"([], [(DPredl vid1 \<rightarrow> (Greater T1 T2 && [[EvolveODE ODE (DPredl vid1)]]Geq (Differential T1) (Differential T2))) \<rightarrow>
+          [[EvolveODE ODE (DPredl vid1)]]Greater T1 T2]) = SG ! i"
+    obtain \<Gamma> \<Delta> where SG_dec:"(\<Gamma>, \<Delta>) = SG ! i" 
+      using prod.collapse by blast
+    have fml_to_seq:"\<And>\<phi>. valid \<phi> \<Longrightarrow> seq_valid ([],[\<phi>])"
+      by(auto simp add: seq_valid_def valid_def)
+    have val:"valid ((DPredl vid1 \<rightarrow> (Greater T1 T2 && [[EvolveODE ODE (DPredl vid1)]]Geq (Differential T1) (Differential T2))) \<rightarrow>
+        [[EvolveODE ODE (DPredl vid1)]]Greater T1 T2)"
+      using DIGr_valid[OF osafe free1 free2 BVO1 BVO2] 
+      unfolding DIGraxiom_def
+      by auto
+    then have sval:"seq_valid ([],[(DPredl vid1 \<rightarrow> (Greater T1 T2 && [[EvolveODE ODE (DPredl vid1)]]Geq (Differential T1) (Differential T2))) \<rightarrow>
+        [[EvolveODE ODE (DPredl vid1)]]Greater T1 T2])"
+      using fml_to_seq[OF val] by auto
+ show " sound (closeI SG i, A, S)" 
     using closeI_valid_sound[OF ii sound ] sval seq_eq by simp
-  qed
+qed
+  subgoal for SG A S ODE T1 T2 using sound some apply auto
+    apply(cases "([], [(DPredl vid1 \<rightarrow> (Equals T1 T2 && [[EvolveODE ODE (DPredl vid1)]]Equals (Differential T1) (Differential T2))) \<rightarrow>
+              [[EvolveODE ODE (DPredl vid1)]]Equals T1 T2]) =
+        SG ! i \<and>
+  osafe ODE \<and>
+  dfree T1 \<and>
+  dfree T2 \<and>
+  FVT T1 \<subseteq> Inl ` ODE_dom ODE \<and>
+  FVT T2 \<subseteq> Inl ` ODE_dom ODE", auto)
+  proof -
+    let ?C = "(A,S)"
+    assume PAS:"R1 = (SG, ?C)"
+    assume RA:"RA = DIEqSchema ODE T1 T2"
+    assume sound:"sound (SG, A, S)"
+    assume R2:"R2 = (closeI SG i, A, S)"
+    assume osafe:"osafe ODE"
+    assume free1:"dfree T1"
+    assume free2:"dfree T2"
+    assume BVO1:"FVT T1 \<subseteq> Inl ` ODE_dom ODE"
+    assume BVO2:"FVT T2 \<subseteq> Inl ` ODE_dom ODE"
+    have ii:"i < length SG" using i PAS by auto
+    assume seq_eq:"([], [(DPredl vid1 \<rightarrow> (Equals T1 T2 && [[EvolveODE ODE (DPredl vid1)]]Equals (Differential T1) (Differential T2))) \<rightarrow>
+          [[EvolveODE ODE (DPredl vid1)]]Equals T1 T2]) = SG ! i"
+    obtain \<Gamma> \<Delta> where SG_dec:"(\<Gamma>, \<Delta>) = SG ! i" 
+      using prod.collapse by blast
+    have fml_to_seq:"\<And>\<phi>. valid \<phi> \<Longrightarrow> seq_valid ([],[\<phi>])"
+      by(auto simp add: seq_valid_def valid_def)
+    have val:"valid ((DPredl vid1 \<rightarrow> (Equals T1 T2 && [[EvolveODE ODE (DPredl vid1)]]Equals (Differential T1) (Differential T2))) \<rightarrow>
+        [[EvolveODE ODE (DPredl vid1)]]Equals T1 T2)"
+      using DIEq_valid[OF osafe free1 free2 BVO1 BVO2] 
+      unfolding DIEqaxiom_def
+      by auto
+    then have sval:"seq_valid ([],[(DPredl vid1 \<rightarrow> (Equals T1 T2 && [[EvolveODE ODE (DPredl vid1)]]Equals (Differential T1) (Differential T2))) \<rightarrow>
+        [[EvolveODE ODE (DPredl vid1)]]Equals T1 T2])"
+      using fml_to_seq[OF val] by auto
+ show " sound (closeI SG i, A, S)" 
+    using closeI_valid_sound[OF ii sound ] sval seq_eq by simp
+qed
 
   done
 

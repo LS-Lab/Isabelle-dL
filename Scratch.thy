@@ -639,6 +639,7 @@ and ddl_Fadmit = "ddl.Fadmit"
 and ddl_TRadmit = "ddl.TRadmit"
 and ddl_FRadmit = "ddl.FRadmit"
 and ddl_assignAnyAxiom = "ddl.assignAnyAxiom"
+and ddl_equalCommuteAxiom = "ddl.equalCommuteAxiom"
 and ddl_Rsafe = "ddl.Rsafe"
   apply(standard, auto simp add: x_def y_def z_def w_def is_i1.intros)
   done

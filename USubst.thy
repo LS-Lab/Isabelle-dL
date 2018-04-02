@@ -47,6 +47,7 @@ where
 | TadmitFFO_Max:"TadmitFFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFFO \<sigma> \<theta>2 \<Longrightarrow> TadmitFFO \<sigma> (Max \<theta>1 \<theta>2)"
 | TadmitFFO_Min:"TadmitFFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFFO \<sigma> \<theta>2 \<Longrightarrow> TadmitFFO \<sigma> (Min \<theta>1 \<theta>2)"
 | TadmitFFO_Abs:"TadmitFFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFFO \<sigma> (Abs \<theta>1)"
+| TadmitFFO_Neg:"TadmitFFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFFO \<sigma> (Neg \<theta>1)"
 | TadmitFFO_Var:"TadmitFFO \<sigma> (Var x)"
 | TadmitFFO_Const:"TadmitFFO \<sigma> (Const r)"
 
@@ -56,6 +57,8 @@ and TadmitFFO_Fun_simps[simp]: "TadmitFFO \<sigma> (Function f args)"
 and TadmitFFO_Plus_simps[simp]: "TadmitFFO \<sigma> (Plus t1 t2)"
 and TadmitFFO_Times_simps[simp]: "TadmitFFO \<sigma> (Times t1 t2)"
 and TadmitFFO_Var_simps[simp]: "TadmitFFO \<sigma> (Var x)"
+and TadmitFFO_Abs_simps[simp]: "TadmitFFO \<sigma> (Abs x)"
+and TadmitFFO_Neg_simps[simp]: "TadmitFFO \<sigma> (Neg x)"
 and TadmitFFO_Const_simps[simp]: "TadmitFFO \<sigma> (Const r)"
   
 primrec TsubstFO::"('a + 'b, 'c) trm \<Rightarrow> ('b \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'c) trm"

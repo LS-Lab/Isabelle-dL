@@ -83,6 +83,16 @@ Equiv
 lemma assignAny_valid:"valid assignAnyAxiom"
   unfolding assignAnyAxiom_def valid_def Box_def Equiv_def Or_def by auto
 
+definition equalCommuteAxiom::"('sf,'sc,'sz) formula"
+  where [axiom_defs]:"equalCommuteAxiom \<equiv>
+Equiv
+(Equals (f0 fid1) (f0 fid2))
+(Equals (f0 fid2) (f0 fid1))
+"
+
+lemma equalCommute_valid:"valid equalCommuteAxiom"
+  unfolding equalCommuteAxiom_def by(auto simp add: f0_def Equiv_def Or_def empty_def Equals_def valid_def)
+
 definition assignEqAxiom::"('sf,'sc,'sz) formula"
   where [axiom_defs]:"assignEqAxiom \<equiv> 
 Equiv 
