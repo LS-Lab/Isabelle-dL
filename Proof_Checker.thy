@@ -312,34 +312,34 @@ next
   then show ?thesis by (simp add: equalCommute_valid)
 next
   case ATrueImply
-  then show ?thesis sorry
+  then show ?thesis by (simp add: TrueImply_valid)
 next
   case Adiamond
-  then show ?thesis sorry
+  then show ?thesis by (simp add: diamond_valid)
 next
   case AdiamondModusPonens
-  then show ?thesis sorry
+  then show ?thesis by (simp add: diamondModusPonens_valid)
 next
   case AequalRefl
-  then show ?thesis sorry
+  then show ?thesis by (simp add: equalRefl_valid)
 next
   case AlessEqualRefl
-  then show ?thesis sorry
+  then show ?thesis by (simp add: lessEqualRefl_valid)
 next
   case Aassignd
-  then show ?thesis sorry
+  then show ?thesis by (simp add: assignd_valid)
 next
   case Atestd
-  then show ?thesis sorry
+  then show ?thesis by (simp add: testd_valid)
 next
   case Achoiced
-  then show ?thesis sorry
+  then show ?thesis by (simp add: choiced_valid)
 next
   case Acomposed
-  then show ?thesis sorry
+  then show ?thesis by (simp add: composed_valid)
 next
   case Arandomd
-  then show ?thesis sorry
+  then show ?thesis by (simp add: randomd_valid)
 qed
 
 fun seq_to_string :: "('sf, 'sc, 'sz) sequent \<Rightarrow> char list"

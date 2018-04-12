@@ -211,8 +211,15 @@ where [axiom_defs]:"Vaxiom \<equiv> ($\<phi> vid1 empty) \<rightarrow> ([[$\<alp
 
 definition TrueImplyAxiom :: "('sf,'sc,'sz) formula"
 where [axiom_defs]:"TrueImplyAxiom \<equiv> Equiv (Implies TT (Prop vid1 empty)) (Prop vid1 empty)"
+
+lemma TrueImply_valid: "valid TrueImplyAxiom"
+  by(auto simp add: valid_def TrueImplyAxiom_def)
+
 definition diamondAxiom :: "('sf,'sc,'sz) formula"
   where [axiom_defs]:"diamondAxiom \<equiv> Equiv (Not (Box ($\<alpha> vid1 ) (Not (P pid1)))) (Diamond ($\<alpha> vid1) (P pid1))"
+
+lemma diamond_valid: "valid diamondAxiom"
+  by(auto simp add: valid_def diamondAxiom_def)
 
 definition diamondModusPonensAxiom :: "('sf,'sc,'sz) formula"
   where [axiom_defs]:"diamondModusPonensAxiom \<equiv> Implies
@@ -221,11 +228,28 @@ definition diamondModusPonensAxiom :: "('sf,'sc,'sz) formula"
      (Diamond ($\<alpha> vid1) (P pid2)) 
      (Diamond ($\<alpha> vid1) (And (P pid1) (P pid2))))"
 
+lemma diamondModusPonens_valid:"valid diamondModusPonensAxiom"
+  by(auto simp add: diamondModusPonensAxiom_def valid_def)
+
 definition equalReflAxiom :: "('sf,'sc,'sz) formula"
 where [axiom_defs]:"equalReflAxiom \<equiv> Equals (Functional fid1) (Functional fid1)"
 
+lemma equalRefl_valid:"valid equalReflAxiom"
+  by(auto simp add: equalReflAxiom_def valid_def)
+
 definition lessEqualReflAxiom :: "('sf,'sc,'sz) formula"
 where [axiom_defs]:"lessEqualReflAxiom \<equiv> Leq (Functional fid1) (Functional fid1)"
+
+lemma lessEqualRefl_valid:"valid lessEqualReflAxiom"
+  by(auto simp add: lessEqualReflAxiom_def valid_def Leq_def)
+
+lemma assign_lem1:
+"dterm_sem I (if i = vid1 then Var vid1 else (Const (bword_zero)))
+                   (vec_lambda (\<lambda>y. if vid1 = y then Functions I fid1
+  (vec_lambda (\<lambda>i. dterm_sem I (empty i) \<nu>)) else  vec_nth (fst \<nu>) y), snd \<nu>)
+=
+ dterm_sem I (if i = vid1 then $f fid1 empty else (Const (bword_zero))) \<nu>"
+  by (cases "i = vid1") (auto simp: proj_sing1)
 
 definition assigndAxiom :: "('sf,'sc,'sz) formula"
   where [axiom_defs]:"assigndAxiom \<equiv> 
@@ -233,10 +257,17 @@ Equiv
   (Diamond (Assign vid1 (f0 fid1)) (Prop vid1 (singleton (Var vid1))))
   (Prop vid1 (singleton (f0 fid1)))
 "
+
+lemma assignd_valid:"valid assigndAxiom"
+  by(auto simp add: valid_def assigndAxiom_def assign_lem1 f0_def)
+
 definition testdAxiom :: "('sf,'sc,'sz) formula"
   where [axiom_defs]:"testdAxiom \<equiv> Equiv
   (Diamond (Test (Prop vid2 empty)) (Prop vid1 empty))
   (And (Prop vid2 empty) (Prop vid1 empty))"
+
+lemma testd_valid:"valid testdAxiom"
+  by(auto simp add: valid_def testdAxiom_def)
 
 definition choicedAxiom :: "('sf,'sc,'sz) formula"
   where [axiom_defs]:"choicedAxiom \<equiv>  Equiv
@@ -244,10 +275,16 @@ definition choicedAxiom :: "('sf,'sc,'sz) formula"
  (Or (Diamond ($\<alpha> vid1) (P pid1))
      (Diamond ($\<alpha> vid2) (P pid1)))"
 
+lemma choiced_valid:"valid choicedAxiom"
+  by(auto simp add: valid_def choicedAxiom_def)
+
 definition composedAxiom :: "('sf,'sc,'sz) formula"
   where [axiom_defs]:"composedAxiom \<equiv> Equiv
 (Diamond (Sequence ($\<alpha> vid1) ($\<alpha> vid2)) (P pid1))
 (Diamond ($\<alpha> vid1) (Diamond ($\<alpha> vid2) (P pid1)))"
+
+lemma composed_valid:"valid composedAxiom"
+  by(auto simp add: valid_def composedAxiom_def)
 
 definition randomdAxiom :: "('sf,'sc,'sz) formula"
   where [axiom_defs]:"randomdAxiom \<equiv> Equiv
@@ -255,6 +292,8 @@ definition randomdAxiom :: "('sf,'sc,'sz) formula"
 (Exists vid1 (Prop vid1 (singleton (Var vid1))))
 "
 
+lemma randomd_valid:"valid randomdAxiom"
+  by(auto simp add: randomdAxiom_def valid_def)
 
 (*  vid1 (singleton (f1 fid1 vid1))) (Prop vid1 (singleton (f1 fid2 vid1)))*)
 definition CEaxrule :: "('sf,'sc,'sz) rule"
@@ -334,14 +373,6 @@ text \<open>Because an axiom in a uniform substitution calculus is an individual
   proving the validity of that formula suffices to prove soundness\<close>
 theorem test_valid: "valid test_axiom"
   by (auto simp add: valid_def test_axiom_def)  
-
-lemma assign_lem1:
-"dterm_sem I (if i = vid1 then Var vid1 else (Const (bword_zero)))
-                   (vec_lambda (\<lambda>y. if vid1 = y then Functions I fid1
-  (vec_lambda (\<lambda>i. dterm_sem I (empty i) \<nu>)) else  vec_nth (fst \<nu>) y), snd \<nu>)
-=
- dterm_sem I (if i = vid1 then $f fid1 empty else (Const (bword_zero))) \<nu>"
-  by (cases "i = vid1") (auto simp: proj_sing1)
 
 lemma diff_assign_lem1:
 "dterm_sem I (if i = vid1 then DiffVar vid1 else (Const (bword_zero)))
