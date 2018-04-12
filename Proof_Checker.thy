@@ -1815,8 +1815,55 @@ then have TRA:"TRadmit t"
   qed
   then show ?thesis using some SG_dec rres by auto
 next 
-  case OrL
-  then show ?thesis sorry
+  case OrL  then have L:"L = OrL" by auto
+  obtain p q where eq:"fst (SG ! i) ! j = (p || q)"
+    using some i L apply(auto simp add: some i L) apply(cases "SG ! i",auto simp add: L  Or_def)
+    apply(cases "(SG ! i)",auto simp add: Or_def)
+    subgoal for a b apply(cases "a ! j", auto) subgoal for x3 apply(cases x3,auto) subgoal for x41 x42 by(cases x41,auto,cases x42,auto)
+    done done done
+  obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)"
+    by (metis seq2fml.cases)
+  have \<Gamma>:"(fst (SG ! i)) = \<Gamma>" using SG_dec by (cases "SG ! i", auto)
+  have \<Delta>:"(snd (SG ! i)) = \<Delta>" using SG_dec by (cases "SG ! i", auto)
+  from \<Gamma> have jG:"j < length \<Gamma>" using SG_dec j by auto
+  have AIjeq:"\<Gamma> ! j = (p || q)" 
+    using SG_dec eq fst_conv
+    by metis
+  have rres:"rres = [(replaceI \<Gamma> j p, \<Delta>), (replaceI \<Gamma> j q, \<Delta>)]"
+    using some L AIjeq apply(cases "SG ! i",auto)
+    subgoal for a b
+      using some L AIjeq  \<Gamma> \<Delta> 
+      by(cases "a ! j",auto simp add: \<Gamma> \<Delta> Or_def) done
+  have res_eq:"LeftRule_result OrL j (\<Gamma>,\<Delta>) = Some [(replaceI \<Gamma> j p, \<Delta>), (replaceI \<Gamma> j q, \<Delta>)]"
+    using rres some AIjeq by (auto simp add: Or_def)
+  have big_sound:"sound ([(replaceI \<Gamma> j p, \<Delta>), (replaceI \<Gamma> j q, \<Delta>)], (\<Gamma>,\<Delta>))"
+    apply(rule soundI')
+    apply(rule seq_semI')
+  proof -
+    fix I::"('sf,'sc,'sz) interp" and \<nu>
+    assume good:"is_interp I"
+    assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow>
+             i < length [(replaceI \<Gamma> j p, \<Delta>), (replaceI \<Gamma> j q, \<Delta>)] \<Longrightarrow>
+             \<nu> \<in> seq_sem I (nth [(replaceI \<Gamma> j p, \<Delta>), (replaceI \<Gamma> j q, \<Delta>)] i))"
+    assume \<Gamma>_sem:"\<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
+    have sg1:"\<nu> \<in> seq_sem I (replaceI \<Gamma> j p, \<Delta>)" using sgs[of 0] by auto
+    have sg2:"\<nu> \<in> seq_sem I (replaceI \<Gamma> j q, \<Delta>)" using sgs[of 1] by auto
+    from \<Gamma>_sem have ante1:"\<nu> \<in> fml_sem I (foldr (&&) ((nth \<Gamma> j) # (closeI \<Gamma> j)) TT)"
+      using closeI_ident_conj[OF jG , of "\<Gamma> ! j", of I, OF refl ] by auto
+    then have ante2:"\<nu> \<in> fml_sem I (foldr (&&) ((p || q) # (closeI \<Gamma> j)) TT)"
+      using AIjeq by auto
+    then have ante_disj:" (\<nu> \<in> fml_sem I (foldr (&&) (p # (closeI \<Gamma> j)) TT))
+\<or> (\<nu> \<in> fml_sem I (foldr (&&) (q # (closeI \<Gamma> j)) TT))"
+      by(auto)
+    show "\<nu> \<in> fml_sem I (foldr (||) \<Delta> FF)"
+      apply(rule disjE[OF ante_disj])
+       apply(rule seq_MP[OF sg1])
+            subgoal using replaceI_closeI_conj_conv[of \<nu> I "p" \<Gamma> j] seq_MP[OF sg1] jG by auto
+            subgoal using replaceI_closeI_conj_conv[of \<nu> I "q" \<Gamma> j] seq_MP[OF sg2] jG by auto
+            done
+  qed
+  show "sound (rres, nth SG i)" 
+    using rres SG_dec big_sound by(auto)
 qed
 
 lemma brename_dfree:"dfree \<theta> \<Longrightarrow> TRadmit \<theta> \<Longrightarrow> dfree (TUrename what repl \<theta>)"
