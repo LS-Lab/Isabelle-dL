@@ -3394,7 +3394,174 @@ then have TRA:"TRadmit t"
   show " sound (rres, SG ! i)" using box_case all_case exist some   by(auto)
 next 
   case (ExchangeR k)
-  then show ?thesis sorry
+ then have L:"L = ExchangeR k" by auto 
+  obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)"
+    by (metis seq2fml.cases) 
+  have kD:"k < length \<Delta>" using some L apply (cases "SG ! i",auto)
+    subgoal for a b 
+      using SG_dec by( cases "k < length b",auto) done
+  have jk:"j \<noteq> k" sorry
+  have exchangeR_simp:"\<And>\<Gamma> \<Delta> SS. 
+    (\<Gamma>,\<Delta>) = SS \<Longrightarrow> 
+     k < length \<Delta> \<Longrightarrow>
+    RightRule_result (ExchangeR k) j SS = Some [(\<Gamma>, replaceI (replaceI \<Delta> j (nth \<Delta> k)) k (nth \<Delta> j))]"
+    subgoal for AI SI SS apply(cases SS) apply (auto) done done
+  have res_eq:"RightRule_result (ExchangeR k) j (SG ! i) = 
+    Some [(\<Gamma>, replaceI (replaceI \<Delta> j (nth \<Delta> k)) k (nth \<Delta> j))]"
+    apply(rule exchangeR_simp)
+    subgoal using  SG_dec kD by (metis snd_conv)
+    by (rule kD)
+  have rres:"rres =  [(\<Gamma>, replaceI (replaceI \<Delta> j (nth \<Delta> k)) k (nth \<Delta> j))]" 
+    using res_eq SG_dec exchangeR_simp some  i j L by auto
+  have \<Gamma>:"(fst (SG ! i)) = \<Gamma>" using SG_dec by (cases "SG ! i", auto)
+  have \<Delta>:"(snd (SG ! i)) = \<Delta>" using SG_dec by (cases "SG ! i", auto)
+  then have jD:"j < length \<Delta>" using SG_dec j by auto
+  have big_sound:"sound ([(\<Gamma>, replaceI (replaceI \<Delta> j (nth \<Delta> k)) k (nth \<Delta> j))], (\<Gamma>,\<Delta>))"
+    apply(rule soundI')
+    apply(rule seq_semI')
+  proof -
+    fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    assume good:"is_interp I"
+    assume ante:" \<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
+    assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [(\<Gamma>, replaceI (replaceI \<Delta> j (nth \<Delta> k)) k (nth \<Delta> j))] \<Longrightarrow> 
+      \<nu> \<in> seq_sem I ([(\<Gamma>, replaceI (replaceI \<Delta> j (nth \<Delta> k)) k (nth \<Delta> j))] ! i))"
+    have sg0:"\<nu> \<in> seq_sem I (\<Gamma>, replaceI (replaceI \<Delta> j (nth \<Delta> k)) k (nth \<Delta> j))" using sgs[of 0] by auto
+    let  ?p =  "(nth \<Delta> j)" let ?q = "(nth \<Delta> k)"
+    have jRep:"j < length (replaceI \<Delta> j ?q)" using kD 
+    proof -                                           
+      have imp:"j < length \<Delta> \<longrightarrow> length \<Delta> = length (replaceI \<Delta> j ?q)"
+        apply(induction rule: index_list_induct[where P = "(\<lambda>L n. n < length L \<longrightarrow> length L = length (replaceI L n ?q))", of j \<Delta>])   
+          apply(auto simp add: jD)                               
+        subgoal for L by(cases L,auto) done
+      then show ?thesis
+        using jD kD by auto
+    qed
+    have kRep:"k < length (replaceI \<Delta> j ?q)" using kD 
+    proof -
+      have imp:"j < length \<Delta> \<longrightarrow> length \<Delta> = length (replaceI \<Delta> j ?q)"
+        apply(induction rule: index_list_induct[where P = "(\<lambda>L n. n < length L \<longrightarrow> length L = length (replaceI L n ?q))", of j \<Delta>]) 
+          apply(auto simp add: jD) 
+        subgoal for L by(cases L,auto) done
+      then show ?thesis
+        using jD kD by auto
+    qed
+    have replace_set_in:"\<And>i::nat. \<And> L::('a list). \<And>x::'a. i < length L \<Longrightarrow> L ! i \<in> set (closeI L i) \<Longrightarrow> set (replaceI L i x) = {x} \<union> set L"
+    proof - 
+      fix i::"nat"  and L::"'a list" and x::"'a"
+      assume i:"i < length L"
+      assume s:"L ! i \<in> set (closeI L i)"                        
+      have imply:"i < length L \<and> L ! i \<in> set (closeI L i) \<and> L ! i \<in> set (closeI L i) \<longrightarrow> set (replaceI L i x) = {x} \<union> set L"
+        apply(induction rule: index_list_induct[where P = "(\<lambda>L i. i < length L \<and> L ! i \<in> set (closeI L i) \<and>L ! i \<in> set (closeI L i) \<longrightarrow> set (replaceI L i x) = {x} \<union> set L)"]) 
+        subgoal for L  by(induction L,auto)
+        subgoal for xa xs i 
+          by (metis insert_absorb2 insert_is_Un list.simps(15) mk_disjoint_insert replaceI_closeI_set replaceI_ident)
+        apply(auto simp add: i)done
+      then show " set (replaceI L i x) = {x} \<union> set L"
+        using i s by auto
+    qed
+    have replace_set_notin:"\<And>i L x. i < length L \<Longrightarrow> L ! i \<notin> set (closeI L i) \<Longrightarrow> set (replaceI L i x) = {x} \<union> (set L - {L ! i})"
+    proof - 
+      fix i::"nat"  and L::"'a list" and x::"'a"
+      assume i:"i < length L"
+      assume s:"L ! i \<notin> set (closeI L i)"                        
+      have imply:"i < length L \<and> L ! i \<notin> set (closeI L i) \<longrightarrow> set (replaceI L i x) = {x} \<union> (set L - {L ! i})"
+        apply(induction rule: index_list_induct[where P = "(\<lambda>L i. i < length L \<and>  L ! i \<notin> set (closeI L i) \<longrightarrow> set (replaceI L i x) = {x} \<union> (set L - {L ! i}))"]) 
+        subgoal for L  by(induction L,auto)
+        subgoal for xa xs i 
+          using insert_absorb2 insert_is_Un list.simps(15) mk_disjoint_insert replaceI_closeI_set replaceI_ident
+          by auto
+        apply(auto simp add: i)done
+      then show "set (replaceI L i x) = {x} \<union> (set L - {L ! i})"
+        using i s by auto
+    qed
+    have memP:"?p \<in> set \<Delta>" using nth_member jD by auto
+    have memQ:"?q \<in> set \<Delta>" using nth_member kD by auto
+    have set_fml:"\<And>P Q. set P = set Q \<Longrightarrow> (\<nu> \<in> fml_sem I (foldr Or P FF)) =( \<nu> \<in> fml_sem I (foldr Or Q FF))"
+      subgoal for P Q
+        by (simp add: foldr_fml_sem) done
+    have mem_lem:"\<And>L j k x. j \<noteq> k \<Longrightarrow> j < length L \<Longrightarrow> k < length L \<Longrightarrow> (replaceI L j x) ! k = L ! k"
+    proof -
+      fix L::"'a list"  and j k::nat and  x::"'a"
+      assume jk:"j \<noteq> k"
+      assume j:"j < length L"                         
+      assume k:"k < length L"                                         
+      have imp:"(j \<noteq> k \<longrightarrow>  j < length L \<longrightarrow> k < length L \<longrightarrow> (replaceI L j x) ! k = L ! k)"
+        apply(rule index_list_induct[of "(\<lambda> L k. j \<noteq> k \<longrightarrow> j < length L \<longrightarrow> k < length L \<longrightarrow> (replaceI L j x) ! k = L ! k)"])
+        subgoal for L by(induction L,auto,cases j, auto)           
+        subgoal for xa xs i
+          sorry
+        sorry
+      show  "(replaceI L j x) ! k = L ! k" using jk j k imp by auto
+    qed
+    have close_lem:"\<And>L::('a list). \<And>j k::nat. \<And>x::'a. j \<noteq> k \<Longrightarrow> j < length L \<Longrightarrow> k < length L \<Longrightarrow> L ! j \<in> set (closeI L k)"
+    proof -
+      fix L::"'a list"  and j k::nat and  x::"'a"
+      assume jk:"j \<noteq> k"
+      assume j:"j < length L"
+      assume k:"k < length L"
+      have imp:"(j \<noteq> k \<longrightarrow>  j < length L \<longrightarrow> k < length L \<longrightarrow> (L ! j \<in> set (closeI L k)))"
+        apply(rule index_list_induct[of "(\<lambda> L j. j \<noteq> k \<longrightarrow> j < length L \<longrightarrow> k < length L \<longrightarrow> L ! j \<in> set (closeI L k))"])
+        subgoal for La using j 
+          apply(induction La, auto simp add: member_rec j k jk)
+          subgoal for a La 
+            by(cases k,auto) done
+(*          by(cases La,auto simp add:  member_rec j k jk)*)
+        subgoal for xa xs i
+          sorry
+(*        using i by auto*)
+        using j by auto
+      then show "L ! j \<in> set (closeI L k)"
+        using i j k jk by auto
+    qed
+    have rep_up_lem:"\<And>L i x. i < length L \<Longrightarrow> (replaceI L i x) ! i = x" 
+    proof -
+      fix L i x 
+      assume i:"i < length L"
+      have imp:"(i < length L \<Longrightarrow> (replaceI L i x) ! i = x)"
+        apply(rule index_list_induct[of "(\<lambda> L i. (replaceI L i x) ! i = x)"])
+        subgoal for La using j by(cases La,auto simp add:  member_rec)
+        subgoal for xa xs i
+          by(auto simp add: j member_rec )
+        using i by auto
+      then show " replaceI L i x ! i = x "
+        using i by auto
+    qed
+    have atK:"(replaceI \<Delta> j ?q) ! k = \<Delta> ! k" 
+      using mem_lem[OF jk jD kD] by auto
+    have atJ:"(replaceI \<Delta> j ?q) ! j = \<Delta> ! k" using rep_up_lem[OF jD] by auto
+    have preMem:"((replaceI \<Delta> j ?q) ! j) \<in> set (closeI (replaceI \<Delta> j ?q) k)"  
+      apply(rule close_lem) using jk kRep jRep by auto
+    have mem:"(replaceI \<Delta> j ?q) ! k \<in> set (closeI (replaceI \<Delta> j ?q) k)"
+      using atK atJ preMem by auto
+    have e1:"set (replaceI (replaceI \<Delta> j ?q) k ?p)
+        = {?p} \<union> set (replaceI \<Delta> j ?q)"
+      using replace_set_in[OF kRep mem, of ?p] by auto
+    have set_eq:"set (replaceI (replaceI \<Delta> j ?q) k ?p) = (set \<Delta>)"
+        apply(cases "\<Delta> ! j \<in> set (closeI \<Delta> j)")
+      proof -      
+        assume elem:" \<Delta> ! j \<in> set (closeI \<Delta> j)"
+        have e2:"{?p} \<union> set (replaceI \<Delta> j ?q) = {?p} \<union> {?q} \<union> set \<Delta>"
+          using replace_set_in[of j, OF jD, of ?q, OF elem] by auto
+        have e3:"... = set \<Delta>" using memP memQ by auto
+        then show ?thesis
+          using e1 e2 e3 by auto
+      next 
+        assume elem:" \<Delta> ! j \<notin> set (closeI \<Delta> j)"
+        have e2:"{?p} \<union> set (replaceI \<Delta> j ?q) = {?p} \<union> {?q} \<union> set \<Delta>"
+          using replace_set_notin[of j, OF jD, of ?q, OF elem] by auto
+        have e3:"... = set \<Delta>" using memP memQ by auto
+        then show ?thesis
+          using e1 e2 e3 by auto
+      qed
+     have same_sem:"(\<nu> \<in> fml_sem I (foldr Or (replaceI (replaceI \<Delta> j ?q) k ?p) FF)) =
+               (\<nu> \<in> fml_sem I (foldr Or \<Delta> FF))"
+       apply(rule set_fml)
+       by(rule set_eq)
+    then show " \<nu> \<in> fml_sem I (foldr (||) \<Delta> FF)"
+      using seq_MP[OF sg0 ante] by auto
+     qed
+  then show ?thesis using some SG_dec rres by auto
+
 next 
   case OrR then have L:"L = OrR" by auto
   obtain p q where eq:"(snd (SG ! i) ! j) = (p || q)" 
