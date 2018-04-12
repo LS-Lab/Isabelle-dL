@@ -506,7 +506,7 @@ else None)
     else None)
    | _ \<Rightarrow> None))"
 | RStep_ExchangeR:"RightRule_result (ExchangeR k) j (A,S) =
-  (if k < length S then
+  (if j \<noteq> k \<and> k < length S then
     Some [(A, replaceI (replaceI S j (nth S k)) k (nth S j))]
   else None)"
 | Rstep_OrR:"RightRule_result (OrR) j (A,S) =
@@ -3397,20 +3397,23 @@ next
  then have L:"L = ExchangeR k" by auto 
   obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)"
     by (metis seq2fml.cases) 
+  have jk:"j \<noteq> k"  using some L apply (cases "SG ! i",auto) done
   have kD:"k < length \<Delta>" using some L apply (cases "SG ! i",auto)
     subgoal for a b 
       using SG_dec by( cases "k < length b",auto) done
-  have jk:"j \<noteq> k" sorry
   have exchangeR_simp:"\<And>\<Gamma> \<Delta> SS. 
     (\<Gamma>,\<Delta>) = SS \<Longrightarrow> 
      k < length \<Delta> \<Longrightarrow>
+    j \<noteq> k \<Longrightarrow> 
     RightRule_result (ExchangeR k) j SS = Some [(\<Gamma>, replaceI (replaceI \<Delta> j (nth \<Delta> k)) k (nth \<Delta> j))]"
     subgoal for AI SI SS apply(cases SS) apply (auto) done done
   have res_eq:"RightRule_result (ExchangeR k) j (SG ! i) = 
     Some [(\<Gamma>, replaceI (replaceI \<Delta> j (nth \<Delta> k)) k (nth \<Delta> j))]"
     apply(rule exchangeR_simp)
     subgoal using  SG_dec kD by (metis snd_conv)
-    by (rule kD)
+     apply (rule kD) 
+    by (rule jk)
+
   have rres:"rres =  [(\<Gamma>, replaceI (replaceI \<Delta> j (nth \<Delta> k)) k (nth \<Delta> j))]" 
     using res_eq SG_dec exchangeR_simp some  i j L by auto
   have \<Gamma>:"(fst (SG ! i)) = \<Gamma>" using SG_dec by (cases "SG ! i", auto)
@@ -3494,25 +3497,26 @@ next
       show  "(replaceI L j x) ! k = L ! k" using jk j k imp by auto
     qed
     have close_lem:"\<And>L::('a list). \<And>j k::nat. \<And>x::'a. j \<noteq> k \<Longrightarrow> j < length L \<Longrightarrow> k < length L \<Longrightarrow> L ! j \<in> set (closeI L k)"
+      subgoal for L j k x
+      apply (cases "j > k") 
     proof -
       fix L::"'a list"  and j k::nat and  x::"'a"
-      assume jk:"j \<noteq> k"
+      assume jkg:"j > k"
       assume j:"j < length L"
       assume k:"k < length L"
-      have imp:"(j \<noteq> k \<longrightarrow>  j < length L \<longrightarrow> k < length L \<longrightarrow> (L ! j \<in> set (closeI L k)))"
-        apply(rule index_list_induct[of "(\<lambda> L j. j \<noteq> k \<longrightarrow> j < length L \<longrightarrow> k < length L \<longrightarrow> L ! j \<in> set (closeI L k))"])
+      have imp:"(k < j \<and>  j < length L \<longrightarrow> (L ! j \<in> set (closeI L k)))"
+        apply(rule index_list_induct[of "(\<lambda> L j. k < j \<and>  j < length L \<longrightarrow> (L ! j \<in> set (closeI L k)))"])
         subgoal for La using j 
-          apply(induction La, auto simp add: member_rec j k jk)
-          subgoal for a La 
-            by(cases k,auto) done
-(*          by(cases La,auto simp add:  member_rec j k jk)*)
+          apply(induction La, auto simp add: member_rec j k jk) done
         subgoal for xa xs i
+          using jkg j k apply(auto) using jkg j k sledgehammer
           sorry
 (*        using i by auto*)
         using j by auto
       then show "L ! j \<in> set (closeI L k)"
-        using i j k jk by auto
-    qed
+        using i j k jk sorry
+    next show "L ! j \<in> set (closeI L k)" sorry
+    qed done
     have rep_up_lem:"\<And>L i x. i < length L \<Longrightarrow> (replaceI L i x) ! i = x" 
     proof -
       fix L i x 
