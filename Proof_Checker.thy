@@ -82,10 +82,13 @@ section \<open>Proof Checker Implementation\<close>
 
 datatype ('a,'b,'c) rrule = ImplyR | AndR |CohideRR | TrueR | EquivR | Skolem | NotR
   | HideR | CutRight "('a,'b,'c) formula" | EquivifyR | CommuteEquivR | BRenameR  'c 'c
+  | ExchangeR nat | OrR
+
 (*  CohideR | *)
   
 datatype ('a,'b,'c) lrule = ImplyL | AndL | HideL
-  | NotL | CutLeft "('a,'b,'c) formula" | EquivL | BRenameL  'c 'c
+  | NotL | CutLeft "('a,'b,'c) formula" | EquivL | BRenameL  'c 'c 
+  | OrL
 (*  EquivForwardL | EquivBackwardL |  *)
 datatype  axRule =
 (*  CT
@@ -103,6 +106,8 @@ datatype axiom =
 | AAllElim | ADiffLinear | ABoxSplit | AImpSelf | Acompose | AconstFcong | AdMinus | AassignEq | AallInst
 | AassignAny | AequalCommute
 
+| ATrueImply | Adiamond | AdiamondModusPonens | AequalRefl | AlessEqualRefl
+| Aassignd | Atestd | Achoiced | Acomposed | Arandomd
 
 datatype ('a,'b,'c) ruleApp =
   URename 'c 'c
@@ -166,6 +171,16 @@ where
 | "get_axiom AallInst = allInstAxiom"
 | "get_axiom AassignAny = assignAnyAxiom"
 | "get_axiom AequalCommute = equalCommuteAxiom"
+| "get_axiom ATrueImply = TrueImplyAxiom"
+| "get_axiom Adiamond = diamondAxiom"
+| "get_axiom AdiamondModusPonens = diamondModusPonensAxiom"
+| "get_axiom AequalRefl = equalReflAxiom"
+| "get_axiom AlessEqualRefl = lessEqualReflAxiom"
+| "get_axiom Aassignd = assigndAxiom"
+| "get_axiom Atestd = testdAxiom"
+| "get_axiom Achoiced = choicedAxiom"
+| "get_axiom Acomposed = composedAxiom"
+| "get_axiom Arandomd = randomdAxiom"
 
 fun get_axrule::"axRule \<Rightarrow> ('sf,'sc,'sz) rule"
   where  
@@ -193,7 +208,7 @@ qed
 lemma axiom_safe:"fsafe (get_axiom a)"
   by(cases a, auto simp add: axiom_defs Box_def Or_def Equiv_def Implies_def empty_def Equals_def 
    f1_def p1_def P_def f0_def expand_singleton Forall_def Greater_def id_simps DFunl_def Minus_def 
-  TT_def)
+  TT_def Leq_def)
 
 lemma axiom_valid:"valid (get_axiom a)"
 proof (cases a)
@@ -295,6 +310,36 @@ next
 next
   case AequalCommute
   then show ?thesis by (simp add: equalCommute_valid)
+next
+  case ATrueImply
+  then show ?thesis sorry
+next
+  case Adiamond
+  then show ?thesis sorry
+next
+  case AdiamondModusPonens
+  then show ?thesis sorry
+next
+  case AequalRefl
+  then show ?thesis sorry
+next
+  case AlessEqualRefl
+  then show ?thesis sorry
+next
+  case Aassignd
+  then show ?thesis sorry
+next
+  case Atestd
+  then show ?thesis sorry
+next
+  case Achoiced
+  then show ?thesis sorry
+next
+  case Acomposed
+  then show ?thesis sorry
+next
+  case Arandomd
+  then show ?thesis sorry
 qed
 
 fun seq_to_string :: "('sf, 'sc, 'sz) sequent \<Rightarrow> char list"
@@ -401,7 +446,14 @@ Some [((closeI A j) @ [p, q], S)]
         Some [(replaceI A j (FBrename x y (nth A j)),S)]
     else None)
    | _ \<Rightarrow> None))"
-|   Lstep_Not:"LeftRule_result NotL j (A,S) = (case (nth A j) of (Not p) \<Rightarrow> Some [(closeI A j , S @ [p])] | _ \<Rightarrow> None)" 
+| Lstep_Not:"LeftRule_result NotL j (A,S) = (case (nth A j) of (Not p) \<Rightarrow> Some [(closeI A j , S @ [p])] | _ \<Rightarrow> None)" 
+| Lstep_OrL:"LeftRule_result OrL j (A,S) =
+(case (nth A j) of
+  Not (And (Not p) (Not q)) \<Rightarrow>
+  Some [(replaceI A j p, S),
+        (replaceI A j q, S)] 
+| _ \<Rightarrow> None
+)"
 
 (* Note: Some of the pattern-matching here is... interesting. The reason for this is that we can only
    match on things in the base grammar, when we would quite like to check things in the derived grammar.
@@ -452,14 +504,26 @@ else None)
     then
         Some [(A, replaceI S j (FBrename x y (nth S j)))]
     else None)
-   | _ \<Rightarrow> None))
+   | _ \<Rightarrow> None))"
+| RStep_ExchangeR:"RightRule_result (ExchangeR k) j (A,S) =
+  (if k < length S then
+    Some [(A, replaceI (replaceI S j (nth S k)) k (nth S j))]
+  else None)"
+| Rstep_OrR:"RightRule_result (OrR) j (A,S) =
+(case (nth S j) of
+  Not (And (Not p) (Not q)) \<Rightarrow>
+  Some [(A, ((closeI S j) @ [p, q]))] 
+| _ \<Rightarrow> None
+)
+
+"
 
 (* TODO: Is this derivable *)
 
 
 (*  (if ((case (SG ! i) of ([],[Not(Diamond(Assign x t) (Not p))]) \<Rightarrow> True | _ \<Rightarrow> False)) then
      Some (merge_seqs SG [SBrename x y (nth SG i)] i,C)
-   else None)*)"
+   else None)*)
 
 | Rstep_HideR:"RightRule_result HideR j (A,S) = Some [(A, closeI S j)]"
 (** G |- c, D    G |- c->p, D
@@ -1750,6 +1814,9 @@ then have TRA:"TRadmit t"
       using   ante2 eq \<Gamma> ante5 by auto
   qed
   then show ?thesis using some SG_dec rres by auto
+next 
+  case OrL
+  then show ?thesis sorry
 qed
 
 lemma brename_dfree:"dfree \<theta> \<Longrightarrow> TRadmit \<theta> \<Longrightarrow> dfree (TUrename what repl \<theta>)"
@@ -2538,7 +2605,7 @@ next
      then have s3:"\<nu> \<in> fml_sem I (foldr (||) (nth \<Delta> j # closeI \<Delta> j) FF)" using sgs[of 0]  AIjeq by (auto simp add: \<Delta> AIjeq)
      then show "\<nu> \<in> fml_sem I (foldr (||) \<Delta> FF)" using closeI_ident_disj[OF jD , of "\<Delta> ! j", of I, OF refl]  by auto
      qed
-  then show ?thesis using some SG_dec rres by auto
+     then show ?thesis using some SG_dec rres by auto
 next
   case (BRenameR what repl)
   then have L:"L = BRenameR what repl" by auto
@@ -3278,6 +3345,12 @@ then have TRA:"TRadmit t"
     then show ?thesis using some SG_dec rres by auto
   qed
   show " sound (rres, SG ! i)" using box_case all_case exist some   by(auto)
+next 
+  case (ExchangeR k)
+  then show ?thesis sorry
+next 
+  case (OrR)
+  then show ?thesis sorry
 qed
 
 

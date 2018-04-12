@@ -614,6 +614,16 @@ global_interpretation ddl:ids x y z "is_i1" i1 i2 i3 i1 i2 i3 i4
   and ddl_ImpSelfAxiom = ddl.ImpSelfAxiom
   and ddl_AllElimAxiom = ddl.AllElimAxiom
   and ddl_dMinusAxiom = ddl.dMinusAxiom
+  and ddl_diamondModusPonensAxiom = ddl.diamondModusPonensAxiom
+  and ddl_lessEqualReflAxiom = ddl.lessEqualReflAxiom
+  and ddl_equalReflAxiom = ddl.equalReflAxiom
+  and ddl_TrueImplyAxiom = ddl.TrueImplyAxiom
+  and ddl_composedAxiom = ddl.composedAxiom
+  and ddl_randomdAxiom = ddl.randomdAxiom
+  and ddl_diamondAxiom = ddl.diamondAxiom
+  and ddl_choicedAxiom = ddl.choicedAxiom
+  and ddl_assigndAxiom = ddl.assigndAxiom
+  and ddl_testdAxiom = ddl.testdAxiom
 
   and ddl_f0 = ddl.f0
 

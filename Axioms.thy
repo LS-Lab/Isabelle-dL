@@ -209,6 +209,53 @@ definition Iaxiom :: "('sf, 'sc, 'sz) formula"
 definition Vaxiom :: "('sf, 'sc, 'sz) formula"
 where [axiom_defs]:"Vaxiom \<equiv> ($\<phi> vid1 empty) \<rightarrow> ([[$\<alpha> vid1]]($\<phi> vid1 empty))"
 
+definition TrueImplyAxiom :: "('sf,'sc,'sz) formula"
+where [axiom_defs]:"TrueImplyAxiom \<equiv> Equiv (Implies TT (Prop vid1 empty)) (Prop vid1 empty)"
+definition diamondAxiom :: "('sf,'sc,'sz) formula"
+  where [axiom_defs]:"diamondAxiom \<equiv> Equiv (Not (Box ($\<alpha> vid1 ) (Not (P pid1)))) (Diamond ($\<alpha> vid1) (P pid1))"
+
+definition diamondModusPonensAxiom :: "('sf,'sc,'sz) formula"
+  where [axiom_defs]:"diamondModusPonensAxiom \<equiv> Implies
+   (Box ($\<alpha> vid1) (P pid1))
+   (Implies 
+     (Diamond ($\<alpha> vid1) (P pid2)) 
+     (Diamond ($\<alpha> vid1) (And (P pid1) (P pid2))))"
+
+definition equalReflAxiom :: "('sf,'sc,'sz) formula"
+where [axiom_defs]:"equalReflAxiom \<equiv> Equals (Functional fid1) (Functional fid1)"
+
+definition lessEqualReflAxiom :: "('sf,'sc,'sz) formula"
+where [axiom_defs]:"lessEqualReflAxiom \<equiv> Leq (Functional fid1) (Functional fid1)"
+
+definition assigndAxiom :: "('sf,'sc,'sz) formula"
+  where [axiom_defs]:"assigndAxiom \<equiv> 
+Equiv 
+  (Diamond (Assign vid1 (f0 fid1)) (Prop vid1 (singleton (Var vid1))))
+  (Prop vid1 (singleton (f0 fid1)))
+"
+definition testdAxiom :: "('sf,'sc,'sz) formula"
+  where [axiom_defs]:"testdAxiom \<equiv> Equiv
+  (Diamond (Test (Prop vid2 empty)) (Prop vid1 empty))
+  (And (Prop vid2 empty) (Prop vid1 empty))"
+
+definition choicedAxiom :: "('sf,'sc,'sz) formula"
+  where [axiom_defs]:"choicedAxiom \<equiv>  Equiv
+ (Diamond (Choice ($\<alpha> vid1) ($\<alpha> vid2)) (P pid1))
+ (Or (Diamond ($\<alpha> vid1) (P pid1))
+     (Diamond ($\<alpha> vid2) (P pid1)))"
+
+definition composedAxiom :: "('sf,'sc,'sz) formula"
+  where [axiom_defs]:"composedAxiom \<equiv> Equiv
+(Diamond (Sequence ($\<alpha> vid1) ($\<alpha> vid2)) (P pid1))
+(Diamond ($\<alpha> vid1) (Diamond ($\<alpha> vid2) (P pid1)))"
+
+definition randomdAxiom :: "('sf,'sc,'sz) formula"
+  where [axiom_defs]:"randomdAxiom \<equiv> Equiv
+(Diamond (AssignAny vid1) (Prop vid1 (singleton (Var vid1))))
+(Exists vid1 (Prop vid1 (singleton (Var vid1))))
+"
+
+
 (*  vid1 (singleton (f1 fid1 vid1))) (Prop vid1 (singleton (f1 fid2 vid1)))*)
 definition CEaxrule :: "('sf,'sc,'sz) rule"
   where [axrule_defs]:"CEaxrule \<equiv> ([  ([],[Equiv(Pc pid1 ) (Pc pid2)])  ],    
