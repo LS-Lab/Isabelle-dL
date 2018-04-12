@@ -3349,8 +3349,49 @@ next
   case (ExchangeR k)
   then show ?thesis sorry
 next 
-  case (OrR)
-  then show ?thesis sorry
+  case OrR then have L:"L = OrR" by auto
+  obtain p q where eq:"(snd (SG ! i) ! j) = (p || q)" 
+    using some L apply(cases "SG ! i",auto simp add: Or_def) subgoal for a b 
+      apply(cases "b ! j", auto simp add: Or_def)
+      subgoal for x3 apply(cases x3,auto) subgoal for x41 x42 apply(cases x41,auto) subgoal for x3a by(cases x42,auto) done done done
+  done
+  have andL_simp:"\<And>AI SI SS p q.
+   (nth SI j) = Or p q \<Longrightarrow>
+   (AI,SI) = SS \<Longrightarrow>
+   RightRule_result OrR j SS = Some [(AI, ((closeI SI j) @ [p, q]))]" 
+    subgoal for AI SI SS p q by(cases SS, auto simp add: Implies_def Or_def) done
+  obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)" by (metis seq2fml.cases)
+  have res_eq:"RightRule_result OrR j (SG ! i) = Some [(\<Gamma>, (closeI \<Delta> j) @ [p, q])]" 
+    apply(rule andL_simp)
+    using SG_dec eq by (metis sndI)+
+  have rres:"rres = [(\<Gamma>, (closeI \<Delta> j) @ [p, q])]" using some res_eq L by auto
+  have AIjeq:"\<Delta> ! j = (p || q)" using SG_dec eq unfolding Implies_def Or_def by (metis snd_conv)
+  have jG:"j < length \<Delta>" using j SG_dec by(cases "SG ! i", auto)
+  have big_sound:"sound  ([(\<Gamma>, (closeI \<Delta> j) @ [p, q])], (\<Gamma>,\<Delta>))"
+    apply(rule soundI')
+    apply(rule seq_semI')
+  proof -
+    fix I::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    assume good:"is_interp I"
+    assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [(\<Gamma>, (closeI \<Delta> j) @ [p, q])] \<Longrightarrow> \<nu> \<in> seq_sem I ([(\<Gamma>, (closeI \<Delta> j) @ [p, q])] ! i))"
+    assume ante:"\<nu> \<in> fml_sem I (foldr And \<Gamma> TT)"
+    have sg1:"\<nu> \<in> seq_sem I (\<Gamma>, (closeI \<Delta> j) @ [p, q])" using sgs[of 0] by auto
+    have duh:"\<And>S T x. x \<in> S \<Longrightarrow> S = T \<Longrightarrow> x \<in> T" by auto
+    have succ1:"\<nu> \<in> fml_sem I (foldr Or ((closeI \<Delta> j) @ [p, q]) FF)"
+      using  seq_MP[OF sg1 ante] by auto
+    then have succ2:"\<nu> \<in> fml_sem I (foldr Or (((closeI \<Delta> j) @ [p]) @ [ q]) FF)"
+      by auto
+    then have succ3:"\<nu> \<in> fml_sem I (foldr Or (q # p # (closeI \<Delta> j)) FF)"
+      using snoc_assoc_disj[of I "((closeI \<Delta> j) @ [p])" q]
+        snoc_assoc_disj[of I "(closeI \<Delta> j)" p]  
+      by auto
+    then have succ4:"\<nu> \<in> fml_sem I (foldr Or ((nth \<Delta> j) # (closeI \<Delta> j)) FF)"
+      using AIjeq by auto
+    then have succ5:"\<nu> \<in> fml_sem I (foldr Or \<Delta> FF)"
+      using closeI_ident_disj[OF jG , of "\<Delta> ! j", of I, OF refl ] by auto
+    show "\<nu> \<in> fml_sem I (foldr (||) \<Delta> FF)" using succ5 sg1 ante by auto
+  qed
+  then show ?thesis using some SG_dec rres by auto
 qed
 
 
