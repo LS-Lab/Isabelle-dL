@@ -3483,39 +3483,98 @@ next
       subgoal for P Q
         by (simp add: foldr_fml_sem) done
     have mem_lem:"\<And>L j k x. j \<noteq> k \<Longrightarrow> j < length L \<Longrightarrow> k < length L \<Longrightarrow> (replaceI L j x) ! k = L ! k"
+      subgoal for L j k x
+      apply(cases "j < k")
     proof -
-      fix L::"'a list"  and j k::nat and  x::"'a"
-      assume jk:"j \<noteq> k"
+      assume jk:"j < k"
       assume j:"j < length L"                         
       assume k:"k < length L"                                         
-      have imp:"(j \<noteq> k \<longrightarrow>  j < length L \<longrightarrow> k < length L \<longrightarrow> (replaceI L j x) ! k = L ! k)"
-        apply(rule index_list_induct[of "(\<lambda> L k. j \<noteq> k \<longrightarrow> j < length L \<longrightarrow> k < length L \<longrightarrow> (replaceI L j x) ! k = L ! k)"])
-        subgoal for L by(induction L,auto,cases j, auto)           
+      have imp:"(\<forall>k. j < k \<longrightarrow>  k < length L \<longrightarrow> (replaceI L j x) ! k = L ! k)"
+        apply(induction rule: index_list_induct[of "(\<lambda> L j. (\<forall>k. j < k  \<longrightarrow> k < length L \<longrightarrow> (replaceI L j x) ! k = L ! k))"] )
+        subgoal for L by (cases L,auto)
         subgoal for xa xs i
-          sorry
-        sorry
+          by(auto)
+        by (rule j)
       show  "(replaceI L j x) ! k = L ! k" using jk j k imp by auto
-    qed
-    have close_lem:"\<And>L::('a list). \<And>j k::nat. \<And>x::'a. j \<noteq> k \<Longrightarrow> j < length L \<Longrightarrow> k < length L \<Longrightarrow> L ! j \<in> set (closeI L k)"
-      subgoal for L j k x
-      apply (cases "j > k") 
-    proof -
-      fix L::"'a list"  and j k::nat and  x::"'a"
-      assume jkg:"j > k"
-      assume j:"j < length L"
-      assume k:"k < length L"
-      have imp:"(k < j \<and>  j < length L \<longrightarrow> (L ! j \<in> set (closeI L k)))"
-        apply(rule index_list_induct[of "(\<lambda> L j. k < j \<and>  j < length L \<longrightarrow> (L ! j \<in> set (closeI L k)))"])
-        subgoal for La using j 
-          apply(induction La, auto simp add: member_rec j k jk) done
+    next
+      assume neq:"j \<noteq> k"
+      assume j:"j < length L"                         
+      assume k:"k < length L"                                         
+      assume not:"\<not>(j < k)"
+      from neq not have jk:"j > k" by auto
+      have imp:"(\<forall>j. j > k \<longrightarrow>  k < length L \<longrightarrow> (replaceI L j x) ! k = L ! k)"
+        apply(induction rule: index_list_induct[of "(\<lambda> L k. (\<forall>j. j > k  \<longrightarrow> k < length L \<longrightarrow> (replaceI L j x) ! k = L ! k))"] )
+        subgoal for L apply(auto) subgoal for j by(cases j,auto,cases L,auto) done 
         subgoal for xa xs i
-          using jkg j k apply(auto) using jkg j k sledgehammer
-          sorry
-(*        using i by auto*)
-        using j by auto
-      then show "L ! j \<in> set (closeI L k)"
-        using i j k jk sorry
-    next show "L ! j \<in> set (closeI L k)" sorry
+          apply(auto)
+            using Suc_less_eq2 by auto
+        by (rule k)
+      show  "(replaceI L j x) ! k = L ! k" using jk j k imp by auto
+    qed done
+  have close_lem:"\<And>L::('a list). \<And>j k::nat. \<And>x::'a. j \<noteq> k \<Longrightarrow> j < length L \<Longrightarrow> k < length L \<Longrightarrow> L ! k  \<in> set (closeI L j)"
+      subgoal for L j k x
+      apply(cases "j < k")
+    proof -
+      assume jk:"j < k"
+      assume j:"j < length L"              
+      assume k:"k < length L"              
+      have imp:"(\<forall>k. j < Suc k \<longrightarrow>  Suc k < length L \<longrightarrow> (List.nth L (Suc k) = List.nth (closeI L j) k))"
+        apply(induction rule: index_list_induct[of "(\<lambda> L j. (\<forall>k. j < Suc k  \<longrightarrow> (Suc k) < length L \<longrightarrow> (List.nth L (Suc k) = List.nth (closeI L j) k)))"] )
+        subgoal for L
+          apply(auto) subgoal for k by(cases L,auto) done
+        subgoal for xa xs i
+          apply(auto) subgoal for k 
+            apply(erule allE[where x="k-1"]) 
+            by(cases k,auto) done
+        by (rule j)
+      have closeI_length:"\<And>j. 0 < length L \<Longrightarrow> j < length L \<Longrightarrow> length(closeI L j) = length(L) - 1"
+        subgoal for j proof -
+          assume L:"0 < length L" assume j:"j < length L"
+          have imp:"L \<noteq> [] \<longrightarrow> length(closeI L j) = length(L) - 1"
+            apply(induction rule: index_list_induct[of "(\<lambda>L j. L \<noteq> [] \<longrightarrow> length(closeI L j) = length(L) - 1)"])
+            subgoal for L by (auto,cases L,auto)
+            subgoal for x xs i by(auto)
+            by (rule j)
+          show "length (closeI L j) = length L - 1" using imp L j by auto
+        qed done
+      have inst:"length (closeI L j) = length L - 1" using closeI_length[of j] j k jk by (auto,cases L,auto)
+      have less:"k - 1 < length (closeI L j)"  using inst j k jk by auto
+      show  "L ! k \<in> set (closeI L j)" 
+        using jk j k spec[OF imp, of "k-1"] 
+          nth_member[of "k-1" "(closeI L j)", OF less]  
+          List.member_def[of "(closeI L j)" "L ! k"] by auto
+    next
+      assume neq:"j \<noteq> k"
+      assume j:"j < length L"                         
+      assume k:"k < length L"                                         
+      assume not:"\<not>(j < k)"
+      from neq not have jk:"j > k" by auto
+      have imp:"(\<forall>j. j >  k \<longrightarrow> j < length L \<longrightarrow> (List.nth L k = List.nth (closeI L j) k))"
+        apply(induction rule: index_list_induct[of "(\<lambda> L k. (\<forall>j. j > k  \<longrightarrow> j < length L \<longrightarrow> (List.nth L k = List.nth (closeI L j) k)))"] )
+        subgoal for L
+          apply(auto) subgoal for j 
+            by(cases L,auto,cases j,auto) done
+        subgoal for xa xs i
+          apply(auto) subgoal for k 
+            apply(erule allE[where x="k-1"]) 
+            by(cases k,auto) done
+        by (rule k)
+      have closeI_length:"\<And>j. 0 < length L \<Longrightarrow> j < length L \<Longrightarrow> length(closeI L j) = length(L) - 1"
+        subgoal for j proof -
+          assume L:"0 < length L" assume j:"j < length L"
+          have imp:"L \<noteq> [] \<longrightarrow> length(closeI L j) = length(L) - 1"
+            apply(induction rule: index_list_induct[of "(\<lambda>L j. L \<noteq> [] \<longrightarrow> length(closeI L j) = length(L) - 1)"])
+            subgoal for L by (auto,cases L,auto)
+            subgoal for x xs i by(auto)
+            by (rule j)
+          show "length (closeI L j) = length L - 1" using imp L j by auto
+        qed done
+      have inst:"length (closeI L j) = length L - 1" using closeI_length[of j] j k jk by (auto,cases L,auto)
+      have less:"k  < length (closeI L j)"  using inst j k jk by auto
+      show  "L ! k \<in> set (closeI L j)" 
+        using jk j k spec[OF imp, of "j"] 
+          nth_member[of "k" "(closeI L j)", OF less]  
+          List.member_def[of "(closeI L j)" "L ! k"] by auto
     qed done
     have rep_up_lem:"\<And>L i x. i < length L \<Longrightarrow> (replaceI L i x) ! i = x" 
     proof -
