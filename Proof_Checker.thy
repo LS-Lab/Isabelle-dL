@@ -86,7 +86,7 @@ datatype ('a,'b,'c) rrule = ImplyR | AndR |CohideRR | TrueR | EquivR | Skolem | 
 
 (*  CohideR | *)
   
-datatype ('a,'b,'c) lrule = ImplyL | AndL | HideL
+datatype ('a,'b,'c) lrule = ImplyL | AndL | HideL | FalseL
   | NotL | CutLeft "('a,'b,'c) formula" | EquivL | BRenameL  'c 'c 
   | OrL
 (*  EquivForwardL | EquivBackwardL |  *)
@@ -445,8 +445,24 @@ Some [((closeI A j) @ [p, q], S)]
     then
         Some [(replaceI A j (FBrename x y (nth A j)),S)]
     else None)
+   | Not(Exists xvar (Not \<phi>)) \<Rightarrow> 
+    (if
+      x = xvar \<and>
+     (FRadmit(Forall xvar \<phi>) \<and>
+      FRadmit \<phi> \<and> 
+     fsafe (Forall xvar \<phi>) \<and>
+     {Inl y, Inr y, Inr x} \<inter> FVF (Forall xvar \<phi>) = {}) \<and>
+      FRadmit (Forall  y (FUrename xvar  y \<phi>)) \<and>
+      FRadmit (FUrename xvar y \<phi>) \<and>
+     fsafe (Forall y (FUrename xvar y \<phi>)) \<and>
+     {Inl xvar, Inr xvar, Inr y} \<inter> FVF (Forall y (FUrename xvar y \<phi>)) = {}
+    then
+        Some [(replaceI A j (FBrename x y (nth A j)),S)]
+    else None)
+
    | _ \<Rightarrow> None))"
 | Lstep_Not:"LeftRule_result NotL j (A,S) = (case (nth A j) of (Not p) \<Rightarrow> Some [(closeI A j , S @ [p])] | _ \<Rightarrow> None)" 
+| Lstep_FalseR:"LeftRule_result FalseL j (A,S) = (Some [])"
 | Lstep_OrL:"LeftRule_result OrL j (A,S) =
 (case (nth A j) of
   Not (And (Not p) (Not q)) \<Rightarrow>
@@ -473,7 +489,10 @@ fun RightRule_result :: "('sf,'sc,'sz) rrule \<Rightarrow> nat \<Rightarrow> ('s
 | Rstep_TrueR:"RightRule_result TrueR j (A,S) = (case (nth S j) of (Geq (Const x) (Const y)) \<Rightarrow>
     (if (x = y & (sint (Rep_bword x) = 0)) then(Some []) else None) | _ \<Rightarrow> None)"
 | Step_Skolem:"RightRule_result Skolem j (A,S) = (case (nth S j) of (Not (Exists x (Not p)))  \<Rightarrow> 
-(if ((Inl x) \<notin> FVSeq (A,S)) \<and> fsafe (foldr (&&) A TT) \<and> fsafe (foldr (||) (closeI S j) FF)then
+(if ((Inl x) \<notin> FVSeq (A,S)) \<and> 
+    fsafe (foldr (&&) A TT) \<and> 
+    fsafe (foldr (||) (closeI S j) FF)
+then
   Some [(A, replaceI S j p)]
 else None)
 | _ \<Rightarrow> None)"
@@ -861,7 +880,7 @@ where
 | LeftRule_EquivForward:"(case (nth (fst (nth SG i)) j) of (!(!(PPPP && Q) && !(! PP && ! QQ))) \<Rightarrow> (PPPP = PP) \<and> (Q = QQ)| _ \<Rightarrow> False) \<Longrightarrow> lrule_ok SG C i j EquivForwardL"
 | LeftRule_Imply:"(case (nth (fst (nth SG i)) j) of ( !(!Q && !(!PP)))  \<Rightarrow> True | _ \<Rightarrow> False) \<Longrightarrow> lrule_ok SG C i j ImplyL"
 | LeftRule_EquivBackward:"(case (nth (fst (nth SG i)) j) of (!(!(PPPP && Q) && !(! PP && ! QQ))) \<Rightarrow> (PPPP = PP) \<and> (Q = QQ) | _ \<Rightarrow> False) \<Longrightarrow> lrule_ok SG C i j EquivBackwardL"
-
+| LeftRule_False:"nth (fst (nth SG i)) j = Geq (Const (bword_zero)) (Const (bword_one)) \<Longrightarrow> lrule_ok SG C i j FalseL"
 named_theorems prover "Simplification rules for checking validity of proof certificates" 
 lemmas [prover] = axiom_defs Box_def Or_def Implies_def filter_append ssafe_def SDom_def FUadmit_def PFUadmit_def id_simps
 
