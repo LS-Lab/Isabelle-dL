@@ -439,9 +439,14 @@ Some [((closeI A j) @ [p, q], S)]
   (case (nth A j) of
    Not(Diamond (Assign xvar \<theta>) (Not \<phi>)) \<Rightarrow>
     (if
-     x = xvar \<and>
+      (x = xvar \<and>
      (TRadmit \<theta> \<and>  FRadmit([[Assign xvar \<theta>]]\<phi>) \<and> FRadmit \<phi> \<and> fsafe ([[Assign xvar \<theta>]]\<phi>) \<and>
-     {Inl y, Inr y, Inr x} \<inter> FVF ([[Assign xvar \<theta>]]\<phi>) = {}) 
+     {Inl y, Inr y, Inr x} \<inter> FVF ([[Assign xvar \<theta>]]\<phi>) = {})  \<and>
+        FRadmit ([[y := \<theta>]]FUrename xvar  y \<phi>) \<and>
+      FRadmit (FUrename xvar y \<phi>) \<and>
+    fsafe ([[y := \<theta>]]FUrename xvar y \<phi>) \<and>
+  {Inl xvar, Inr xvar, Inr y} \<inter> FVF ([[y := \<theta>]]FUrename xvar y \<phi>) = {})
+  
     then
         Some [(replaceI A j (FBrename x y (nth A j)),S)]
     else None)
@@ -462,7 +467,7 @@ Some [((closeI A j) @ [p, q], S)]
 
    | _ \<Rightarrow> None))"
 | Lstep_Not:"LeftRule_result NotL j (A,S) = (case (nth A j) of (Not p) \<Rightarrow> Some [(closeI A j , S @ [p])] | _ \<Rightarrow> None)" 
-| Lstep_FalseR:"LeftRule_result FalseL j (A,S) = (Some [])"
+| Lstep_FalseR:"LeftRule_result FalseL j (A,S) = (if (nth A j) = FF then (Some []) else None)"
 | Lstep_OrL:"LeftRule_result OrL j (A,S) =
 (case (nth A j) of
   Not (And (Not p) (Not q)) \<Rightarrow>
@@ -1301,6 +1306,116 @@ lemma foldr_FUrename_conj:"FUrename what repl (foldr (||) a FF) = foldr (||) (ma
 lemma SUrename_FUrename:"seq2fml (SUrename what repl \<phi>)  = FUrename what repl (seq2fml \<phi>)"
   by(cases \<phi>, auto simp add: foldr_FUrename_disj foldr_FUrename_conj Implies_def Or_def)
 
+lemma brename_dfree:"dfree \<theta> \<Longrightarrow> TRadmit \<theta> \<Longrightarrow> dfree (TUrename what repl \<theta>)"
+proof (induction  rule: dfree.induct)
+qed(auto)
+
+lemma brename_dsafe:"dsafe \<theta> \<Longrightarrow> TRadmit \<theta> \<Longrightarrow> dsafe (TUrename what repl \<theta>)"
+proof (induction rule: dsafe.induct )
+qed(auto simp add:  brename_dfree)
+
+
+lemma brename_tadmit:"TRadmit \<theta>  \<Longrightarrow> TRadmit (TUrename what repl \<theta>)"
+proof (induction \<theta>)
+  case (Var x)
+then show ?case by auto
+next
+case (Const x)
+  then show ?case by auto
+next
+case (Function x1a x2a)
+  then show ?case by auto
+next
+  case (Functional x)
+  then show ?case by auto
+next
+case (Plus \<theta>1 \<theta>2)
+then show ?case by auto
+next
+  case (Times \<theta>1 \<theta>2)
+  then show ?case by auto
+next
+  case (Max \<theta>1 \<theta>2)
+  then show ?case by auto
+next
+  case (DiffVar x)
+  then show ?case by auto
+next
+  case (Differential \<theta>)  
+  then show ?case using brename_dfree by(auto simp add: brename_dfree)
+qed (auto)
+
+lemma brename_oadmit:"ORadmit ODE  \<Longrightarrow> ORadmit (OUrename what repl ODE)"
+proof(induction ODE)
+  case (OVar x)
+  then show ?case by(auto)
+next
+  case (OSing x1a x2)
+  then show ?case by(auto simp add: brename_tadmit brename_dfree)
+next
+  case (OProd ODE1 ODE2)
+  then show ?case by(auto)
+qed
+
+lemma brename_fadmit:"FRadmit \<phi>  \<Longrightarrow> FRadmit (FUrename what repl \<phi>)"
+ and  brename_padmit:"PRadmit \<alpha>  \<Longrightarrow> PRadmit (PUrename what repl \<alpha>)"
+proof(induction \<phi> and \<alpha>)
+  case (Pvar x)
+  then show ?case by(auto)
+next
+  case (Assign x1 x2)
+  then show ?case by(auto simp add: brename_tadmit brename_dfree)
+next
+  case (AssignAny x1)
+  then show ?case by(auto simp add: brename_tadmit brename_dfree)
+next
+case (DiffAssign x1 x2)
+  then show ?case by(auto simp add: brename_tadmit brename_dfree)
+next
+  case (Test x)
+  then show ?case by(auto)
+next
+  case (EvolveODE x1 x2)
+  then show ?case by(auto simp add: brename_tadmit brename_dfree brename_oadmit)
+next
+  case (Choice x1 x2)
+  then show ?case by(auto)
+next
+  case (Sequence x1 x2)
+  then show ?case by(auto)
+next
+  case (Loop x)
+  then show ?case by(auto)
+next
+  case (Geq x1 x2)
+  then show ?case  by(auto simp add: brename_tadmit brename_dfree)
+next
+  case (Prop x1 x2)
+  then show ?case  by(auto simp add: brename_tadmit brename_dfree)
+next
+  case (Not x)
+  then show ?case by auto
+next
+  case (And x1 x2)
+  then show ?case by auto
+next
+  case (Exists x1 x2)
+  then show ?case by auto
+next
+  case (Diamond x1 x2)
+  then show ?case by auto
+next
+  case (InContext x1 x2)
+  then show ?case by auto
+qed
+
+lemma brenameR_fadmitwhat_lem:"FRadmit ([[what := t]]p)  \<Longrightarrow> FRadmit ([[repl := t]]FUrename what repl p)"
+  using brename_fadmit by (auto simp add: Box_def)
+lemma brenameR_fadmitP_lem:  "FRadmit p \<Longrightarrow> FRadmit (FUrename what repl p)" using brename_fadmit by auto
+
+lemma brenameR_all_admitwhat_lem:"  FRadmit (Forall what p) ==> FRadmit (Forall repl (FUrename what repl p))"
+  using brename_fadmit by (auto simp add: Forall_def)
+
 lemma lrule_sound:       
   assumes some:"(LeftRule_result L j (nth SG i)) = Some rres"
   assumes i:"i < length SG"
@@ -1623,140 +1738,658 @@ next
   then show ?thesis using some SG_dec rres by auto
 next
   case (BRenameL what repl) then have L:"L = BRenameL what repl" by auto
-  have exist:"\<exists> t p.(fst (SG ! i) ! j) =  ([[what := t]]p)" 
+  have exist:"(\<exists> t p.(fst (SG ! i) ! j) =  ([[what := t]]p)) \<or> (\<exists> p. (fst (SG ! i) ! j) = Forall what p)"
     using some i L apply(auto simp add: some i L) apply(cases "SG ! i",auto simp add: L Equiv_def Implies_def Or_def)
     apply(cases "what = repl",auto)
     subgoal for a b
       apply(cases "a ! j",auto) subgoal for x3 apply(cases x3,auto)
-        subgoal for x61 x62 
-          apply(cases x61,auto) subgoal for x21 x22 apply(cases x62,auto)
+        subgoal for x61 x62
+          apply(cases x62,auto) subgoal for x3a
+              apply(cases "what = x61 \<and> FRadmit (Forall x61 x3a) \<and>
+        FRadmit x3a \<and>
+        fsafe (Forall x61 x3a) \<and>
+        Inl repl \<notin> FVF (Forall x61 x3a) \<and>
+        Inr repl \<notin> FVF (Forall x61 x3a) \<and>
+        Inr x61 \<notin> FVF (Forall x61 x3a) \<and>
+        FRadmit (Forall repl (FUrename x61 repl x3a)) \<and>
+        FRadmit (FUrename x61 repl x3a) \<and>
+        fsafe (Forall repl (FUrename x61 repl x3a)) \<and>
+        Inl x61 \<notin> FVF (Forall repl (FUrename x61 repl x3a)) \<and>
+        Inr x61 \<notin> FVF (Forall repl (FUrename x61 repl x3a)) \<and> Inr repl \<notin> FVF (Forall repl (FUrename x61 repl x3a))")
+               apply(auto simp add: Box_def)
+             apply(cases "what = x61",auto simp add: Box_def, cases "repl = x61",simp add: Box_def Forall_def)
+            apply(erule allE[where x="x3a"], unfold Forall_def) by auto done
+        subgoal for x61 x62
+          apply(cases x61,auto)
+          subgoal for x21 x22
+            apply(cases x62,auto)
             subgoal for x3a
-              apply(cases "what = x21 \<and> TRadmit x22 \<and>
+        
+        apply(cases "what = x21 \<and>
+        TRadmit x22 \<and>
         ((\<exists>\<theta>1 \<theta>2. ([[x21 := x22]]x3a) = Geq \<theta>1 \<theta>2 \<and> TRadmit \<theta>1 \<and> TRadmit \<theta>2) \<or>
          (\<exists>args. (\<exists>p. ([[x21 := x22]]x3a) = $\<phi> p args) \<and> (\<forall>i. TRadmit (args i))) \<or>
          (\<exists>\<phi>. ([[x21 := x22]]x3a) = ! \<phi> \<and> FRadmit \<phi>) \<or>
          (\<exists>\<phi> \<psi>. ([[x21 := x22]]x3a) = (\<phi> && \<psi>) \<and> FRadmit \<phi> \<and> FRadmit \<psi>) \<or>
          (\<exists>\<phi>. (\<exists>x. ([[x21 := x22]]x3a) = Exists x \<phi>) \<and> FRadmit \<phi>) \<or> (\<exists>\<alpha> \<phi>. ([[x21 := x22]]x3a) = (\<langle> \<alpha> \<rangle> \<phi>) \<and> PRadmit \<alpha> \<and> FRadmit \<phi>)) \<and>
         FRadmit x3a \<and>
-        fsafe ([[x21 := x22]]x3a) \<and> Inl repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr what \<notin> FVF ([[x21 := x22]]x3a)")
-               apply(auto simp add: Box_def)
-               apply(cases "what = x21",auto simp add: Box_def, cases "repl = x21",simp add: Box_def)
-              apply(cases "what = x21 \<and>
+        fsafe ([[x21 := x22]]x3a) \<and>
+        Inl repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr what \<notin> FVF ([[x21 := x22]]x3a)",auto simp add: Box_def)
+
+              by(cases "what = x21 \<and>
         TRadmit x22 \<and>
         FRadmit x3a \<and>
         dsafe x22 \<and>
         fsafe x3a \<and>
         Inl repl \<notin> FVT x22 \<and>
-        (Inl repl \<in> FVF x3a \<longrightarrow> repl = x21) \<and> Inr repl \<notin> FVT x22 \<and> Inr repl \<notin> FVF x3a \<and> Inr what \<notin> FVT x22 \<and> Inr what \<notin> FVF x3a",auto)
-              by(cases "what = x21 \<and>
+        (Inl repl \<in> FVF x3a \<longrightarrow> repl = x21) \<and>
+        Inr repl \<notin> FVT x22 \<and>
+        Inr repl \<notin> FVF x3a \<and>
+        Inr what \<notin> FVT x22 \<and>
+        Inr what \<notin> FVF x3a \<and>
         TRadmit x22 \<and>
-        FRadmit x3a \<and>
+        FRadmit (FUrename x21 repl x3a) \<and>
         dsafe x22 \<and>
-        fsafe x3a \<and> Inl repl \<notin> FVT x22 \<and> Inl repl \<notin> FVF x3a \<and> Inr repl \<notin> FVT x22 \<and> Inr repl \<notin> FVF x3a \<and> Inr what \<notin> FVT x22 \<and> Inr what \<notin> FVF x3a",auto)
+        fsafe (FUrename x21 repl x3a) \<and>
+        Inl x21 \<notin> FVT x22 \<and>
+        (Inl x21 \<in> FVF (FUrename x21 repl x3a) \<longrightarrow> x21 = repl) \<and>
+        Inr x21 \<notin> FVT x22 \<and> Inr x21 \<notin> FVF (FUrename x21 repl x3a) \<and> Inr repl \<notin> FVT x22 \<and> Inr repl \<notin> FVF (FUrename x21 repl x3a)",auto)+
+
             done done done done done
-          then obtain t p where eq:"(fst (SG ! i) ! j) = ([[what := t]]p)" by auto
-          have admits:
-             "TRadmit t \<and>  FRadmit ([[what := t]]p) \<and> FRadmit p \<and> fsafe ([[what := t]]p) \<and>
-                 {Inl repl, Inr repl, Inr what} \<inter> FVF ([[what := t]]p) = {}"
+
+  have all_case:"(\<exists>  p.(fst (SG ! i) ! j) =  (Forall what p)) \<Longrightarrow> ?thesis"
+  proof -
+    assume "(\<exists>  p.(fst (SG ! i) ! j) =  (Forall what p))"
+    then obtain  p where eq:"(fst (SG ! i) ! j) = (Forall what p)" by(auto)
+    have admits:
+     " FRadmit (Forall what p) \<and> FRadmit p \<and> fsafe (Forall what  p) \<and>
+           {Inl repl, Inr repl, Inr what} \<inter> FVF (Forall what p) = {} \<and>
+          FRadmit (Forall repl (FUrename what  repl p)) \<and>
+         FRadmit (FUrename what repl p) \<and>
+         fsafe (Forall repl (FUrename what repl p)) \<and>
+         {Inl what, Inr what, Inr repl} \<inter> FVF (Forall repl (FUrename what repl p)) = {}"
+
             using some i L  apply(cases "SG ! i", auto simp add: L Equiv_def Implies_def Or_def some i)apply(cases "what = repl",auto)
             subgoal for a b
               apply(cases "a ! j",auto)
               subgoal for x3
-                apply(cases x3,auto) subgoal for x61 x62 apply(cases x61,auto,cases x62,auto) subgoal for x21 x22 x3a using eq by(cases "what = x21 \<and>
-        TRadmit x22 \<and>
-        ((\<exists>\<theta>1 \<theta>2. ([[x21 := x22]]x3a) = Geq \<theta>1 \<theta>2 \<and> TRadmit \<theta>1 \<and> TRadmit \<theta>2) \<or>
-         (\<exists>args. (\<exists>p. ([[x21 := x22]]x3a) = $\<phi> p args) \<and> (\<forall>i. TRadmit (args i))) \<or>
-         (\<exists>\<phi>. ([[x21 := x22]]x3a) = ! \<phi> \<and> FRadmit \<phi>) \<or>
-         (\<exists>\<phi> \<psi>. ([[x21 := x22]]x3a) = (\<phi> && \<psi>) \<and> FRadmit \<phi> \<and> FRadmit \<psi>) \<or>
-         (\<exists>\<phi>. (\<exists>x. ([[x21 := x22]]x3a) = Exists x \<phi>) \<and> FRadmit \<phi>) \<or> (\<exists>\<alpha> \<phi>. ([[x21 := x22]]x3a) = (\<langle> \<alpha> \<rangle> \<phi>) \<and> PRadmit \<alpha> \<and> FRadmit \<phi>)) \<and>
-        FRadmit x3a \<and>
-        fsafe ([[x21 := x22]]x3a) \<and> Inl repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr what \<notin> FVF ([[x21 := x22]]x3a)",auto simp add: Box_def eq)
-                  done done done
+                apply(cases x3,auto) subgoal for x61 x62 apply(cases x62,auto)
+                  subgoal for x3a using eq apply(cases "FRadmit p \<and> fsafe p \<and> Inl repl \<notin> FVF p \<and> Inr repl \<notin> FVF p \<and> Inr what \<notin> FVF p ",auto simp add: Box_def Forall_def eq) done done
+                subgoal for x61 x62 apply(cases x61,auto,cases x62,auto) 
+                  subgoal for x21 x22 x3a using eq
+                  by(cases "what = x21 \<and>
+           TRadmit x22 \<and>
+           ((\<exists>\<theta>1 \<theta>2. ([[x21 := x22]]x3a) = Geq \<theta>1 \<theta>2 \<and> TRadmit \<theta>1 \<and> TRadmit \<theta>2) \<or>
+            (\<exists>args. (\<exists>p. ([[x21 := x22]]x3a) = $\<phi> p args) \<and> (\<forall>i. TRadmit (args i))) \<or>
+            (\<exists>\<phi>. ([[x21 := x22]]x3a) = ! \<phi> \<and> FRadmit \<phi>) \<or>
+            (\<exists>\<phi> \<psi>. ([[x21 := x22]]x3a) = (\<phi> && \<psi>) \<and> FRadmit \<phi> \<and> FRadmit \<psi>) \<or>
+            (\<exists>\<phi>. (\<exists>x. ([[x21 := x22]]x3a) = Exists x \<phi>) \<and> FRadmit \<phi>) \<or> (\<exists>\<alpha> \<phi>. ([[x21 := x22]]x3a) = (\<langle> \<alpha> \<rangle> \<phi>) \<and> PRadmit \<alpha> \<and> FRadmit \<phi>)) \<and>
+           FRadmit x3a \<and>
+           fsafe ([[x21 := x22]]x3a) \<and>
+           Inl repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr what \<notin> FVF ([[x21 := x22]]x3a)",auto simp add: Forall_def)
+                done done done
                 subgoal for a b
                   apply(cases "what = repl",auto)
               apply(cases "a ! j",auto)
               subgoal for x3
-                apply(cases x3,auto) subgoal for x61 x62 apply(cases x61,auto,cases x62,auto) subgoal for x21 x22 x3a using eq by(cases "what = x21 \<and>
-        TRadmit x22 \<and>
-        ((\<exists>\<theta>1 \<theta>2. ([[x21 := x22]]x3a) = Geq \<theta>1 \<theta>2 \<and> TRadmit \<theta>1 \<and> TRadmit \<theta>2) \<or>
-         (\<exists>args. (\<exists>p. ([[x21 := x22]]x3a) = $\<phi> p args) \<and> (\<forall>i. TRadmit (args i))) \<or>
-         (\<exists>\<phi>. ([[x21 := x22]]x3a) = ! \<phi> \<and> FRadmit \<phi>) \<or>
-         (\<exists>\<phi> \<psi>. ([[x21 := x22]]x3a) = (\<phi> && \<psi>) \<and> FRadmit \<phi> \<and> FRadmit \<psi>) \<or>
-         (\<exists>\<phi>. (\<exists>x. ([[x21 := x22]]x3a) = Exists x \<phi>) \<and> FRadmit \<phi>) \<or> (\<exists>\<alpha> \<phi>. ([[x21 := x22]]x3a) = (\<langle> \<alpha> \<rangle> \<phi>) \<and> PRadmit \<alpha> \<and> FRadmit \<phi>)) \<and>
-        FRadmit x3a \<and>
-        fsafe ([[x21 := x22]]x3a) \<and> Inl repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr what \<notin> FVF ([[x21 := x22]]x3a)",auto simp add: Box_def eq)
-                  done done done
+                apply(cases x3,auto) subgoal for x61 x62 apply(cases x62)
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21  using eq apply(cases x62,auto) 
+                    by(cases " what = x61 \<and>
+        FRadmit (Forall x61 x21) \<and>
+        FRadmit x21 \<and> fsafe (Forall x61 x21) \<and> Inl repl \<notin> FVF (Forall x61 x21) \<and> Inr repl \<notin> FVF (Forall x61 x21) \<and> Inr what \<notin> FVF (Forall x61 x21)
+",auto simp add: Forall_def)
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  done
                 subgoal for a b
-apply(cases "what = repl",auto)
-              apply(cases "a ! j",auto)
-              subgoal for x3
-                apply(cases x3,auto) subgoal for x61 x62 apply(cases x61,auto,cases x62,auto) subgoal for x21 x22 x3a using eq by(cases "what = x21 \<and>
+                 apply(cases "what = repl",auto)
+              apply(cases "a",auto) apply(cases "b",auto simp add: Box_def)
+                  subgoal for x21 x22 x3
+                    apply(cases "what = x21 \<and>
         TRadmit x22 \<and>
-        ((\<exists>\<theta>1 \<theta>2. ([[x21 := x22]]x3a) = Geq \<theta>1 \<theta>2 \<and> TRadmit \<theta>1 \<and> TRadmit \<theta>2) \<or>
-         (\<exists>args. (\<exists>p. ([[x21 := x22]]x3a) = $\<phi> p args) \<and> (\<forall>i. TRadmit (args i))) \<or>
-         (\<exists>\<phi>. ([[x21 := x22]]x3a) = ! \<phi> \<and> FRadmit \<phi>) \<or>
-         (\<exists>\<phi> \<psi>. ([[x21 := x22]]x3a) = (\<phi> && \<psi>) \<and> FRadmit \<phi> \<and> FRadmit \<psi>) \<or>
-         (\<exists>\<phi>. (\<exists>x. ([[x21 := x22]]x3a) = Exists x \<phi>) \<and> FRadmit \<phi>) \<or> (\<exists>\<alpha> \<phi>. ([[x21 := x22]]x3a) = (\<langle> \<alpha> \<rangle> \<phi>) \<and> PRadmit \<alpha> \<and> FRadmit \<phi>)) \<and>
-        FRadmit x3a \<and>
-        fsafe ([[x21 := x22]]x3a) \<and> Inl repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr what \<notin> FVF ([[x21 := x22]]x3a)",auto simp add: Box_def eq)
-                  done done done
-                subgoal for a b
-apply(cases "what = repl",auto)
-              apply(cases "a ! j",auto)
-              subgoal for x3
-                apply(cases x3,auto) subgoal for x61 x62 apply(cases x61,auto,cases x62,auto) subgoal for x21 x22 x3a using eq by(cases "what = x21 \<and>
-        TRadmit x22 \<and>
-        ((\<exists>\<theta>1 \<theta>2. ([[x21 := x22]]x3a) = Geq \<theta>1 \<theta>2 \<and> TRadmit \<theta>1 \<and> TRadmit \<theta>2) \<or>
-         (\<exists>args. (\<exists>p. ([[x21 := x22]]x3a) = $\<phi> p args) \<and> (\<forall>i. TRadmit (args i))) \<or>
-         (\<exists>\<phi>. ([[x21 := x22]]x3a) = ! \<phi> \<and> FRadmit \<phi>) \<or>
-         (\<exists>\<phi> \<psi>. ([[x21 := x22]]x3a) = (\<phi> && \<psi>) \<and> FRadmit \<phi> \<and> FRadmit \<psi>) \<or>
-         (\<exists>\<phi>. (\<exists>x. ([[x21 := x22]]x3a) = Exists x \<phi>) \<and> FRadmit \<phi>) \<or> (\<exists>\<alpha> \<phi>. ([[x21 := x22]]x3a) = (\<langle> \<alpha> \<rangle> \<phi>) \<and> PRadmit \<alpha> \<and> FRadmit \<phi>)) \<and>
-        FRadmit x3a \<and>
-        fsafe ([[x21 := x22]]x3a) \<and> Inl repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr what \<notin> FVF ([[x21 := x22]]x3a)",auto simp add: Box_def eq)
-                  done done done
-                subgoal for a b
-apply(cases "what = repl",auto)
-              apply(cases "a ! j",auto)
-              subgoal for x3
-                apply(cases x3,auto) subgoal for x61 x62 apply(cases x61,auto,cases x62,auto) subgoal for x21 x22 x3a using eq by(cases "what = x21 \<and>
-        TRadmit x22 \<and>
-        ((\<exists>\<theta>1 \<theta>2. ([[x21 := x22]]x3a) = Geq \<theta>1 \<theta>2 \<and> TRadmit \<theta>1 \<and> TRadmit \<theta>2) \<or>
-         (\<exists>args. (\<exists>p. ([[x21 := x22]]x3a) = $\<phi> p args) \<and> (\<forall>i. TRadmit (args i))) \<or>
-         (\<exists>\<phi>. ([[x21 := x22]]x3a) = ! \<phi> \<and> FRadmit \<phi>) \<or>
-         (\<exists>\<phi> \<psi>. ([[x21 := x22]]x3a) = (\<phi> && \<psi>) \<and> FRadmit \<phi> \<and> FRadmit \<psi>) \<or>
-         (\<exists>\<phi>. (\<exists>x. ([[x21 := x22]]x3a) = Exists x \<phi>) \<and> FRadmit \<phi>) \<or> (\<exists>\<alpha> \<phi>. ([[x21 := x22]]x3a) = (\<langle> \<alpha> \<rangle> \<phi>) \<and> PRadmit \<alpha> \<and> FRadmit \<phi>)) \<and>
-        FRadmit x3a \<and>
-        fsafe ([[x21 := x22]]x3a) \<and> Inl repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr what \<notin> FVF ([[x21 := x22]]x3a)",auto simp add: Box_def eq)
-                  done done done
-                subgoal for a b
-                  apply(cases "what = repl",auto)
-              apply(cases "a ! j",auto)
-              subgoal for x3
-                apply(cases x3,auto) subgoal for x61 x62 apply(cases x61,auto,cases x62,auto) subgoal for x21 x22 x3a using eq by(cases "what = x21 \<and>
-        TRadmit x22 \<and>
-        ((\<exists>\<theta>1 \<theta>2. ([[x21 := x22]]x3a) = Geq \<theta>1 \<theta>2 \<and> TRadmit \<theta>1 \<and> TRadmit \<theta>2) \<or>
-         (\<exists>args. (\<exists>p. ([[x21 := x22]]x3a) = $\<phi> p args) \<and> (\<forall>i. TRadmit (args i))) \<or>
-         (\<exists>\<phi>. ([[x21 := x22]]x3a) = ! \<phi> \<and> FRadmit \<phi>) \<or>
-         (\<exists>\<phi> \<psi>. ([[x21 := x22]]x3a) = (\<phi> && \<psi>) \<and> FRadmit \<phi> \<and> FRadmit \<psi>) \<or>
-         (\<exists>\<phi>. (\<exists>x. ([[x21 := x22]]x3a) = Exists x \<phi>) \<and> FRadmit \<phi>) \<or> (\<exists>\<alpha> \<phi>. ([[x21 := x22]]x3a) = (\<langle> \<alpha> \<rangle> \<phi>) \<and> PRadmit \<alpha> \<and> FRadmit \<phi>)) \<and>
-        FRadmit x3a \<and>
-        fsafe ([[x21 := x22]]x3a) \<and> Inl repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr what \<notin> FVF ([[x21 := x22]]x3a)",auto simp add: Box_def eq)
-                  done done done
-                subgoal for a b
-                  apply(cases "what = repl",auto)
-              apply(cases "a ! j",auto)
-              subgoal for x3
-                apply(cases x3,auto) subgoal for x61 x62 apply(cases x61,auto,cases x62,auto) subgoal for x21 x22 x3a using eq by(cases "what = x21 \<and>
-        TRadmit x22 \<and>
-        ((\<exists>\<theta>1 \<theta>2. ([[x21 := x22]]x3a) = Geq \<theta>1 \<theta>2 \<and> TRadmit \<theta>1 \<and> TRadmit \<theta>2) \<or>
-         (\<exists>args. (\<exists>p. ([[x21 := x22]]x3a) = $\<phi> p args) \<and> (\<forall>i. TRadmit (args i))) \<or>
-         (\<exists>\<phi>. ([[x21 := x22]]x3a) = ! \<phi> \<and> FRadmit \<phi>) \<or>
-         (\<exists>\<phi> \<psi>. ([[x21 := x22]]x3a) = (\<phi> && \<psi>) \<and> FRadmit \<phi> \<and> FRadmit \<psi>) \<or>
-         (\<exists>\<phi>. (\<exists>x. ([[x21 := x22]]x3a) = Exists x \<phi>) \<and> FRadmit \<phi>) \<or> (\<exists>\<alpha> \<phi>. ([[x21 := x22]]x3a) = (\<langle> \<alpha> \<rangle> \<phi>) \<and> PRadmit \<alpha> \<and> FRadmit \<phi>)) \<and>
-        FRadmit x3a \<and>
-        fsafe ([[x21 := x22]]x3a) \<and> Inl repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr what \<notin> FVF ([[x21 := x22]]x3a)",auto simp add: Box_def eq)
-                  done done done done
+        FRadmit x3 \<and>
+        dsafe x22 \<and>
+        fsafe x3 \<and>
+        Inl repl \<notin> FVT x22 \<and> (Inl repl \<in> FVF x3 \<longrightarrow> repl = x21) \<and> Inr repl \<notin> FVT x22 \<and> Inr repl \<notin> FVF x3 \<and> Inr what \<notin> FVT x22 \<and> Inr what \<notin> FVF x3
+")
+                    subgoal  using eq by(auto simp add: Box_def Forall_def)
+                    subgoal  using eq by(auto simp add: Box_def Forall_def) done done done done
 
+                subgoal for a b
+                  apply(cases "what = repl",auto, cases "a ! j",auto) subgoal for x3 apply(cases x3,auto) 
+                    subgoal for x51 x52 apply(cases x52,auto) subgoal for x3a
+                        using eq by(cases "what = x51 \<and> FRadmit (Forall x51 x3a) \<and> FRadmit x3a \<and> fsafe (Forall x51 x3a) \<and> Inl repl \<notin> FVF (Forall x51 x3a) \<and> Inr repl \<notin> FVF (Forall x51 x3a) \<and> Inr what \<notin> FVF (Forall x51 x3a)",auto simp add: Forall_def)
+                      done
+                    subgoal for x51 x52 apply(cases x51,auto,cases x52,auto) subgoal for x51 x52 x3a    
+                      using eq by(cases "what = x51 \<and>
+        TRadmit x52 \<and>
+        ((\<exists>\<theta>1 \<theta>2. ([[x51 := x52]]x3a) = Geq \<theta>1 \<theta>2 \<and> TRadmit \<theta>1 \<and> TRadmit \<theta>2) \<or>
+         (\<exists>args. (\<exists>p. ([[x51 := x52]]x3a) = $\<phi> p args) \<and> (\<forall>i. TRadmit (args i))) \<or>
+         (\<exists>\<phi>. ([[x51 := x52]]x3a) = ! \<phi> \<and> FRadmit \<phi>) \<or>
+         (\<exists>\<phi> \<psi>. ([[x51 := x52]]x3a) = (\<phi> && \<psi>) \<and> FRadmit \<phi> \<and> FRadmit \<psi>) \<or>
+         (\<exists>\<phi>. (\<exists>x. ([[x51 := x52]]x3a) = Exists x \<phi>) \<and> FRadmit \<phi>) \<or> (\<exists>\<alpha> \<phi>. ([[x51 := x52]]x3a) = (\<langle> \<alpha> \<rangle> \<phi>) \<and> PRadmit \<alpha> \<and> FRadmit \<phi>)) \<and>
+        FRadmit x3a \<and>
+        fsafe ([[x51 := x52]]x3a) \<and> Inl repl \<notin> FVF ([[x51 := x52]]x3a) \<and> Inr repl \<notin> FVF ([[x51 := x52]]x3a) \<and> Inr what \<notin> FVF ([[x51 := x52]]x3a)",auto simp add: Forall_def)
+                    done done done
+                subgoal for a b
+                 apply(cases "what = repl",auto) apply(cases "a ! j",auto) subgoal for x3 apply(cases x3,auto) 
+                    subgoal for x51 x52 apply(cases x52,auto) subgoal for x3a
+                        using eq by(cases "what = x51 \<and> FRadmit (Forall x51 x3a) \<and> FRadmit x3a \<and> fsafe (Forall x51 x3a) \<and> Inl repl \<notin> FVF (Forall x51 x3a) \<and> Inr repl \<notin> FVF (Forall x51 x3a) \<and> Inr what \<notin> FVF (Forall x51 x3a)",auto simp add: Forall_def)
+                      done
+                    subgoal for x51 x52 apply(cases x51,auto,cases x52,auto) subgoal for x51 x52 x3a    
+                      using eq by(cases "what = x51 \<and>
+        TRadmit x52 \<and>
+        ((\<exists>\<theta>1 \<theta>2. ([[x51 := x52]]x3a) = Geq \<theta>1 \<theta>2 \<and> TRadmit \<theta>1 \<and> TRadmit \<theta>2) \<or>
+         (\<exists>args. (\<exists>p. ([[x51 := x52]]x3a) = $\<phi> p args) \<and> (\<forall>i. TRadmit (args i))) \<or>
+         (\<exists>\<phi>. ([[x51 := x52]]x3a) = ! \<phi> \<and> FRadmit \<phi>) \<or>
+         (\<exists>\<phi> \<psi>. ([[x51 := x52]]x3a) = (\<phi> && \<psi>) \<and> FRadmit \<phi> \<and> FRadmit \<psi>) \<or>
+         (\<exists>\<phi>. (\<exists>x. ([[x51 := x52]]x3a) = Exists x \<phi>) \<and> FRadmit \<phi>) \<or> (\<exists>\<alpha> \<phi>. ([[x51 := x52]]x3a) = (\<langle> \<alpha> \<rangle> \<phi>) \<and> PRadmit \<alpha> \<and> FRadmit \<phi>)) \<and>
+        FRadmit x3a \<and>
+        fsafe ([[x51 := x52]]x3a) \<and> Inl repl \<notin> FVF ([[x51 := x52]]x3a) \<and> Inr repl \<notin> FVF ([[x51 := x52]]x3a) \<and> Inr what \<notin> FVF ([[x51 := x52]]x3a)",auto simp add: Box_def Forall_def)
+                    done done done
+                subgoal for a b
+                 apply(cases "what = repl",auto) apply(cases "a ! j",auto) subgoal for x3 apply(cases x3,auto) 
+                    subgoal for x51 x52 apply(cases x52,auto) subgoal for  x3a    
+                      using eq apply(auto simp add: Forall_def)  
+                      done done 
+                    subgoal for x51 x52 apply(cases x51,auto) subgoal for  x3a    
+                      using eq apply(auto simp add: Box_def Forall_def) 
+                      done done
+                    done done
+                subgoal for a b
+                 apply(cases "what = repl",auto) apply(cases "a ! j",auto) subgoal for x3 apply(cases x3,auto) 
+                    subgoal for x51 x52 apply(cases x52,auto) subgoal for  x3a    
+                      using eq apply(auto simp add: Forall_def) 
+                      done done 
+                    subgoal for x51 x52 apply(cases x51,auto) subgoal for  x3a    
+                      using eq apply(auto simp add: Box_def Forall_def) 
+                      done done
+                    done done 
+              subgoal for a b
+              apply(cases "what = repl",auto, cases "a ! j",auto)
+              subgoal for x3
+                apply(cases x3,auto) subgoal for x61 x62 apply(cases x62,auto)
+                  subgoal for x3a using eq
+                    apply(cases "what = x61 \<and>
+        FRadmit (Forall x61 x3a) \<and>
+        FRadmit x3a \<and>
+        fsafe (Forall x61 x3a) \<and>
+        Inl repl \<notin> FVF (Forall x61 x3a) \<and>
+        Inr repl \<notin> FVF (Forall x61 x3a) \<and>
+        Inr what \<notin> FVF (Forall x61 x3a) \<and>
+        FRadmit (Forall repl (FUrename x61 repl x3a)) \<and>
+        FRadmit (FUrename x61 repl x3a) \<and>
+        fsafe (Forall repl (FUrename x61 repl x3a)) \<and>
+        Inl x61 \<notin> FVF (Forall repl (FUrename x61 repl x3a)) \<and>
+        Inr x61 \<notin> FVF (Forall repl (FUrename x61 repl x3a)) \<and> Inr repl \<notin> FVF (Forall repl (FUrename x61 repl x3a))",auto simp add: Box_def Forall_def eq) done done
+                subgoal for x61 x62 apply(cases x61,auto,cases x62,auto) 
+                  subgoal for x21 x22 x3a using eq
+                  by(cases "what = x21 \<and>
+           TRadmit x22 \<and>
+           ((\<exists>\<theta>1 \<theta>2. ([[x21 := x22]]x3a) = Geq \<theta>1 \<theta>2 \<and> TRadmit \<theta>1 \<and> TRadmit \<theta>2) \<or>
+            (\<exists>args. (\<exists>p. ([[x21 := x22]]x3a) = $\<phi> p args) \<and> (\<forall>i. TRadmit (args i))) \<or>
+            (\<exists>\<phi>. ([[x21 := x22]]x3a) = ! \<phi> \<and> FRadmit \<phi>) \<or>
+            (\<exists>\<phi> \<psi>. ([[x21 := x22]]x3a) = (\<phi> && \<psi>) \<and> FRadmit \<phi> \<and> FRadmit \<psi>) \<or>
+            (\<exists>\<phi>. (\<exists>x. ([[x21 := x22]]x3a) = Exists x \<phi>) \<and> FRadmit \<phi>) \<or> (\<exists>\<alpha> \<phi>. ([[x21 := x22]]x3a) = (\<langle> \<alpha> \<rangle> \<phi>) \<and> PRadmit \<alpha> \<and> FRadmit \<phi>)) \<and>
+           FRadmit x3a \<and>
+           fsafe ([[x21 := x22]]x3a) \<and>
+           Inl repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr repl \<notin> FVF ([[x21 := x22]]x3a) \<and> Inr what \<notin> FVF ([[x21 := x22]]x3a)",auto simp add: Forall_def)
+                done done done
+                subgoal for a b
+                  apply(cases "what = repl",auto)
+              apply(cases "a ! j",auto)
+              subgoal for x3
+                apply(cases x3,auto) subgoal for x61 x62 apply(cases x62)
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21  using eq apply(cases x62,auto) 
+                    by(cases "what = x61 \<and>
+        FRadmit (Forall x61 x21) \<and>
+        FRadmit x21 \<and>
+        fsafe (Forall x61 x21) \<and>
+        Inl repl \<notin> FVF (Forall x61 x21) \<and>
+        Inr repl \<notin> FVF (Forall x61 x21) \<and>
+        Inr what \<notin> FVF (Forall x61 x21) \<and>
+        FRadmit (Forall repl (FUrename x61 repl x21)) \<and>
+        FRadmit (FUrename x61 repl x21) \<and>
+        fsafe (Forall repl (FUrename x61 repl x21)) \<and>
+        Inl x61 \<notin> FVF (Forall repl (FUrename x61 repl x21)) \<and>
+        Inr x61 \<notin> FVF (Forall repl (FUrename x61 repl x21)) \<and> Inr repl \<notin> FVF (Forall repl (FUrename x61 repl x21))",auto simp add: Forall_def)
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  done
+                subgoal for a b
+                 apply(cases "what = repl",auto)
+              apply(cases "a",auto) apply(cases "b",auto simp add: Box_def)
+                  subgoal for x21 x22 x3
+                    apply(cases "what = x21 \<and>
+        TRadmit x22 \<and>
+        FRadmit x3 \<and>
+        dsafe x22 \<and>
+        fsafe x3 \<and>
+        Inl repl \<notin> FVT x22 \<and> (Inl repl \<in> FVF x3 \<longrightarrow> repl = x21) \<and> Inr repl \<notin> FVT x22 \<and> Inr repl \<notin> FVF x3 \<and> Inr what \<notin> FVT x22 \<and> Inr what \<notin> FVF x3
+")
+                    subgoal  using eq by(auto simp add: Box_def Forall_def)
+                    subgoal  using eq by(auto simp add: Box_def Forall_def) done done done done
+
+                subgoal for a b
+                  apply(cases "what = repl",auto, cases "a ! j",auto) subgoal for x3 apply(cases x3,auto) 
+                    subgoal for x51 x52 apply(cases x52,auto) subgoal for x3a
+                        using eq by(cases "what = x51 \<and>
+        FRadmit (Forall x51 x3a) \<and>
+        FRadmit x3a \<and>
+        fsafe (Forall x51 x3a) \<and>
+        Inl repl \<notin> FVF (Forall x51 x3a) \<and>
+        Inr repl \<notin> FVF (Forall x51 x3a) \<and>
+        Inr what \<notin> FVF (Forall x51 x3a) \<and>
+        FRadmit (Forall repl (FUrename x51 repl x3a)) \<and>
+        FRadmit (FUrename x51 repl x3a) \<and>
+        fsafe (Forall repl (FUrename x51 repl x3a)) \<and>
+        Inl x51 \<notin> FVF (Forall repl (FUrename x51 repl x3a)) \<and>
+        Inr x51 \<notin> FVF (Forall repl (FUrename x51 repl x3a)) \<and> Inr repl \<notin> FVF (Forall repl (FUrename x51 repl x3a))
+     ",auto simp add: Forall_def)
+                      done
+                    subgoal for x51 x52 apply(cases x51,auto,cases x52,auto) subgoal for x51 x52 x3a    
+                      using eq by(cases "what = x51 \<and>
+        TRadmit x52 \<and>
+        ((\<exists>\<theta>1 \<theta>2. ([[x51 := x52]]x3a) = Geq \<theta>1 \<theta>2 \<and> TRadmit \<theta>1 \<and> TRadmit \<theta>2) \<or>
+         (\<exists>args. (\<exists>p. ([[x51 := x52]]x3a) = $\<phi> p args) \<and> (\<forall>i. TRadmit (args i))) \<or>
+         (\<exists>\<phi>. ([[x51 := x52]]x3a) = ! \<phi> \<and> FRadmit \<phi>) \<or>
+         (\<exists>\<phi> \<psi>. ([[x51 := x52]]x3a) = (\<phi> && \<psi>) \<and> FRadmit \<phi> \<and> FRadmit \<psi>) \<or>
+         (\<exists>\<phi>. (\<exists>x. ([[x51 := x52]]x3a) = Exists x \<phi>) \<and> FRadmit \<phi>) \<or> (\<exists>\<alpha> \<phi>. ([[x51 := x52]]x3a) = (\<langle> \<alpha> \<rangle> \<phi>) \<and> PRadmit \<alpha> \<and> FRadmit \<phi>)) \<and>
+        FRadmit x3a \<and>
+        fsafe ([[x51 := x52]]x3a) \<and> Inl repl \<notin> FVF ([[x51 := x52]]x3a) \<and> Inr repl \<notin> FVF ([[x51 := x52]]x3a) \<and> Inr what \<notin> FVF ([[x51 := x52]]x3a)",auto simp add: Forall_def)
+                    done done done
+                subgoal for a b
+                 apply(cases "what = repl",auto) apply(cases "a ! j",auto) subgoal for x3 apply(cases x3,auto) 
+                    subgoal for x51 x52 apply(cases x52,auto) subgoal for x3a
+                        using eq by(cases "what = x51 \<and> FRadmit (Forall x51 x3a) \<and> FRadmit x3a \<and> fsafe (Forall x51 x3a) \<and> Inl repl \<notin> FVF (Forall x51 x3a) \<and> Inr repl \<notin> FVF (Forall x51 x3a) \<and> Inr what \<notin> FVF (Forall x51 x3a)",auto simp add: Forall_def)
+                      done
+                    subgoal for x51 x52 apply(cases x51,auto,cases x52,auto) subgoal for x51 x52 x3a    
+                      using eq by(cases "what = x51 \<and>
+        TRadmit x52 \<and>
+        ((\<exists>\<theta>1 \<theta>2. ([[x51 := x52]]x3a) = Geq \<theta>1 \<theta>2 \<and> TRadmit \<theta>1 \<and> TRadmit \<theta>2) \<or>
+         (\<exists>args. (\<exists>p. ([[x51 := x52]]x3a) = $\<phi> p args) \<and> (\<forall>i. TRadmit (args i))) \<or>
+         (\<exists>\<phi>. ([[x51 := x52]]x3a) = ! \<phi> \<and> FRadmit \<phi>) \<or>
+         (\<exists>\<phi> \<psi>. ([[x51 := x52]]x3a) = (\<phi> && \<psi>) \<and> FRadmit \<phi> \<and> FRadmit \<psi>) \<or>
+         (\<exists>\<phi>. (\<exists>x. ([[x51 := x52]]x3a) = Exists x \<phi>) \<and> FRadmit \<phi>) \<or> (\<exists>\<alpha> \<phi>. ([[x51 := x52]]x3a) = (\<langle> \<alpha> \<rangle> \<phi>) \<and> PRadmit \<alpha> \<and> FRadmit \<phi>)) \<and>
+        FRadmit x3a \<and>
+        fsafe ([[x51 := x52]]x3a) \<and> Inl repl \<notin> FVF ([[x51 := x52]]x3a) \<and> Inr repl \<notin> FVF ([[x51 := x52]]x3a) \<and> Inr what \<notin> FVF ([[x51 := x52]]x3a)",auto simp add: Box_def Forall_def)
+                    done done done
+                subgoal for a b
+                 apply(cases "what = repl",auto) apply(cases "a ! j",auto) subgoal for x3 apply(cases x3,auto) 
+                    subgoal for x51 x52 apply(cases x52,auto) subgoal for  x3a    
+                      using eq apply(auto simp add: Forall_def)  
+                      done done 
+                    subgoal for x51 x52 apply(cases x51,auto) subgoal for  x3a    
+                      using eq apply(auto simp add: Box_def Forall_def) 
+                      done done
+                    done done
+                subgoal for a b
+                 apply(cases "what = repl",auto) apply(cases "a ! j",auto) subgoal for x3 apply(cases x3,auto) 
+                    subgoal for x51 x52 apply(cases x52,auto) subgoal for  x3a    
+                      using eq apply(auto simp add: Forall_def) 
+                      done done 
+                    subgoal for x51 x52 apply(cases x51,auto) subgoal for  x3a    
+                      using eq apply(auto simp add: Box_def Forall_def) 
+                      done done
+                    done done 
+                  done
+then have FRAwhat:"FRadmit (Forall what p)" 
+     and  FRAp:"FRadmit p" 
+     and fsafewhat:"fsafe (Forall what p)"
+     and  fvars:"{Inl repl, Inr repl, Inr what} \<inter> FVF (Forall what p) = {}"
+  by auto
+  have neq:"what \<noteq> repl"
+    using some i L apply(auto simp add: some i L) by(cases "SG ! i",auto simp add: L Equiv_def Implies_def Or_def Forall_def)
+  from FRAwhat   have FRArepl:"FRadmit (Forall repl (FUrename what  repl p))" using admits by auto 
+  from  FRAp     have FRAprepl:"FRadmit (FUrename what repl p)" using brenameR_fadmitP_lem using admits by auto 
+  from fsafewhat have fsaferepl:"fsafe (Forall repl (FUrename what repl p))" using admits by auto
+  from fvars     have fvarsrepl:"{Inl what, Inr what, Inr repl} \<inter> FVF (Forall repl (FUrename what repl p)) = {}" 
+    using admits by auto
+  obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)"
+    by (metis seq2fml.cases) 
+  have brenameR_simp:"\<And>\<Gamma> \<Delta> p SS. 
+    (\<Gamma>,\<Delta>) = SS \<Longrightarrow> 
+    \<Gamma> ! j = (Forall what p) \<Longrightarrow>
+    what \<noteq> repl \<Longrightarrow>
+  ( FRadmit((Forall what p)) \<and> FRadmit p \<and> fsafe (Forall what p) \<and>
+     {Inl repl, Inr repl, Inr what} \<inter> FVF (Forall what p) = {})
+\<and> FRadmit (Forall repl (FUrename what  repl p))
+\<and> FRadmit (FUrename what repl p)
+\<and> fsafe (Forall repl (FUrename what repl p))
+\<and> {Inl what, Inr what, Inr repl} \<inter> FVF (Forall repl (FUrename what repl p)) = {} \<Longrightarrow>
+    LeftRule_result (BRenameL what repl) j SS =
+    Some [(replaceI \<Gamma> j (FBrename what repl (nth \<Gamma> j)),\<Delta>)]"
+    subgoal for AI SI p  SS apply(cases SS) 
+      by (auto simp add: Equiv_def Implies_def Or_def Box_def Forall_def)
+    done
+  have Gi:"\<Gamma> ! j = (Forall what p)" using SG_dec eq by (cases "SG ! i",auto)
+  have res_eq:"LeftRule_result (BRenameL what repl) j (SG ! i) = 
+    Some [(replaceI \<Gamma> j (FBrename what repl (nth \<Gamma> j)),\<Delta>)]"
+    apply(rule brenameR_simp)
+    subgoal using  SG_dec by (metis snd_conv) 
+    using SG_dec  apply(cases "SG ! i",auto  simp add: FRAwhat FRAp fsafewhat fvars eq)
+            apply(rule Gi)
+    subgoal using neq by auto
+          defer 
+          apply(rule  FRAp)
+         apply(rule fsafewhat)
+    subgoal using fvars by auto
+    subgoal using fvars by auto
+    subgoal using fvars by auto
+    using FRAwhat FRAp fsafewhat fvars FRArepl FRAprepl fsaferepl fvarsrepl by auto
+  have rres:"rres = [(replaceI \<Gamma> j (FBrename what repl (nth \<Gamma> j)),\<Delta>)]"
+    using res_eq SG_dec brenameR_simp some  i j L by auto
+  have \<Gamma>:"(fst (SG ! i)) = \<Gamma>" using SG_dec by (cases "SG ! i", auto)
+  have \<Delta>:"(snd (SG ! i)) = \<Delta>" using SG_dec by (cases "SG ! i", auto)
+  have jG:"j < length \<Gamma>" using \<Gamma> SG_dec j by auto
+  have big_sound:"sound ([(replaceI \<Gamma> j (FBrename what repl (nth \<Gamma> j)),\<Delta>)], (\<Gamma>,\<Delta>))"
+    apply(rule soundI')
+    apply(rule seq_semI')
+  proof -
+    fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    assume good_interp:"is_interp I"
+    assume ante:" \<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
+    assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> 
+    i < length [(replaceI \<Gamma> j (FBrename what repl (nth \<Gamma> j)),\<Delta>)] \<Longrightarrow> 
+          \<nu> \<in> seq_sem I ([(replaceI \<Gamma> j (FBrename what repl (nth \<Gamma> j)),\<Delta>)] ! i))"
+    have duh:"\<And>S T x. x \<in> S \<Longrightarrow> S = T \<Longrightarrow> x \<in> T" by auto
+    from sgs have sg:"\<nu> \<in> seq_sem I (replaceI \<Gamma> j (FBrename what repl (nth \<Gamma> j)),\<Delta>)" by auto
+    have sg1:"\<nu> \<in> seq_sem I ((FBrename what repl (nth \<Gamma> j)) # closeI \<Gamma> j, \<Delta>)"    
+    proof(rule seq_semI')
+      assume ante:"\<nu> \<in> fml_sem I (foldr (&&) ((FBrename what repl (nth \<Gamma> j)) # closeI \<Gamma> j) TT)"
+      then have ante1:"\<nu> \<in> fml_sem I (foldr (&&) (replaceI \<Gamma> j (FBrename what repl (\<Gamma> ! j))) TT)" 
+        using replaceI_closeI_conj_conv[of \<nu> I "(FBrename what repl (nth \<Gamma> j))" \<Gamma> j] jG
+        by auto
+      then have succ1:"\<nu> \<in> fml_sem I (foldr (||) ( \<Delta> ) FF)"
+        using seq_MP[OF sg ante1]  by auto
+      then show "\<nu> \<in> fml_sem I (foldr (||) \<Delta> FF)"  by auto
+    qed
+    have sgN:"\<nu> \<in> seq_sem I (\<Gamma>, \<Delta>)"    
+    proof(rule seq_semI')
+      assume ante:"\<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
+      then have con_sem:"\<nu> \<in> fml_sem I (foldr (&&) (nth \<Gamma> j # closeI  \<Gamma> j) TT)"
+        using closeI_ident_conj[OF jG refl,of I] by auto
+      then have canSem:"\<nu> \<in> fml_sem I (Forall what p)"
+        using eq \<Gamma> SG_dec by auto
+      have  moreEq:"(nth \<Gamma> j) = Forall what p"
+        using eq SG_dec \<Gamma> by auto
+      have renSem:"\<nu> \<in> fml_sem I (Forall repl (FUrename what repl p))"
+        apply(rule BRename_forall_local_sound_neq[OF  FRAwhat  FRAp fsafewhat]) 
+           apply(rule canSem) 
+          apply(rule fvars) 
+         apply(rule good_interp)
+        by(rule neq)
+      then have stuff:"\<nu> \<in> fml_sem I (FBrename what repl (Forall what p))"
+        unfolding Forall_def by auto
+      then have brenameSem:"\<nu> \<in> fml_sem I (FBrename what repl (nth \<Gamma> j))"
+        using moreEq by auto
+      then have ante1:"\<nu> \<in> fml_sem I (foldr (&&) (FBrename what repl (\<Gamma> ! j) # closeI \<Gamma> j) TT)"
+        using  ante closeI_ident_conj[OF jG, of "\<Gamma> ! j", of I, OF refl]
+        by auto
+      then have succ1:"\<nu> \<in> fml_sem I (foldr (||) ( \<Delta> ) FF)"
+        using seq_MP[OF sg1 ante1] by auto
+      then show "\<nu> \<in> fml_sem I (foldr (||) \<Delta> FF)"  by auto
+    qed
+    show " \<nu> \<in> fml_sem I (foldr (||) \<Delta> FF)"
+      apply(rule seq_MP[OF sgN])
+      using   ante eq \<Gamma>  by auto
+  qed
+    then show "sound (rres, SG ! i)"
+      using some SG_dec rres by auto
+  qed
+
+  have box_case:"(\<exists> t p.(fst (SG ! i) ! j) =  ([[what := t]]p)) \<Longrightarrow> ?thesis"
+  proof -
+    assume "(\<exists> t p.(fst (SG ! i) ! j) =  ([[what := t]]p))"
+    then obtain t p where eq:"(fst (SG ! i) ! j) = ([[what := t]]p)" by(auto)
+          have admits:
+             "TRadmit t \<and>  FRadmit ([[what := t]]p) \<and> FRadmit p \<and> fsafe ([[what := t]]p) \<and>
+                 {Inl repl, Inr repl, Inr what} \<inter> FVF ([[what := t]]p) = {} \<and>
+FRadmit ([[repl := t]]FUrename what  repl p) \<and>
+FRadmit (FUrename what repl p) \<and>
+fsafe ([[repl := t]]FUrename what repl p) \<and>
+{Inl what, Inr what, Inr repl} \<inter> FVF ([[repl := t]]FUrename what repl p) = {}"
+            using some i L  apply(cases "SG ! i", auto simp add: L Equiv_def Implies_def Or_def some i)apply(cases "what = repl",auto)
+            subgoal for a b
+              apply(cases "a ! j",auto)
+              subgoal for x3
+                apply(cases x3,auto) subgoal for x61 x62 apply(cases x62,auto) subgoal for x3a using eq by(auto simp add: Box_def eq) done 
+                subgoal for x61 x62 apply(cases x62,auto) subgoal for x3a using eq by(auto simp add: Box_def eq)
+              subgoal for x21 x22 by(cases x61,auto)
+              subgoal for x3a using eq apply(auto simp add: Box_def eq)by(cases "TRadmit t \<and>
+        FRadmit p \<and>
+        dsafe t \<and> fsafe p \<and> Inl repl \<notin> FVT t \<and> Inl repl \<notin> FVF p \<and> Inr repl \<notin> FVT t \<and> Inr repl \<notin> FVF p \<and> Inr what \<notin> FVT t \<and> Inr what \<notin> FVF p",auto)
+              subgoal for x21 x22 by(cases x61,auto)
+              subgoal for x21 x22 by(cases x61,auto)
+              subgoal for x21 x22 by(cases x61,auto)
+              subgoal for x21 x22 by(cases x61,auto)
+              done done done
+
+                subgoal for a b
+                  apply(cases "what = repl",auto)
+              apply(cases "a ! j",auto)
+              subgoal for x3
+                apply(cases x3,auto) subgoal for x61 x62 apply(cases x62)
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21  using eq apply(cases x62,auto) 
+                    by(cases "what = x61 \<and>
+        FRadmit (Forall x61 x21) \<and>
+        FRadmit x21 \<and> fsafe (Forall x61 x21) \<and> Inl repl \<notin> FVF (Forall x61 x21) \<and> Inr repl \<notin> FVF (Forall x61 x21) \<and> Inr what \<notin> FVF (Forall x61 x21)",auto simp add: Box_def)
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  done
+                subgoal for a b
+                 apply(cases "what = repl",auto)
+              apply(cases "a",auto) apply(cases "b",auto simp add: Box_def)
+                  subgoal for x21 x22 x3
+                    apply(cases "what = x21 \<and> TRadmit x22 \<and> FRadmit x3 \<and> dsafe x22 \<and> fsafe x3 \<and> Inl repl \<notin> FVT x22 \<and> (Inl repl \<in> FVF x3 \<longrightarrow> repl = x21) \<and> Inr repl \<notin> FVT x22 \<and> Inr repl \<notin> FVF x3 \<and> Inr what \<notin> FVT x22 \<and> Inr what \<notin> FVF x3")
+                    subgoal  using eq by(auto simp add: Box_def)
+                    subgoal  using eq by(auto simp add: Box_def) done
+
+                  subgoal for x21 x22 x3
+                    apply(cases "what = x21 \<and> TRadmit x22 \<and>  FRadmit x3 \<and> dsafe x22 \<and> fsafe x3 \<and> Inl repl \<notin> FVT x22 \<and> (Inl repl \<in> FVF x3 \<longrightarrow> repl = x21) \<and> Inr repl \<notin> FVT x22 \<and> Inr repl \<notin> FVF x3 \<and> Inr what \<notin> FVT x22 \<and> Inr what \<notin> FVF x3")
+                    subgoal  using eq by(auto simp add: Box_def)
+                    subgoal  using eq by(auto simp add: Box_def) done
+                  done done done
+                subgoal for a b
+                  apply(cases "what = repl",auto, cases "a ! j",auto) subgoal for x3 apply(cases x3,auto) 
+                    subgoal for x51 x52 apply(cases x52,auto) subgoal for x3a
+                        using eq by(cases "what = x51 \<and> FRadmit (Forall x51 x3a) \<and> FRadmit x3a \<and> fsafe (Forall x51 x3a) \<and> Inl repl \<notin> FVF (Forall x51 x3a) \<and> Inr repl \<notin> FVF (Forall x51 x3a) \<and> Inr what \<notin> FVF (Forall x51 x3a)",auto simp add: Box_def)
+                      done
+                    subgoal for x51 x52 apply(cases x51,auto,cases x52,auto) subgoal for x51 x52 x3a    
+                      using eq by(cases "what = x51 \<and>
+        TRadmit x52 \<and>
+        ((\<exists>\<theta>1 \<theta>2. ([[x51 := x52]]x3a) = Geq \<theta>1 \<theta>2 \<and> TRadmit \<theta>1 \<and> TRadmit \<theta>2) \<or>
+         (\<exists>args. (\<exists>p. ([[x51 := x52]]x3a) = $\<phi> p args) \<and> (\<forall>i. TRadmit (args i))) \<or>
+         (\<exists>\<phi>. ([[x51 := x52]]x3a) = ! \<phi> \<and> FRadmit \<phi>) \<or>
+         (\<exists>\<phi> \<psi>. ([[x51 := x52]]x3a) = (\<phi> && \<psi>) \<and> FRadmit \<phi> \<and> FRadmit \<psi>) \<or>
+         (\<exists>\<phi>. (\<exists>x. ([[x51 := x52]]x3a) = Exists x \<phi>) \<and> FRadmit \<phi>) \<or> (\<exists>\<alpha> \<phi>. ([[x51 := x52]]x3a) = (\<langle> \<alpha> \<rangle> \<phi>) \<and> PRadmit \<alpha> \<and> FRadmit \<phi>)) \<and>
+        FRadmit x3a \<and>
+        fsafe ([[x51 := x52]]x3a) \<and> Inl repl \<notin> FVF ([[x51 := x52]]x3a) \<and> Inr repl \<notin> FVF ([[x51 := x52]]x3a) \<and> Inr what \<notin> FVF ([[x51 := x52]]x3a)",auto simp add: Box_def)
+                    done done done
+                subgoal for a b
+                 apply(cases "what = repl",auto) apply(cases "a ! j",auto) subgoal for x3 apply(cases x3,auto) 
+                    subgoal for x51 x52 apply(cases x52,auto) subgoal for x3a
+                        using eq by(cases "what = x51 \<and> FRadmit (Forall x51 x3a) \<and> FRadmit x3a \<and> fsafe (Forall x51 x3a) \<and> Inl repl \<notin> FVF (Forall x51 x3a) \<and> Inr repl \<notin> FVF (Forall x51 x3a) \<and> Inr what \<notin> FVF (Forall x51 x3a)",auto simp add: Box_def)
+                      done
+                    subgoal for x51 x52 apply(cases x51,auto,cases x52,auto) subgoal for x51 x52 x3a    
+                      using eq by(cases "what = x51 \<and>
+        TRadmit x52 \<and>
+        ((\<exists>\<theta>1 \<theta>2. ([[x51 := x52]]x3a) = Geq \<theta>1 \<theta>2 \<and> TRadmit \<theta>1 \<and> TRadmit \<theta>2) \<or>
+         (\<exists>args. (\<exists>p. ([[x51 := x52]]x3a) = $\<phi> p args) \<and> (\<forall>i. TRadmit (args i))) \<or>
+         (\<exists>\<phi>. ([[x51 := x52]]x3a) = ! \<phi> \<and> FRadmit \<phi>) \<or>
+         (\<exists>\<phi> \<psi>. ([[x51 := x52]]x3a) = (\<phi> && \<psi>) \<and> FRadmit \<phi> \<and> FRadmit \<psi>) \<or>
+         (\<exists>\<phi>. (\<exists>x. ([[x51 := x52]]x3a) = Exists x \<phi>) \<and> FRadmit \<phi>) \<or> (\<exists>\<alpha> \<phi>. ([[x51 := x52]]x3a) = (\<langle> \<alpha> \<rangle> \<phi>) \<and> PRadmit \<alpha> \<and> FRadmit \<phi>)) \<and>
+        FRadmit x3a \<and>
+        fsafe ([[x51 := x52]]x3a) \<and> Inl repl \<notin> FVF ([[x51 := x52]]x3a) \<and> Inr repl \<notin> FVF ([[x51 := x52]]x3a) \<and> Inr what \<notin> FVF ([[x51 := x52]]x3a)",auto simp add: Box_def)
+                    done done done
+                subgoal for a b
+                 apply(cases "what = repl",auto) apply(cases "a ! j",auto) subgoal for x3 apply(cases x3,auto) 
+                    subgoal for x51 x52 apply(cases x52,auto) subgoal for  x3a    
+                      using eq apply(auto simp add: Box_def) 
+                      done done 
+                    subgoal for x51 x52 apply(cases x51,auto) subgoal for  x3a    
+                      using eq apply(auto simp add: Box_def) 
+                      done done
+                    done done
+                subgoal for a b
+                 apply(cases "what = repl",auto) apply(cases "a ! j",auto) subgoal for x3 apply(cases x3,auto) 
+                    subgoal for x51 x52 apply(cases x52,auto) subgoal for  x3a    
+                      using eq apply(auto simp add: Box_def) 
+                      done done 
+                    subgoal for x51 x52 apply(cases x51,auto) subgoal for  x3a    
+                      using eq apply(auto simp add: Box_def) 
+                      done done
+                    done done
+                subgoal for a b
+                 apply(cases "what = repl",auto) apply(cases "a ! j",auto) subgoal for x3 apply(cases x3,auto) 
+                    subgoal for x51 x52 apply(cases x52,auto) subgoal for  x3a    
+                      using eq apply(auto simp add: Box_def) 
+                      done done 
+                    subgoal for x51 x52 apply(cases x51,auto) subgoal for  x3a    
+                      using eq apply(auto simp add: Box_def) 
+                      done done
+                    done done 
+                      apply(cases "what = repl",auto)
+            subgoal for a b
+              apply(cases "a ! j",auto)
+              subgoal for x3
+                apply(cases x3,auto) subgoal for x61 x62 apply(cases x62,auto) subgoal for x3a using eq by(auto simp add: Box_def eq) done 
+                subgoal for x61 x62 apply(cases x62,auto) subgoal for x3a using eq by(auto simp add: Box_def eq)
+              subgoal for x21 x22 by(cases x61,auto)
+              subgoal for x3a using eq by(auto simp add: Box_def eq)
+              subgoal for x41 x42
+                apply(cases x61,auto)
+                done
+              subgoal for x51 x52 by(cases x61,auto)
+              subgoal for x61a x62a apply(cases x61a,auto) subgoal for x1 by(cases x61,auto)
+              subgoal for x21 x22 by(cases x61,auto)
+              subgoal for x3a apply(cases x61,auto) done
+              subgoal for x21 x22 by(cases x61,auto)
+              subgoal for x21  by(cases x61,auto)
+              subgoal for x21 x22 by(cases x61,auto)
+              subgoal for x21 x22 by(cases x61,auto)
+              subgoal for x21 x22 by(cases x61,auto)
+              subgoal for x21 by(cases x61,auto)
+
+              done 
+
+            subgoal for x71 x72 apply(cases x61,auto) done done done done
+                subgoal for a b
+                  apply(cases "what = repl",auto)
+              apply(cases "a ! j",auto)
+              subgoal for x3
+                apply(cases x3,auto) subgoal for x61 x62 apply(cases x62)
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21  using eq apply(cases x62,auto) 
+                    by(cases "what = x61 \<and>
+        FRadmit (Forall x61 x21) \<and>
+        FRadmit x21 \<and> fsafe (Forall x61 x21) \<and> Inl repl \<notin> FVF (Forall x61 x21) \<and> Inr repl \<notin> FVF (Forall x61 x21) \<and> Inr what \<notin> FVF (Forall x61 x21)",auto simp add: Box_def)
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  subgoal for x21 x22 using eq apply(cases x62,auto) done
+                  done
+                subgoal for a b
+                 apply(cases "what = repl",auto)
+              apply(cases "a",auto) apply(cases "b",auto simp add: Box_def)
+                  subgoal for x21 x22 x3
+                    apply(cases "what = x21 \<and>
+        TRadmit x22 \<and>
+        FRadmit x3 \<and>
+        dsafe x22 \<and>
+        fsafe x3 \<and>
+        Inl repl \<notin> FVT x22 \<and>
+        (Inl repl \<in> FVF x3 \<longrightarrow> repl = x21) \<and>
+        Inr repl \<notin> FVT x22 \<and>
+        Inr repl \<notin> FVF x3 \<and>
+        Inr what \<notin> FVT x22 \<and>
+        Inr what \<notin> FVF x3 \<and>
+        TRadmit x22 \<and>
+        FRadmit (FUrename x21 repl x3) \<and>
+        dsafe x22 \<and>
+        fsafe (FUrename x21 repl x3) \<and>
+        Inl x21 \<notin> FVT x22 \<and>
+        (Inl x21 \<in> FVF (FUrename x21 repl x3) \<longrightarrow> x21 = repl) \<and>
+        Inr x21 \<notin> FVT x22 \<and> Inr x21 \<notin> FVF (FUrename x21 repl x3) \<and> Inr repl \<notin> FVT x22 \<and> Inr repl \<notin> FVF (FUrename x21 repl x3)")
+                    subgoal  using eq by(auto simp add: Box_def)
+                    subgoal  using eq by(auto simp add: Box_def) done done done done
+                subgoal for a b
+                  apply(cases "what = repl",auto, cases "a ! j",auto) subgoal for x3 apply(cases x3,auto) 
+                    subgoal for x51 x52 apply(cases x52,auto) subgoal for x3a
+                        using eq by(cases "what = x51 \<and> FRadmit (Forall x51 x3a) \<and> FRadmit x3a \<and> fsafe (Forall x51 x3a) \<and> Inl repl \<notin> FVF (Forall x51 x3a) \<and> Inr repl \<notin> FVF (Forall x51 x3a) \<and> Inr what \<notin> FVF (Forall x51 x3a)",auto simp add: Box_def)
+                      done
+                    subgoal for x51 x52 apply(cases x51,auto,cases x52,auto) subgoal for x51 x52 x3a    
+                      using eq by(cases "what = x51 \<and>
+        TRadmit x52 \<and>
+        ((\<exists>\<theta>1 \<theta>2. ([[x51 := x52]]x3a) = Geq \<theta>1 \<theta>2 \<and> TRadmit \<theta>1 \<and> TRadmit \<theta>2) \<or>
+         (\<exists>args. (\<exists>p. ([[x51 := x52]]x3a) = $\<phi> p args) \<and> (\<forall>i. TRadmit (args i))) \<or>
+         (\<exists>\<phi>. ([[x51 := x52]]x3a) = ! \<phi> \<and> FRadmit \<phi>) \<or>
+         (\<exists>\<phi> \<psi>. ([[x51 := x52]]x3a) = (\<phi> && \<psi>) \<and> FRadmit \<phi> \<and> FRadmit \<psi>) \<or>
+         (\<exists>\<phi>. (\<exists>x. ([[x51 := x52]]x3a) = Exists x \<phi>) \<and> FRadmit \<phi>) \<or>
+         (\<exists>\<alpha> \<phi>. ([[x51 := x52]]x3a) = (\<langle> \<alpha> \<rangle> \<phi>) \<and> PRadmit \<alpha> \<and> FRadmit \<phi>)) \<and>
+        FRadmit x3a \<and>
+        fsafe ([[x51 := x52]]x3a) \<and>
+        Inl repl \<notin> FVF ([[x51 := x52]]x3a) \<and>
+        Inr repl \<notin> FVF ([[x51 := x52]]x3a) \<and>
+        Inr what \<notin> FVF ([[x51 := x52]]x3a) \<and>
+        ((\<exists>\<theta>1 \<theta>2. ([[repl := x52]]FUrename x51 repl x3a) = Geq \<theta>1 \<theta>2 \<and> TRadmit \<theta>1 \<and> TRadmit \<theta>2) \<or>
+         (\<exists>args. (\<exists>p. ([[repl := x52]]FUrename x51 repl x3a) = $\<phi> p args) \<and> (\<forall>i. TRadmit (args i))) \<or>
+         (\<exists>\<phi>. ([[repl := x52]]FUrename x51 repl x3a) = ! \<phi> \<and> FRadmit \<phi>) \<or>
+         (\<exists>\<phi> \<psi>. ([[repl := x52]]FUrename x51 repl x3a) = (\<phi> && \<psi>) \<and> FRadmit \<phi> \<and> FRadmit \<psi>) \<or>
+         (\<exists>\<phi>. (\<exists>x. ([[repl := x52]]FUrename x51 repl x3a) = Exists x \<phi>) \<and> FRadmit \<phi>) \<or>
+         (\<exists>\<alpha> \<phi>. ([[repl := x52]]FUrename x51 repl x3a) = (\<langle> \<alpha> \<rangle> \<phi>) \<and> PRadmit \<alpha> \<and> FRadmit \<phi>)) \<and>
+        FRadmit (FUrename x51 repl x3a) \<and>
+        fsafe ([[repl := x52]]FUrename x51 repl x3a) \<and>
+        Inl x51 \<notin> FVF ([[repl := x52]]FUrename x51 repl x3a) \<and>
+        Inr x51 \<notin> FVF ([[repl := x52]]FUrename x51 repl x3a) \<and> Inr repl \<notin> FVF ([[repl := x52]]FUrename x51 repl x3a)",auto simp add: Box_def)
+                    done done done
+                subgoal for a b
+                 apply(cases "what = repl",auto) apply(cases "a ! j",auto) subgoal for x3 apply(cases x3,auto) 
+                    subgoal for x51 x52 apply(cases x52,auto) subgoal for x3a
+                        using eq by(cases "what = x51 \<and> FRadmit (Forall x51 x3a) \<and> FRadmit x3a \<and> fsafe (Forall x51 x3a) \<and> Inl repl \<notin> FVF (Forall x51 x3a) \<and> Inr repl \<notin> FVF (Forall x51 x3a) \<and> Inr what \<notin> FVF (Forall x51 x3a)",auto simp add: Box_def)
+                      done
+                    subgoal for x51 x52 apply(cases x51,auto,cases x52,auto) subgoal for x51 x52 x3a    
+                      using eq by(cases "what = x51 \<and>
+        TRadmit x52 \<and>
+        ((\<exists>\<theta>1 \<theta>2. ([[x51 := x52]]x3a) = Geq \<theta>1 \<theta>2 \<and> TRadmit \<theta>1 \<and> TRadmit \<theta>2) \<or>
+         (\<exists>args. (\<exists>p. ([[x51 := x52]]x3a) = $\<phi> p args) \<and> (\<forall>i. TRadmit (args i))) \<or>
+         (\<exists>\<phi>. ([[x51 := x52]]x3a) = ! \<phi> \<and> FRadmit \<phi>) \<or>
+         (\<exists>\<phi> \<psi>. ([[x51 := x52]]x3a) = (\<phi> && \<psi>) \<and> FRadmit \<phi> \<and> FRadmit \<psi>) \<or>
+         (\<exists>\<phi>. (\<exists>x. ([[x51 := x52]]x3a) = Exists x \<phi>) \<and> FRadmit \<phi>) \<or> (\<exists>\<alpha> \<phi>. ([[x51 := x52]]x3a) = (\<langle> \<alpha> \<rangle> \<phi>) \<and> PRadmit \<alpha> \<and> FRadmit \<phi>)) \<and>
+        FRadmit x3a \<and>
+        fsafe ([[x51 := x52]]x3a) \<and> Inl repl \<notin> FVF ([[x51 := x52]]x3a) \<and> Inr repl \<notin> FVF ([[x51 := x52]]x3a) \<and> Inr what \<notin> FVF ([[x51 := x52]]x3a)",auto simp add: Box_def)
+                    done done done
+                subgoal for a b
+                 apply(cases "what = repl",auto) apply(cases "a ! j",auto) subgoal for x3 apply(cases x3,auto) 
+                    subgoal for x51 x52 apply(cases x52,auto) subgoal for  x3a    
+                      using eq apply(auto simp add: Box_def) 
+                      done done 
+                    subgoal for x51 x52 apply(cases x51,auto) subgoal for  x3a    
+                      using eq apply(auto simp add: Box_def) 
+                      done done
+                    done done
+                subgoal for a b
+                 apply(cases "what = repl",auto) apply(cases "a ! j",auto) subgoal for x3 apply(cases x3,auto) 
+                    subgoal for x51 x52 apply(cases x52,auto) subgoal for  x3a    
+                      using eq apply(auto simp add: Box_def) 
+                      done done 
+                    subgoal for x51 x52 apply(cases x51,auto) subgoal for  x3a    
+                      using eq apply(auto simp add: Box_def) 
+                      done done
+                    done done done
 then have TRA:"TRadmit t" 
      and  FRAwhat:"FRadmit ([[what := t]]p)" 
      and  FRAp:"FRadmit p" 
@@ -1765,76 +2398,95 @@ then have TRA:"TRadmit t"
   by auto
   have neq:"what \<noteq> repl"
     using some i L apply(auto simp add: some i L) by(cases "SG ! i",auto simp add: L Equiv_def Implies_def Or_def)
+  from FRAwhat   have FRArepl:"FRadmit ([[repl := t]]FUrename what  repl p)"  using admits by auto
+  from  FRAp     have FRAprepl:"FRadmit (FUrename what repl p)" using admits by auto
+  from fsafewhat have fsaferepl:"fsafe ([[repl := t]]FUrename what repl p)" using admits by auto
+  from fvars     have fvarsrepl:"{Inl what, Inr what, Inr repl} \<inter> FVF ([[repl := t]]FUrename what repl p) = {}" 
+    using admits by auto
   obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)"
     by (metis seq2fml.cases) 
-  have brenameL_simp:"\<And>\<Gamma> \<Delta> \<theta> p SS. 
-    (\<Gamma>,\<Delta>) = SS \<Longrightarrow> 
-    \<Gamma> ! j = ([[Assign what \<theta>]]p) \<Longrightarrow>
+  have brenameR_simp:"\<And>\<Gamma> \<Delta> SS. 
+    (\<Gamma>,\<Delta>) = SS \<Longrightarrow>  (* \<theta> p *)
+    \<Gamma> ! j = ([[Assign what t]]p) \<Longrightarrow>
     what \<noteq> repl \<Longrightarrow>
-  (TRadmit \<theta> \<and>  FRadmit([[Assign what \<theta>]]p) \<and> FRadmit p \<and> fsafe ([[Assign what \<theta>]]p) \<and>
-     {Inl repl, Inr repl, Inr what} \<inter> FVF ([[Assign what \<theta>]]p) = {}) \<Longrightarrow>
+  (TRadmit t \<and>  FRadmit([[Assign what t]]p) \<and> FRadmit p \<and> fsafe ([[Assign what t]]p) \<and>
+     {Inl repl, Inr repl, Inr what} \<inter> FVF ([[Assign what t]]p) = {}
+\<and> FRadmit ([[repl := t]]FUrename what  repl p)
+\<and> FRadmit (FUrename what repl p)
+\<and> fsafe ([[repl := t]]FUrename what repl p)
+\<and> {Inl what, Inr what, Inr repl} \<inter> FVF ([[repl := t]]FUrename what repl p) = {}
+) \<Longrightarrow>
     LeftRule_result (BRenameL what repl) j SS =
-    Some [(replaceI \<Gamma> j (FBrename what repl (nth \<Gamma> j)), \<Delta>)]"
-    subgoal for AI SI p q SS apply(cases SS) 
+    Some [(replaceI \<Gamma> j (FBrename what repl (nth \<Gamma> j)),\<Delta>)]"
+    subgoal for AI SI (*p q*) SS apply(cases SS) 
       by (auto simp add: Equiv_def Implies_def Or_def Box_def)
     done
   have Gi:"\<Gamma> ! j = ([[what := t]]p)" using SG_dec eq by (cases "SG ! i",auto)
   have res_eq:"LeftRule_result (BRenameL what repl) j (SG ! i) = 
-    Some [(replaceI \<Gamma> j (FBrename what repl (nth \<Gamma> j)), \<Delta>)]"
-    apply(rule brenameL_simp)
+    Some [(replaceI \<Gamma> j (FBrename what repl (nth \<Gamma> j)),\<Delta>)]"
+    apply(rule brenameR_simp)
     subgoal using  SG_dec by (metis snd_conv) 
-(* TRA FRAwhat FRAp fsafewhat fvars *)
     using SG_dec  apply(cases "SG ! i",auto  simp add: TRA FRAwhat FRAp fsafewhat fvars eq)
             apply(rule Gi)
     subgoal using neq by auto
           defer defer
-          apply(rule  FRAp)
-         apply(rule fsafewhat)
-    subgoal using fvars by auto
-    subgoal using fvars by auto
-    subgoal using fvars by auto
-     apply(rule TRA)
+          apply(rule  FRAprepl)
+         apply(rule fsaferepl)
+    subgoal using fvarsrepl by auto
+    subgoal using fvarsrepl by auto
+    subgoal using fvarsrepl by auto
     apply(erule allE[where x=t])
     apply(erule allE[where x="Diamond (Assign what  t) (Not p)"])
     apply(erule allE)
     apply(erule allE[where x=p])
     apply(erule allE[where x="Assign what t"])
     apply(auto simp add: Box_def)
-    using TRA FRAwhat FRAp fsafewhat fvars by auto
-  have rres:"rres = [(replaceI \<Gamma> j (FBrename what repl (nth \<Gamma> j)), \<Delta>)]" 
-    using res_eq SG_dec brenameL_simp some  i j L by auto
+    using TRA FRAwhat FRAp fsafewhat fvars FRArepl FRAprepl fsaferepl fsaferepl
+    by (auto simp add: TRA FRAwhat FRAp fsafewhat fvars FRArepl FRAprepl fsaferepl fvarsrepl)
+  have rres:"rres = [( replaceI \<Gamma> j (FBrename what repl (nth \<Gamma> j)),\<Delta>)]" 
+    using res_eq SG_dec brenameR_simp some  i j L by auto
   have \<Gamma>:"(fst (SG ! i)) = \<Gamma>" using SG_dec by (cases "SG ! i", auto)
   have \<Delta>:"(snd (SG ! i)) = \<Delta>" using SG_dec by (cases "SG ! i", auto)
   have jD:"j < length \<Gamma>" using \<Gamma> SG_dec j by auto
-  have big_sound:"sound ([(replaceI \<Gamma> j (FBrename what repl (nth \<Gamma> j)), \<Delta>)], (\<Gamma>,\<Delta>))"
+  have big_sound:"sound ([(replaceI \<Gamma> j (FBrename what repl (nth \<Gamma> j)),\<Delta>)], (\<Gamma>,\<Delta>))"
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
     fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
     assume good_interp:"is_interp I"
     assume ante:" \<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
-    then have ante1:" \<nu> \<in> fml_sem I (foldr (&&) (nth \<Gamma> j #(closeI \<Gamma> j)) TT)" 
-      using closeI_ident_conj[OF j, of "nth \<Gamma> j" ] \<Gamma> i j  by auto 
-    then have ante2:" \<nu> \<in> fml_sem I (foldr (&&) ((closeI \<Gamma> j)) TT)" 
-      using closeI_ident_conj[OF j, of "nth \<Gamma> j" ] \<Gamma> i j  by auto 
-    then have ante3:" \<nu> \<in> fml_sem I (nth \<Gamma> j)" 
-      using ante1 eq \<Gamma> by auto 
-    then have ante4:" \<nu> \<in> fml_sem I ([[what := t]]p)" 
-      using ante1 eq \<Gamma> by auto 
-    then have ante5:"\<nu> \<in> fml_sem I (FBrename what repl ([[what := t]]p))" 
-      using BRename_local_sound_neq[OF TRA FRAwhat FRAp fsafewhat ante4 fvars good_interp neq] by (auto simp add: Box_def)
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> 
-    i < length [(replaceI \<Gamma> j (FBrename what repl (nth \<Gamma> j)), \<Delta>)] \<Longrightarrow> 
-          \<nu> \<in> seq_sem I ([(replaceI \<Gamma> j (FBrename what repl (nth \<Gamma> j)), \<Delta>)] ! i))"
+    i < length [(replaceI \<Gamma> j (FBrename what repl (\<Gamma> ! j)),\<Delta>)] \<Longrightarrow> 
+          \<nu> \<in> seq_sem I ([(replaceI \<Gamma> j (FBrename what repl (\<Gamma> ! j)),\<Delta>)] ! i))"
     have duh:"\<And>S T x. x \<in> S \<Longrightarrow> S = T \<Longrightarrow> x \<in> T" by auto
-    from sgs have sg:"\<nu> \<in> seq_sem I (replaceI \<Gamma> j (FBrename what repl (nth \<Gamma> j)), \<Delta>)" by auto
-    then have sg1:"\<nu> \<in> seq_sem I ((FBrename what repl (nth \<Gamma> j)) # closeI \<Gamma> j , \<Delta>)"
-      using replaceI_closeI_conj_conv[of \<nu> I "(FBrename what repl (nth \<Gamma> j))" \<Gamma> j] jD by(auto)
+    from sgs have sg:"\<nu> \<in> seq_sem I (replaceI \<Gamma> j (FBrename what repl (\<Gamma> ! j)),\<Delta>)" by auto
+    then have sg1:"\<nu> \<in> seq_sem I ((FBrename what repl (nth \<Gamma> j)) # closeI \<Gamma> j ,\<Delta>)"
+      using replaceI_closeI_conj_conv[of \<nu> I   "(FBrename what repl (nth \<Gamma> j))" \<Gamma> j] jD 
+      by auto
+    have sgN:"\<nu> \<in> seq_sem I (\<Gamma>, \<Delta>)"    
+    proof(rule seq_semI')
+      assume ante:"\<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
+      then have ante1:"\<nu> \<in> fml_sem I (foldr (&&) (nth \<Gamma> j # closeI  \<Gamma> j) TT)"
+        using closeI_ident_conj[OF jD refl,of I] by auto
+      then have fSem:"\<nu> \<in> fml_sem I (nth \<Gamma> j)" by auto
+      have someEq:"(nth \<Gamma> j) = ([[what := t]]p)" using eq \<Delta> SG_dec by (auto,cases "SG ! i",auto)
+      from fSem have fSem:"\<nu> \<in> fml_sem I ([[what := t]]p)" 
+        using someEq by auto
+      then have renSem:"\<nu> \<in> fml_sem I (FBrename what repl ([[what := t]]p))"
+        using BRename_local_sound_neq[OF TRA FRAwhat  FRAp fsafewhat fSem fvars good_interp neq]  by (auto simp add: Box_def)
+      then have rIsem:"\<nu> \<in> fml_sem I (FBrename what repl (nth \<Gamma> j))" using someEq by auto
+      then have ante1:"\<nu> \<in> fml_sem I (foldr (&&) ((FBrename what repl (nth \<Gamma> j)) # closeI \<Gamma> j) TT)"
+        using ante1   by auto
+      then show "\<nu> \<in> fml_sem I (foldr (||) \<Delta> FF)" 
+        using seq_MP[OF sg1]  by auto
+    qed
     show " \<nu> \<in> fml_sem I (foldr (||) \<Delta> FF)"
-      apply(rule seq_MP[OF sg1])
-      using   ante2 eq \<Gamma> ante5 by auto
+      apply(rule seq_MP[OF sgN])
+      using   ante eq \<Gamma>  by auto
   qed
   then show ?thesis using some SG_dec rres by auto
+qed
+  show " sound (rres, SG ! i)" using box_case all_case exist some   by(auto) 
 next 
   case OrL  then have L:"L = OrL" by auto
   obtain p q where eq:"fst (SG ! i) ! j = (p || q)"
@@ -1885,127 +2537,56 @@ next
   qed
   show "sound (rres, nth SG i)" 
     using rres SG_dec big_sound by(auto)
+next
+  case FalseL then have L:"L = FalseL" by auto
+  obtain p q where eq:"nth (fst (nth SG  i)) j = FF"
+    using some L apply(cases " (*snd *)(SG ! i)(* ! j*)", auto simp add: L FF_def)
+    subgoal for a b
+      apply(cases "a ! j" ,auto)
+      subgoal for x11 x12 
+        apply(cases x11)
+               apply(cases "x11 = Const bword_zero \<and> x12 = Const (bword_one)",auto)
+        apply(cases x12)
+               apply(cases "x11 = Const bword_zero \<and> x12 = Const (bword_one)",auto)
+        subgoal for x2 x2a
+               by(cases "x11 = Const bword_zero \<and> x12 = Const (bword_one)",auto) done done done
+  obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)"
+    by (metis seq2fml.cases)
+  have \<Gamma>:"(fst (SG ! i)) = \<Gamma>" using SG_dec by (cases "SG ! i", auto)
+  have \<Delta>:"(snd (SG ! i)) = \<Delta>" using SG_dec by (cases "SG ! i", auto)
+  from \<Gamma> have jD:"j < length \<Gamma>" using SG_dec j by auto
+  have AIjeq:"\<Gamma> ! j = (FF)"
+    using SG_dec eq fst_conv
+    by metis
+  have rres:"rres = []"
+    using some L AIjeq apply(cases "SG ! i",auto)
+    subgoal for a b
+      using some L AIjeq  \<Gamma> \<Delta> eq by(cases "a ! j",auto simp add: \<Gamma> \<Delta> eq) done
+  have big_sound:"sound ([], (\<Gamma>,\<Delta>))"
+    apply(rule soundI')
+    apply(rule seq_semI')
+  proof -
+    fix I::"('sf,'sc,'sz) interp" and \<nu>
+    assume good:"is_interp I"
+    assume ante:"\<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
+    then have "\<nu> \<in> fml_sem I (foldr (&&) (FF # closeI \<Gamma> j) TT)"  
+      using closeI_ident_conj[OF jD AIjeq, of I] 
+       by auto
+    then show "\<nu> \<in> fml_sem I (foldr (||) \<Delta>  FF)"
+      using closeI_ident_disj[OF jD AIjeq, of I] by auto
+  qed
+  then show ?thesis using rres SG_dec big_sound by(auto)    
+
 qed
 
-lemma brename_dfree:"dfree \<theta> \<Longrightarrow> TRadmit \<theta> \<Longrightarrow> dfree (TUrename what repl \<theta>)"
-proof (induction  rule: dfree.induct)
-qed(auto)
-
-lemma brename_dsafe:"dsafe \<theta> \<Longrightarrow> TRadmit \<theta> \<Longrightarrow> dsafe (TUrename what repl \<theta>)"
-proof (induction rule: dsafe.induct )
-qed(auto simp add:  brename_dfree)
-
-
-lemma brename_tadmit:"TRadmit \<theta>  \<Longrightarrow> TRadmit (TUrename what repl \<theta>)"
-proof (induction \<theta>)
-  case (Var x)
-then show ?case by auto
-next
-case (Const x)
-  then show ?case by auto
-next
-case (Function x1a x2a)
-  then show ?case by auto
-next
-  case (Functional x)
-  then show ?case by auto
-next
-case (Plus \<theta>1 \<theta>2)
-then show ?case by auto
-next
-  case (Times \<theta>1 \<theta>2)
-  then show ?case by auto
-next
-  case (Max \<theta>1 \<theta>2)
-  then show ?case by auto
-next
-  case (DiffVar x)
-  then show ?case by auto
-next
-  case (Differential \<theta>)  
-  then show ?case using brename_dfree by(auto simp add: brename_dfree)
-qed (auto)
-
-lemma brename_oadmit:"ORadmit ODE  \<Longrightarrow> ORadmit (OUrename what repl ODE)"
-proof(induction ODE)
-  case (OVar x)
-  then show ?case by(auto)
-next
-  case (OSing x1a x2)
-  then show ?case by(auto simp add: brename_tadmit brename_dfree)
-next
-  case (OProd ODE1 ODE2)
-  then show ?case by(auto)
-qed
-
-lemma brename_fadmit:"FRadmit \<phi>  \<Longrightarrow> FRadmit (FUrename what repl \<phi>)"
- and  brename_padmit:"PRadmit \<alpha>  \<Longrightarrow> PRadmit (PUrename what repl \<alpha>)"
-proof(induction \<phi> and \<alpha>)
-  case (Pvar x)
-  then show ?case by(auto)
-next
-  case (Assign x1 x2)
-  then show ?case by(auto simp add: brename_tadmit brename_dfree)
-next
-  case (AssignAny x1)
-  then show ?case by(auto simp add: brename_tadmit brename_dfree)
-next
-case (DiffAssign x1 x2)
-  then show ?case by(auto simp add: brename_tadmit brename_dfree)
-next
-  case (Test x)
-  then show ?case by(auto)
-next
-  case (EvolveODE x1 x2)
-  then show ?case by(auto simp add: brename_tadmit brename_dfree brename_oadmit)
-next
-  case (Choice x1 x2)
-  then show ?case by(auto)
-next
-  case (Sequence x1 x2)
-  then show ?case by(auto)
-next
-  case (Loop x)
-  then show ?case by(auto)
-next
-  case (Geq x1 x2)
-  then show ?case  by(auto simp add: brename_tadmit brename_dfree)
-next
-  case (Prop x1 x2)
-  then show ?case  by(auto simp add: brename_tadmit brename_dfree)
-next
-  case (Not x)
-  then show ?case by auto
-next
-  case (And x1 x2)
-  then show ?case by auto
-next
-  case (Exists x1 x2)
-  then show ?case by auto
-next
-  case (Diamond x1 x2)
-  then show ?case by auto
-next
-  case (InContext x1 x2)
-  then show ?case by auto
-qed
-
-lemma brenameR_fadmitwhat_lem:"FRadmit ([[what := t]]p)  \<Longrightarrow> FRadmit ([[repl := t]]FUrename what repl p)"
-  using brename_fadmit by (auto simp add: Box_def)
-lemma brenameR_fadmitP_lem:  "FRadmit p \<Longrightarrow> FRadmit (FUrename what repl p)" using brename_fadmit by auto
-
-lemma brenameR_all_admitwhat_lem:"  FRadmit (Forall what p) ==> FRadmit (Forall repl (FUrename what repl p))"
-  using brename_fadmit by (auto simp add: Forall_def)
 
 
 lemma rrule_sound: 
-(*  assumes "rrule_ok SG C i j L"*)
   assumes some:"(RightRule_result L j (nth SG i)) = Some rres"
   assumes i:"i < length SG"
   assumes j:"j < length (snd (nth SG  i))"
   assumes sound:"sound (SG,C)"
   shows "sound (rres, nth SG i)"
-(*  shows "sound (merge_seqs SG rres i, C)"*)
 proof(cases L)
 case ImplyR then have L:"L = ImplyR" by auto
   obtain p q where eq:"snd (SG ! i) ! j = (Implies p q)"
