@@ -364,8 +364,8 @@ definition PFUadmit :: "('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('
 where "PFUadmit \<sigma> \<theta> U \<longleftrightarrow> True"
 
 definition PPUadmit :: "('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b + 'd, 'c) hp \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
-where "PPUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i. FVF (\<sigma> i)) \<inter> U) = {}"
-  
+where "PPUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> {i | i. Inr(Inl(Inr i)) \<in> SIGP \<theta>}. FVF (\<sigma> i)) \<inter> U) = {}"
+
 inductive PPadmit:: "('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b + 'd, 'c) hp \<Rightarrow> bool"
 and PFadmit:: "('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b + 'd, 'c) formula \<Rightarrow> bool"
 where 

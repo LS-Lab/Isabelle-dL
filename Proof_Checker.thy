@@ -495,7 +495,9 @@ else None)
    | Not(Exists xvar (Not \<phi>)) \<Rightarrow> 
     (if
       x = xvar \<and>
-     (FRadmit(Forall xvar \<phi>) \<and> FRadmit \<phi> \<and> fsafe (Forall xvar \<phi>) \<and>
+     (FRadmit(Forall xvar \<phi>) \<and>
+      FRadmit \<phi> \<and> 
+     fsafe (Forall xvar \<phi>) \<and>
      {Inl y, Inr y, Inr x} \<inter> FVF (Forall xvar \<phi>) = {}) \<and>
       FRadmit (Forall  y (FUrename xvar  y \<phi>)) \<and>
       FRadmit (FUrename xvar y \<phi>) \<and>

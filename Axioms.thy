@@ -232,13 +232,20 @@ lemma diamondModusPonens_valid:"valid diamondModusPonensAxiom"
   by(auto simp add: diamondModusPonensAxiom_def valid_def)
 
 definition equalReflAxiom :: "('sf,'sc,'sz) formula"
-where [axiom_defs]:"equalReflAxiom \<equiv> Equals (Functional fid1) (Functional fid1)"
+  where [axiom_defs]:"equalReflAxiom \<equiv> 
+Equiv
+  (Equals (Function fid1 empty) (Function fid1 empty))
+  TT
+"
 
 lemma equalRefl_valid:"valid equalReflAxiom"
   by(auto simp add: equalReflAxiom_def valid_def)
 
 definition lessEqualReflAxiom :: "('sf,'sc,'sz) formula"
-where [axiom_defs]:"lessEqualReflAxiom \<equiv> Leq (Functional fid1) (Functional fid1)"
+  where [axiom_defs]:"lessEqualReflAxiom \<equiv> 
+Equiv
+  (Leq (Function fid1 empty) (Function fid1 empty))
+  TT"
 
 lemma lessEqualRefl_valid:"valid lessEqualReflAxiom"
   by(auto simp add: lessEqualReflAxiom_def valid_def Leq_def)

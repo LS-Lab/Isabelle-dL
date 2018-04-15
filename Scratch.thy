@@ -38,13 +38,19 @@ datatype myvars =
   | i18
   | i19
   | i20
+  | i21
+  | i22
+  | i23
+  | i24
+  | i25
+
 instantiation myvars :: finite begin
 instance proof
-  have "UNIV = {i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16, i17, i18, i19, i20}"
+  have "UNIV = {i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16, i17, i18, i19, i20, i21, i22, i23, i24, i25}"
     unfolding UNIV_def 
     using myvars.exhaust
     by (blast)
-  moreover have "finite {i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16, i17, i18, i19, i20}"
+  moreover have "finite {i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16, i17, i18, i19, i20, i21, i22, i23, i24, i25}"
     by(auto)
   ultimately show "finite (UNIV:: myvars set)"
     by auto
@@ -61,9 +67,9 @@ instance
 end
 
 instantiation myvars :: enum begin
-definition enum_myvars where   "enum_myvars \<equiv> [i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16, i17, i18, i19, i20]"
-definition enum_all_myvars where "enum_all_myvars P \<equiv> list_all P [i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16, i17, i18, i19, i20]"
-definition enum_ex_myvars where "enum_ex_myvars P \<equiv> list_ex P [i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16, i17, i18, i19, i20]"
+definition enum_myvars where   "enum_myvars \<equiv> [i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16, i17, i18, i19, i20,i21,i22,i23,i24,i25]"
+definition enum_all_myvars where "enum_all_myvars P \<equiv> list_all P [i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16, i17, i18, i19, i20,i21,i22,i23,i24,i25]"
+definition enum_ex_myvars where "enum_ex_myvars P \<equiv> list_ex P [i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16, i17, i18, i19, i20,i21,i22,i23,i24,i25]"
 instance
   apply(standard)
   subgoal apply auto
@@ -109,6 +115,11 @@ definition less_eq_myvars where
   | (i4, i18) \<Rightarrow> True
   | (i4, i19) \<Rightarrow> True
   | (i4, i20) \<Rightarrow> True
+  | (i4, i21) \<Rightarrow> True
+  | (i4, i22) \<Rightarrow> True
+  | (i4, i23) \<Rightarrow> True
+  | (i4, i24) \<Rightarrow> True
+  | (i4, i25) \<Rightarrow> True
   | (i4, _) \<Rightarrow> False
   | (i5, i12) \<Rightarrow> True
   | (i5, i13) \<Rightarrow> True
@@ -119,6 +130,11 @@ definition less_eq_myvars where
   | (i5, i18) \<Rightarrow> True
   | (i5, i19) \<Rightarrow> True
   | (i5, i20) \<Rightarrow> True
+  | (i5, i21) \<Rightarrow> True
+  | (i5, i22) \<Rightarrow> True
+  | (i5, i23) \<Rightarrow> True
+  | (i5, i24) \<Rightarrow> True
+  | (i5, i25) \<Rightarrow> True
   | (i5, i11) \<Rightarrow> True
   | (i5, i10) \<Rightarrow> True
   | (i5, i9) \<Rightarrow> True
@@ -142,6 +158,11 @@ definition less_eq_myvars where
   | (i6, i18) \<Rightarrow> True
   | (i6, i19) \<Rightarrow> True
   | (i6, i20) \<Rightarrow> True
+  | (i6, i21) \<Rightarrow> True
+  | (i6, i22) \<Rightarrow> True
+  | (i6, i23) \<Rightarrow> True
+  | (i6, i24) \<Rightarrow> True
+  | (i6, i25) \<Rightarrow> True
   | (i6, _) \<Rightarrow> False
   | (i7, i7) \<Rightarrow> True
   | (i7, i8) \<Rightarrow> True
@@ -157,6 +178,11 @@ definition less_eq_myvars where
   | (i7, i18) \<Rightarrow> True
   | (i7, i19) \<Rightarrow> True
   | (i7, i20) \<Rightarrow> True
+  | (i7, i21) \<Rightarrow> True
+  | (i7, i22) \<Rightarrow> True
+  | (i7, i23) \<Rightarrow> True
+  | (i7, i24) \<Rightarrow> True
+  | (i7, i25) \<Rightarrow> True
   | (i7, _) \<Rightarrow> False
   | (i8, i8) \<Rightarrow> True
   | (i8, i9) \<Rightarrow> True
@@ -171,6 +197,11 @@ definition less_eq_myvars where
   | (i8, i18) \<Rightarrow> True
   | (i8, i19) \<Rightarrow> True
   | (i8, i20) \<Rightarrow> True
+  | (i8, i21) \<Rightarrow> True
+  | (i8, i22) \<Rightarrow> True
+  | (i8, i23) \<Rightarrow> True
+  | (i8, i24) \<Rightarrow> True
+  | (i8, i25) \<Rightarrow> True
 
   | (i8, _) \<Rightarrow> False
   | (i9, i12) \<Rightarrow> True
@@ -182,6 +213,11 @@ definition less_eq_myvars where
   | (i9, i18) \<Rightarrow> True
   | (i9, i19) \<Rightarrow> True
   | (i9, i20) \<Rightarrow> True
+  | (i9, i21) \<Rightarrow> True
+  | (i9, i22) \<Rightarrow> True
+  | (i9, i23) \<Rightarrow> True
+  | (i9, i24) \<Rightarrow> True
+  | (i9, i25) \<Rightarrow> True
 
   | (i9, i11) \<Rightarrow> True
   | (i9, i10) \<Rightarrow> True
@@ -196,6 +232,11 @@ definition less_eq_myvars where
   | (i10, i18) \<Rightarrow> True
   | (i10, i19) \<Rightarrow> True
   | (i10, i20) \<Rightarrow> True
+  | (i10, i21) \<Rightarrow> True
+  | (i10, i22) \<Rightarrow> True
+  | (i10, i23) \<Rightarrow> True
+  | (i10, i24) \<Rightarrow> True
+  | (i10, i25) \<Rightarrow> True
   | (i10, i11) \<Rightarrow> True
   | (i10, i10) \<Rightarrow> True
   | (i10, _) \<Rightarrow> False
@@ -209,6 +250,11 @@ definition less_eq_myvars where
   | (i11, i18) \<Rightarrow> True
   | (i11, i19) \<Rightarrow> True
   | (i11, i20) \<Rightarrow> True
+  | (i11, i21) \<Rightarrow> True
+  | (i11, i22) \<Rightarrow> True
+  | (i11, i23) \<Rightarrow> True
+  | (i11, i24) \<Rightarrow> True
+  | (i11, i25) \<Rightarrow> True
   | (i11, _) \<Rightarrow> False
   | (i12, i12) \<Rightarrow> True
   | (i12, i13) \<Rightarrow> True
@@ -219,6 +265,11 @@ definition less_eq_myvars where
   | (i12, i18) \<Rightarrow> True
   | (i12, i19) \<Rightarrow> True
   | (i12, i20) \<Rightarrow> True
+  | (i12, i21) \<Rightarrow> True
+  | (i12, i22) \<Rightarrow> True
+  | (i12, i23) \<Rightarrow> True
+  | (i12, i24) \<Rightarrow> True
+  | (i12, i25) \<Rightarrow> True
   | (i12, _) \<Rightarrow> False
 
   | (i13, i13) \<Rightarrow> True
@@ -229,6 +280,11 @@ definition less_eq_myvars where
   | (i13, i18) \<Rightarrow> True
   | (i13, i19) \<Rightarrow> True
   | (i13, i20) \<Rightarrow> True
+  | (i13, i21) \<Rightarrow> True
+  | (i13, i22) \<Rightarrow> True
+  | (i13, i23) \<Rightarrow> True
+  | (i13, i24) \<Rightarrow> True
+  | (i13, i25) \<Rightarrow> True
   | (i13, _) \<Rightarrow> False
 
   | (i14, i14) \<Rightarrow> True
@@ -238,14 +294,23 @@ definition less_eq_myvars where
   | (i14, i18) \<Rightarrow> True
   | (i14, i19) \<Rightarrow> True
   | (i14, i20) \<Rightarrow> True
+  | (i14, i21) \<Rightarrow> True
+  | (i14, i22) \<Rightarrow> True
+  | (i14, i23) \<Rightarrow> True
+  | (i14, i24) \<Rightarrow> True
+  | (i14, i25) \<Rightarrow> True
   | (i14, _) \<Rightarrow> False
-
   | (i15, i15) \<Rightarrow> True
   | (i15, i16) \<Rightarrow> True
   | (i15, i17) \<Rightarrow> True
   | (i15, i18) \<Rightarrow> True
   | (i15, i19) \<Rightarrow> True
   | (i15, i20) \<Rightarrow> True
+  | (i15, i21) \<Rightarrow> True
+  | (i15, i22) \<Rightarrow> True
+  | (i15, i23) \<Rightarrow> True
+  | (i15, i24) \<Rightarrow> True
+  | (i15, i25) \<Rightarrow> True
   | (i15, _) \<Rightarrow> False
 
   | (i16, i16) \<Rightarrow> True
@@ -253,25 +318,75 @@ definition less_eq_myvars where
   | (i16, i18) \<Rightarrow> True
   | (i16, i19) \<Rightarrow> True
   | (i16, i20) \<Rightarrow> True
+  | (i16, i21) \<Rightarrow> True
+  | (i16, i22) \<Rightarrow> True
+  | (i16, i23) \<Rightarrow> True
+  | (i16, i24) \<Rightarrow> True
+  | (i16, i25) \<Rightarrow> True
   | (i16, _) \<Rightarrow> False
 
   | (i17, i17) \<Rightarrow> True
   | (i17, i18) \<Rightarrow> True
   | (i17, i19) \<Rightarrow> True
   | (i17, i20) \<Rightarrow> True
+  | (i17, i21) \<Rightarrow> True
+  | (i17, i22) \<Rightarrow> True
+  | (i17, i23) \<Rightarrow> True
+  | (i17, i24) \<Rightarrow> True
+  | (i17, i25) \<Rightarrow> True
   | (i17, _) \<Rightarrow> False
 
   | (i18, i18) \<Rightarrow> True
   | (i18, i19) \<Rightarrow> True
   | (i18, i20) \<Rightarrow> True
+  | (i18, i21) \<Rightarrow> True
+  | (i18, i22) \<Rightarrow> True
+  | (i18, i23) \<Rightarrow> True
+  | (i18, i24) \<Rightarrow> True
+  | (i18, i25) \<Rightarrow> True
   | (i18, _) \<Rightarrow> False
 
   | (i19, i19) \<Rightarrow> True
   | (i19, i20) \<Rightarrow> True
+  | (i19, i21) \<Rightarrow> True
+  | (i19, i22) \<Rightarrow> True
+  | (i19, i23) \<Rightarrow> True
+  | (i19, i24) \<Rightarrow> True
+  | (i19, i25) \<Rightarrow> True
   | (i19, _) \<Rightarrow> False
 
   | (i20, i20) \<Rightarrow> True
+  | (i20, i21) \<Rightarrow> True
+  | (i20, i22) \<Rightarrow> True
+  | (i20, i23) \<Rightarrow> True
+  | (i20, i24) \<Rightarrow> True
+  | (i20, i25) \<Rightarrow> True
   | (i20, _) \<Rightarrow> False
+
+  | (i21, i21) \<Rightarrow> True
+  | (i21, i22) \<Rightarrow> True
+  | (i21, i23) \<Rightarrow> True
+  | (i21, i24) \<Rightarrow> True
+  | (i21, i25) \<Rightarrow> True
+  | (i21, _) \<Rightarrow> False
+
+  | (i22, i22) \<Rightarrow> True
+  | (i22, i23) \<Rightarrow> True
+  | (i22, i24) \<Rightarrow> True
+  | (i22, i25) \<Rightarrow> True
+  | (i22, _) \<Rightarrow> False
+
+  | (i23, i23) \<Rightarrow> True
+  | (i23, i24) \<Rightarrow> True
+  | (i23, i25) \<Rightarrow> True
+  | (i23, _) \<Rightarrow> False
+
+  | (i24, i24) \<Rightarrow> True
+  | (i24, i25) \<Rightarrow> True
+  | (i24, _) \<Rightarrow> False
+
+  | (i25, i25) \<Rightarrow> True
+  | (i25, _) \<Rightarrow> False
 
 )
 "
@@ -497,8 +612,128 @@ definition less_myvars where
   | (i19, i1) \<Rightarrow> False
   | (i19, _) \<Rightarrow> True
 
+  | (i20, i20) \<Rightarrow> False
+  | (i20, i19) \<Rightarrow> False
+  | (i20, i18) \<Rightarrow> False
+  | (i20, i17) \<Rightarrow> False
+  | (i20, i16) \<Rightarrow> False
+  | (i20, i15) \<Rightarrow> False
+  | (i20, i14) \<Rightarrow> False
+  | (i20, i13) \<Rightarrow> False
+  | (i20, i12) \<Rightarrow> False
+  | (i20, i11) \<Rightarrow> False
+  | (i20, i10) \<Rightarrow> False
+  | (i20, i9) \<Rightarrow> False
+  | (i20, i8) \<Rightarrow> False
+  | (i20, i7) \<Rightarrow> False
+  | (i20, i6) \<Rightarrow> False
+  | (i20, i5) \<Rightarrow> False
+  | (i20, i4) \<Rightarrow> False
+  | (i20, i3) \<Rightarrow> False
+  | (i20, i2) \<Rightarrow> False
+  | (i20, i1) \<Rightarrow> False
+  | (i20, _) \<Rightarrow> True
 
-  | (i20, _) \<Rightarrow> False)
+  | (i21, i21) \<Rightarrow> False
+  | (i21, i20) \<Rightarrow> False
+  | (i21, i19) \<Rightarrow> False
+  | (i21, i18) \<Rightarrow> False
+  | (i21, i17) \<Rightarrow> False
+  | (i21, i16) \<Rightarrow> False
+  | (i21, i15) \<Rightarrow> False
+  | (i21, i14) \<Rightarrow> False
+  | (i21, i13) \<Rightarrow> False
+  | (i21, i12) \<Rightarrow> False
+  | (i21, i11) \<Rightarrow> False
+  | (i21, i10) \<Rightarrow> False
+  | (i21, i9) \<Rightarrow> False
+  | (i21, i8) \<Rightarrow> False
+  | (i21, i7) \<Rightarrow> False
+  | (i21, i6) \<Rightarrow> False
+  | (i21, i5) \<Rightarrow> False
+  | (i21, i4) \<Rightarrow> False
+  | (i21, i3) \<Rightarrow> False
+  | (i21, i2) \<Rightarrow> False
+  | (i21, i1) \<Rightarrow> False
+  | (i21, _) \<Rightarrow> True
+
+  | (i22, i22) \<Rightarrow> False
+  | (i22, i21) \<Rightarrow> False
+  | (i22, i20) \<Rightarrow> False
+  | (i22, i19) \<Rightarrow> False
+  | (i22, i18) \<Rightarrow> False
+  | (i22, i17) \<Rightarrow> False
+  | (i22, i16) \<Rightarrow> False
+  | (i22, i15) \<Rightarrow> False
+  | (i22, i14) \<Rightarrow> False
+  | (i22, i13) \<Rightarrow> False
+  | (i22, i12) \<Rightarrow> False
+  | (i22, i11) \<Rightarrow> False
+  | (i22, i10) \<Rightarrow> False
+  | (i22, i9) \<Rightarrow> False
+  | (i22, i8) \<Rightarrow> False
+  | (i22, i7) \<Rightarrow> False
+  | (i22, i6) \<Rightarrow> False
+  | (i22, i5) \<Rightarrow> False
+  | (i22, i4) \<Rightarrow> False
+  | (i22, i3) \<Rightarrow> False
+  | (i22, i2) \<Rightarrow> False
+  | (i22, i1) \<Rightarrow> False
+  | (i22, _) \<Rightarrow> True
+
+  | (i23, i23) \<Rightarrow> False
+  | (i23, i22) \<Rightarrow> False
+  | (i23, i21) \<Rightarrow> False
+  | (i23, i20) \<Rightarrow> False
+  | (i23, i19) \<Rightarrow> False
+  | (i23, i18) \<Rightarrow> False
+  | (i23, i17) \<Rightarrow> False
+  | (i23, i16) \<Rightarrow> False
+  | (i23, i15) \<Rightarrow> False
+  | (i23, i14) \<Rightarrow> False
+  | (i23, i13) \<Rightarrow> False
+  | (i23, i12) \<Rightarrow> False
+  | (i23, i11) \<Rightarrow> False
+  | (i23, i10) \<Rightarrow> False
+  | (i23, i9) \<Rightarrow> False
+  | (i23, i8) \<Rightarrow> False
+  | (i23, i7) \<Rightarrow> False
+  | (i23, i6) \<Rightarrow> False
+  | (i23, i5) \<Rightarrow> False
+  | (i23, i4) \<Rightarrow> False
+  | (i23, i3) \<Rightarrow> False
+  | (i23, i2) \<Rightarrow> False
+  | (i23, i1) \<Rightarrow> False
+  | (i23, _) \<Rightarrow> True
+
+  | (i24, i24) \<Rightarrow> False
+  | (i24, i23) \<Rightarrow> False
+  | (i24, i22) \<Rightarrow> False
+  | (i24, i21) \<Rightarrow> False
+  | (i24, i20) \<Rightarrow> False
+  | (i24, i19) \<Rightarrow> False
+  | (i24, i18) \<Rightarrow> False
+  | (i24, i17) \<Rightarrow> False
+  | (i24, i16) \<Rightarrow> False
+  | (i24, i15) \<Rightarrow> False
+  | (i24, i14) \<Rightarrow> False
+  | (i24, i13) \<Rightarrow> False
+  | (i24, i12) \<Rightarrow> False
+  | (i24, i11) \<Rightarrow> False
+  | (i24, i10) \<Rightarrow> False
+  | (i24, i9) \<Rightarrow> False
+  | (i24, i8) \<Rightarrow> False
+  | (i24, i7) \<Rightarrow> False
+  | (i24, i6) \<Rightarrow> False
+  | (i24, i5) \<Rightarrow> False
+  | (i24, i4) \<Rightarrow> False
+  | (i24, i3) \<Rightarrow> False
+  | (i24, i2) \<Rightarrow> False
+  | (i24, i1) \<Rightarrow> False
+  | (i24, _) \<Rightarrow> True
+
+
+  | (i25, _) \<Rightarrow> False)
 "
 
 instance
@@ -512,6 +747,11 @@ instance
   subgoal for x y z   
     apply(cases x)
     subgoal by((cases y,(cases z, (auto simp add: less_myvars_def less_eq_myvars_def myvars.exhaust)))+)+
+    subgoal apply(cases y) by((cases z, (auto simp add: less_myvars_def less_eq_myvars_def myvars.exhaust)))+
+    subgoal apply(cases y) by((cases z, (auto simp add: less_myvars_def less_eq_myvars_def myvars.exhaust)))+
+    subgoal apply(cases y) by((cases z, (auto simp add: less_myvars_def less_eq_myvars_def myvars.exhaust)))+
+    subgoal apply(cases y) by((cases z, (auto simp add: less_myvars_def less_eq_myvars_def myvars.exhaust)))+
+    subgoal apply(cases y) by((cases z, (auto simp add: less_myvars_def less_eq_myvars_def myvars.exhaust)))+
     subgoal apply(cases y) by((cases z, (auto simp add: less_myvars_def less_eq_myvars_def myvars.exhaust)))+
     subgoal apply(cases y) by((cases z, (auto simp add: less_myvars_def less_eq_myvars_def myvars.exhaust)))+
     subgoal apply(cases y) by((cases z, (auto simp add: less_myvars_def less_eq_myvars_def myvars.exhaust)))+
