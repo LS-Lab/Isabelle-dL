@@ -214,8 +214,7 @@ proof (induction rule: dfree.induct[OF free])
                           (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b)))"
           using eq apply simp by presburger
         qed
-    apply simp
-    by(rule continuous_intros)
+    by simp
 next
   case (4 \<theta>\<^sub>1 \<theta>\<^sub>2)
   assume free1:"dfree \<theta>\<^sub>1"
@@ -355,9 +354,9 @@ lemma extendf_deriv:
                      ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
                   (args i) \<nu>)) = (?f \<circ> ?g)"
        by auto
-     have "\<forall>x. ((?f o ?g) has_derivative (?myf' x \<circ> ?myg' x)) (at x)"
-       apply (rule allI)
-       apply (rule chain)
+     have "\<And>x. ((?f o ?g) has_derivative (?myf' x \<circ> ?myg' x)) (at x)"
+(*       subgoal for x*)
+       apply (rule diff_chain_at)
        subgoal for xa
          apply (rule has_derivative_vec)
          subgoal for i 
@@ -370,7 +369,7 @@ lemma extendf_deriv:
          and cont:"continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I a x))"
            using good_interp[unfolded is_interp_def] by auto
          show ?thesis
-           apply(rule has_derivative_at_within)
+           apply(rule has_derivative_at_withinI)
            using deriv by auto
        qed
       done
@@ -781,6 +780,12 @@ lemma SIGT_max1:"Vagree \<nu> \<omega> (SigSet \<sigma>(Max t1 t2)) \<Longrighta
 lemma SIGT_max2:"Vagree \<nu> \<omega> (SigSet \<sigma> (Max t1 t2)) \<Longrightarrow> Vagree \<nu> \<omega> (SigSet \<sigma> t2)"
   unfolding Vagree_def SigSet_def by auto
 
+lemma SIGT_div1:"Vagree \<nu> \<omega> (SigSet \<sigma>(Div t1 t2)) \<Longrightarrow> Vagree \<nu> \<omega> (SigSet \<sigma> t1)"
+  unfolding Vagree_def SigSet_def by auto
+
+lemma SIGT_div2:"Vagree \<nu> \<omega> (SigSet \<sigma>(Div t1 t2)) \<Longrightarrow> Vagree \<nu> \<omega> (SigSet \<sigma> t2)"
+  unfolding Vagree_def SigSet_def by auto
+
 lemma SIGT_min1:"Vagree \<nu> \<omega> (SigSet \<sigma>(Min t1 t2)) \<Longrightarrow> Vagree \<nu> \<omega> (SigSet \<sigma> t1)"
   unfolding Vagree_def SigSet_def by auto
 
@@ -1011,6 +1016,15 @@ next
     using IH1[OF SIGT_max1[OF VA]] IH2[OF SIGT_max2[OF VA]] by auto
 next
   let ?Set = "SigSet \<sigma>"
+  case (Div \<theta>1 \<theta>2)
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (?Set \<theta>1) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>1 = dterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>1"
+  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (?Set \<theta>2) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>2 = dterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>2"
+  assume VA:"Vagree \<nu> \<omega> (?Set (Div \<theta>1 \<theta>2))"
+  assume safe:"dsafe (Div \<theta>1 \<theta>2)"
+  then show ?case      
+    using IH1[OF SIGT_div1[OF VA]] IH2[OF SIGT_div2[OF VA]] by auto
+next
+  let ?Set = "SigSet \<sigma>"
   case (Min \<theta>1 \<theta>2)
   assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (?Set \<theta>1) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>1 = dterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>1"
   assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (?Set \<theta>2) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (local.adjoint I \<sigma> \<nu>) \<theta>2 = dterm_sem (local.adjoint I \<sigma> \<omega>) \<theta>2"
@@ -1208,6 +1222,17 @@ next
     and VA2:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>2}. FVT (\<sigma> i))"
     unfolding Vagree_def by auto
   assume safe:"dsafe (Min \<theta>1 \<theta>2)"
+  show ?case 
+    using IH1[OF VA1] IH2[OF VA2] safe by auto
+next
+  case (Div \<theta>1 \<theta>2 \<nu> \<omega>)
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>1 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>1"
+  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>2}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>2 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>2"
+  assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT (Div \<theta>1 \<theta>2)}. FVT (\<sigma> i))"
+  then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
+    and VA2:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. Inr i \<in> SIGT \<theta>2}. FVT (\<sigma> i))"
+    unfolding Vagree_def by auto
+  assume safe:"dsafe (Div \<theta>1 \<theta>2)"
   show ?case 
     using IH1[OF VA1] IH2[OF VA2] safe by auto
 next
@@ -2819,16 +2844,10 @@ lemma nsubst_ode:
 proof (induction rule: osafe.induct)
   case (osafe_Var c sp)
   then show ?case unfolding OUadmitFO_def adjointFO_def
-    apply(cases sp,auto)
-    apply(rule vec_extensionality)
-     apply(auto)
-    apply(rule vec_extensionality)
-    by(auto)
+    by(cases sp,auto)
 next
   case (osafe_Sing \<theta> x)
   then show ?case apply auto
-    apply(rule vec_extensionality)
-    apply auto
     using nsubst_sterm' [of  \<sigma> \<theta> I "(fst \<nu>)" "(snd \<nu>)"]
     by auto
 next
@@ -3604,9 +3623,7 @@ next
     assume safes:"(\<forall>i. fsafe (\<sigma> i))"
     show "?thesis"
       apply(auto)
-       apply(rule vec_extensionality)
        subgoal using psubst_dterm[OF good_interp dsafe, of \<sigma>] by auto
-       apply(rule vec_extensionality)
        using psubst_dterm[OF good_interp dsafe, of \<sigma>] by auto
   qed
   then show "?case" by auto 
@@ -3619,9 +3636,7 @@ next
     assume safes:"(\<forall>i. fsafe (\<sigma> i))"
     show "?thesis"
       apply(auto)
-       apply(rule vec_extensionality)
        subgoal using psubst_dterm[OF good_interp dsafe, of \<sigma>] by auto
-       apply(rule vec_extensionality)
        using psubst_dterm[OF good_interp dsafe, of \<sigma>] by auto
   qed
   then show ?case by auto
@@ -3819,33 +3834,8 @@ proof (induction rule: osafe.induct)
     
     apply(rule vec_extensionality,auto)
       apply (cases "SODEs \<sigma> c All", auto)
-     using OA apply(simp)
-   proof -
-     fix x2 a 
-     assume sp:"sp = None"
-     assume some:"SODEs \<sigma> c None = Some a"
-(*     assume bvol:"Inl x2 \<notin> BVO a"*)
-
-(*     let ?hp = "EvolveODE (OVar c sp) TT" 
-     have hpsafe:"hpsafe ?hp" unfolding TT_def by(auto)
-     note boundx = bound_effect[OF good_interp hpsafe]*)
-     show"ODE_sem I a (fst \<nu>) =
-         (\<chi> i. if i \<in> ODE_vars I a
-               then ODEs \<lparr>Functions = \<lambda>f. case SFunctions \<sigma> f of None \<Rightarrow> Functions I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem (extendf I R) f' \<nu>,
-                            Funls = \<lambda>f. case SFunls \<sigma> f of None \<Rightarrow> Funls I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem I f' \<nu>,
-                            Predicates = \<lambda>p. case SPredicates \<sigma> p of None \<Rightarrow> Predicates I p | Some p' \<Rightarrow> \<lambda>R. \<nu> \<in> fml_sem (extendf I R) p',
-                            Contexts = \<lambda>c. case SContexts \<sigma> c of None \<Rightarrow> Contexts I c | Some c' \<Rightarrow> \<lambda>R. fml_sem (extendc I R) c',
-                            Programs = \<lambda>a. case SPrograms \<sigma> a of None \<Rightarrow> Programs I a | Some x \<Rightarrow> prog_sem I x,
-                            ODEs = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEs I ode sp | Some x \<Rightarrow> ODE_sem I x,
-                            ODEBV = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEBV I ode sp | Some x \<Rightarrow> ODE_vars I x\<rparr>
-                     c None (fst \<nu>) $
-                    i
-               else 0)"
-       apply(rule vec_extensionality) apply auto
-        apply(cases "SODEs \<sigma> c All",auto)
-         apply (simp add: some)+
-       using good_interp  ODE_unbound_zero by blast
-   qed
+      using OA apply(simp)
+      using ODE_unbound_zero[OF good_interp] by blast
  proof -
      fix x2 i ::"'sz"
      assume sp:"sp = Some x2"
@@ -3864,17 +3854,13 @@ proof (induction rule: osafe.induct)
     apply(rule vec_extensionality,auto)
       apply (cases "SODEs \<sigma> c sp", auto)
       using OA apply(simp)
-      apply(rule vec_extensionality)
       apply(auto)
        using ODE_unbound_zero[OF good_interp] by auto
-
      done
  qed
 next
   case (osafe_Sing \<theta> x)
   then show ?case apply auto
-    apply(rule vec_extensionality)
-    apply auto
     using subst_sterm [of  \<sigma> \<theta> I "\<nu>"]
     unfolding ssafe_def by (simp,metis  option.simps(5))+
 next

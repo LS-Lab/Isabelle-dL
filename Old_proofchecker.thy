@@ -181,7 +181,7 @@ next
 qed
 
 datatype rrule = ImplyR | AndR | CohideR | CohideRR | TrueR | EquivR
-datatype lrule = ImplyL | AndL | EquivForwardL | EquivBackwardL
+datatype lrule = ImplyL | AndL | EquivForwardL | EquivBackwardL | FalseL
   
 datatype ('a, 'b, 'c) step =
   Axiom axiom
@@ -261,6 +261,8 @@ where "Lrule_result AndL j (A,S) = (case (nth A j) of And p q \<Rightarrow> [(cl
    [(close (q # A) (nth A j), S), (close A (nth A j), p # S)])"
 | "Lrule_result EquivBackwardL j (A,S) = (case (nth A j) of Not(And (Not (And p q)) (Not (And (Not p') (Not q')))) \<Rightarrow>
    [(close (p # A) (nth A j), S), (close A (nth A j), q # S)])"
+| "Lrule_result FalseL j (A,S) = []"
+
 
 (* Note: Some of the pattern-matching here is... interesting. The reason for this is that we can only
    match on things in the base grammar, when we would quite like to check things in the derived grammar.
@@ -306,6 +308,7 @@ where
 | Lrule_Imply:"\<And>p q. nth (fst (nth SG i)) j = (p \<rightarrow> q) \<Longrightarrow> lrule_ok SG C i j ImplyL"
 | Lrule_EquivForward:"\<And>p q. nth (fst (nth SG i)) j = (p \<leftrightarrow> q) \<Longrightarrow> lrule_ok SG C i j EquivForwardL"
 | Lrule_EquivBackward:"\<And>p q. nth (fst (nth SG i)) j = (p \<leftrightarrow> q) \<Longrightarrow> lrule_ok SG C i j EquivBackwardL"
+| Lrule_False:"nth (fst (nth SG i)) j = FF \<Longrightarrow> lrule_ok SG C i j FalseL"
 
   
 lemma Lrule_And_code:"(case (nth (fst (nth SG i)) j) of(And p q) \<Rightarrow> True | _ \<Rightarrow> False) \<Longrightarrow> lrule_ok SG C i j AndL"

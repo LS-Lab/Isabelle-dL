@@ -1,8 +1,8 @@
 theory Syntax
 imports
   Complex_Main
-  "./Word_Lib/Word_Lib"
-  "./Word_Lib/Word_Lemmas"
+  Word_Lib.Word_Lib
+  Word_Lib.Word_Lemmas
   "./Ids"
 begin 
 section \<open>Syntax\<close>
@@ -70,6 +70,7 @@ datatype ('a, 'c) trm =
 (*| DFunctional 'a ("$$F'")*)
 | Plus "('a, 'c) trm" "('a, 'c) trm"
 | Times "('a, 'c) trm" "('a, 'c) trm"
+| Div "('a, 'c) trm" "('a, 'c) trm"
 | Neg "('a, 'c) trm"
 | Max "('a, 'c) trm" "('a, 'c) trm"
 | Min "('a, 'c) trm" "('a, 'c) trm"
@@ -303,6 +304,7 @@ where
 | dsafe_Neg: "dsafe \<theta> \<Longrightarrow> dsafe (Neg \<theta>)"
 | dsafe_Plus: "dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dsafe_Times: "dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
+| dsafe_Div: "dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Div \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dsafe_Diff: "dfree \<theta> \<Longrightarrow> dsafe (Differential \<theta>)"
 | dsafe_DiffVar: "dsafe ($' i)"
 | dsafe_Max :"dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Max \<theta>\<^sub>1 \<theta>\<^sub>2)"
@@ -316,6 +318,7 @@ where
 | dexec_Neg: "dexec \<theta> \<Longrightarrow> dexec (Neg \<theta>)"
 | dexec_Plus: "dexec \<theta>\<^sub>1 \<Longrightarrow> dexec \<theta>\<^sub>2 \<Longrightarrow> dexec (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dexec_Times: "dexec \<theta>\<^sub>1 \<Longrightarrow> dexec \<theta>\<^sub>2 \<Longrightarrow> dexec (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
+| dexec_Div: "dexec \<theta>\<^sub>1 \<Longrightarrow> dexec \<theta>\<^sub>2 \<Longrightarrow> dexec (Div \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dexec_Max :"dexec \<theta>\<^sub>1 \<Longrightarrow> dexec \<theta>\<^sub>2 \<Longrightarrow> dexec (Max \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dexec_Min :"dexec \<theta>\<^sub>1 \<Longrightarrow> dexec \<theta>\<^sub>2 \<Longrightarrow> dexec (Min \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dexec_Abs :"dexec \<theta>\<^sub>1 \<Longrightarrow> dexec (Abs \<theta>\<^sub>1)"
@@ -428,11 +431,13 @@ inductive_simps
 (*  and dfree_DFunl_simps[simp]: "dfree (DFunctional i)"*)
   and dfree_Fun_simps[simp]: "dfree (Function i args)"
   and dfree_Const_simps[simp]: "dfree (Const r)"
+  and dfree_Div_simps[simp]: "dfree (Div a b)"
 
 inductive_simps
       dsafe_Plus_simps[simp]: "dsafe (Plus a b)"
   and dsafe_Neg_simps[simp]: "dsafe (Neg a)"
   and dsafe_Times_simps[simp]: "dsafe (Times a b)"
+  and dsafe_Div_simps[simp]: "dsafe (Div a b)"
   and dsafe_Max_simps[simp]: "dsafe (Max a b)"
   and dsafe_Min_simps[simp]: "dsafe (Min a b)"
   and dsafe_Abs_simps[simp]: "dsafe (Abs a)"
@@ -447,6 +452,7 @@ inductive_simps
       dexec_Plus_simps[simp]: "dexec (Plus a b)"
   and dexec_Neg_simps[simp]: "dexec (Neg a)"
   and dexec_Times_simps[simp]: "dexec (Times a b)"
+  and dexec_Div_simps[simp]: "dexec (Div a b)"
   and dexec_Max_simps[simp]: "dexec (Max a b)"
   and dexec_Var_simps[simp]: "dexec (Var x)"
   and dexec_Const_simps[simp]: "dexec (Const r)"

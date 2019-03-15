@@ -380,6 +380,22 @@ next
   then show ?case 
     using IH1[OF VA1 IA1] IH2[OF VA2 IA2] by auto  
 next
+  case (dsafe_Div \<theta>\<^sub>1 \<theta>\<^sub>2) then
+  have safe:"dsafe \<theta>\<^sub>1" "dsafe \<theta>\<^sub>2"
+    and IH1:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>1) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>1} \<Longrightarrow> dterm_sem I \<theta>\<^sub>1 \<nu> = dterm_sem J \<theta>\<^sub>1 \<nu>'"
+    and IH2:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>2) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>2} \<Longrightarrow> dterm_sem I \<theta>\<^sub>2 \<nu> = dterm_sem J \<theta>\<^sub>2 \<nu>'"
+    and VA:"Vagree \<nu> \<nu>' (FVT (Div \<theta>\<^sub>1 \<theta>\<^sub>2))"
+    and IA:"Iagree I J {Inl x |x. x \<in> SIGT (Div \<theta>\<^sub>1 \<theta>\<^sub>2)}"
+    by auto
+  from VA have VA1:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>1)" and VA2:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>2)" 
+    unfolding Vagree_def by auto
+  have subs:"{Inl x |x. x \<in> SIGT \<theta>\<^sub>1} \<subseteq> {Inl x |x. x \<in> SIGT (Div \<theta>\<^sub>1 \<theta>\<^sub>2)}" 
+    "{Inl x |x. x \<in> SIGT \<theta>\<^sub>2} \<subseteq> {Inl x |x. x \<in> SIGT (Div \<theta>\<^sub>1 \<theta>\<^sub>2)}"by auto
+  from IA have IA1:"Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>1}" and IA2:"Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>2}"
+    using Iagree_sub subs by auto
+  then show ?case 
+    using IH1[OF VA1 IA1] IH2[OF VA2 IA2] by auto  
+next
 case (dsafe_Max \<theta>\<^sub>1 \<theta>\<^sub>2) then
   have safe:"dsafe \<theta>\<^sub>1" "dsafe \<theta>\<^sub>2"
     and IH1:"Vagree \<nu> \<nu>' (FVT \<theta>\<^sub>1) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT \<theta>\<^sub>1} \<Longrightarrow> dterm_sem I \<theta>\<^sub>1 \<nu> = dterm_sem J \<theta>\<^sub>1 \<nu>'"
@@ -449,9 +465,8 @@ proof (induction rule: osafe.induct)
       using Iagree_ODE[OF IA] by auto
     have eqbvIJ:"ODEBV I c All = ODEBV J c All"
       using Iagree_ODEBV[OF IA] by auto
-    show "(\<chi> i. if i \<in> ODEBV I c None then ODEs I c sp (fst \<nu>) $ i else 0) 
-        = (\<chi> i. if i \<in> ODEBV J c None then ODEs J c sp (fst \<nu>') $ i else 0)"
-      apply(rule vec_extensionality)
+    show "(\<lambda> i. if i \<in> ODEBV I c None then ODEs I c sp (fst \<nu>) $ i else 0) 
+        = (\<lambda> i. if i \<in> ODEBV J c None then ODEs J c sp (fst \<nu>') $ i else 0)"
       using sp eqV eqIJ eqbvIJ by (auto)
   next 
     fix x
@@ -467,8 +482,7 @@ proof (induction rule: osafe.induct)
       using Iagree_ODEBV[OF IA] by auto
     have iBound:"\<And>ode x. ODEBV I ode (NB x) \<subseteq> - {x}" using goodI unfolding is_interp_def by auto
     have jBound:"\<And>ode x. ODEBV J ode (NB x) \<subseteq> - {x}" using goodJ unfolding is_interp_def by auto
-    show "(\<chi> i. if i \<in> ODEBV I c sp then ODEs I c sp (fst \<nu>) $ i else 0) = (\<chi> i. if i \<in> ODEBV J c sp then ODEs J c sp (fst \<nu>') $ i else 0)"
-       apply(rule vec_extensionality)
+    show "(\<lambda> i. if i \<in> ODEBV I c sp then ODEs I c sp (fst \<nu>) $ i else 0) = (\<lambda> i. if i \<in> ODEBV J c sp then ODEs J c sp (fst \<nu>') $ i else 0)"
       using sp eqV eqIJ eqbvIJ by(auto simp add: eqV eqIJ sp eqbvIJ)
   qed
 next
@@ -486,7 +500,7 @@ next
     done
   have trm:"sterm_sem I  \<theta> (fst \<nu>) = sterm_sem J \<theta> (fst \<nu>')"
     using coincidence_sterm' free VA' IA agree_Lem[of \<theta>, OF free] by blast
-  show "(\<chi> i. if i = x then sterm_sem I \<theta> (fst \<nu>) else 0) = (\<chi> i. if i = x then sterm_sem J \<theta> (fst \<nu>') else 0)"
+  show "(\<lambda> i. if i = x then sterm_sem I \<theta> (fst \<nu>) else 0) = (\<lambda> i. if i = x then sterm_sem J \<theta> (fst \<nu>') else 0)"
     by (auto simp add: vec_eq_iff trm)
   qed
 next

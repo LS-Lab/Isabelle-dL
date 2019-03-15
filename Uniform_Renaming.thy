@@ -30,6 +30,7 @@ where
 | "TUrename x y (Neg \<theta>1 ) = Neg (TUrename x y \<theta>1) "
 | "TUrename x y (Plus \<theta>1 \<theta>2) = Plus (TUrename x y \<theta>1) (TUrename x y \<theta>2)"
 | "TUrename x y (Times \<theta>1 \<theta>2) = Times (TUrename x y \<theta>1) (TUrename x y \<theta>2)"
+| "TUrename x y (Div \<theta>1 \<theta>2) = Div (TUrename x y \<theta>1) (TUrename x y \<theta>2)"
 | "TUrename x y (Max \<theta>1 \<theta>2) = Max (TUrename x y \<theta>1) (TUrename x y \<theta>2)"
 | "TUrename x y (Min \<theta>1 \<theta>2) = Min (TUrename x y \<theta>1) (TUrename x y \<theta>2)"
 | "TUrename x y (Abs \<theta>1) = Abs (TUrename x y \<theta>1)"
@@ -44,6 +45,7 @@ where
 | TRadmit_Neg:"TRadmit t1 \<Longrightarrow> TRadmit (Neg t1)"
 | TRadmit_Plus:"TRadmit t1 \<Longrightarrow> TRadmit t2 \<Longrightarrow> TRadmit (Plus t1 t2)"
 | TRadmit_Times:"TRadmit t1 \<Longrightarrow> TRadmit t2 \<Longrightarrow> TRadmit (Times t1 t2)"
+| TRadmit_Div:"TRadmit t1 \<Longrightarrow> TRadmit t2 \<Longrightarrow> TRadmit (Div t1 t2)"
 | TRadmit_Max:"TRadmit t1 \<Longrightarrow> TRadmit t2 \<Longrightarrow> TRadmit (Max t1 t2)"
 | TRadmit_Min:"TRadmit t1 \<Longrightarrow> TRadmit t2 \<Longrightarrow> TRadmit (Min t1 t2)"
 | TRadmit_Abs:"TRadmit t1 \<Longrightarrow> TRadmit (Abs t1)"
@@ -58,6 +60,7 @@ and TRadmit_functional_simps[simp]: "TRadmit (Functional f)"
 and TRadmit_neg_simps[simp]: "TRadmit (Neg t1)"
 and TRadmit_plus_simps[simp]: "TRadmit (Plus t1 t2)"
 and TRadmit_times_simps[simp]: "TRadmit (Times t1 t2)"
+and TRadmit_div_simps[simp]: "TRadmit (Div t1 t2)"
 and TRadmit_max_simps[simp]: "TRadmit (Max t1 t2)"
 and TRadmit_min_simps[simp]: "TRadmit (Min t1 t2)"
 and TRadmit_abs_simps[simp]: "TRadmit (Abs t1)"
@@ -328,10 +331,10 @@ lemma Radj_eq_iff:"(a = b) = ((Radj x y a) = (Radj x y b))"
   apply (rule state_eq)
    subgoal for i 
      apply(cases "i = x", cases "i = y", auto)
-       using vec_lambda_beta apply (metis)
+        apply (metis)
      proof -
        assume "x \<noteq> y"
-       assume "(\<chi> z. fst a $ (if z = x then y else if z = y then x else z)) = (\<chi> z. fst b $ (if z = x then y else if z = y then x else z))"
+       assume "(\<lambda> z. fst a $ (if z = x then y else if z = y then x else z)) = (\<lambda> z. fst b $ (if z = x then y else if z = y then x else z))"
        then have "\<And>s. (\<chi> s. fst a $ (if s = x then y else if s = y then x else s)) $ s = fst b $ (if s = x then y else if s = y then x else s)"
          by simp
        then have "\<And>s. fst b $ (if s = x then y else if s = y then x else s) = fst a $ (if s = x then y else if s = y then x else s)"
@@ -339,7 +342,7 @@ lemma Radj_eq_iff:"(a = b) = ((Radj x y a) = (Radj x y b))"
        then show "fst a $ x = fst b $ x"
          by presburger
      next
-       assume "(\<chi> z. fst a $ (if z = x then y else if z = y then x else z)) = (\<chi> z. fst b $ (if z = x then y else if z = y then x else z))"
+       assume "(\<lambda> z. fst a $ (if z = x then y else if z = y then x else z)) = (\<lambda> z. fst b $ (if z = x then y else if z = y then x else z))"
        then have "\<And>s. (\<chi> s. fst a $ (if s = x then y else if s = y then x else s)) $ s = fst b $ (if s = x then y else if s = y then x else s)"
          by simp
        then have "\<And>s. fst b $ (if s = x then y else if s = y then x else s) = fst a $ (if s = x then y else if s = y then x else s)"
@@ -364,7 +367,7 @@ lemma Radj_eq_iff:"(a = b) = ((Radj x y a) = (Radj x y b))"
        using vec_lambda_beta apply (metis)
      proof -
        assume "x \<noteq> y"
-       assume "(\<chi> z. snd a $ (if z = x then y else if z = y then x else z)) = (\<chi> z. snd b $ (if z = x then y else if z = y then x else z))"
+       assume "(\<lambda> z. snd a $ (if z = x then y else if z = y then x else z)) = (\<lambda> z. snd b $ (if z = x then y else if z = y then x else z))"
        then have "\<And>s. (\<chi> s. snd a $ (if s = x then y else if s = y then x else s)) $ s = snd b $ (if s = x then y else if s = y then x else s)"
          by simp
        then have "\<And>s. snd b $ (if s = x then y else if s = y then x else s) = snd a $ (if s = x then y else if s = y then x else s)"
@@ -372,7 +375,7 @@ lemma Radj_eq_iff:"(a = b) = ((Radj x y a) = (Radj x y b))"
        then show "snd a $ x = snd b $ x"
          by presburger
      next
-       assume "(\<chi> z. snd a $ (if z = x then y else if z = y then x else z)) = (\<chi> z. snd b $ (if z = x then y else if z = y then x else z))"
+       assume "(\<lambda> z. snd a $ (if z = x then y else if z = y then x else z)) = (\<lambda> z. snd b $ (if z = x then y else if z = y then x else z))"
        then have "\<And>s. (\<chi> s. snd a $ (if s = x then y else if s = y then x else s)) $ s = snd b $ (if s = x then y else if s = y then x else s)"
          by simp
        then have "\<And>s. snd b $ (if s = x then y else if s = y then x else s) = snd a $ (if s = x then y else if s = y then x else s)"
@@ -436,12 +439,11 @@ lemma mkv_lemma:
 proof -
   have inner1:"(mk_v I (OUrename x y ODE) (a, b) c) = ((\<chi> i. (if i \<in> ODE_vars I (OUrename x y ODE) then c else a) $ i), (\<chi> i. (if i \<in> ODE_vars I (OUrename x y ODE) then ODE_sem I (OUrename x y ODE) c else b) $ i))"
     using mk_v_concrete[of I "OUrename x y ODE" "(a,b)" c]
-    apply auto
-     by (rule vec_extensionality | auto)+
+    by auto
   have inner2:"(((\<chi> i. (if i \<in> ODE_vars I (OUrename x y ODE) then c else a) $ i), (\<chi> i. (if i \<in> ODE_vars I (OUrename x y ODE) then ODE_sem I (OUrename x y ODE) c else b) $ i))) 
             = (((\<chi> i. (if (swap x y i) \<in> ODE_vars I ODE then c else a) $ i), (\<chi> i. (if (swap x y i) \<in> ODE_vars I ODE then ODE_sem I (OUrename x y ODE) c else b) $ i)))"
     apply auto
-     apply (rule vec_extensionality)
+     apply (rule ext)
     using OUrename_preserves_ODE_vars[OF ORA]
     subgoal for i
     proof -
@@ -457,10 +459,10 @@ proof -
         by force }
       ultimately have "(\<chi> s. (if s \<in> ODE_vars I (OUrename x y ODE) then c else a) $ s) $ i = (\<chi> s. (if (if s = x then y else if s = y then x else s) \<in> ODE_vars I ODE then c else a) $ s) $ i \<or> i \<in> ODE_vars I (OUrename x y ODE)"
       using f1 \<open>\<And>y x I. {z. swap x y z \<in> ODE_vars I ODE} = ODE_vars I (OUrename x y ODE)\<close> by blast
-      then show "(\<chi> s. (if s \<in> ODE_vars I (OUrename x y ODE) then c else a) $ s) $ i = (\<chi> s. (if (if s = x then y else if s = y then x else s) \<in> ODE_vars I ODE then c else a) $ s) $ i"
+      then show "(if i \<in> ODE_vars I (OUrename x y ODE) then c else a) $ i =  (if (if i = x then y else if i = y then x else i) \<in> ODE_vars I ODE then c else a) $ i"
       using f2 by fastforce
     qed
-    apply(rule vec_extensionality)
+    apply(rule ext)
     subgoal for i
       using OUrename_preserves_ODE_vars[OF ORA]
     proof -
@@ -495,20 +497,19 @@ proof -
   moreover have "... = (((\<chi> i. (if i \<in> ODE_vars I ODE then RSadj x y c else RSadj x y a) $ i)),
                          (\<chi> i. (if i \<in> ODE_vars I ODE then RSadj x y (ODE_sem I (OUrename x y ODE) c) else RSadj x y b) $ i))"
     apply(auto)
-     by(rule vec_extensionality, auto simp add: ren_proj)+
+     by(rule ext, auto simp add: ren_proj)+
   moreover have "... = (((\<chi> i. (if i \<in> ODE_vars I ODE then RSadj x y c else RSadj x y a) $ i)),
                          (\<chi> i. (if i \<in> ODE_vars I ODE then RSadj x y (RSadj x y (ODE_sem I ODE (RSadj x y c))) else RSadj x y b) $ i))"
     apply(auto)
-    apply(rule vec_extensionality, auto)
+    apply(rule ext, auto)
     using OUren[OF ORA, of I x y c] by auto
   moreover have "... = (((\<chi> i. (if i \<in> ODE_vars I ODE then RSadj x y c else RSadj x y a) $ i)),
                          (\<chi> i. (if i \<in> ODE_vars I ODE then (ODE_sem I ODE (RSadj x y c)) else RSadj x y b) $ i))"
     apply(auto)
-    by(rule vec_extensionality, auto simp add: RSadj_cancel)
+    by(rule ext, auto simp add: RSadj_cancel)
   moreover have "... = mk_v I ODE (RSadj x y a, RSadj x y b) (RSadj x y c)"
     using mk_v_concrete[of I "ODE" "(RSadj x y a, RSadj x y b)" "RSadj x y c"]
-    apply auto
-     by (rule vec_extensionality | auto)+
+    by auto
   ultimately show ?thesis by auto
 qed
 
@@ -558,7 +559,7 @@ lemma sol_lemma:
        have "((\<lambda>\<nu>. (\<chi> i. RSadj x y \<nu> $ i)) has_derivative (\<lambda>\<nu>'. (\<chi> i . RSadj x y \<nu>' $ i))) (at (?f s) within ?f ` {0..t})"
          apply(rule has_derivative_vec)
          apply(auto simp add: RSadj_def intro:derivative_eq_intros)
-           by (simp add: Derivative.has_derivative_at_within has_derivative_proj')+
+           by (simp add: has_derivative_at_withinI has_derivative_proj')+
        then have gderiv:"(RSadj x y has_derivative (RSadj x y)) (at (?f s) within ?f ` {0..t})"
          using fun_eq1 by auto
        have hderiv:"(?h has_derivative (?g' \<circ> ?f')) (at s within {0..t})"
@@ -633,7 +634,7 @@ lemma sol_lemma2:
      have "((\<lambda>\<nu>. (\<chi> i. RSadj x y \<nu> $ i)) has_derivative (\<lambda>\<nu>'. (\<chi> i . RSadj x y \<nu>' $ i))) (at (?f s) within ?f ` {0..t})"
        apply(rule has_derivative_vec)
        apply(auto simp add: RSadj_def intro:derivative_eq_intros)
-         by (simp add: Derivative.has_derivative_at_within has_derivative_proj')+
+         by (simp add: Derivative.has_derivative_at_withinI has_derivative_proj')+
      then have gderiv:"(RSadj x y has_derivative (RSadj x y)) (at (?f s) within ?f ` {0..t})"
        using fun_eq1 by auto
      have hderiv:"(?h has_derivative (?g' \<circ> ?f')) (at s within {0..t})"
@@ -801,7 +802,7 @@ next
          subgoal for \<nu> using TUren[OF good_interp admit , of x y \<nu>] by auto done*)
        have "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (AssignAny z))) = ((\<nu>, \<omega>) \<in> prog_sem I (AssignAny y))"  using zx by auto
        moreover have "... = (\<exists>r. (\<omega> = repv \<nu> y r))" 
-         apply(auto) apply(rule exI[where x="fst \<nu>"],auto) subgoal for r by(rule exI[where x=r], rule vec_extensionality,auto) done
+         apply(auto) apply(rule exI[where x="fst \<nu>"],auto) subgoal for r by(rule exI[where x=r], auto) done
 (*       moreover have "... = (\<exists>r. (\<omega> = repv \<nu> y r))" using IH' by auto*)
        moreover have "... = (\<exists>r. (Radj x y \<omega> = Radj x y (repv \<nu> y r)))" using Radj_eq_iff by auto
        moreover have "... = (\<exists>r. (Radj x y \<omega> = repv (Radj x y \<nu>) x r))" using Radj_repv1 by auto
@@ -811,8 +812,8 @@ next
          subgoal for r 
            apply(rule exI[where x="fst (Radj x y \<nu>)"], rule conjI)
            subgoal unfolding Radj_def by auto
-           by(rule exI[where x=r],rule vec_extensionality,auto)
-         subgoal for b aa r by(rule exI[where x=r], rule vec_extensionality,auto) done
+           by(rule exI[where x=r],rule ext,auto)
+         subgoal for b aa r by(rule exI[where x=r], rule ext,auto) done
        ultimately 
        show "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (AssignAny z))) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem  I (AssignAny z))"
          by auto
@@ -826,7 +827,7 @@ next
 (*       have IH':"(\<And>\<nu>. dterm_sem I (TUrename x y \<theta>) \<nu> = dterm_sem I \<theta> (Radj x y \<nu>))"
          subgoal for \<nu> using TUren[OF good_interp admit , of x y \<nu>] by auto done*)
        have "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (AssignAny z))) = ((\<nu>, \<omega>) \<in> prog_sem I (AssignAny x))"  using zy by auto
-       moreover have "... = (\<exists>r.(\<omega> = repv \<nu> x r))" apply auto subgoal for r by(rule exI[where x = "fst \<nu>"],auto,rule exI[where x=r],rule vec_extensionality,auto) done
+       moreover have "... = (\<exists>r.(\<omega> = repv \<nu> x r))" apply auto subgoal for r by(rule exI[where x = "fst \<nu>"],auto,rule exI[where x=r],rule ext,auto) done
 (*       moreover have "... = (\<omega> = repv \<nu> x (dterm_sem I \<theta> (Radj x y \<nu>)))" using IH' by auto*)
        moreover have "... = (\<exists>r.(Radj x y \<omega> = Radj x y (repv \<nu> x r)))" using Radj_eq_iff by auto
        moreover have "... = (\<exists>r.(Radj x y \<omega> = repv (Radj x y \<nu>) y r))" using Radj_repv2 by auto
@@ -836,8 +837,8 @@ next
          subgoal for r 
            apply(rule exI[where x="fst (Radj x y \<nu>)"], rule conjI)
            subgoal unfolding Radj_def by auto
-           by(rule exI[where x=r],rule vec_extensionality,auto)
-         subgoal for b aa r by(rule exI[where x=r], rule vec_extensionality,auto) done
+           by(rule exI[where x=r],rule ext,auto)
+         subgoal for b aa r by(rule exI[where x=r], rule ext, auto) done
        ultimately 
        show "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (AssignAny z))) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem  I (AssignAny z))"
          by auto
@@ -850,7 +851,7 @@ next
 (*      have IH':"(\<And>\<nu>. dterm_sem I (TUrename x y \<theta>) \<nu> = dterm_sem I \<theta> (Radj x y \<nu>))"
         subgoal for \<nu> using TUren[OF good_interp admit, of x y \<nu>] by auto done*)
       have "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (AssignAny z))) = ((\<nu>, \<omega>) \<in> prog_sem I (AssignAny z))"  using zx zy by auto
-      moreover have "... = (\<exists>r. (\<omega> = repv \<nu> z r))" apply auto subgoal for r by(rule exI[where x = "fst \<nu>"],auto,rule exI[where x=r],rule vec_extensionality,auto) done
+      moreover have "... = (\<exists>r. (\<omega> = repv \<nu> z r))" apply auto subgoal for r by(rule exI[where x = "fst \<nu>"],auto,rule exI[where x=r],rule ext,auto) done
       moreover have "... = (\<exists>r. (Radj x y \<omega> = Radj x y (repv \<nu> z r)))" using Radj_eq_iff by auto
       moreover have "... = (\<exists>r. (Radj x y \<omega> = repv (Radj x y \<nu>) z r))" using Radj_repv3[OF zx zy] by auto
       moreover have "... = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem  I (AssignAny z))" 
@@ -858,8 +859,8 @@ next
          subgoal for r 
            apply(rule exI[where x="fst (Radj x y \<nu>)"], rule conjI)
            subgoal unfolding Radj_def by auto
-           by(rule exI[where x=r],rule vec_extensionality,auto)
-         subgoal for b aa r by(rule exI[where x=r], rule vec_extensionality,auto) done
+           by(rule exI[where x=r],rule ext,auto)
+         subgoal for b aa r by(rule exI[where x=r], rule ext,auto) done
       ultimately 
       show "((\<nu>, \<omega>) \<in> prog_sem I (PUrename x y (AssignAny z))) = ((Radj x y \<nu>, Radj x y \<omega>) \<in> prog_sem  I (AssignAny z))"
         by auto

@@ -187,6 +187,7 @@ where
 | ssem_Max:"sterm_sem I (Max _ _ ) v = undefined"
 | ssem_Min:"sterm_sem I (Min _ _ ) v = undefined"
 | ssem_Abs:"sterm_sem I (Abs _) v = undefined"
+| ssem_Div:"sterm_sem I (Div t1 t2) v = undefined"
   
 (* frechet I \<theta> \<nu> syntactically computes the frechet derivative of the term \<theta> in the interpretation
  * I at state \<nu> (containing only the unprimed variables). The frechet derivative is a
@@ -220,6 +221,7 @@ where
 | "dterm_sem I (Neg t) = (\<lambda>v. - (dterm_sem I t v) )"
 | "dterm_sem I (Plus t1 t2) = (\<lambda>v. (dterm_sem I t1 v) + (dterm_sem I t2 v))"
 | "dterm_sem I (Times t1 t2) = (\<lambda>v. (dterm_sem I t1 v) * (dterm_sem I t2 v))"
+| "dterm_sem I (Div t1 t2) = (\<lambda>v. (dterm_sem I t1 v) / (dterm_sem I t2 v))"
 | "dterm_sem I (Differential t) = (\<lambda>v. directional_derivative I t v)"
 | "dterm_sem I ($$F f) = (\<lambda>v. Funls I f v)"
 | "dterm_sem I (Const b) = (\<lambda>v. sint (Rep_bword b))"

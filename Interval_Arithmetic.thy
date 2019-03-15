@@ -1,8 +1,8 @@
 theory Interval_Arithmetic
 imports 
   Complex_Main
-  "./Word_Lib/Word_Lib"
-  "./Word_Lib/Word_Lemmas"
+  Word_Lib.Word_Lib
+  Word_Lib.Word_Lemmas
   "./Syntax"
 begin
 
@@ -36,8 +36,16 @@ and repeInt_simps[rep_simps]:"repe w (sint w)"
 definition repU ::"word \<Rightarrow> real \<Rightarrow> bool" (infix "\<equiv>\<^sub>U" 10)
 where "repU w r \<equiv> \<exists> r'. r' \<ge> r \<and> repe w r'"
 
+lemma repU_leq:"repU w r \<Longrightarrow> r' \<le> r \<Longrightarrow> repU w r'"
+  unfolding repU_def
+  using order_trans by auto
+
 definition repL ::"word \<Rightarrow> real \<Rightarrow> bool" (infix "\<equiv>\<^sub>L" 10)
 where "repL w r \<equiv> \<exists> r'. r' \<le> r \<and> repe w r'"
+
+lemma repL_geq:"repL w r \<Longrightarrow> r' \<ge> r \<Longrightarrow> repL w r'"
+  unfolding repL_def
+  using order_trans by auto
 
 definition repP ::"word * word \<Rightarrow> real \<Rightarrow> bool" (infix "\<equiv>\<^sub>P" 10)
 where "repP w r \<equiv> let (w1, w2) = w in repL w1 r \<and> repU w2 r" 
@@ -48,6 +56,7 @@ inductive rtsem :: "('sf, 'sz) trm \<Rightarrow> 'sz rstate \<Rightarrow> real  
 | rtsem_Var:"([Var x]\<nu> \<down> \<nu> x)"
 | rtsem_Plus:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> ([Plus \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> (r\<^sub>1 + r\<^sub>2))"
 | rtsem_Times:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> ([Times \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> (r\<^sub>1 * r\<^sub>2))"
+| rtsem_Div:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> ([Div \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> (r\<^sub>1 / r\<^sub>2))"
 | rtsem_Max:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> ([Max \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> (max r\<^sub>1 r\<^sub>2))"
 | rtsem_Min:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1); ([\<theta>\<^sub>2]\<nu> \<down> r\<^sub>2)\<rbrakk> \<Longrightarrow> ([Min \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> \<down> (min r\<^sub>1 r\<^sub>2))"
 | rtsem_Abs:"\<lbrakk>([\<theta>\<^sub>1]\<nu> \<down> r\<^sub>1)\<rbrakk> \<Longrightarrow> ([Abs \<theta>\<^sub>1]\<nu> \<down> (abs r\<^sub>1))"
@@ -61,6 +70,7 @@ and rtsem_TimesU_simps[simp] : "([Times \<theta>\<^sub>1 \<theta>\<^sub>2]\<nu> 
 and rtsem_Abs_simps[simp] : "([Abs \<theta>] \<nu> \<down> r)"
 and rtsem_Max_simps[simp] : "([Max \<theta>\<^sub>1 \<theta>\<^sub>2] \<nu> \<down> r)"
 and rtsem_Min_simps[simp] : "([Min \<theta>\<^sub>1 \<theta>\<^sub>2] \<nu> \<down> r)"
+and rtsem_Div_simps[simp] : "([Div \<theta>\<^sub>1 \<theta>\<^sub>2] \<nu> \<down> r)"
 and rtsem_Neg_simps[simp] : "([Neg \<theta>] \<nu> \<down> r)"
 
 definition set_less :: "real set \<Rightarrow> real set \<Rightarrow> bool" (infix "<\<^sub>S" 10)
@@ -1742,6 +1752,8 @@ where "wtimes w1 w2 =
    if prod <=s (scast NEG_INF) then NEG_INF
    else if (scast POS_INF) <=s prod then POS_INF
    else (scast prod)))"
+
+
  
 lemma times_upcast_lower:
   fixes x y::int
@@ -3325,10 +3337,11 @@ lemma min_repU2:
   using wmin_lemma assms repL_def
 by (meson min_le_iff_disj)
 
+
 fun tl :: "word \<Rightarrow> word \<Rightarrow> word \<Rightarrow> word \<Rightarrow> word"
 where "tl w1l w1u w2l w2u =
   wmin (wmin (wtimes w1l w2l) (wtimes w1u w2l))
-       (wmin (wtimes w1l w2u) (wtimes w1u w2u)) "
+       (wmin (wtimes w1l w2u) (wtimes w1u w2u))"
 
 lemmas real_zero_le_0_iff = zero_le_mult_iff
 
@@ -4053,6 +4066,455 @@ lemma wleq_lemma:"w\<^sub>1 \<equiv>\<^sub>U (r\<^sub>1::real) \<Longrightarrow>
     qed
   done
 
+
+(*fun wdiv:: "word \<Rightarrow> word \<Rightarrow> word"
+  where "wdiv w1 w2 = 
+ (undefined )
+"*)
+
+fun divfloor :: "word \<Rightarrow> word \<Rightarrow> word"
+  where "divfloor w1 w2 = 
+  (if w1 mod w2 = 0 then
+    w1 div w2 
+  else (w1 div w2) + 1)"
+(**)
+fun divceil :: "word \<Rightarrow> word \<Rightarrow> word"
+  where "divceil w1 w2 = w1 div w2" 
+
+fun wabs :: "word \<Rightarrow> word"
+  where "wabs l1 = (wmax l1 (wneg l1))"
+(* "hopeful" table that might not work
+  let x = n or +-inf, y != 0 = m or +-inf 
+Then
+up(x/y) =
+     |  -inf  |  -   |  +  |  +inf
+--------------------------------------
+-inf | +inf   | +inf |min/m|  0
+--------------------------------------
+  -  |  1     | n/m  | n/m |  0      
+--------------------------------------
+  0  |  0     |  0   |  0  |  0      
+--------------------------------------
+  +  |  0     | n/m  | n/m |  1      
+--------------------------------------
++inf |  0     |max/m |max/m|  1      
+
+*)
+fun divu :: "word \<Rightarrow> word \<Rightarrow> word"
+  where "divu w1 w2 = 
+(if NEG_INF < w1 \<and> w1 < POS_INF \<and> NEG_INF < w2 \<and> w2 < POS_INF then
+  divceil w1 w2
+ else if (w1 \<ge> 0 \<and> w2 = NEG_INF) \<or> (w1 \<le> 0 \<and> w2 = POS_INF) then
+  0
+ else if w1 = NEG_INF then
+  (if w2 < 0 then POS_INF else 
+   divceil NEG_INF w2)
+ else if w1 = POS_INF \<and> w2 < POS_INF then
+   divceil POS_INF w2
+ else 1)"
+
+
+(* "hopeful" table that might not work
+  let x = n or +-inf, y != 0 = m or +-inf 
+Then
+down(x/y) =
+     |  -inf  |  -    |   +   |  +inf
+--------------------------------------
+-inf | 0      | min/m | -inf  | -inf  
+--------------------------------------
+  -  | 0      | n/m   |  n/m  | -1    
+--------------------------------------
+  0  | 0      | 0     | 0     | 0       
+--------------------------------------
+  +  | -1     | n/m   | n/m   | 0       
+--------------------------------------
++inf | -inf   | -inf  | max/m | 0       
+*)
+fun divl :: "word \<Rightarrow> word \<Rightarrow> word"
+  where "divl w1 w2 = 
+(if NEG_INF < w1 \<and> w1 < POS_INF \<and> NEG_INF < w2 \<and> w2 < POS_INF then
+  divfloor w1 w2
+ else if (w1 \<le> 0 \<and> w2 = NEG_INF) \<or> (w1 \<ge> 0 \<and> w2 = POS_INF) then
+  0
+ else if w1 = NEG_INF \<and> w2 < 0 then divfloor NEG_INF w2
+ else if (w1 = NEG_INF \<and> w2 \<ge> 0) 
+       \<or> (w1 = POS_INF \<and> w2 < 0) then
+   NEG_INF
+ else if w1 = POS_INF then
+   divfloor POS_INF w2
+ else (-1))"
+
+lemma divl_lemma:
+  assumes "w1 \<equiv>\<^sub>E r1"
+  assumes "w2 \<equiv>\<^sub>E r2"
+  assumes "r2 \<noteq> 0"
+  shows "divl w1 w2 \<equiv>\<^sub>L (r1/r2)"
+proof -
+  show ?thesis sorry
+qed
+
+lemma divu_lemma:
+  assumes "w1 \<equiv>\<^sub>E r1"
+  assumes "w2 \<equiv>\<^sub>E r2"
+  assumes "r2 \<noteq> 0"
+  shows "divu w1 w2 \<equiv>\<^sub>U (r1/r2)"
+proof -
+  show ?thesis sorry
+qed
+
+
+(* "conservative" table, more likely to work
+  let x = n or +-inf, y != 0 = m or +-inf 
+Then
+up(x/y) =
+     |  -inf  |  -   |  +  |  +inf
+--------------------------------------
+-inf | +inf   | +inf | +inf|  +inf
+--------------------------------------
+  -  |  1     | n/m  | |n| |  |n|    
+--------------------------------------
+  0  |  0     |  0   |  0  |  0      
+--------------------------------------
+  +  |  0     |  0   | |n| |  |n|    
+--------------------------------------
++inf | +inf   | +inf |+inf | +inf    
+
+*)
+
+fun divuCon :: "word \<Rightarrow> word \<Rightarrow> word"
+where "divuCon w1 w2 =
+ (if (w1 = POS_INF \<or> w1 = NEG_INF) then POS_INF
+ else if w1 = 0 then 0
+ else if wleq 0 w2  then wabs w1
+ else if wleq 0 w1  then 0
+ else if w2 = NEG_INF then 1
+ else w1 div w2)"
+
+(* 0/u2 *)(* 0/l2 *)
+fun divU :: "word \<Rightarrow> word \<Rightarrow> word \<Rightarrow> word \<Rightarrow> (word * word)"
+where "divU l1 u1 l2 u2 =
+  (if (wleq l2 0 \<and> wleq 0 u2) then
+    (NEG_INF, POS_INF)
+else if wle 0 l2  then (* top half*)
+  (if wleq l1 0 \<and> wleq 0 u1 then (* top-center*)
+    (wmin (divl l1 l2) 0,  
+     wmax (divu u1 l2) 0)
+   else if wle u1  0 then (* top-left *)
+     (divl l1 l2, divu u1 u2)
+   else (* top-right *)
+     (divl l1 u2, divu u1 l2))
+else (* bottom half *)
+  (if wleq l1  0 \<and> wleq 0 u1 then (* bottom-center*)
+    (wmin (divl u1 u2) 0 
+    ,wmax (divu l1 u2) 0)
+  else if wle u1  0 then (* bottom-left *)
+    (divl u1 l2, divu l1 u2)
+  else (* bottom-right*)
+    (divl u1 u2, divu l1 l2)
+))"
+
+lemma divU_lemma:
+  assumes ul1:"(l1, u1) \<equiv>\<^sub>P r1"
+  assumes ul2:"(l2, u2) \<equiv>\<^sub>P r2"
+  shows "divU l1 u1 l2 u2 \<equiv>\<^sub>P (r1 / r2)"
+proof -
+  from ul1 ul2
+  have l1:"(l1 \<equiv>\<^sub>L r1)" and u1:"(u1 \<equiv>\<^sub>U r1)"
+  and  l2:"(l2 \<equiv>\<^sub>L r2)" and u2:"(u2 \<equiv>\<^sub>U r2)"
+    unfolding repP_def by auto
+  obtain r1l r1u r2l r2u ::real where 
+      l1def:"(r1l \<le> r1)"  "(l1 \<equiv>\<^sub>E r1l)" 
+ and  u1def:"(r1u \<ge> r1)"  "(u1 \<equiv>\<^sub>E r1u)"
+ and  l2def:"(r2l \<le> r2)"  "(l2 \<equiv>\<^sub>E r2l)"
+ and  u2def:"(r2u \<ge> r2)"  "(u2 \<equiv>\<^sub>E r2u)"
+    using l1 u1 l2 u2 unfolding repL_def repU_def by auto
+  have  rep0:" (0::word) \<equiv>\<^sub>E real_of_int (sint (0::word))"
+    apply (rule repINT)
+    by(auto simp add: POS_INF_def NEG_INF_def)
+  have  rep0w:" (0::word) \<equiv>\<^sub>E 0"
+    using rep0 by auto
+  then have  rep0u:"(0::word) \<equiv>\<^sub>U 0"
+    using repU_def by auto
+  from rep0w have rep0l:"(0::word) \<equiv>\<^sub>L 0"
+    using repL_def by auto
+  show ?thesis
+  apply(cases "wleq l2 0 \<and> wleq 0 u2")
+   apply(simp only: divU.simps)
+  subgoal proof -
+    assume lu2:"wleq l2 0 \<and> wleq 0 u2"
+    show "?thesis"
+      apply(simp)
+      apply(unfold repP_def, simp, rule conjI)
+      subgoal
+        apply(auto simp add: repL_def repNEG_INF)
+        using  NEG_INF_def repNEG_INF 
+        by (meson le_cases)
+      subgoal
+        apply(auto simp add: repU_def repPOS_INF)
+        using  POS_INF_def repPOS_INF 
+        by (meson le_cases) done qed
+  apply(cases "wle 0 l2") 
+  subgoal (*top*)
+    apply(cases "wleq l1  0 \<and> wleq 0  u1") 
+    subgoal(*top-center *)
+      subgoal proof -
+        assume a1:"\<not> (wleq l2 0 \<and> wleq 0 u2)"
+        assume a2:"wle 0 l2"
+        assume a3:"wleq l1 0 \<and> wleq 0 u1"
+        have r2lbound:"0 < r2l" 
+          apply (rule wle_lemma)
+          prefer 3
+            apply (rule a2)
+           prefer 2
+          using l2def(2) repL_def apply auto[1]
+          apply(auto simp add: repU_def)
+          apply(rule exI[where x=0]) 
+          using rep0 by auto
+        have r2bound:"0 < r2" using r2lbound l2def by auto
+        have wminCase1:"r1 \<ge> 0 \<Longrightarrow> wmin (divl l1 l2) 0 \<equiv>\<^sub>L r1 / r2"
+        proof -
+          assume r1bound:"r1 \<ge> 0" 
+          have quotPos:"r1/r2 \<ge> 0" using r1bound r2bound by auto
+         have zBound:"0 \<equiv>\<^sub>L r1 / r2"
+           apply(auto simp add: repL_def)
+           apply(rule exI[where x=0],auto simp add: quotPos) using rep0 by auto
+         show ?thesis
+           apply(rule min_repU2)
+            apply(rule divl_lemma)
+           apply(rule l1def(2)) apply(rule l2def(2))
+            defer apply(rule zBound)
+           using r2lbound by blast
+          qed
+        have wminCase2:"r1 < 0 \<Longrightarrow> wmin (divl l1 l2) 0 \<equiv>\<^sub>L r1 / r2"
+        proof -
+          assume r1bound:"r1 < 0" 
+          have quotPos:"r1/r2 < 0" using r1bound r2bound 
+            by (simp add: divide_neg_pos)
+          have divBound:"divl l1 l2  \<equiv>\<^sub>L r1l / r2l"
+            apply(rule divl_lemma[OF l1def(2) l2def(2)])  
+            using r2bound r2lbound by blast
+          then have divBound2:"divl l1 l2  \<equiv>\<^sub>L r1 / r2"
+            using repU_leq 
+            sorry
+         show ?thesis
+           apply(rule min_repU1)
+(*            apply(rule divBound)*)
+           subgoal sorry
+           using rep0w repL_def by auto
+       qed
+          have min:"wmin (divl l1 l2) 0 \<equiv>\<^sub>L r1 / r2" 
+            apply(cases "r1 \<ge>0")
+            subgoal by(rule wminCase1)
+            subgoal by(rule wminCase2,simp)
+            done
+          have wmaxCase1:"r1 \<ge> 0 \<Longrightarrow> wmax (divu u1 l2) 0 \<equiv>\<^sub>U r1 / r2"
+          proof -
+            assume r1bound:"r1 \<ge> 0"
+            have quotPos:"r1/r2 \<ge> 0" using r1bound r2bound by auto
+            have divBound:"divu u1 l2  \<equiv>\<^sub>U r1u / r2l"
+              apply(rule divu_lemma)  
+              using u1def l2def apply auto
+              using r2lbound by blast
+            have rel:"r1u/r2l \<ge> r1/r2"
+              by (simp add: frac_le l2def(1) r1bound r2lbound u1def(1))
+            have divBound2:"divu u1 l2  \<equiv>\<^sub>U r1 / r2" 
+              apply(rule repU_leq)
+              apply(rule divBound)
+              using rel by auto
+            have zBound:"0 \<equiv>\<^sub>U 0"
+              apply(auto simp add: repU_def)
+              apply(rule exI[where x=0],auto simp add: quotPos) using rep0 by auto
+            show ?thesis
+              apply(rule max_repU1)
+               apply(rule divBound2)
+              by(rule zBound)
+          qed
+            have wmaxCase2:"r1 < 0 \<Longrightarrow> wmax (divu u1 l2) 0 \<equiv>\<^sub>U r1 / r2"
+            proof -
+            assume r1bound:"r1 < 0"
+            have quotPos:"r1/r2 < 0" using r1bound r2bound 
+              by (simp add: divide_neg_pos)
+            have divBound:"divu u1 l2  \<equiv>\<^sub>U r1u / r2l"
+              apply(rule divu_lemma)  
+              using u1def l2def apply auto
+              using r2lbound by blast
+            have zBound:"0 \<equiv>\<^sub>U r1 / r2"
+              apply(auto simp add: repU_def)
+              apply(rule exI[where x=0],auto simp add: quotPos) using rep0 quotPos by auto
+            show ?thesis
+              apply(rule max_repU2)
+               apply(rule divBound)
+              apply(rule zBound)
+              done
+          qed
+          have max:" wmax (divu u1 l2) 0 \<equiv>\<^sub>U r1 / r2" 
+            apply(cases "r1\<ge>0")
+            subgoal by(rule wmaxCase1,auto)
+            subgoal by(rule wmaxCase2,auto) done
+          have res:"(wmin (divl l1 l2) 0, wmax (divu u1 l2) 0) \<equiv>\<^sub>P r1 / r2"
+            unfolding repP_def using min max by auto
+          have eval:" divU l1 u1 l2 u2  = (wmin (divl l1 l2) 0, wmax (divu u1 l2) 0)"
+            using a2 a3 by auto
+          from res eval show ?thesis by auto
+        qed done
+    subgoal
+      apply(cases "wle u1  0")
+      subgoal (*top-left*)
+      proof - 
+        assume a1:"\<not> (wleq l2 0 \<and> wleq 0 u2)"
+        assume a2:"wle 0 l2"
+        assume a3:"\<not> (wleq l1 0 \<and> wleq 0 u1)"
+        assume a4:"wle u1  0"
+        have r1ubound:"r1u < 0"
+          apply (rule wle_lemma)
+          prefer 3
+            apply (rule a4)
+          defer apply(rule rep0l)
+          unfolding repU_def
+          apply(rule exI[where x=r1u]) 
+          using rep0 u1def(2) by blast
+        have r2lbound:"0 < r2l" 
+          apply (rule wle_lemma)
+          prefer 3
+            apply (rule a2)
+           prefer 2
+          using l2def(2) repL_def apply auto[1]
+          apply(auto simp add: repU_def)
+          apply(rule exI[where x=0]) 
+          using rep0 by auto
+        then have r2ubound:"0 < r2u" 
+          using l2def(1) u2def(1) by linarith
+        have r1bound:"r1 < 0" using r1ubound u1def by linarith
+        have r2bound:"0 < r2" using r2lbound l2def by auto
+        have divBound:"divl l1 l2  \<equiv>\<^sub>L r1l / r2l"
+          apply(rule divl_lemma)  
+          using l1def l2def apply auto
+          using r2lbound by blast
+        have rel:"r1l/r2l \<le> r1/r2"
+          using frac_le l2def(1) r1bound r2lbound l1def(1)
+          by (smt divide_minus_left)
+        have divBound2:"divl l1 l2  \<equiv>\<^sub>L r1 / r2"
+          by(rule repL_geq,rule divBound, rule rel)
+        have divBoundU:"divu u1 u2  \<equiv>\<^sub>U r1u / r2u"
+          apply(rule divu_lemma)  
+          using u1def u2def apply auto
+          using r2ubound by blast
+        have relU:"r1u/r2u \<ge> r1/r2"
+          using frac_le u2def(1) r1bound r2ubound u1def(1)
+          by (smt divide_minus_left r2bound) 
+        have divBound2U:"divu u1 u2  \<equiv>\<^sub>U r1 / r2"
+          by(rule repU_leq, rule divBoundU, rule relU)
+        have res:"( (divl l1 l2),  (divu u1 u2) ) \<equiv>\<^sub>P r1 / r2"
+          unfolding repP_def using divBound2 divBound2U by auto
+        have eval:" divU l1 u1 l2 u2  = ((divl l1 l2) ,  (divu u1 u2))"
+          using a2 a3 a4 by auto
+        from res eval show ?thesis by auto
+      qed
+      subgoal (*top-right*)
+      proof - 
+        assume a1:"\<not> (wleq l2 0 \<and> wleq 0 u2)"
+        assume a2:"wle 0 l2"
+        assume a3:"\<not> (wleq l1 0 \<and> wleq 0 u1)"
+        assume a4:"\<not>(wle u1  0)"
+        have wleq_ex:" (wle u1 0 \<longleftrightarrow> \<not>(wleq 0 u1))"
+          using a1 a2 a3 a4
+          by (auto simp add: NEG_INF_def POS_INF_def)
+        have wleq_ex2:" (wle l1 0 \<longleftrightarrow> \<not>(wleq 0 l1))"
+          using a1 a2 a3 a4
+          by (auto simp add: NEG_INF_def POS_INF_def)
+        have "\<not> wleq l1 0" using a3 a4 wleq_ex by auto
+        then have wle0:" wle 0 l1 " using a3 a4 wleq_ex2 by auto
+        have r1lbound:"0 < r1l"
+          apply (rule wle_lemma)
+          prefer 3
+            apply (rule wle0)
+          apply(rule rep0u)
+          unfolding repL_def
+          apply(rule exI[where x=r1l]) 
+          using rep0 l1def(2) by blast
+        have r2lbound:"0 < r2l" 
+          apply (rule wle_lemma)
+          prefer 3
+            apply (rule a2)
+           prefer 2
+          using l2def(2) repL_def apply auto[1]
+          apply(auto simp add: repU_def)
+          apply(rule exI[where x=0]) 
+          using rep0 by auto
+        then have r2ubound:"0 < r2u" 
+          using l2def(1) u2def(1) by linarith
+        have r1bound:"0 < r1" using r1lbound l1def by linarith
+        have r2bound:"0 < r2" using r2lbound l2def by auto
+        have divBound:"divl l1 u2  \<equiv>\<^sub>L r1l / r2u"
+          apply(rule divl_lemma)  
+          using l1def l2def u1def u2def apply auto
+          using r2ubound by blast
+        have rel:"r1l/r2u \<le> r1/r2"
+          using frac_le l2def(1) r1bound r2lbound l1def(1)
+          by (metis le_less r1lbound r2bound u2def(1))
+        have divBound2:"divl l1 u2  \<equiv>\<^sub>L r1 / r2"
+          by(rule repL_geq,rule divBound, rule rel)
+        have divBoundU:"divu u1 l2  \<equiv>\<^sub>U r1u / r2l"
+          apply(rule divu_lemma)  
+          using u1def l2def apply auto
+          using r2lbound by blast
+        have relU:"r1u/r2l \<ge> r1/r2"
+          using frac_le l2def(1) r1bound r2ubound u1def(1) divide_minus_left r2bound
+          by (metis le_less r2lbound)
+        have divBound2U:"divu u1 l2  \<equiv>\<^sub>U r1 / r2"
+          by(rule repU_leq, rule divBoundU, rule relU)
+        have res:"( (divl l1 u2),  (divu u1 l2) ) \<equiv>\<^sub>P r1 / r2"
+          unfolding repP_def using divBound2 divBound2U by auto
+        have eval:" divU l1 u1 l2 u2  = ((divl l1 u2) ,  (divu u1 l2))"
+          using a1 a2 a3 a4 
+          using divU.simps by presburger
+        from res eval show ?thesis by auto
+      qed done done
+  subgoal (*bottom*)
+    apply(cases "l1 \<le> 0 \<and> 0 \<le> u1") 
+(*
+(if NEG_INF < l1 \<and> l1 < POS_INF \<and> NEG_INF < l2 \<and> l2 < POS_INF then divfloor l1 l2
+ else if l1 \<le> 0 \<and> l2 = NEG_INF \<or> 0 \<le> l1 \<and> l2 = POS_INF then 0
+ else if l1 = NEG_INF \<and> l2 < 0 then divfloor NEG_INF l2
+ else if l1 = NEG_INF \<and> 0 \<le> l2 \<or> l1 = POS_INF \<and> l2 < 0 then NEG_INF 
+ else if l1 = POS_INF then divfloor POS_INF l2 
+ else - 1)
+*)
+    subgoal(*bottom-center *)
+    proof - 
+      assume a1:"\<not> (wleq l2 0 \<and> wleq 0 u2)"
+      assume a2:"\<not> wle 0 l2"
+      assume a3:"l1 \<le> 0 \<and> 0 \<le> u1"
+      show "divU l1 u1 l2 u2 \<equiv>\<^sub>P r1 / r2"
+    subgoal
+      apply(cases "u1 < 0")
+      subgoal (*bottom-left*)
+        subgoal (*bottom-right*)
+          sorry
+        done
+      sorry
+    done
+qed
+  sorry
+  done
+qed
+lemma dl_lemma:
+  assumes u1:"u\<^sub>1 \<equiv>\<^sub>U (r\<^sub>1::real)"
+  assumes u2:"u\<^sub>2 \<equiv>\<^sub>U (r\<^sub>2::real)"
+  assumes l1:"l\<^sub>1 \<equiv>\<^sub>L (r\<^sub>1::real)"
+  assumes l2:"l\<^sub>2 \<equiv>\<^sub>L (r\<^sub>2::real)"
+  shows "dl l\<^sub>1 u\<^sub>1 l\<^sub>2 u\<^sub>2 \<equiv>\<^sub>L (r\<^sub>1 / r\<^sub>2)"
+  sorry
+
+lemma du_lemma:
+  assumes u1:"u\<^sub>1 \<equiv>\<^sub>U (r\<^sub>1::real)"
+  assumes u2:"u\<^sub>2 \<equiv>\<^sub>U (r\<^sub>2::real)"
+  assumes l1:"l\<^sub>1 \<equiv>\<^sub>L (r\<^sub>1::real)"
+  assumes l2:"l\<^sub>2 \<equiv>\<^sub>L (r\<^sub>2::real)"
+  shows "du l\<^sub>1 u\<^sub>1 l\<^sub>2 u\<^sub>2 \<equiv>\<^sub>U (r\<^sub>1 / r\<^sub>2)"
+  sorry
+
+
 fun wtsemU :: "('sf,'sz) trm \<Rightarrow> 'sz wstate \<Rightarrow>  word * word " ("([_]<>_)" 20)
 where "([Const r]<>\<nu>) = (Rep_bword r::word, Rep_bword r)"
 | wVarU:"([Var x]<>\<nu>) = (\<nu> (Inl x), \<nu> (Inr x))"
@@ -4072,6 +4534,10 @@ where "([Const r]<>\<nu>) = (Rep_bword r::word, Rep_bword r)"
   (let (l1, u1) = [\<theta>\<^sub>1]<> \<nu> in 
    let (l2, u2) = [\<theta>\<^sub>2]<> \<nu> in
   (wmin l1 l2, wmin u1 u2))"
+| wDivU:"([(Div \<theta>\<^sub>1 \<theta>\<^sub>2)]<> \<nu>) = 
+  (let (l1, u1) = [\<theta>\<^sub>1]<> \<nu> in 
+   let (l2, u2) = [\<theta>\<^sub>2]<> \<nu> in
+  (divU l1 u1 l2 u2))"
 | wNegU:"([(Neg \<theta>)]<> \<nu>) =
   (let (l, u) = [\<theta>]<> \<nu> in
    (wneg u, wneg l))"
@@ -4264,6 +4730,39 @@ next
   then show "[Min \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P min r\<^sub>1 r\<^sub>2"
     unfolding repP_def
     using lbound ubound lu1 lu2 by auto
+next
+  case rtsem_Div
+   fix \<theta>\<^sub>1 :: "('sf,'sz) trm" and \<nu>':: "'sz rstate" and r\<^sub>1 and \<theta>\<^sub>2 :: "('sf,'sz) trm" and  r\<^sub>2
+   assume rep:"\<nu> REP \<nu>'"
+   assume eval1:"[\<theta>\<^sub>1]\<nu>' \<down> r\<^sub>1"
+   assume "(\<nu> REP \<nu>' \<Longrightarrow> [\<theta>\<^sub>1]<>\<nu> \<equiv>\<^sub>P r\<^sub>1)"
+   then have IH1:"[\<theta>\<^sub>1]<>\<nu> \<equiv>\<^sub>P r\<^sub>1" using rep by auto
+   assume eval2:"[\<theta>\<^sub>2]\<nu>' \<down> r\<^sub>2"
+   assume "(\<nu> REP \<nu>' \<Longrightarrow> [\<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>2)"
+   then have IH2:"[\<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>2" using rep by auto
+   obtain l1 u1 l2 u2 where 
+        lu1:"(l1, u1) = ([\<theta>\<^sub>1]<> \<nu>)" 
+    and lu2:"(l2, u2) = ([\<theta>\<^sub>2]<> \<nu>)"
+    using IH1 IH2 repP_def by auto
+   from lu1 and lu2 have
+        lu1':"([\<theta>\<^sub>1]<> \<nu>) = (l1, u1)" 
+    and lu2':"([\<theta>\<^sub>2]<> \<nu>) = (l2, u2)"
+    by auto
+  have l1:"l1 \<equiv>\<^sub>L r\<^sub>1" using IH1 lu1 unfolding repP_def by auto
+  have u1:"u1 \<equiv>\<^sub>U r\<^sub>1" using IH1 lu1 unfolding repP_def by auto
+  have l2:"l2 \<equiv>\<^sub>L r\<^sub>2" using IH2 lu2 unfolding repP_def by auto
+  have u2:"u2 \<equiv>\<^sub>U r\<^sub>2" using IH2 lu2 unfolding repP_def by auto
+  then have "([(Plus \<theta>\<^sub>1 \<theta>\<^sub>2)]<>\<nu>) = (pl l1 l2, pu u1 u2)"  
+   using lu1' lu2' by auto
+  have lBound:"(pl l1 l2 \<equiv>\<^sub>L r\<^sub>1 + r\<^sub>2)"
+    using l1 l2 pl_lemma by auto
+  have uBound:"(pu u1 u2 \<equiv>\<^sub>U r\<^sub>1 + r\<^sub>2)"
+    using pu_lemma[OF u1 u2] by auto
+  have "divU l1 u1 l2 u2 \<equiv>\<^sub>P (r\<^sub>1 / r\<^sub>2)"
+    unfolding repP_def Let_def using lBound uBound 
+    using IH1 IH2 divU_lemma lu1' lu2' repP_def by auto
+  then show"[Div \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>1 / r\<^sub>2"
+    using lu1' lu2' by auto
 next
   case rtsem_Neg
   fix \<theta> :: "('sf,'sz) trm" and \<nu>' r

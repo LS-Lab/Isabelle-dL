@@ -707,7 +707,7 @@ proof -
     by auto
   then have f_linear:"linear (FunctionFrechet I id1 ?x)"
     using Deriv.has_derivative_linear by auto
-  then show ?thesis using empty_zero f_linear Linear_Algebra.linear_0 by (auto)
+  then show ?thesis using empty_zero f_linear linear_0 by auto 
 qed
 
 lemma constant_deriv_zero:"\<And>id. is_interp I \<Longrightarrow> directional_derivative I ($f id empty) \<nu> = 0"
@@ -810,7 +810,7 @@ proof
     have argsEq:"(\<chi> i. dterm_sem I (singleton (trm.Var vid1) i)
           (mk_v I (OSing vid1 ($f fid1 (singleton (trm.Var vid1)))) (ab, bb) (sol t)))
           = (\<chi> i.  sterm_sem I (singleton (trm.Var vid1) i) (sol t))"
-      using agree by (simp add: vec_extensionality Vagree_def f1_def)
+      using agree by (simp add: ext Vagree_def f1_def)
     thus "Functions I fid1 (\<chi> i. dterm_sem I (singleton (trm.Var vid1) i)
           (mk_v I (OSing vid1 ($f fid1 (singleton (trm.Var vid1)))) (ab, bb) (sol t))) 
         = snd (mk_v I (OSing vid1 ($f fid1 (singleton (trm.Var vid1)))) (ab, bb) (sol t)) $ vid1"
@@ -1370,8 +1370,7 @@ next
     apply(standard)
         apply(auto)
      unfolding local_lipschitz_def f0_def empty_def sterm_sem.simps apply(safe)
-     using gt_ex lipschitz_constI apply blast
-    by (simp add: continuous_on_const)
+     using gt_ex local_lipschitz_constI lipschitz_on_constant by fastforce
   have eq_UNIV:"ll.existence_ivl 0 (sol 0) = UNIV"
     apply(rule ll.existence_ivl_eq_domain)
         apply(auto)
@@ -1697,7 +1696,7 @@ proof -
   done
   then have fderiv:"(?f has_derivative ?f') (at s within {0..t})" using eta eta_esque by auto
   have gderiv:"(?g has_derivative ?g') (at (?f s) within ?f ` {0..t})"
-     using Derivative.has_derivative_at_within 
+     using Derivative.has_derivative_at_withinI
      using frechet_correctness free good_interp 
      by blast
   have chain:"((?g \<circ> ?f) has_derivative (?g' \<circ> ?f')) (at s within {0..t})"

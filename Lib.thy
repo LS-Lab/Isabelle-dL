@@ -28,13 +28,15 @@ lemma bounded_linear_vec:
   shows "bounded_linear (\<lambda>x. \<chi> i. f i x)"
 proof -
   let ?g = "(\<lambda>x. \<chi> i. f i x)"
-  have additives:"\<And>i. Real_Vector_Spaces.additive (f i)"
-    using bounds unfolding bounded_linear_def bounded_linear_axioms_def linear_def by auto
-  have additive:"Real_Vector_Spaces.additive (\<lambda>x. \<chi> i. f i x)"
-    using additives unfolding Real_Vector_Spaces.additive_def apply auto 
+  have additives:"\<And>i. Modules.additive (f i)"
+    using bounds unfolding bounded_linear_def bounded_linear_axioms_def linear_def
+    by (simp add: Modules.additive_def bounds linear_simps(1))
+  have additive:"Modules.additive (\<lambda>x. \<chi> i. f i x)"
+    using additives unfolding Modules.additive_def apply auto 
     by (metis (mono_tags, lifting) Cart_lambda_cong plus_vec_def vec_lambda_beta)
   have scales:"\<And>i. (\<forall>r x. f i (r *\<^sub>R x) = r *\<^sub>R f i x)"
-    using bounds unfolding bounded_linear_def bounded_linear_axioms_def linear_def linear_axioms_def by auto
+    using bounds unfolding bounded_linear_def bounded_linear_axioms_def linear_def linear_simps 
+    by (simp add: bounds linear_simps(5))
   have scale:"(\<forall>r x. ?g (r *\<^sub>R x) = r *\<^sub>R ?g x)"
     using scales
   proof -
@@ -72,7 +74,8 @@ proof -
   have linears:"\<And>i. linear (f i)"
     using bounds unfolding bounded_linear_def bounded_linear_axioms_def by auto
   have linear:"linear (\<lambda>x. \<chi> i. f i x)"
-    using linears unfolding linear_def linear_axioms_def using scale additive by auto
+    using linears scale additive
+    by (metis (mono_tags, lifting) Cart_lambda_cong Modules.additive_def linearI)
   show ?thesis
     unfolding bounded_linear_def bounded_linear_axioms_def
     using linear norm by auto
@@ -452,8 +455,9 @@ proof -
   let ?x0.0 = "\<chi> i::('sz::finite). x"
   interpret ll: ll_on_open "UNIV" "(\<lambda>t x. \<chi> i::('sz::finite). 0)" UNIV
     apply unfold_locales
-        using gt_ex lipschitz_constI
-        by (force simp: interval_def continuous_on_def local_lipschitz_def)+
+    using gt_ex local_lipschitz_constI
+    using interval_def continuous_on_def local_lipschitz_def
+    by (blast, (simp add: local_lipschitz_constI)+)
   have foo1:"?t0.0 \<in> ?T" by auto
   have foo2:"?x0.0 \<in> ?X" by auto
   let ?v = "ll.flow  ?t0.0 ?x0.0"
