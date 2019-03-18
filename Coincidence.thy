@@ -103,17 +103,6 @@ next
   qed
 qed (unfold Vagree_def Iagree_def, auto)
 
-lemma sum_unique_nonzero:
-  fixes i::"'sv::finite" and f::"'sv \<Rightarrow> real"
-  assumes restZero:"\<And>j. j\<in>(UNIV::'sv set) \<Longrightarrow> j \<noteq> i \<Longrightarrow> f j = 0"
-  shows "(\<Sum>j\<in>(UNIV::'sv set). f j) = f i"
-proof -
-  have "(\<Sum>j\<in>(UNIV::'sv set). f j) = (\<Sum>j\<in>{i}. f j)"
-    using restZero by (intro sum.mono_neutral_cong_right) auto
-  then show ?thesis
-    by simp
-qed
-
 lemma  coincidence_frechet :
   fixes I :: "('a::finite, 'b::finite, 'c::finite) interp" and \<nu> :: "'c state" and \<nu>'::"'c state"
   shows "dfree \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVDiff \<theta>) \<Longrightarrow> frechet I  \<theta> (fst \<nu>) (snd \<nu>) = frechet I  \<theta> (fst \<nu>') (snd \<nu>')"
@@ -321,7 +310,7 @@ next
 qed (auto simp: Vagree_def directional_derivative_def coincidence_frechet)
 
 lemma coincidence_dterm':
-  fixes I J :: "('a::finite, 'b::finite, 'c::finite) interp" and \<nu> :: "'c::finite state" and \<nu>'::"'c::finite state"
+  fixes I J :: "('a::finite, 'b::finite, 'c::finite) interp" and \<nu> :: "'c state" and \<nu>'::"'c state"
   shows "dsafe \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> Iagree I J {Inl x | x. x \<in> (SIGT \<theta>)} \<Longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem J \<theta> \<nu>'"
 proof (induction rule: dsafe.induct)
   case (dsafe_Fun args f) then 
@@ -445,7 +434,7 @@ qed (auto simp: Vagree_def directional_derivative_def coincidence_frechet')
 
 subsection \<open>ODE Coincidence Theorems\<close>
 lemma coincidence_ode:
-  fixes I J :: "('a::finite, 'b::finite, 'c::finite) interp" and \<nu> :: "'c::finite state" and \<nu>'::"'c::finite state"
+  fixes I J :: "('a::finite, 'b::finite, 'c::finite) interp" and \<nu> :: "'c state" and \<nu>'::"'c state"
   assumes goodI:"is_interp I"
   assumes goodJ:"is_interp J"
   shows "osafe ODE \<Longrightarrow> 
@@ -553,7 +542,7 @@ lemma coincidence_ode':
   unfolding VSagree_def Vagree_def apply auto
   done
   
-lemma alt_sem_lemma:"\<And> I::('a::finite,'b::finite,'c::finite) interp. \<And>  ODE::('a::finite,'c::finite) ODE. \<And>sol. \<And>t::real. \<And> ab. osafe ODE \<Longrightarrow> 
+lemma alt_sem_lemma:"\<And> I::('a::finite,'b::finite,'c::finite) interp. \<And>  ODE::('a,'c) ODE. \<And>sol. \<And>t::real. \<And> ab. osafe ODE \<Longrightarrow> 
   is_interp I \<Longrightarrow>
   ODE_sem I ODE (sol t) = ODE_sem I ODE (\<chi> i. if i \<in> FVO ODE then sol t $ i else ab $ i)"
 proof -
@@ -596,12 +585,12 @@ next
   then show ?case by auto
 qed
 
-definition coincide_hp :: "('a::finite, 'b::finite, 'c::finite) hp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> bool"
+definition coincide_hp :: "('a::finite, 'b::finite, 'c::finite) hp \<Rightarrow> ('a, 'b, 'c) interp \<Rightarrow> ('a, 'b, 'c) interp \<Rightarrow> bool"
 where "coincide_hp \<alpha> I J \<longleftrightarrow> (\<forall> \<nu> \<nu>' \<mu> V. Iagree I J (SIGP \<alpha>) \<longrightarrow> Vagree \<nu> \<nu>' V \<longrightarrow> V \<supseteq> (FVP \<alpha>) \<longrightarrow> (\<nu>, \<mu>) \<in> prog_sem I \<alpha> \<longrightarrow> (\<exists>\<mu>'. (\<nu>', \<mu>') \<in> prog_sem J \<alpha> \<and> Vagree \<mu> \<mu>' (MBV \<alpha> \<union> V)))"
 
-definition ode_sem_equiv ::"('a::finite, 'b::finite, 'c::finite) hp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> bool"
+definition ode_sem_equiv ::"('a::finite, 'b::finite, 'c::finite) hp \<Rightarrow> ('a, 'b, 'c) interp \<Rightarrow> bool"
 where "ode_sem_equiv \<alpha> I \<longleftrightarrow>
-   (\<forall>ODE::('a::finite,'c::finite) ODE. \<forall>\<phi>::('a::finite,'b::finite,'c::finite)formula. osafe ODE \<longrightarrow> fsafe \<phi>  \<longrightarrow>
+   (\<forall>ODE::('a,'c) ODE. \<forall>\<phi>::('a,'b,'c) formula. osafe ODE \<longrightarrow> fsafe \<phi>  \<longrightarrow>
    (\<alpha> = EvolveODE ODE \<phi>) \<longrightarrow>
   {(\<nu>, mk_v I ODE \<nu> (sol t)) | \<nu> sol t.
       t \<ge> 0 \<and>
@@ -624,7 +613,7 @@ lemma coinc_fml [simp]: "coincide_fml \<phi>  = (\<forall> \<nu> \<nu>' I J. is_
 subsection \<open>Coincidence Theorems for Programs and Formulas\<close>
 lemma coincidence_hp_fml:
   fixes \<alpha>::"('a::finite, 'b::finite, 'c::finite) hp"
-  fixes \<phi>::"('a::finite, 'b::finite, 'c::finite) formula"
+  fixes \<phi>::"('a, 'b, 'c) formula"
  shows "(hpsafe \<alpha> \<longrightarrow> coincide_hp' \<alpha>) \<and> (fsafe \<phi> \<longrightarrow> coincide_fml \<phi>)"
 proof (induction rule: hpsafe_fsafe.induct)
   case (hpsafe_Pvar x)
@@ -656,7 +645,7 @@ next
   case (hpsafe_Assign e x) then 
   show "?case" 
   proof (auto simp only: coincide_hp'_def ode_sem_equiv_def coincide_hp_def)
-    fix I J :: "('a::finite,'b::finite,'c::finite) interp" 
+    fix I J :: "('a,'b,'c) interp" 
       and \<nu>1 \<nu>2 \<nu>'1 \<nu>'2 \<mu>1 \<mu>2 V
     assume safe:"dsafe e"
       and IA:"Iagree I J (SIGP (x := e))"
@@ -680,7 +669,7 @@ next
   case (hpsafe_AssignAny x) then 
   show "?case" 
   proof (auto simp only: coincide_hp'_def ode_sem_equiv_def coincide_hp_def)
-    fix I J :: "('a::finite,'b::finite,'c::finite) interp" 
+    fix I J :: "('a,'b,'c) interp" 
       and \<nu>1 \<nu>2 \<nu>'1 \<nu>'2 \<mu>1 \<mu>2 V
     assume IA:"Iagree I J (SIGP (AssignAny x))"
       and VA:"Vagree (\<nu>1, \<nu>2) (\<nu>'1, \<nu>'2) V"
@@ -1517,7 +1506,7 @@ next
     by auto
   have almost:"\<And>\<nu> \<nu>' I J. is_interp I \<Longrightarrow> is_interp J \<Longrightarrow> Iagree I J (SIGF (Exists x p)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Exists x p)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Exists x p)) = (\<nu>' \<in> fml_sem J (Exists x p))" 
   proof -
-    fix \<nu> \<nu>' and I J::"('a,'b,'c)interp"
+    fix \<nu> \<nu>' and I J::"('a,'b,'c) interp"
     assume goodI:"is_interp I" and goodJ:"is_interp J"
     assume IA:"Iagree I J (SIGF (Exists x p))"
     hence IA':"Iagree I J (SIGF p)" 
@@ -1689,7 +1678,7 @@ qed
 subsection \<open>Corollaries: Alternate ODE semantics definition\<close>
 
 lemma ode_sem_eq:
-  fixes I::"('a::finite,'b::finite,'c::finite) interp" and ODE::"('a,'c) ODE" and \<phi>::"('a,'b,'c) formula"
+  fixes I::"('sf,'sc,'sz) interp" and ODE::"('sf,'sz) ODE" and \<phi>::"('sf,'sc,'sz) formula"
   assumes goodI:"is_interp I"
   assumes goodJ:"is_interp J"
   assumes osafe:"osafe ODE"
@@ -1711,7 +1700,7 @@ proof -
     unfolding ode_sem_equiv_def using osafe fsafe by auto
 qed
 
-lemma ode_alt_sem:"\<And>I ::('a::finite,'b::finite,'c::finite) interp. \<And>ODE::('a,'c) ODE. \<And>\<phi>::('a,'b,'c)formula. 
+lemma ode_alt_sem:"\<And>I ::('sf,'sc,'sz) interp. \<And>ODE::('sf,'sz) ODE. \<And>\<phi>::('sf,'sc,'sz)formula. 
 is_interp I \<Longrightarrow> osafe ODE \<Longrightarrow> fsafe \<phi>  \<Longrightarrow> 
   prog_sem I (EvolveODE ODE \<phi>)
 = 

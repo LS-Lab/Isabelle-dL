@@ -1610,7 +1610,9 @@ lemma frech_linear:
   by (simp add: linear_simps)
     
 lemma rift_in_space_time:
-  fixes sol I ODE \<psi> \<theta> t s b
+  fixes sol 
+    and I::"('sf,'sc,'sz) interp"
+    and ODE \<psi> \<theta> t s b
   assumes good_interp:"is_interp I"
   assumes free:"dfree \<theta>"
   assumes osafe:"osafe ODE"
@@ -1619,9 +1621,9 @@ lemma rift_in_space_time:
   assumes FVT:"FVT \<theta> \<subseteq> semBV I ODE"  
   assumes ivl:"s \<in> {0..t}"
   shows "((\<lambda>t. sterm_sem I \<theta> (fst (mk_v I ODE (sol 0, b) (sol t))))
+    has_derivative (\<lambda>t'. t' * frechet I \<theta> (fst((mk_v I ODE (sol 0, b) (sol s)))) (snd (mk_v I ODE (sol 0, b) (sol s))))) (at s within {0..t})"
     (* This is Frechet derivative, so equivalent to
        has_real_derivative frechet I \<theta> (fst((mk_v I ODE (sol 0, b) (sol s)))) (snd (mk_v I ODE (sol 0, b) (sol s))))) (at s within {0..t})*)
-    has_derivative (\<lambda>t'. t' * frechet I \<theta> (fst((mk_v I ODE (sol 0, b) (sol s)))) (snd (mk_v I ODE (sol 0, b) (sol s))))) (at s within {0..t})"
 proof -
   let ?\<phi> = "(\<lambda>t. (mk_v I ODE (sol 0, b) (sol t)))"
   let ?\<phi>s = "(\<lambda>t. fst (?\<phi> t))"

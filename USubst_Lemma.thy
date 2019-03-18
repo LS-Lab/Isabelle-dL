@@ -642,7 +642,11 @@ lemma adjointFO_safe:
 
 
 subsection \<open>Lemmas about adjoint interpretations\<close>
-lemma adjoint_consequence:"(\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dsafe f') \<Longrightarrow> (\<And>f f'. SFunls \<sigma> f = Some f' \<Longrightarrow> dsafe f') \<Longrightarrow> (\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f') \<Longrightarrow> Vagree \<nu> \<omega> (FVS \<sigma>) \<Longrightarrow> 
+lemma adjoint_consequence:
+  shows "(\<And>f f'. SFunctions \<sigma> f = Some f' \<Longrightarrow> dsafe f') \<Longrightarrow> 
+ (\<And>f f'. SFunls \<sigma> f = Some f' \<Longrightarrow> dsafe f') \<Longrightarrow> 
+ (\<And>f f'. SPredicates \<sigma> f = Some f' \<Longrightarrow> fsafe f') \<Longrightarrow> 
+  Vagree \<nu> \<omega> (FVS \<sigma>) \<Longrightarrow> 
           is_interp I \<Longrightarrow> adjoint I \<sigma> \<nu> = adjoint I \<sigma> \<omega>"
   apply(unfold FVS_def)
   apply(auto)

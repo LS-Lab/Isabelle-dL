@@ -1,6 +1,7 @@
 theory "Ids"
 imports Complex_Main
 begin
+
 (*Differential dynamic logic can be defined for any finite types, given a 
   few elements of those types (so that we can generate axioms). *)
 locale ids =

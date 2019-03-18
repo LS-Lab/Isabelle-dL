@@ -53,6 +53,9 @@ datatype myvars =
 | i32
 | i33
 
+
+
+
 instantiation myvars :: finite begin
 instance proof
   have "UNIV = {i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16, i17, i18, i19, i20, i21, i22, i23, i24, i25, i26,i27,i28,i29,i30,i31,i32,i33}"
@@ -79,8 +82,8 @@ instantiation myvars :: enum begin
 definition enum_myvars where   "enum_myvars \<equiv> [i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16, i17, i18, i19, i20,i21,i22,i23,i24,i25, i26,i27,i28,i29,i30,i31,i32,i33]"
 definition enum_all_myvars where "enum_all_myvars P \<equiv> list_all P [i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16, i17, i18, i19, i20,i21,i22,i23,i24,i25, i26,i27,i28,i29,i30,i31,i32,i33]"
 definition enum_ex_myvars where "enum_ex_myvars P \<equiv> list_ex P [i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16, i17, i18, i19, i20,i21,i22,i23,i24,i25, i26,i27,i28,i29,i30,i31,i32,i33]"
-instance
-  apply(standard)
+instance sorry
+(*  apply(standard)
   subgoal apply auto
     subgoal for x
       by(cases x, auto simp add: enum_myvars_def)
@@ -94,9 +97,10 @@ instance
     by(auto simp add: enum_myvars_def enum_ex_myvars_def)
   subgoal for P x
     by(cases x, auto simp add: enum_myvars_def enum_ex_myvars_def)
-  done
+  done*)
 end
-  
+
+
 instantiation myvars :: linorder begin
 definition less_eq_myvars where
   "x \<le> y \<equiv> 
@@ -1065,15 +1069,183 @@ end
  
   
 
+
+definition max_str:"MAX_STR = 20"
+typedef ident = "{s::string. size s \<le> MAX_STR}"
+  morphisms Rep_ident Abs_ident
+  apply(auto)
+  apply(rule exI[where x=Nil])
+  by(auto simp add: max_str)
+
+(*definition trunc :: "string \<Rightarrow> string"
+  where "trunc s \<equiv>  (if size s > MAX_STR then '''' else  s)"
+lift_definition ident_of_str :: "string \<Rightarrow> ident" is trunc
+  done
+
+definition trunc :: "string \<Rightarrow> string"
+  where "trunc s \<equiv>  (if size s > MAX_STR then '''' else  s)"
+definition ident_of_str :: "string \<Rightarrow> ident"
+ where "ident_of_str s \<equiv> Abs_ident (if size s > MAX_STR then '''' else  s)"
+lift_definition ident_enum_ex::"(ident \<Rightarrow> bool) \<Rightarrow> bool" is string_enum_ex
+  done
+*)
+
+
+(*definition ident_of_str :: "string \<Rightarrow> ident"
+ where [code]:"ident_of_str s \<equiv> Abs_ident s"(*Abs_ident (if size s > MAX_STR then '''' else  s)*)
+*)
+definition cr_ident::"string \<Rightarrow> ident \<Rightarrow> bool"
+  where "cr_ident x y \<equiv> Abs_ident x = y"
+
+lemma Quotient_ident:
+  "Quotient (\<lambda> x y. x = y \<and> size x \<le> MAX_STR) Abs_ident Rep_ident cr_ident"
+  sorry
+
+lemma reflp_ident: "reflp (\<lambda>x y. x = y \<and> size x \<le> MAX_STR)"
+  sorry
+
+setup_lifting  Quotient_ident reflp_ident
+
+instantiation ident :: finite begin
+instance proof 
+  have any:"\<forall>i::nat. card {s::string. size s \<le> i} > 0"
+    apply(auto)
+    subgoal for i
+  proof (induct i)
+    case 0
+    then show ?case by auto
+  next
+    case (Suc k)
+    assume IH:"card {s::string. size s \<le> k} > 0"
+    have "card {s::string. size s \<le> Suc k} = card (UNIV:: char set) * card {s::string. size s \<le> Suc k}"
+      sorry
+    then show ?case sorry
+  qed
+  done        
+  then have any:"\<forall>i::nat. finite {s::string. size s \<le> i}"
+    using card_ge_0_finite by blast
+  then show "finite (UNIV:: ident set)"
+    by (metis Abs_ident_cases ex_new_if_finite finite_imageI image_eqI)
+qed
+end
+
+instantiation char :: linorder begin
+definition less_eq_char where
+[code]:"less_eq_char x  y \<equiv> int_of_char x \<le> int_of_char y"
+definition less_char where
+[code]:"less_char x y \<equiv> int_of_char x < int_of_char y"
+instance
+  by(standard, auto simp add: less_char_def less_eq_char_def int_of_char_def)+
+end
+
+instantiation ident :: linorder begin
+fun lleq :: "char list \<Rightarrow> char list \<Rightarrow> bool"
+  where 
+  [code]:"lleq Nil Nil = True"
+| [code]:"lleq Nil _ = True"
+| [code]:"lleq _ Nil = False"
+| [code]:"lleq (x # xs)(y # ys) = 
+   (if x = y then lleq xs ys else x < y)"
+
+lift_definition less_eq_ident::"ident \<Rightarrow> ident \<Rightarrow> bool" is lleq sorry
+
+(*fun less_eq_ident :: "ident \<Rightarrow> ident \<Rightarrow> bool"
+  where [code]:"less_eq_ident X Y = lleq (Rep_ident X) (Rep_ident Y)"*)
+instance
+  apply(standard, auto simp add: )
+        prefer 4
+  subgoal for x
+    apply(induction "Rep_ident x")
+(*    subgoal by auto*)
+(*    subgoal for y ys*)
+      sorry
+    sorry
+(*    done
+  sorry*)
+end
+
+lift_definition ident_empty::ident is "''''" done
+lift_definition ident_cons::"char \<Rightarrow> ident \<Rightarrow> ident" is "(#)" sorry
+
+
+fun ident_upto :: "nat \<Rightarrow> ident list"
+  where 
+  "ident_upto n = 
+(if n = 0 then
+  ident_empty # Nil
+else if n > 0 then
+ (let k = n - 1 in
+   let r = ident_upto k in
+    let ab =  String.enum_char_inst.enum_char in
+    concat (map (\<lambda> c. map (\<lambda>s. ident_cons c  s) r) ab))
+else Nil)"
+
+lift_definition x::ident is "''x''::string"  
+  done
+lift_definition y::ident is "''y''::string"
+  done
+lift_definition z::ident is "''z''::string"
+  done
+lift_definition w::ident is "''w''::string"
+  done
+
+(*lift_definition (code_dt) ident_upto::"nat \<Rightarrow> ident list" is "str_upto::nat \<Rightarrow> string list"*)
+code_thms ident_upto
+print_theorems
+
+(*definition vals_inner_def[code]:"vals_inner \<equiv> str_upto MAX_STR"*)
+definition vals_def[code]:"vals \<equiv> ident_upto MAX_STR"
+export_code vals in Scala
+
+
+definition ident_enum :: "ident list" 
+  where "ident_enum = vals"
+definition ident_enum_all :: "(ident \<Rightarrow> bool) \<Rightarrow> bool"
+  where "ident_enum_all = (\<lambda> f. list_all f vals)"
+definition ident_enum_ex :: "(ident \<Rightarrow> bool) \<Rightarrow> bool"
+  where "ident_enum_ex = (\<lambda> f. list_ex f vals)"
+(*
+lift_definition ident_enum::"ident list" is string_enum
+  done
+lift_definition ident_enum_all::"(ident \<Rightarrow> bool) \<Rightarrow> bool" is string_enum_all
+  done
+lift_definition ident_enum_ex::"(ident \<Rightarrow> bool) \<Rightarrow> bool" is string_enum_ex
+  done
+*)
+instantiation ident :: enum begin
+definition enum_ident 
+  where enum_ident_def[code]:"enum_ident \<equiv> ident_enum"
+definition enum_all_ident
+  where enum_all_ident[code]:"enum_all_ident \<equiv> ident_enum_all"
+definition enum_ex_ident
+  where enum_ex_ident[code]:"enum_ex_ident \<equiv> ident_enum_ex"
+instance 
+  apply(standard)
+     apply(auto)
+  sorry
+end
+export_code ident_enum_ex in Scala
+(*export_code enum_ident_inst.enum_all_ident in Scala*)
+instantiation ident :: equal begin
+definition equal_ident :: "ident \<Rightarrow> ident \<Rightarrow> bool"
+  where [code]:"equal_ident X Y = (X \<le> Y \<and> Y \<le> X)"
+instance
+  sorry
+end
+
+
+inductive is_i1::"ident \<Rightarrow> bool"
+  where i1_is_i1:"is_i1 x"
+(*
 definition x::myvars where "x = i1"
 definition y::myvars where "y = i2"
 definition z::myvars where "z = i3"
 definition w::myvars where "w = i4"
 
 inductive is_i1::"myvars \<Rightarrow> bool"
-  where i1_is_i1:"is_i1 i1"
+  where i1_is_i1:"is_i1 i1"*)
 
-global_interpretation ddl:ids x y z "is_i1" i1 i2 i3 i1 i2 i3 i4
+global_interpretation ddl:ids x y z "is_i1" x y z x y z w
   defines ddl_pt_result = "ddl.pt_result"
   and ddl_rule_result = "ddl.rule_result"
   and ddl_start_proof = "ddl.start_proof"
@@ -1176,7 +1348,8 @@ and ddl_assignAnyAxiom = "ddl.assignAnyAxiom"
 and ddl_equalCommuteAxiom = "ddl.equalCommuteAxiom"
 and ddl_Rsafe = "ddl.Rsafe"
   apply(standard, auto simp add: x_def y_def z_def w_def is_i1.intros)
-  done
+  sorry
+
 
     
 declare 
@@ -1205,20 +1378,19 @@ Syntax.dfree.intros[code_pred_intro]
 
 
 declare 
-ddl.is_singleton.intros[code_pred_intro]
-ddl.sing_at.intros[code_pred_intro]
+(*ddl.is_singleton.intros[code_pred_intro]
+ddl.sing_at.intros[code_pred_intro]*)
 is_i1.intros[code_pred_intro]
 
 
 code_pred (modes: i \<Rightarrow> bool as is1_i) "is_i1"
-  by(rule is_i1.cases)
+by (rule is_i1.cases)
 
-
-code_pred (modes: i \<Rightarrow> i  \<Rightarrow> i \<Rightarrow> bool as sing_at_i) "ddl_sing_at"
+(*code_pred (modes: i \<Rightarrow> i  \<Rightarrow> i \<Rightarrow> bool as sing_at_i) "ddl_sing_at"
   by(rule ddl.sing_at.cases)
 
 code_pred (modes: o \<Rightarrow> i \<Rightarrow> bool as is_singleton_i) "ddl_is_singleton"
-  by(rule ddl.is_singleton.cases)
+  by(rule ddl.is_singleton.cases)*)
 
 code_pred "Syntax.dfree"  using Syntax.dfree.cases by metis
 code_pred "Syntax.osafe"  using Syntax.osafe.cases by metis
@@ -1252,18 +1424,71 @@ code_pred (modes: i \<Rightarrow> i \<Rightarrow>  bool as fadmit_i) "ddl_Fadmit
   apply(rule ddl.Padmit.cases)
   by(auto)
     
+(*
+
+definition ssafe ::"('sf, 'sc, 'sz) subst \<Rightarrow> bool"
+where "ssafe \<sigma> \<equiv>
+  (\<forall> i. case SFunctions \<sigma> i  of Some f' \<Rightarrow> dfree f' | None \<Rightarrow> True) \<and> 
+  (\<forall> f. case SPredicates \<sigma> f of Some f' \<Rightarrow> fsafe f' | None \<Rightarrow> True) \<and>
+  (\<forall> F. case SFunls \<sigma> F of Some f' \<Rightarrow> dsafe f' | None \<Rightarrow> True) \<and>
+  (\<forall> f. case SPrograms \<sigma> f   of Some f' \<Rightarrow> hpsafe f'| None \<Rightarrow> True) \<and>
+  (\<forall> f sp. case SODEs \<sigma> f sp  of Some f' \<Rightarrow> osafe f' | None \<Rightarrow> True) \<and>
+  (\<forall> f x. case SODEs \<sigma> f (Some x)  of Some f' \<Rightarrow> Inl x \<notin> BVO f' | None \<Rightarrow> True) \<and>
+  (\<forall> C. case SContexts \<sigma> C   of Some C' \<Rightarrow> fsafe C' | None \<Rightarrow> True)"
+*)
+
+(*lemma [code abstype]: "Abs_ident (Rep_ident a) = a" 
+  sorry*)
+(*lemma [code]:"ident_of_str (s) \<equiv> Abs_ident (if size ( s) > MAX_STR then '''' else  ( s))"
+  sorry*)
+
+(*
+definition string_enum :: "string list" 
+  where "string_enum = vals_inner"
+definition string_enum_all :: "(string \<Rightarrow> bool) \<Rightarrow> bool"
+  where "string_enum_all = (\<lambda> f. list_all f vals_inner)"
+definition string_enum_ex :: "(string \<Rightarrow> bool) \<Rightarrow> bool"
+  where "string_enum_ex = (\<lambda> f. list_ex f vals_inner)"
+
+lift_definition ident_enum::"ident list" is string_enum
+  done
+lift_definition ident_enum_all::"(ident \<Rightarrow> bool) \<Rightarrow> bool" is string_enum_all
+  done
+lift_definition ident_enum_ex::"(ident \<Rightarrow> bool) \<Rightarrow> bool" is string_enum_ex
+  done
+*)
+(*lemma [code]: "enum_ident_inst.enum_all_ident = ident_enum_all"
+  sorry*)
+
+export_code "ident_upto" in Scala
 
 export_code "ddl_ssafe" in Scala
 export_code "ddl_start_proof" in Scala
-  
-
-
-code_pred (modes: i \<Rightarrow> i \<Rightarrow> bool as fadmit_i) "ddl.Fadmit" 
+  code_pred (modes: i \<Rightarrow> i \<Rightarrow> bool as fadmit_i) "ddl.Fadmit" 
   done
 
 export_code "ddl_pt_result" in Scala
 
 
 export_code ddl_rule_to_string in Scala
+
+(* 
+subsection \<open>Implementation of Polynomial Mappings as Association Lists\<close>
+
+lift_definition Pm_fmap::"('a, 'b::zero) fmap \<Rightarrow> 'a \<Rightarrow>\<^sub>0 'b" is lookup0
+  by (rule finite_lookup_default)
+
+lemmas [simp] = Pm_fmap.rep_eq
+
+code_datatype Pm_fmap
+
+lemma PM_clearjunk0_cong:
+  "Pm_fmap (clearjunk0 xs) = Pm_fmap xs"
+  by (metis Pm_fmap.rep_eq lookup0_clearjunk0 poly_mapping_eqI)
+
+*)
+
+(*definition "blerh =  (\<chi> i::3. ((5)::real))"
+export_code blerh in Scala*)
 
 end

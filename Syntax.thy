@@ -53,7 +53,7 @@ lift_definition bword_one::"bword" is "1::32 Word.word"
   by(auto simp add: POS_INF_def NEG_INF_def)
 
 lift_definition bword_neg_one::"bword" is "-1::32 Word.word"
-  by(auto simp add: POS_INF_def NEG_INF_def)
+    by(auto simp add: POS_INF_def NEG_INF_def)
 
 datatype ('a, 'c) trm =
 (* Real-valued variables given meaning by the state and modified by programs. *)
