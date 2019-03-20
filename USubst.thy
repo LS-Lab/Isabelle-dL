@@ -25,23 +25,40 @@ Explicit data structure for substitutions.
 
 The RHS of a function or predicate substitution is a term or formula
 with extra variables, which are used to refer to arguments. \<close>
-record ('a, 'b, 'c) subst =
+record subst =
+  SFunctions       :: "ident \<rightharpoonup> trm"
+  SFunls           :: "ident \<rightharpoonup> trm"
+  SPredicates      :: "ident \<rightharpoonup> formula"
+  SContexts        :: "ident \<rightharpoonup> formula"
+  SPrograms        :: "ident \<rightharpoonup> hp"
+  SODEs            :: "ident \<Rightarrow> space \<Rightarrow> ODE option"
+
+
+(* ident_expose *)
+
+(*
+record  subst =
   SFunctions       :: "'a \<rightharpoonup> ('a + 'c, 'c) trm"
   SFunls           :: "'a \<rightharpoonup> ('a, 'c) trm"
   SPredicates      :: "'c \<rightharpoonup> ('a + 'c, 'b, 'c) formula"
   SContexts        :: "'b \<rightharpoonup> ('a, 'b + unit, 'c) formula"
   SPrograms        :: "'c \<rightharpoonup> ('a, 'b, 'c) hp"
-  SODEs            :: "'c \<Rightarrow> 'c space \<Rightarrow> ('a, 'c) ODE option"
+  SODEs            :: "'c \<Rightarrow> 'c space \<Rightarrow> ('a, 'c) ODE option"*)
 
 context ids begin
-definition NTUadmit :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'c) trm \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
-where "NTUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> {i. Inr i \<in> SIGT \<theta>}. FVT (\<sigma> i)) \<inter> U) = {}"
 
-inductive TadmitFFO :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'c) trm \<Rightarrow> bool"
+
+(* definition NTUadmit :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'c) trm \<Rightarrow> ('c + 'c) set \<Rightarrow> bool" *)
+definition NTUadmit :: "(ident \<Rightarrow> trm) \<Rightarrow>  trm \<Rightarrow> (ident + ident) set \<Rightarrow> bool"
+where "NTUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> {i. (debase i) \<in> SIGT \<theta>}. FVT (\<sigma> i)) \<inter> U) = {}"
+
+
+(* TadmitFFO :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'c) trm \<Rightarrow> bool *)
+inductive TadmitFFO :: "(ident \<Rightarrow> trm) \<Rightarrow> trm \<Rightarrow> bool"
 where 
   TadmitFFO_Diff:"TadmitFFO \<sigma> \<theta> \<Longrightarrow> NTUadmit \<sigma> \<theta> UNIV \<Longrightarrow> TadmitFFO \<sigma> (Differential \<theta>)"
-| TadmitFFO_Fun1:"(\<forall>i. TadmitFFO \<sigma> (args i)) \<Longrightarrow> TadmitFFO \<sigma> (Function (Inl f) args)"
-| TadmitFFO_Fun2:"(\<forall>i. TadmitFFO \<sigma> (args i)) \<Longrightarrow> dfree (\<sigma> f) \<Longrightarrow> TadmitFFO \<sigma> (Function (Inr f) args)"
+| TadmitFFO_Fun1:"(\<forall>i. TadmitFFO \<sigma> (args i)) \<Longrightarrow> is_base f \<Longrightarrow> TadmitFFO \<sigma> (Function f args)"
+| TadmitFFO_Fun2:"(\<forall>i. TadmitFFO \<sigma> (args i)) \<Longrightarrow> \<not>is_base f \<Longrightarrow> dfree (\<sigma> (rebase f)) \<Longrightarrow> TadmitFFO \<sigma> (Function f args)"
 | TadmitFFO_Plus:"TadmitFFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFFO \<sigma> \<theta>2 \<Longrightarrow> TadmitFFO \<sigma> (Plus \<theta>1 \<theta>2)"
 | TadmitFFO_Times:"TadmitFFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFFO \<sigma> \<theta>2 \<Longrightarrow> TadmitFFO \<sigma> (Times \<theta>1 \<theta>2)"
 | TadmitFFO_Max:"TadmitFFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFFO \<sigma> \<theta>2 \<Longrightarrow> TadmitFFO \<sigma> (Max \<theta>1 \<theta>2)"
@@ -62,16 +79,18 @@ and TadmitFFO_Var_simps[simp]: "TadmitFFO \<sigma> (Var x)"
 and TadmitFFO_Abs_simps[simp]: "TadmitFFO \<sigma> (Abs x)"
 and TadmitFFO_Neg_simps[simp]: "TadmitFFO \<sigma> (Neg x)"
 and TadmitFFO_Const_simps[simp]: "TadmitFFO \<sigma> (Const r)"
-  
-primrec TsubstFO::"('a + 'b, 'c) trm \<Rightarrow> ('b \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'c) trm"
+
+(* primrec TsubstFO::"('a + 'b, 'c) trm \<Rightarrow> ('b \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'c) trm" *)
+
+primrec TsubstFO::" trm \<Rightarrow> (ident \<Rightarrow> trm) \<Rightarrow> trm"
 where
   TFO_Var:"TsubstFO (Var v) \<sigma> = Var v"
 | TFO_DiffVar:"TsubstFO (DiffVar v) \<sigma> = DiffVar v"
 | TFO_Const:"TsubstFO (Const r) \<sigma> = Const r"  
 (* TODO: So weird to replicate between function vs. funl case but might actually work*)
-| TFO_Funl:"TsubstFO ($$F f) \<sigma> = (case f of Inl ff \<Rightarrow> ($$F ff) | Inr ff \<Rightarrow> \<sigma> ff)"
+| TFO_Funl:"TsubstFO ($$F f) \<sigma> = (case args_to_id f of Inl ff \<Rightarrow> ($$F ff) | Inr ff \<Rightarrow> \<sigma> ff)"
 | TFO_Funl_rep:"TsubstFO (Function f args) \<sigma> =
-    (case f of 
+    (case args_to_id f of 
       Inl f' \<Rightarrow> Function f' (\<lambda> i. TsubstFO (args i) \<sigma>) 
     | Inr f' \<Rightarrow> \<sigma> f')"  
 | TFO_Neg:"TsubstFO (Neg \<theta>1) \<sigma> = Neg (TsubstFO \<theta>1 \<sigma>)"  
@@ -83,11 +102,11 @@ where
 | TFO_Abs:"TsubstFO (Abs \<theta>1) \<sigma> = Abs (TsubstFO \<theta>1 \<sigma>)"  
 | TFO_Diff:"TsubstFO (Differential \<theta>) \<sigma> = Differential (TsubstFO \<theta> \<sigma>)"
 
-inductive TadmitFO :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'c) trm \<Rightarrow> bool"
+inductive TadmitFO :: "(ident \<Rightarrow> trm) \<Rightarrow> trm \<Rightarrow> bool"
 where 
   TadmitFO_Diff:"TadmitFFO \<sigma> \<theta> \<Longrightarrow> NTUadmit \<sigma> \<theta> UNIV \<Longrightarrow> dfree (TsubstFO \<theta> \<sigma>) \<Longrightarrow> TadmitFO \<sigma> (Differential \<theta>)"
 | TadmitFO_Fun:"(\<forall>i. TadmitFO \<sigma> (args i)) \<Longrightarrow> TadmitFO \<sigma> (Function f args)"
-| TadmitFO_Funl:"TadmitFO \<sigma> ($$F (Inl f))"
+| TadmitFO_Funl:"TadmitFO \<sigma> ($$F f)" (*Inl *)
 | TadmitFO_Neg:"TadmitFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFO \<sigma> (Neg \<theta>1)"
 | TadmitFO_Plus:"TadmitFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFO \<sigma> \<theta>2 \<Longrightarrow> TadmitFO \<sigma> (Plus \<theta>1 \<theta>2)"
 | TadmitFO_Times:"TadmitFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFO \<sigma> \<theta>2 \<Longrightarrow> TadmitFO \<sigma> (Times \<theta>1 \<theta>2)"
@@ -113,7 +132,7 @@ inductive_simps
   and TadmitFO_Fun_simps[simp]: "TadmitFO \<sigma> (Function i args)"
   and TadmitFO_Funl_simps[simp]: "TadmitFO \<sigma> ($$F f)"
 
-primrec Tsubst::"('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) trm"
+primrec Tsubst::" trm \<Rightarrow> subst \<Rightarrow> trm"
 where
   TVar:"Tsubst (Var x) \<sigma> = Var x"
 | TDiffVar:"Tsubst (DiffVar x) \<sigma> = DiffVar x"  
@@ -129,20 +148,20 @@ where
 | TAbs:"Tsubst (Abs \<theta>1) \<sigma> = Abs (Tsubst \<theta>1 \<sigma>) "  
 | TDiff:"Tsubst (Differential \<theta>) \<sigma> = Differential (Tsubst \<theta> \<sigma>)"
   
-primrec OsubstFO::"('a + 'b, 'c) ODE \<Rightarrow> ('b \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'c) ODE"
+primrec OsubstFO::"ODE \<Rightarrow> (ident \<Rightarrow> trm) \<Rightarrow> ODE"
 where
   "OsubstFO (OVar c sp) \<sigma> = OVar c sp"
 | "OsubstFO (OSing x \<theta>) \<sigma> = OSing x (TsubstFO \<theta> \<sigma>)"
 | "OsubstFO (OProd ODE1 ODE2) \<sigma> = oprod (OsubstFO ODE1 \<sigma>) (OsubstFO ODE2 \<sigma>)"
 
-primrec Osubst::"('a, 'c) ODE \<Rightarrow> ('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) ODE"
+primrec Osubst::"ODE \<Rightarrow> subst \<Rightarrow> ODE"
 where
   "Osubst (OVar c sp ) \<sigma> = (case SODEs \<sigma> c sp of Some c' \<Rightarrow> c' | None \<Rightarrow> OVar c sp)"
 | "Osubst (OSing x \<theta>) \<sigma> = OSing x (Tsubst \<theta> \<sigma>)"
 | "Osubst (OProd ODE1 ODE2) \<sigma> = oprod (Osubst ODE1 \<sigma>) (Osubst ODE2 \<sigma>)"
   
-fun PsubstFO::"('a + 'd, 'b, 'c) hp \<Rightarrow> ('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'b, 'c) hp"
-and FsubstFO::"('a + 'd, 'b, 'c) formula \<Rightarrow> ('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a, 'b, 'c) formula"
+fun PsubstFO::"hp \<Rightarrow> (ident \<Rightarrow> trm) \<Rightarrow> hp"
+and FsubstFO::"formula \<Rightarrow> (ident \<Rightarrow> trm) \<Rightarrow> formula"
 where
   "PsubstFO (Pvar a) \<sigma> = Pvar a"
 | "PsubstFO (Assign x \<theta>) \<sigma> = Assign x (TsubstFO \<theta> \<sigma>)"
@@ -162,8 +181,8 @@ where
 | "FsubstFO (Diamond \<alpha> \<phi>) \<sigma> = Diamond (PsubstFO \<alpha> \<sigma>) (FsubstFO \<phi> \<sigma>)"
 | "FsubstFO (InContext C \<phi>) \<sigma> = InContext C (FsubstFO \<phi> \<sigma>)"
   
-fun PPsubst::"('a, 'b + 'd, 'c) hp \<Rightarrow> ('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b, 'c) hp"
-and PFsubst::"('a, 'b + 'd, 'c) formula \<Rightarrow> ('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b, 'c) formula"
+fun PPsubst::"hp \<Rightarrow> (ident \<Rightarrow> formula) \<Rightarrow> hp"
+and PFsubst::"formula \<Rightarrow> (ident \<Rightarrow> formula) \<Rightarrow> formula"
 where
   "PPsubst (Pvar a) \<sigma> = Pvar a"
 | "PPsubst (Assign x \<theta>) \<sigma> = Assign x \<theta>"
@@ -181,11 +200,11 @@ where
 | "PFsubst (And \<phi> \<psi>) \<sigma> = And (PFsubst \<phi> \<sigma>) (PFsubst \<psi> \<sigma>)"
 | "PFsubst (Exists x \<phi>) \<sigma> = Exists x (PFsubst \<phi> \<sigma>)"
 | "PFsubst (Diamond \<alpha> \<phi>) \<sigma> = Diamond (PPsubst \<alpha> \<sigma>) (PFsubst \<phi> \<sigma>)"
-| "PFsubst (InContext C \<phi>) \<sigma> = (case C of Inl C' \<Rightarrow> InContext C' (PFsubst \<phi> \<sigma>) | Inr p' \<Rightarrow> \<sigma> p')"
+| "PFsubst (InContext C \<phi>) \<sigma> = (case args_to_id C of Inl C' \<Rightarrow> InContext C' (PFsubst \<phi> \<sigma>) | Inr p' \<Rightarrow> \<sigma> p')"
 
   
-fun Psubst::"('a, 'b, 'c) hp \<Rightarrow> ('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) hp"
-and Fsubst::"('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) formula"
+fun Psubst::"hp \<Rightarrow> subst \<Rightarrow> hp"
+and Fsubst::"formula \<Rightarrow> subst \<Rightarrow> formula"
 where
   "Psubst (Pvar a) \<sigma> = (case SPrograms \<sigma> a of Some a' \<Rightarrow> a' | None \<Rightarrow> Pvar a)"
 | "Psubst (Assign x \<theta>) \<sigma> = Assign x (Tsubst \<theta> \<sigma>)"
@@ -205,18 +224,18 @@ where
 | "Fsubst (Diamond \<alpha> \<phi>) \<sigma> = Diamond (Psubst \<alpha> \<sigma>) (Fsubst \<phi> \<sigma>)"
 | "Fsubst (InContext C \<phi>) \<sigma> = (case SContexts \<sigma> C of Some C' \<Rightarrow> PFsubst C' (\<lambda> _. (Fsubst \<phi> \<sigma>)) | None \<Rightarrow>  InContext C (Fsubst \<phi> \<sigma>))"
 
-definition FVA :: "('a \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('c + 'c) set"
+definition FVA :: "(ident \<Rightarrow> trm) \<Rightarrow> (ident + ident) set"
 where "FVA args = (\<Union> i. FVT (args i))"
 
-fun SFV :: "('a, 'b, 'c) subst \<Rightarrow> ('a + 'b + 'c) \<Rightarrow> ('c + 'c) set"
+fun SFV :: "subst \<Rightarrow> (ident + ident + ident) \<Rightarrow> (ident + ident) set"
 where "SFV \<sigma> (Inl i) = (case SFunctions \<sigma> i of Some f' \<Rightarrow> FVT f' | None \<Rightarrow> {}) \<union> (case SFunls \<sigma> i of Some f' \<Rightarrow> FVT f' | None \<Rightarrow> {})"
 | "SFV \<sigma> (Inr (Inl i)) = {}"
 | "SFV \<sigma> (Inr (Inr i)) = (case SPredicates \<sigma> i of Some p' \<Rightarrow> FVF p' | None \<Rightarrow> {})"
 
-definition FVS :: "('a, 'b, 'c) subst \<Rightarrow> ('c + 'c) set"
+definition FVS :: "subst \<Rightarrow> (ident + ident) set"
 where "FVS \<sigma> = (\<Union>i. SFV \<sigma> i)"
 
-definition SDom :: "('a, 'b, 'c) subst \<Rightarrow> ('a + 'b + 'c) set"
+definition SDom :: "subst \<Rightarrow> (ident + ident + ident) set"
 where "SDom \<sigma> = 
    {Inl x | x. x \<in> dom (SFunctions \<sigma>)}
  \<union> {Inl x | x. x \<in> dom (SFunls \<sigma>)}
@@ -224,12 +243,12 @@ where "SDom \<sigma> =
  \<union> {Inr (Inr x) | x. x \<in> dom (SPredicates \<sigma>)} 
  \<union> {Inr (Inr x) | x. x \<in> dom (SPrograms \<sigma>)}"
 
-definition TUadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
+definition TUadmit :: "subst \<Rightarrow> trm \<Rightarrow> (ident + ident) set \<Rightarrow> bool"
   where "TUadmit \<sigma> \<theta> U \<longleftrightarrow> 
   ((\<Union> i \<in> SIGT \<theta>. (case SFunctions \<sigma> i of Some f' \<Rightarrow> FVT f'  | None \<Rightarrow> {}) 
                 \<union> (case SFunls \<sigma> i of Some f' \<Rightarrow> FVT f'  | None \<Rightarrow> {})) \<inter> U) = {}"
 
-inductive Tadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) trm \<Rightarrow> bool"
+inductive Tadmit :: "subst \<Rightarrow> trm \<Rightarrow> bool"
 where 
   Tadmit_Diff:"Tadmit \<sigma> \<theta> \<Longrightarrow> TUadmit \<sigma> \<theta> UNIV \<Longrightarrow> Tadmit \<sigma> (Differential \<theta>)"
 | Tadmit_Fun1:"(\<forall>i. Tadmit \<sigma> (args i)) \<Longrightarrow> SFunctions \<sigma> f = Some f' \<Longrightarrow> TadmitFO (\<lambda> i. Tsubst (args i) \<sigma>) f' \<Longrightarrow> Tadmit \<sigma> (Function f args)"
@@ -259,7 +278,7 @@ inductive_simps
   and Tadmit_Fun_simps[simp]: "Tadmit \<sigma> (Function i args)"
   and Tadmit_Funl_simps[simp]: "Tadmit \<sigma> ($$F i)"
 
-inductive TadmitF :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) trm \<Rightarrow> bool"
+inductive TadmitF :: "subst \<Rightarrow> trm \<Rightarrow> bool"
 where 
   TadmitF_Diff:"TadmitF \<sigma> \<theta> \<Longrightarrow> TUadmit \<sigma> \<theta> UNIV \<Longrightarrow> TadmitF \<sigma> (Differential \<theta>)"
 | TadmitF_Fun1:"(\<forall>i. TadmitF \<sigma> (args i)) \<Longrightarrow> SFunctions \<sigma> f = Some f' \<Longrightarrow> (\<forall>i. dfree (Tsubst (args i) \<sigma>)) \<Longrightarrow> TadmitFFO (\<lambda> i. Tsubst (args i) \<sigma>) f' \<Longrightarrow> TadmitF \<sigma> (Function f args)"
@@ -288,7 +307,7 @@ inductive_simps
   and TadmitF_Fun_simps[simp]: "TadmitF \<sigma> (Function i args)"
   and TadmitF_Funl_simps[simp]: "TadmitF \<sigma> ($$F i)"
 
-inductive Oadmit:: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'c) ODE \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
+inductive Oadmit:: "subst \<Rightarrow> ODE \<Rightarrow> (ident + ident) set \<Rightarrow> bool"
 where 
   Oadmit_Var:"Oadmit \<sigma> (OVar c None) U"
 | Oadmit_VarNB:"(case SODEs \<sigma> c (Some x) of Some ode \<Rightarrow> Inl x \<notin> BVO ode | None \<Rightarrow> False) \<Longrightarrow> Oadmit \<sigma> (OVar c (Some x)) U"
@@ -300,16 +319,16 @@ inductive_simps
   and Oadmit_Sing_simps[simp]: "Oadmit \<sigma> (OSing x e) U"
   and Oadmit_Prod_simps[simp]: "Oadmit \<sigma> (OProd ODE1 ODE2) U"
 
-definition PUadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) hp \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
+definition PUadmit :: "subst \<Rightarrow> hp \<Rightarrow> (ident + ident) set \<Rightarrow> bool"
 where "PUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> (SDom \<sigma> \<inter> SIGP \<theta>).  SFV \<sigma> i) \<inter> U) = {}"
 
-definition FUadmit :: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
+definition FUadmit :: "subst \<Rightarrow> formula \<Rightarrow> (ident + ident) set \<Rightarrow> bool"
 where "FUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> (SDom \<sigma> \<inter> SIGF \<theta>).  SFV \<sigma> i) \<inter> U) = {}"
 
-definition OUadmitFO :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd,  'c) ODE \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
-where "OUadmitFO \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> {i. Inl (Inr i) \<in> SIGO \<theta>}. FVT (\<sigma> i)) \<inter> U) = {}"
+definition OUadmitFO :: "(ident \<Rightarrow> trm) \<Rightarrow> ODE \<Rightarrow> (ident + ident) set \<Rightarrow> bool"
+where "OUadmitFO \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> {i. Inl (debase i) \<in> SIGO \<theta>}. FVT (\<sigma> i)) \<inter> U) = {}"
  
-inductive OadmitFO :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd,  'c) ODE \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
+inductive OadmitFO :: "(ident \<Rightarrow> trm) \<Rightarrow> ODE \<Rightarrow> (ident + ident) set \<Rightarrow> bool"
 where 
   OadmitFO_OVar:"OUadmitFO \<sigma> (OVar c sp) U \<Longrightarrow> OadmitFO \<sigma> (OVar c sp) U"
 | OadmitFO_OSing:"OUadmitFO \<sigma> (OSing x \<theta>) U \<Longrightarrow> TadmitFFO \<sigma> \<theta> \<Longrightarrow> OadmitFO \<sigma> (OSing x \<theta>) U"
@@ -320,14 +339,14 @@ inductive_simps
   and OadmitFO_OProd_simps[simp]: "OadmitFO \<sigma> (OProd ODE1 ODE2) U"
   and OadmitFO_OSing_simps[simp]: "OadmitFO \<sigma> (OSing x e) U"
   
-definition FUadmitFO :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'b, 'c) formula \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
-where "FUadmitFO \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> {i. Inl (Inr i) \<in> SIGF \<theta>}. FVT (\<sigma> i)) \<inter> U) = {}"
+definition FUadmitFO :: "(ident \<Rightarrow> trm) \<Rightarrow> formula \<Rightarrow> (ident + ident) set \<Rightarrow> bool"
+where "FUadmitFO \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> {i. Inl (debase i) \<in> SIGF \<theta>}. FVT (\<sigma> i)) \<inter> U) = {}"
 
-definition PUadmitFO :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'b, 'c) hp \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
-where "PUadmitFO \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i  \<in> {i. Inl (Inr i) \<in> SIGP \<theta>}. FVT (\<sigma> i)) \<inter> U) = {}"
+definition PUadmitFO :: "(ident \<Rightarrow> trm) \<Rightarrow> hp \<Rightarrow> (ident + ident) set \<Rightarrow> bool"
+where "PUadmitFO \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i  \<in> {i. Inl (debase i) \<in> SIGP \<theta>}. FVT (\<sigma> i)) \<inter> U) = {}"
 
-inductive NPadmit :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'b, 'c) hp \<Rightarrow> bool" 
-and NFadmit :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'b, 'c) formula \<Rightarrow> bool"
+inductive NPadmit :: "(ident \<Rightarrow> trm) \<Rightarrow> hp \<Rightarrow> bool" 
+and NFadmit :: "(ident \<Rightarrow> trm) \<Rightarrow> formula \<Rightarrow> bool"
 where
   NPadmit_Pvar:"NPadmit \<sigma> (Pvar a)"
 | NPadmit_Sequence:"NPadmit \<sigma> a \<Longrightarrow> NPadmit \<sigma> b \<Longrightarrow> PUadmitFO \<sigma> b (BVP (PsubstFO a \<sigma>))\<Longrightarrow> hpsafe (PsubstFO a \<sigma>) \<Longrightarrow> NPadmit \<sigma> (Sequence a b)"  
@@ -366,14 +385,14 @@ inductive_simps
   and NFadmit_Diamond_simps[simp]: "NFadmit \<sigma> (Diamond a p)"
   and NFadmit_Context_simps[simp]: "NFadmit \<sigma> (InContext C p)"
 
-definition PFUadmit :: "('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b + 'd, 'c) formula \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
+definition PFUadmit :: "(ident \<Rightarrow> formula) \<Rightarrow> formula \<Rightarrow> (ident + ident) set \<Rightarrow> bool"
 where "PFUadmit \<sigma> \<theta> U \<longleftrightarrow> True"
 
-definition PPUadmit :: "('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b + 'd, 'c) hp \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
-where "PPUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> {i | i. Inr(Inl(Inr i)) \<in> SIGP \<theta>}. FVF (\<sigma> i)) \<inter> U) = {}"
+definition PPUadmit :: "(ident \<Rightarrow> formula) \<Rightarrow> hp \<Rightarrow> (ident + ident) set \<Rightarrow> bool"
+where "PPUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> {i | i. Inr(Inl(debase i)) \<in> SIGP \<theta>}. FVF (\<sigma> i)) \<inter> U) = {}"
 
-inductive PPadmit:: "('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b + 'd, 'c) hp \<Rightarrow> bool"
-and PFadmit:: "('d \<Rightarrow> ('a, 'b, 'c) formula) \<Rightarrow> ('a, 'b + 'd, 'c) formula \<Rightarrow> bool"
+inductive PPadmit:: "(ident \<Rightarrow> formula) \<Rightarrow> hp \<Rightarrow> bool"
+and PFadmit:: "(ident \<Rightarrow> formula) \<Rightarrow>  formula \<Rightarrow> bool"
 where 
   PPadmit_Pvar:"PPadmit \<sigma> (Pvar a)"
 | PPadmit_Sequence:"PPadmit \<sigma> a \<Longrightarrow> PPadmit \<sigma> b \<Longrightarrow> PPUadmit \<sigma> b (BVP (PPsubst a \<sigma>))\<Longrightarrow> hpsafe (PPsubst a \<sigma>) \<Longrightarrow> PPadmit \<sigma> (Sequence a b)"  
@@ -412,8 +431,8 @@ inductive_simps
   and PFadmit_Diamond_simps[simp]: "PFadmit \<sigma> (Diamond a p)"
   and PFadmit_Context_simps[simp]: "PFadmit \<sigma> (InContext C p)"
   
-inductive Padmit:: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) hp \<Rightarrow> bool"
-and Fadmit:: "('a, 'b, 'c) subst \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> bool"
+inductive Padmit:: "subst \<Rightarrow> hp \<Rightarrow> bool"
+and Fadmit:: "subst \<Rightarrow> formula \<Rightarrow> bool"
 where
   Padmit_Pvar:"Padmit \<sigma> (Pvar a)"
 | Padmit_Sequence:"Padmit \<sigma> a \<Longrightarrow> Padmit \<sigma> b \<Longrightarrow> PUadmit \<sigma> b (BVP (Psubst a \<sigma>))\<Longrightarrow> hpsafe (Psubst a \<sigma>) \<Longrightarrow> Padmit \<sigma> (Sequence a b)"  
@@ -454,10 +473,10 @@ inductive_simps
   and Fadmit_Diamond_simps[simp]: "Fadmit \<sigma> (Diamond a p)"
   and Fadmit_Context_simps[simp]: "Fadmit \<sigma> (InContext C p)"
     
-fun extendf :: "('sf, 'sc, 'sz) interp \<Rightarrow> 'sz Rvec \<Rightarrow> ('sf + 'sz, 'sc, 'sz) interp"
+fun extendf :: "interp \<Rightarrow>  Rvec \<Rightarrow> interp"
 where "extendf I R =
-\<lparr>Functions = (\<lambda>f. case f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> (\<lambda>_. R $ f')),
- Funls = (\<lambda>f. case f of Inl f' \<Rightarrow> Funls I f' | Inr f' \<Rightarrow> (\<lambda>_. R $ f')),
+\<lparr>Functions = (\<lambda>f. case args_to_id f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> (\<lambda>_. R $ f')),
+ Funls = (\<lambda>f. case args_to_id f of Inl f' \<Rightarrow> Funls I f' | Inr f' \<Rightarrow> (\<lambda>_. R $ f')),
  Predicates = Predicates I,
  Contexts = Contexts I,
  Programs = Programs I,
@@ -465,17 +484,17 @@ where "extendf I R =
  ODEBV = ODEBV I
  \<rparr>"
 
-fun extendc :: "('sf, 'sc, 'sz) interp \<Rightarrow> 'sz state set \<Rightarrow> ('sf, 'sc + unit, 'sz) interp"
+fun extendc :: "interp \<Rightarrow> state set \<Rightarrow> interp"
 where "extendc I R =
 \<lparr>Functions =  Functions I,
  Funls = Funls I,
  Predicates = Predicates I,
- Contexts = (\<lambda>C. case C of Inl C' \<Rightarrow> Contexts I C' | Inr () \<Rightarrow> (\<lambda>_.  R)),
+ Contexts = (\<lambda>C. case arg_to_id C of Inl C' \<Rightarrow> Contexts I C' | Inr () \<Rightarrow> (\<lambda>_.  R)),
  Programs = Programs I,
  ODEs = ODEs I,
  ODEBV = ODEBV I\<rparr>"
 
-definition adjoint :: "('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sc, 'sz) subst \<Rightarrow> 'sz state \<Rightarrow> ('sf, 'sc, 'sz) interp" 
+definition adjoint :: "interp \<Rightarrow> subst \<Rightarrow> state \<Rightarrow> interp" 
 where "adjoint I \<sigma> \<nu> =
 \<lparr>Functions =   (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. dterm_sem (extendf I R) f' \<nu>) | None \<Rightarrow> Functions I f),
  Funls =       (\<lambda>f. case SFunls \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. dterm_sem I f' \<nu>) | None \<Rightarrow> Funls I f),
@@ -489,10 +508,10 @@ where "adjoint I \<sigma> \<nu> =
 lemma dsem_to_ssem:"dfree \<theta> \<Longrightarrow> dterm_sem I \<theta> \<nu> = sterm_sem I \<theta> (fst \<nu>)"
     by (induct rule: dfree.induct) (auto)
 
-definition adjointFO::"('sf, 'sc, 'sz) interp \<Rightarrow> ('d::finite \<Rightarrow> ('sf, 'sz) trm) \<Rightarrow> 'sz state \<Rightarrow> ('sf + 'd, 'sc, 'sz) interp" 
+definition adjointFO::"interp \<Rightarrow> (ident \<Rightarrow> trm) \<Rightarrow> state \<Rightarrow> interp" 
 where "adjointFO I \<sigma> \<nu> =
-\<lparr>Functions =   (\<lambda>f. case f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> (\<lambda>_. dterm_sem I (\<sigma> f') \<nu>)),
- Funls =  (\<lambda>f. case f of Inl f' \<Rightarrow> Funls I f' | Inr f' \<Rightarrow> (\<lambda>_. dterm_sem I (\<sigma> f') \<nu>)),
+\<lparr>Functions =   (\<lambda>f. case args_to_id f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> (\<lambda>_. dterm_sem I (\<sigma> f') \<nu>)),
+ Funls =  (\<lambda>f. case args_to_id f of Inl f' \<Rightarrow> Funls I f' | Inr f' \<Rightarrow> (\<lambda>_. dterm_sem I (\<sigma> f') \<nu>)),
  Predicates = Predicates I,
  Contexts = Contexts I,
  Programs = Programs I,
@@ -518,33 +537,34 @@ lemma adjoint_free:
   using sfree[of x ]  sledgehammer*)
 
 lemma adjointFO_free:"(\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (adjointFO I \<sigma> \<nu> =
-\<lparr>Functions =   (\<lambda>f. case f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> (\<lambda>_. sterm_sem I (\<sigma> f') (fst \<nu>))),
- Funls =   (\<lambda>f. case f of Inl f' \<Rightarrow> Funls I f' | Inr f' \<Rightarrow> (\<lambda>_. sterm_sem I (\<sigma> f') (fst \<nu>))),
+\<lparr>Functions =   (\<lambda>f. case args_to_id f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> (\<lambda>_. sterm_sem I (\<sigma> f') (fst \<nu>))),
+ Funls =   (\<lambda>f. case args_to_id f of Inl f' \<Rightarrow> Funls I f' | Inr f' \<Rightarrow> (\<lambda>_. sterm_sem I (\<sigma> f') (fst \<nu>))),
  Predicates = Predicates I,
  Contexts = Contexts I,
  Programs = Programs I,
  ODEs = ODEs I,
  ODEBV = ODEBV I\<rparr>)" 
-  by (auto simp add: dsem_to_ssem adjointFO_def)
+  apply (auto simp add: dsem_to_ssem adjointFO_def)
+  using dsem_to_ssem by presburger+
 
-definition PFadjoint::"('sf, 'sc, 'sz) interp \<Rightarrow> ('d::finite \<Rightarrow> ('sf, 'sc, 'sz) formula) \<Rightarrow> ('sf, 'sc  + 'd, 'sz) interp" 
+definition PFadjoint::"interp \<Rightarrow> (ident \<Rightarrow> formula) \<Rightarrow> interp" 
 where "PFadjoint I \<sigma> =
 \<lparr>Functions =  Functions I,
  Funls =  Funls I,
  Predicates = Predicates I,
- Contexts = (\<lambda>f. case f of Inl f' \<Rightarrow> Contexts I f' | Inr f' \<Rightarrow> (\<lambda>_. fml_sem I (\<sigma> f'))),
+ Contexts = (\<lambda>f. case args_to_id f of Inl f' \<Rightarrow> Contexts I f' | Inr f' \<Rightarrow> (\<lambda>_. fml_sem I (\<sigma> f'))),
  Programs = Programs I,
  ODEs = ODEs I,
  ODEBV = ODEBV I\<rparr>"
 
 
-fun Ssubst::"('sf, 'sc, 'sz) sequent \<Rightarrow> ('sf,'sc,'sz) subst \<Rightarrow> ('sf,'sc,'sz) sequent"
+fun Ssubst::"sequent \<Rightarrow> subst \<Rightarrow> sequent"
 where "Ssubst (\<Gamma>,\<Delta>) \<sigma> = (map (\<lambda> \<phi>. Fsubst \<phi> \<sigma>) \<Gamma>, map (\<lambda> \<phi>. Fsubst \<phi> \<sigma>) \<Delta>)"
   
-fun Rsubst::"('sf, 'sc, 'sz) rule \<Rightarrow> ('sf,'sc,'sz) subst \<Rightarrow> ('sf,'sc,'sz) rule"
+fun Rsubst::"rule \<Rightarrow> subst \<Rightarrow> rule"
 where "Rsubst (SG,C) \<sigma> = (map (\<lambda> \<phi>. Ssubst \<phi> \<sigma>) SG, Ssubst C \<sigma>)"
 
-definition Sadmit::"('sf,'sc,'sz) subst \<Rightarrow> ('sf,'sc,'sz) sequent \<Rightarrow> bool"
+definition Sadmit::"subst \<Rightarrow> sequent \<Rightarrow> bool"
 where "Sadmit \<sigma> S \<longleftrightarrow> ((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst S) \<longrightarrow> Fadmit \<sigma> (nth (fst S) i))
                       \<and>(\<forall>i. i \<ge> 0 \<longrightarrow> i < length (snd S) \<longrightarrow> Fadmit \<sigma> (nth (snd S) i)))"
 
@@ -553,7 +573,7 @@ lemma Sadmit_code[code]:"Sadmit \<sigma> (A,S) \<longleftrightarrow> (list_all (
   using list_all_length by blast+
 
 
-definition Radmit::"('sf,'sc,'sz) subst \<Rightarrow> ('sf,'sc,'sz) rule \<Rightarrow> bool"
+definition Radmit::"subst \<Rightarrow> rule \<Rightarrow> bool"
 where "Radmit \<sigma> R \<longleftrightarrow> (((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst R) \<longrightarrow> Sadmit \<sigma> (nth (fst R) i)) 
                    \<and> Sadmit \<sigma> (snd R)))"
 

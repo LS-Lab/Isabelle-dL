@@ -55,58 +55,58 @@ lift_definition bword_one::"bword" is "1::32 Word.word"
 lift_definition bword_neg_one::"bword" is "-1::32 Word.word"
     by(auto simp add: POS_INF_def NEG_INF_def)
 
-datatype ('a, 'c) trm =
+datatype  trm =
 (* Real-valued variables given meaning by the state and modified by programs. *)
-  Var 'c
+  Var ident
 | Const lit
 (* A function (applied to its arguments) consists of an identifier for the function
- * and a function 'c \<Rightarrow> ('a, 'c) trm (where 'c is a finite type) which specifies one
+ * and a function 'c \<Rightarrow> trm (where 'c is a finite type) which specifies one
  * argument of the function for each element of type 'c. To simulate a function with
  * less than 'c arguments, set the remaining arguments to a constant, such as Const 0*)
-| Function 'a "'c \<Rightarrow> ('a, 'c) trm" ("$f")
+| Function ident "ident \<Rightarrow> trm" ("$f")
 (* A functional is analogous to a function, but can depend on ALL state variables*)
-| Functional 'a ("$$F")
+| Functional ident ("$$F")
 (* A functional that can depend only on base variables and thus is differentiable*)
 (*| DFunctional 'a ("$$F'")*)
-| Plus "('a, 'c) trm" "('a, 'c) trm"
-| Times "('a, 'c) trm" "('a, 'c) trm"
-| Div "('a, 'c) trm" "('a, 'c) trm"
-| Neg "('a, 'c) trm"
-| Max "('a, 'c) trm" "('a, 'c) trm"
-| Min "('a, 'c) trm" "('a, 'c) trm"
-| Abs "('a, 'c) trm"
+| Plus trm trm
+| Times trm trm
+| Div trm trm
+| Neg trm
+| Max trm trm
+| Min trm trm
+| Abs trm
 (* A (real-valued) variable standing for a differential, such as x', given meaning by the state
  * and modified by programs. *)
-| DiffVar 'c ("$'") 
+| DiffVar ident ("$'") 
 (* The differential of an arbitrary term (\<theta>)' *)
-| Differential "('a, 'c) trm"
+| Differential trm
 
-type_synonym 'c space  = "'c option"
+type_synonym space  = "ident option"
 
-definition All ::"'c space" where Space_All_def[simp]:"All = None"
-definition NB ::"'c \<Rightarrow> 'c space" where Space_NB_def[simp]:"NB = Some"
+definition All ::"space" where Space_All_def[simp]:"All = None"
+definition NB ::"ident \<Rightarrow> space" where Space_NB_def[simp]:"NB = Some"
 (*
 datatype 'c space =
   All
 | NB 'c (* one variable not-bound *)*)
 
-datatype('a, 'c) ODE =
+datatype ODE =
 (* Variable standing for an ODE system, given meaning by the interpretation *)
-  OVar 'c "'c space"
+  OVar ident  space
 (* Singleton ODE defining x' = \<theta>, where \<theta> may or may not contain x
  * (but must not contain differentials) *)
-| OSing 'c "('a, 'c) trm"
+| OSing ident trm
 (* The product OProd ODE1 ODE2 composes two ODE systems in parallel, e.g. 
  * OProd (x' = y) (y' = -x) is the system {x' = y, y' = -x} *)
-| OProd "('a, 'c) ODE" "('a, 'c) ODE"
+| OProd ODE ODE
 
-fun oprod::"('a,'c) ODE \<Rightarrow> ('a,'c) ODE \<Rightarrow> ('a,'c) ODE"
+fun oprod::"ODE \<Rightarrow> ODE \<Rightarrow> ODE"
   where "oprod (OSing x t) ODE2 = (OProd (OSing x t) ODE2)"
   | "oprod (OVar c d) ODE2 = (OProd (OVar c d) ODE2)"
   | "oprod (OProd ll lr) ODE2 = oprod ll (oprod lr  ODE2)"
 
 lemma oprod_induct:
-  fixes l r::"('a,'c)ODE" and P::"('a,'c)ODE \<Rightarrow> ('a,'c)ODE \<Rightarrow> bool"
+  fixes l r::"ODE" and P::"ODE \<Rightarrow> ODE \<Rightarrow> bool"
   assumes BC1:"(\<And>x t ODE2. P (OSing x t) ODE2)"
   assumes BC2:"(\<And>c d ODE2. (P (OVar c d) ODE2))"
   assumes  IH:"\<And>l1 l2 x. (\<And>x. P l1 x) \<Longrightarrow> (\<And>x. P l2 x) \<Longrightarrow> P (OProd l1 l2) x"
@@ -118,97 +118,97 @@ lemma oprod_induct:
 
 
 
-datatype ('a, 'b, 'c) hp =
+datatype hp =
 (* Variables standing for programs, given meaning by the interpretation. *)
-  Pvar 'c                           ("$\<alpha>")
+  Pvar ident                           ("$\<alpha>")
 (* Assignment to a real-valued variable x := \<theta> *)
-| Assign 'c "('a, 'c) trm"                (infixr ":=" 10)
+| Assign ident "trm"                (infixr ":=" 10)
 (* Nondeterministic assignment to a real-valued variable x := * *)
-| AssignAny 'c                
+| AssignAny ident                
 (* Assignment to a differential variable*)
-| DiffAssign 'c "('a, 'c) trm"
+| DiffAssign ident "trm"
 (* Program ?\<phi> succeeds iff \<phi> holds in current state. *)
-| Test "('a, 'b, 'c) formula"                 ("?")
+| Test "formula"                 ("?")
 (* An ODE program is an ODE system with some evolution domain. *)
-| EvolveODE "('a, 'c) ODE" "('a, 'b, 'c) formula"
+| EvolveODE "ODE" "formula"
 (* Non-deterministic choice between two programs a and b *)
-| Choice "('a, 'b, 'c) hp" "('a, 'b, 'c) hp"            (infixl "\<union>\<union>" 10)
+| Choice "hp" "hp"            (infixl "\<union>\<union>" 10)
 (* Sequential composition of two programs a and b *)
-| Sequence "('a, 'b, 'c) hp"  "('a, 'b, 'c) hp"         (infixr ";;" 8)
+| Sequence "hp"  "hp"         (infixr ";;" 8)
 (* Nondeterministic repetition of a program "a", zero or more times. *)
-| Loop "('a, 'b, 'c) hp"                      ("_**")
+| Loop "hp"                      ("_**")
 
-and ('a, 'b, 'c) formula =
-  Geq "('a, 'c) trm" "('a, 'c) trm"
-| Prop 'c "'c \<Rightarrow> ('a, 'c) trm"      ("$\<phi>")
-| Not "('a, 'b, 'c) formula"            ("!")
-| And "('a, 'b, 'c) formula" "('a, 'b, 'c) formula"    (infixl "&&" 8)
-| Exists 'c "('a, 'b, 'c) formula"
+and formula =
+  Geq "trm" "trm"
+| Prop ident "ident \<Rightarrow> trm"      ("$\<phi>")
+| Not "formula"            ("!")
+| And "formula" "formula"    (infixl "&&" 8)
+| Exists ident "formula"
 (* \<langle>\<alpha>\<rangle>\<phi> iff exists run of \<alpha> where \<phi> is true in end state *)
-| Diamond "('a, 'b, 'c) hp" "('a, 'b, 'c) formula"         ("(\<langle> _ \<rangle> _)" 10)
+| Diamond "hp" "formula"         ("(\<langle> _ \<rangle> _)" 10)
 (* Contexts C are symbols standing for functions from (the semantics of) formulas to 
  * (the semantics of) formulas, thus C(\<phi>) is another formula. While not necessary
  * in terms of expressiveness, contexts allow for more efficient reasoning principles. *)
-| InContext 'b "('a, 'b, 'c) formula"
+| InContext ident "formula"
     
 (* Derived forms *)
-definition DFunl :: "'a \<Rightarrow> ('a,'c) trm"
+definition DFunl :: "ident \<Rightarrow> trm"
   where "DFunl fid = Function fid Var"
 
-definition DPredl :: "'c \<Rightarrow> ('a,'b,'c) formula"
+definition DPredl :: "ident \<Rightarrow> formula"
   where "DPredl fid = Prop fid Var"
 
-definition Minus :: "('a,'c) trm \<Rightarrow> ('a,'c) trm \<Rightarrow> ('a,'c) trm" 
+definition Minus :: "trm \<Rightarrow> trm \<Rightarrow> trm" 
   where "Minus \<theta>\<^sub>1 \<theta>\<^sub>2 = Plus \<theta>\<^sub>1 (Neg \<theta>\<^sub>2)"
 
-definition Or :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" (infixl "||" 7)
+definition Or :: "formula \<Rightarrow> formula \<Rightarrow> formula" (infixl "||" 7)
 where "Or P Q = Not (And (Not P) (Not Q))"
 
-definition Implies :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" (infixr "\<rightarrow>" 10)
+definition Implies :: "formula \<Rightarrow> formula \<Rightarrow> formula" (infixr "\<rightarrow>" 10)
 where "Implies P Q = Or Q (Not P)"
 
-definition Equiv :: "('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" (infixl "\<leftrightarrow>" 10)
+definition Equiv :: "formula \<Rightarrow> formula \<Rightarrow> formula" (infixl "\<leftrightarrow>" 10)
 where "Equiv P Q = Or (And P Q) (And (Not P) (Not Q))"
 
-definition Forall :: "'c \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula"
+definition Forall :: "ident \<Rightarrow> formula \<Rightarrow> formula"
 where "Forall x P = Not (Exists x (Not P))"
 
-definition Equals :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) formula"
+definition Equals :: "trm \<Rightarrow> trm \<Rightarrow> formula"
 where "Equals \<theta> \<theta>' = ((Geq \<theta> \<theta>') && (Geq \<theta>' \<theta>))"
 
-definition NotEquals :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) formula"
+definition NotEquals :: "trm \<Rightarrow> trm \<Rightarrow> formula"
 where "NotEquals \<theta> \<theta>' = Not((Geq \<theta> \<theta>') && (Geq \<theta>' \<theta>))"
 
-definition Greater :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) formula"
+definition Greater :: "trm \<Rightarrow> trm \<Rightarrow> formula"
 where "Greater \<theta> \<theta>' = ((Geq \<theta> \<theta>') && (Not (Geq \<theta>' \<theta>)))"
 
-definition Less :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) formula"
+definition Less :: "trm \<Rightarrow> trm \<Rightarrow> formula"
   where "Less \<theta> \<theta>' = ((Geq \<theta>' \<theta>) && (Not (Geq \<theta> \<theta>')))"
 
-definition Le ::  "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) formula" where "Le = Less"
-definition Ge ::  "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) formula" where "Ge = Greater"
+definition Le ::  "trm \<Rightarrow> trm \<Rightarrow> formula" where "Le = Less"
+definition Ge ::  "trm \<Rightarrow> trm \<Rightarrow> formula" where "Ge = Greater"
 
-definition Leq :: "('a, 'c) trm \<Rightarrow> ('a, 'c) trm \<Rightarrow> ('a, 'b, 'c) formula"
+definition Leq :: "trm \<Rightarrow> trm \<Rightarrow> formula"
   where "Leq \<theta> \<theta>' = (Geq \<theta>' \<theta>)"
 
-definition Box :: "('a, 'b, 'c) hp \<Rightarrow> ('a, 'b, 'c) formula \<Rightarrow> ('a, 'b, 'c) formula" ("([[_]]_)" 10)
+definition Box :: "hp \<Rightarrow> formula \<Rightarrow> formula" ("([[_]]_)" 10)
 where "Box \<alpha> P = Not (Diamond \<alpha> (Not P))"
   
-definition TT ::"('a,'b,'c) formula" 
+definition TT ::" formula" 
 where "TT = Geq (Const (bword_zero)) (Const (bword_zero))"
 
-definition FF ::"('a,'b,'c) formula" 
+definition FF ::"formula" 
 where "FF = Geq (Const (bword_zero)) (Const (bword_one))"
 
 
-type_synonym ('a,'b,'c) sequent = "('a,'b,'c) formula list * ('a,'b,'c) formula list"
+type_synonym sequent = "formula list * formula list"
 (* Rule: assumptions, then conclusion *)
-type_synonym ('a,'b,'c) rule = "('a,'b,'c) sequent list * ('a,'b,'c) sequent"
+type_synonym rule = "sequent list * sequent"
 
   
 (* silliness to enable proving disequality lemmas *)
-primrec sizeF::"('sf,'sc, 'sz) formula \<Rightarrow> nat"
-  and   sizeP::"('sf,'sc, 'sz) hp \<Rightarrow> nat"
+primrec sizeF::"formula \<Rightarrow> nat"
+  and   sizeP::"hp \<Rightarrow> nat"
 where 
   "sizeP (Pvar a) = 1"
 | "sizeP (Assign x \<theta>) = 1"
@@ -248,42 +248,42 @@ lemma [expr_diseq]:"p \<noteq> InContext C p" by(induction p, auto)
  * because predicates depend only on their arguments (which might then indirectly depend on the state).
  * We encode a predicational as a context applied to a formula whose truth value is constant with
  * respect to the state (specifically, always true)*)
-fun Predicational :: "'b \<Rightarrow> ('a, 'b, 'c) formula" ("Pc")
+fun Predicational :: "ident \<Rightarrow> formula" ("Pc")
 where "Predicational P = InContext P (Geq (Const (bword_zero)) (Const (bword_zero)))"
 
 (* Abbreviations for common syntactic constructs in order to make axiom definitions, etc. more
  * readable. *)
 context ids begin
 (* "Empty" function argument tuple, encoded as tuple where all arguments assume a constant value. *)
-definition empty::" 'b \<Rightarrow> ('a, 'b) trm"
+definition empty::" ident \<Rightarrow> trm"
 where "empty \<equiv> \<lambda>i.(Const (bword_zero))"
 
 (* Function argument tuple with (effectively) one argument, where all others have a constant value. *)
-fun singleton :: "('a, 'sz) trm \<Rightarrow> ('sz \<Rightarrow> ('a, 'sz) trm)"
+fun singleton :: "trm \<Rightarrow> (ident \<Rightarrow> trm)"
 where "singleton t i = (if i = vid1 then t else (Const (bword_zero)))"
 
 lemma expand_singleton:"singleton t = (\<lambda>i. (if i = vid1 then t else (Const (bword_zero))))"
   by auto
 
 (* Function applied to one argument *)
-definition f1::"'sf \<Rightarrow> 'sz \<Rightarrow> ('sf,'sz) trm"
+definition f1::"ident \<Rightarrow> ident \<Rightarrow> trm"
 where "f1 f x = Function f (singleton (Var x))"
 
 (* Function applied to zero arguments (simulates a constant symbol given meaning by the interpretation) *)
-definition f0::"'sf \<Rightarrow> ('sf,'sz) trm"
+definition f0::"ident \<Rightarrow> trm"
 where "f0 f = Function f empty"
 
 (* Predicate applied to one argument *)
-definition p1::"'sz \<Rightarrow> 'sz \<Rightarrow> ('sf, 'sc, 'sz) formula"
+definition p1::"ident \<Rightarrow> ident \<Rightarrow> formula"
 where "p1 p x = Prop p (singleton (Var x))"
 
 (* Predicational *)
-definition P::"'sc \<Rightarrow> ('sf, 'sc, 'sz) formula"
+definition P::"ident \<Rightarrow> formula"
 where "P p = Predicational p"
 end
 
 subsection \<open>Well-Formedness predicates\<close>
-inductive dfree :: "('a, 'c) trm \<Rightarrow> bool"
+inductive dfree :: "trm \<Rightarrow> bool"
 where
   dfree_Var: "dfree (Var i)"
 | dfree_Const: "dfree (Const r)"
@@ -294,7 +294,7 @@ where
 (* regular functionals are not dfree because they can depend on differential state, that's what dfunctionals are for *)
 (*| dfree_DFunctional: "dfree ($$F' fid)"*)
   
-inductive dsafe :: "('a, 'c) trm \<Rightarrow> bool"
+inductive dsafe :: "trm \<Rightarrow> bool"
 where
   dsafe_Var: "dsafe (Var i)"
 | dsafe_Const: "dsafe (Const r)"
@@ -311,7 +311,7 @@ where
 | dsafe_Min :"dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Min \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dsafe_Abs :"dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe (Abs \<theta>\<^sub>1)"
 
-inductive dexec :: "('a, 'c) trm \<Rightarrow> bool"
+inductive dexec :: "trm \<Rightarrow> bool"
 where
   dexec_Var: "dexec (Var i)"
 | dexec_Const: "dexec (Const r)"
@@ -326,7 +326,7 @@ where
 
 (* Explictly-written variables that are bound by the ODE. Needed to compute whether
  * ODE's are valid (e.g. whether they bind the same variable twice) *)
-fun ODE_dom::"('a, 'c) ODE \<Rightarrow> 'c set"
+fun ODE_dom::"ODE \<Rightarrow> ident set"
 where 
   "ODE_dom (OVar c d) =  {}"
 | "ODE_dom (OSing x \<theta>) = {x}"
@@ -336,7 +336,7 @@ lemma ODE_dom_assoc:"ODE_dom (oprod ODE1 ODE2) = ODE_dom (OProd ODE1 ODE2)"
   apply(induction ODE1 arbitrary:ODE2)
   by(auto)
 
-inductive osafe:: "('a, 'c) ODE \<Rightarrow> bool"
+inductive osafe:: "ODE \<Rightarrow> bool"
 where
   osafe_Var:"osafe (OVar c d)"
 | osafe_Sing:"dfree \<theta> \<Longrightarrow> osafe (OSing x \<theta>)"
@@ -361,8 +361,8 @@ qed
 
 (* Programs/formulas without any differential terms. This definition not currently used but may
  * be useful in the future. *)
-inductive hpfree:: "('a, 'b, 'c) hp \<Rightarrow> bool"
-  and     ffree::  "('a, 'b, 'c) formula \<Rightarrow> bool"
+inductive hpfree:: "hp \<Rightarrow> bool"
+  and     ffree::  "formula \<Rightarrow> bool"
 where
   "hpfree (Pvar x)"
 | "dfree e \<Longrightarrow> hpfree (Assign x e)"
@@ -384,8 +384,8 @@ where
 | "ffree (Predicational P)"
 | "dfree t1 \<Longrightarrow> dfree t2 \<Longrightarrow> ffree (Geq t1 t2)"
 
-inductive hpsafe:: "('a, 'b, 'c) hp \<Rightarrow> bool"
-  and     fsafe::  "('a, 'b, 'c) formula \<Rightarrow> bool"
+inductive hpsafe:: "hp \<Rightarrow> bool"
+  and     fsafe::  "formula \<Rightarrow> bool"
 where
    hpsafe_Pvar:"hpsafe (Pvar x)"
  | hpsafe_Assign:"dsafe e \<Longrightarrow> hpsafe (Assign x e)"
@@ -405,8 +405,8 @@ where
  | fsafe_Diamond:"hpsafe a \<Longrightarrow> fsafe p \<Longrightarrow> fsafe (Diamond a p)"
  | fsafe_InContext:"fsafe f \<Longrightarrow> fsafe (InContext C f)"
 
-inductive hpexec:: "('a, 'b, 'c) hp \<Rightarrow> bool"
-  and     fexec::  "('a, 'b, 'c) formula \<Rightarrow> bool"
+inductive hpexec:: "hp \<Rightarrow> bool"
+  and     fexec::  "formula \<Rightarrow> bool"
 where
    hpexec_Assign:"dexec e \<Longrightarrow> hpexec (Assign x e)"
  | hpexec_Test:"fexec P \<Longrightarrow> hpexec (Test P)" 
@@ -494,7 +494,7 @@ inductive_simps
   and fexec_Ge_simps[simp]: "fexec (Ge p q)"
   and fexec_Leq_simps[simp]: "fexec (Leq p q)"
 
-fun Ssafe::"('sf,'sc,'sz) sequent \<Rightarrow> bool"
+fun Ssafe::"sequent \<Rightarrow> bool"
 where Ssafe_def:"Ssafe S =((\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst S) \<longrightarrow> fsafe (nth (fst S) i))
                  \<and>(\<forall>i. i \<ge> 0 \<longrightarrow> i < length (snd S) \<longrightarrow> fsafe (nth (snd S) i)))"
 

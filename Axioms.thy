@@ -22,12 +22,12 @@ named_theorems axiom_defs "Axiom definitions"
 named_theorems axrule_defs "Axiomatic Rule definitions"
 
 
-definition AllElimAxiom::"('sf,'sc,'sz) formula"
+definition AllElimAxiom::"formula"
   where [axiom_defs]:"AllElimAxiom \<equiv> (Forall vid1 (Pc pid1)) \<rightarrow> (Pc pid1)"
 
 lemma AllElimAxiom_valid:"valid AllElimAxiom"
 proof (unfold AllElimAxiom_def, unfold valid_def, simp, rule allI, rule impI, rule allI, rule allI, rule impI)
-  fix I::"('sf,'sc,'sz)interp" and  a b
+  fix I::"interp" and  a b
   assume good_interp:"is_interp I"
   assume all:"\<forall>r. (\<chi> y. if vid1 = y then r else fst (a, b) $ y, b) \<in> Contexts I pid1 UNIV"
   have eq:"(\<chi> y. if vid1 = y then a $ vid1 else fst (a, b) $ y, b) = (a,b)"
@@ -37,14 +37,14 @@ proof (unfold AllElimAxiom_def, unfold valid_def, simp, rule allI, rule impI, ru
 qed
 
 (* [a](p_(||)&q_(||)) <-> [a]p_(||)&[a]q_(||)" *)
-definition BoxSplitAxiom::"('sf,'sc,'sz) formula"
+definition BoxSplitAxiom::"formula"
   where [axiom_defs]:"BoxSplitAxiom \<equiv> 
 ([[Pvar vid1]](And (Pc pid1) (Pc pid2)))
 \<leftrightarrow>  (And ([[Pvar vid1]](Pc pid1))
          ([[Pvar vid1]](Pc pid2)))
 "
 
-definition ImpSelfAxiom::"('sf,'sc,'sz) formula"
+definition ImpSelfAxiom::"formula"
   where [axiom_defs]:"ImpSelfAxiom \<equiv> 
 Equiv
  ((Prop vid1 empty) \<rightarrow>(Prop vid1 empty))
@@ -52,7 +52,7 @@ Equiv
 
 (* s() = t() -> (ctxF_(s()) <-> ctxF_(t()))
  *)
-definition constFcongAxiom::"('sf,'sc,'sz) formula"
+definition constFcongAxiom::"formula"
   where [axiom_defs]:"constFcongAxiom \<equiv> 
 Implies
  (Equals (Function fid1 empty) (Function fid2 empty))
@@ -63,7 +63,7 @@ Implies
 
 lemma constFcong_valid:"valid constFcongAxiom"
 proof (simp add: constFcongAxiom_def valid_def, rule allI, rule impI, rule allI, rule allI, rule impI, unfold empty_def)
-  fix I::"('sf,'sc,'sz) interp" and a b
+  fix I::"interp" and a b
   assume good_interp:"is_interp I"
   assume fn:"Functions I fid1 (\<chi> i. dterm_sem I (Const (bword_zero)) (a, b)) = Functions I fid2 (\<chi> i. dterm_sem I (Const (bword_zero)) (a, b))" 
   have vec_eq:"(\<chi> i. dterm_sem I (if i = vid1 then $f fid1 (\<lambda>i. Const (bword_zero)) else Const (bword_zero)) (a, b)) = (\<chi> i. dterm_sem I (if i = vid1 then $f fid2 (\<lambda>i. Const (bword_zero)) else Const (bword_zero)) (a, b))"
@@ -74,7 +74,7 @@ proof (simp add: constFcongAxiom_def valid_def, rule allI, rule impI, rule allI,
     by auto
 qed
 
-definition assignAnyAxiom::"('sf,'sc,'sz) formula"
+definition assignAnyAxiom::"formula"
   where [axiom_defs]:"assignAnyAxiom \<equiv>
 Equiv
  (Box (AssignAny vid1) (Pc pid1))
@@ -83,7 +83,7 @@ Equiv
 lemma assignAny_valid:"valid assignAnyAxiom"
   unfolding assignAnyAxiom_def valid_def Box_def Equiv_def Or_def by auto
 
-definition equalCommuteAxiom::"('sf,'sc,'sz) formula"
+definition equalCommuteAxiom::"formula"
   where [axiom_defs]:"equalCommuteAxiom \<equiv>
 Equiv
 (Equals (f0 fid1) (f0 fid2))
@@ -93,7 +93,7 @@ Equiv
 lemma equalCommute_valid:"valid equalCommuteAxiom"
   unfolding equalCommuteAxiom_def by(auto simp add: f0_def Equiv_def Or_def empty_def Equals_def valid_def)
 
-definition assignEqAxiom::"('sf,'sc,'sz) formula"
+definition assignEqAxiom::"formula"
   where [axiom_defs]:"assignEqAxiom \<equiv> 
 Equiv 
   ([[Assign vid1 (Function fid1 empty)]](P pid1))
@@ -101,7 +101,7 @@ Equiv
 
 lemma assignEq_valid:"valid assignEqAxiom"
 proof (unfold assignEqAxiom_def, unfold valid_def, rule allI, rule allI, rule impI, simp)
-  fix I::"('sf,'sc,'sz) interp" and \<nu>
+  fix I::"interp" and \<nu>
   assume "is_interp I"
   have dir1:"((\<chi> y. if vid1 = y then Functions I fid1 (\<chi> i. dterm_sem I (local.empty i) \<nu>) else fst \<nu> $ y, snd \<nu>) \<in> fml_sem I (P pid1)) \<Longrightarrow>
            (\<forall>r. r = Functions I fid1 (\<chi> i. dterm_sem I (local.empty i) (\<chi> y. if vid1 = y then r else fst \<nu> $ y, snd \<nu>)) \<longrightarrow>
@@ -137,12 +137,12 @@ proof (unfold assignEqAxiom_def, unfold valid_def, rule allI, rule allI, rule im
   using dir1 dir2 by blast
 qed
 
-definition allInstAxiom::"('sf,'sc,'sz) formula"
+definition allInstAxiom::"formula"
   where [axiom_defs]:"allInstAxiom \<equiv> Implies (Forall vid1 (Prop vid1 (singleton (Var vid1)))) ( Prop vid1(singleton (Function fid1 empty)))"
 
 lemma allInst_valid:"valid allInstAxiom"
 proof (unfold allInstAxiom_def, unfold valid_def, rule allI, rule allI, rule impI, simp, rule impI)
-  fix I::"('sf,'sc,'sz) interp" and \<nu>
+  fix I::"interp" and \<nu>
   let ?f = "$f fid1 local.empty"
   let ?fs = "dterm_sem I ?f \<nu>"
   assume "is_interp I"
@@ -155,40 +155,40 @@ proof (unfold allInstAxiom_def, unfold valid_def, rule allI, rule allI, rule imp
     using spec[OF pre, of ?fs] arg_eq by auto
 qed
 
-definition EquivReflexiveAxiom::"('sf,'sc,'sz) formula"
+definition EquivReflexiveAxiom::"formula"
   where [axiom_defs]:"EquivReflexiveAxiom \<equiv> (Prop vid1 empty) \<leftrightarrow> (Prop  vid1 empty)"
 
-definition assign_axiom :: "('sf, 'sc, 'sz) formula"
+definition assign_axiom :: "formula"
 where [axiom_defs]:"assign_axiom \<equiv>
   ([[vid1 := ($f fid1 empty)]] (Prop vid1 (singleton (Var vid1))))
     \<leftrightarrow> Prop vid1 (singleton ($f fid1 empty))"
 
-definition diff_assign_axiom :: "('sf, 'sc, 'sz) formula"
+definition diff_assign_axiom :: "formula"
   where [axiom_defs]:"diff_assign_axiom \<equiv>
 (* [x_':=f();]p(x_') <-> p(f())*)
   ([[DiffAssign vid1  ($f fid1 empty)]] (Prop vid1 (singleton (DiffVar vid1))))
     \<leftrightarrow> Prop vid1 (singleton ($f fid1 empty))"
 
-definition loop_iterate_axiom :: "('sf, 'sc, 'sz) formula"
+definition loop_iterate_axiom :: "formula"
 where [axiom_defs]:"loop_iterate_axiom \<equiv> ([[$\<alpha> vid1**]]Predicational pid1)
   \<leftrightarrow> ((Predicational pid1) && ([[$\<alpha> vid1]][[$\<alpha> vid1**]]Predicational pid1))"
 
-definition test_axiom :: "('sf, 'sc, 'sz) formula"
+definition test_axiom :: "formula"
 where [axiom_defs]:"test_axiom \<equiv>
   ([[?($\<phi> vid2 empty)]]$\<phi> vid1 empty) \<leftrightarrow> (($\<phi> vid2 empty) \<rightarrow> ($\<phi> vid1 empty))"
 
-definition box_axiom :: "('sf, 'sc, 'sz) formula"
+definition box_axiom :: "formula"
 where [axiom_defs]:"box_axiom \<equiv> (\<langle>$\<alpha> vid1\<rangle>Predicational pid1) \<leftrightarrow> !([[$\<alpha> vid1]]!(Predicational pid1))"
 
-definition choice_axiom :: "('sf, 'sc, 'sz) formula"
+definition choice_axiom :: "formula"
 where [axiom_defs]:"choice_axiom \<equiv> ([[$\<alpha> vid1 \<union>\<union> $\<alpha> vid2]]Predicational pid1)
   \<leftrightarrow> (([[$\<alpha> vid1]]Predicational pid1) && ([[$\<alpha> vid2]]Predicational pid1))"
 
-definition compose_axiom :: "('sf, 'sc, 'sz) formula"
+definition compose_axiom :: "formula"
 where [axiom_defs]:"compose_axiom \<equiv> ([[$\<alpha> vid1 ;; $\<alpha> vid2]]Predicational pid1) \<leftrightarrow> 
   ([[$\<alpha> vid1]][[ $\<alpha> vid2]]Predicational pid1)"
   
-definition Kaxiom :: "('sf, 'sc, 'sz) formula"
+definition Kaxiom :: "formula"
 where [axiom_defs]:"Kaxiom \<equiv> ([[$\<alpha> vid1]]((Predicational pid1) \<rightarrow> (Predicational pid2)))
   \<rightarrow> ([[$\<alpha> vid1]]Predicational pid1) \<rightarrow> ([[$\<alpha> vid1]]Predicational pid2)"
 
@@ -196,32 +196,32 @@ where [axiom_defs]:"Kaxiom \<equiv> ([[$\<alpha> vid1]]((Predicational pid1) \<r
  * and thus very easy to prove: it used predicates when it should have used predicationals.
  * This serves as a reminder to be careful whether other axioms are also too weak. *)
 (* 
-definition Ibroken :: "('sf, 'sc, 'sz) formula"
+definition Ibroken :: "formula"
   where "Ibroken \<equiv> ([[$$a]]($P [] \<rightarrow> ([[$$a]]$P []))
     \<rightarrow> ($P [] \<rightarrow> ([[($$a)**]]$P [])))"*)
 
-definition Iaxiom :: "('sf, 'sc, 'sz) formula"
+definition Iaxiom :: "formula"
   where [axiom_defs]:"Iaxiom \<equiv> 
 (Pc pid1  && ([[Loop(Pvar vid1)]](Pc pid1 \<rightarrow> ([[Pvar vid1]] Pc pid1)))) \<rightarrow> ([[Loop(Pvar vid1)]]Pc pid1)"
 (*([[($\<alpha> vid1)**]](Predicational pid1 \<rightarrow> ([[$\<alpha> vid1]]Predicational pid1)))
   \<rightarrow>((Predicational pid1 \<rightarrow> ([[($\<alpha> vid1)**]]Predicational pid1)))*)
 
-definition Vaxiom :: "('sf, 'sc, 'sz) formula"
+definition Vaxiom :: "formula"
 where [axiom_defs]:"Vaxiom \<equiv> ($\<phi> vid1 empty) \<rightarrow> ([[$\<alpha> vid1]]($\<phi> vid1 empty))"
 
-definition TrueImplyAxiom :: "('sf,'sc,'sz) formula"
+definition TrueImplyAxiom :: "formula"
 where [axiom_defs]:"TrueImplyAxiom \<equiv> Equiv (Implies TT (Prop vid1 empty)) (Prop vid1 empty)"
 
 lemma TrueImply_valid: "valid TrueImplyAxiom"
   by(auto simp add: valid_def TrueImplyAxiom_def)
 
-definition diamondAxiom :: "('sf,'sc,'sz) formula"
+definition diamondAxiom :: "formula"
   where [axiom_defs]:"diamondAxiom \<equiv> Equiv (Not (Box ($\<alpha> vid1 ) (Not (P pid1)))) (Diamond ($\<alpha> vid1) (P pid1))"
 
 lemma diamond_valid: "valid diamondAxiom"
   by(auto simp add: valid_def diamondAxiom_def)
 
-definition diamondModusPonensAxiom :: "('sf,'sc,'sz) formula"
+definition diamondModusPonensAxiom :: "formula"
   where [axiom_defs]:"diamondModusPonensAxiom \<equiv> Implies
    (Box ($\<alpha> vid1) (P pid1))
    (Implies 
@@ -231,7 +231,7 @@ definition diamondModusPonensAxiom :: "('sf,'sc,'sz) formula"
 lemma diamondModusPonens_valid:"valid diamondModusPonensAxiom"
   by(auto simp add: diamondModusPonensAxiom_def valid_def)
 
-definition equalReflAxiom :: "('sf,'sc,'sz) formula"
+definition equalReflAxiom :: "formula"
   where [axiom_defs]:"equalReflAxiom \<equiv> 
 Equiv
   (Equals (Function fid1 empty) (Function fid1 empty))
@@ -241,7 +241,7 @@ Equiv
 lemma equalRefl_valid:"valid equalReflAxiom"
   by(auto simp add: equalReflAxiom_def valid_def)
 
-definition lessEqualReflAxiom :: "('sf,'sc,'sz) formula"
+definition lessEqualReflAxiom :: "formula"
   where [axiom_defs]:"lessEqualReflAxiom \<equiv> 
 Equiv
   (Leq (Function fid1 empty) (Function fid1 empty))
@@ -258,7 +258,7 @@ lemma assign_lem1:
  dterm_sem I (if i = vid1 then $f fid1 empty else (Const (bword_zero))) \<nu>"
   by (cases "i = vid1") (auto simp: proj_sing1)
 
-definition assigndAxiom :: "('sf,'sc,'sz) formula"
+definition assigndAxiom :: "formula"
   where [axiom_defs]:"assigndAxiom \<equiv> 
 Equiv 
   (Diamond (Assign vid1 (f0 fid1)) (Prop vid1 (singleton (Var vid1))))
@@ -268,7 +268,7 @@ Equiv
 lemma assignd_valid:"valid assigndAxiom"
   by(auto simp add: valid_def assigndAxiom_def assign_lem1 f0_def)
 
-definition testdAxiom :: "('sf,'sc,'sz) formula"
+definition testdAxiom :: "formula"
   where [axiom_defs]:"testdAxiom \<equiv> Equiv
   (Diamond (Test (Prop vid2 empty)) (Prop vid1 empty))
   (And (Prop vid2 empty) (Prop vid1 empty))"
@@ -276,7 +276,7 @@ definition testdAxiom :: "('sf,'sc,'sz) formula"
 lemma testd_valid:"valid testdAxiom"
   by(auto simp add: valid_def testdAxiom_def)
 
-definition choicedAxiom :: "('sf,'sc,'sz) formula"
+definition choicedAxiom :: "formula"
   where [axiom_defs]:"choicedAxiom \<equiv>  Equiv
  (Diamond (Choice ($\<alpha> vid1) ($\<alpha> vid2)) (P pid1))
  (Or (Diamond ($\<alpha> vid1) (P pid1))
@@ -285,7 +285,7 @@ definition choicedAxiom :: "('sf,'sc,'sz) formula"
 lemma choiced_valid:"valid choicedAxiom"
   by(auto simp add: valid_def choicedAxiom_def)
 
-definition composedAxiom :: "('sf,'sc,'sz) formula"
+definition composedAxiom :: "formula"
   where [axiom_defs]:"composedAxiom \<equiv> Equiv
 (Diamond (Sequence ($\<alpha> vid1) ($\<alpha> vid2)) (P pid1))
 (Diamond ($\<alpha> vid1) (Diamond ($\<alpha> vid2) (P pid1)))"
@@ -293,7 +293,7 @@ definition composedAxiom :: "('sf,'sc,'sz) formula"
 lemma composed_valid:"valid composedAxiom"
   by(auto simp add: valid_def composedAxiom_def)
 
-definition randomdAxiom :: "('sf,'sc,'sz) formula"
+definition randomdAxiom :: "formula"
   where [axiom_defs]:"randomdAxiom \<equiv> Equiv
 (Diamond (AssignAny vid1) (Prop vid1 (singleton (Var vid1))))
 (Exists vid1 (Prop vid1 (singleton (Var vid1))))
@@ -303,13 +303,13 @@ lemma randomd_valid:"valid randomdAxiom"
   by(auto simp add: randomdAxiom_def valid_def)
 
 (*  vid1 (singleton (f1 fid1 vid1))) (Prop vid1 (singleton (f1 fid2 vid1)))*)
-definition CEaxrule :: "('sf,'sc,'sz) rule"
+definition CEaxrule :: "rule"
   where [axrule_defs]:"CEaxrule \<equiv> ([  ([],[Equiv(Pc pid1 ) (Pc pid2)])  ],    
 ([], [Equiv(InContext pid3 (Pc pid1)) (InContext pid3 (Pc pid2))]))"
 
 lemma sound_CEaxrule: "sound CEaxrule"
 proof (unfold CEaxrule_def,rule soundI)
-  fix I::"('sf,'sc,'sz) interp"
+  fix I::"interp"
   assume good_interp:"is_interp I"
   assume pres:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [([], [Pc pid1 \<leftrightarrow> Pc pid2])] \<Longrightarrow> seq_sem I ([([], [Pc pid1 \<leftrightarrow> Pc pid2])] ! i) = UNIV)"
   have pre:"fml_sem I (Pc pid1) = fml_sem I (Pc pid2)"
@@ -319,17 +319,17 @@ proof (unfold CEaxrule_def,rule soundI)
     using pre by(auto simp add: pre)
 qed
 
-definition CTaxrule :: "('sf,'sc,'sz) rule"
+definition CTaxrule :: "rule"
   where [axrule_defs]:
 "CTaxrule \<equiv> ([],([],[]))"
 
-definition CQaxrule :: "('sf,'sc,'sz) rule"
+definition CQaxrule :: "rule"
   where [axrule_defs]:"CQaxrule \<equiv> ([   ([],[Equals ($$F fid1) ($$F fid2)])   ],
   ([],[Equiv(Prop vid3 (singleton ($$F fid1)))(Prop vid3 (singleton ($$F fid2)))]))"
 
 lemma sound_CQaxrule: "sound CQaxrule"
 proof (unfold CQaxrule_def,rule soundI)
-  fix I::"('sf,'sc,'sz) interp"
+  fix I::"interp"
   assume good_interp:"is_interp I"
   assume pres:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [([], [Equals ($$F fid1) ($$F fid2)])] \<Longrightarrow> seq_sem I ([([], [Equals ($$F fid1) ($$F fid2)])] ! i) = UNIV)"
   have pre:"fml_sem I (Equals ($$F fid1) ($$F fid2)) = UNIV"
@@ -346,12 +346,12 @@ proof (unfold CQaxrule_def,rule soundI)
     using pre2 vec_eq by(auto simp add: pre2 vec_eq)
 qed
 
-definition Gaxrule :: "('sf,'sc,'sz) rule"
+definition Gaxrule :: "rule"
 where [axrule_defs]:"Gaxrule \<equiv> ([   ([],[(P pid1)])   ],   ([],[ ([[Pvar vid1]](P pid1)) ]))"
 
 lemma sound_Gaxrule: "sound Gaxrule"
 proof (unfold Gaxrule_def,rule soundI)
-  fix I::"('sf,'sc,'sz) interp"
+  fix I::"interp"
   assume good_interp:"is_interp I"
   assume pres:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [([], [P pid1])] \<Longrightarrow> seq_sem I ([([], [P pid1])] ! i) = UNIV)"
   then have pre:"(\<And>\<nu>. \<nu> \<in> fml_sem I (P pid1))" using pres[of 0] 
@@ -360,12 +360,12 @@ proof (unfold Gaxrule_def,rule soundI)
     by(auto simp add: pre)
 qed
 
-definition monbrule :: "('sf,'sc,'sz) rule"
+definition monbrule :: "rule"
 where [axrule_defs]:"monbrule \<equiv> ([   ([P pid1],[(P pid2)])   ],   ([([[Pvar vid1]](P pid1))],[ ([[Pvar vid1]](P pid2)) ]))"
 
 lemma sound_monbrule: "sound monbrule"
 proof (unfold monbrule_def,rule soundI)
-  fix I::"('sf,'sc,'sz) interp"
+  fix I::"interp"
   assume good_interp:"is_interp I"
   assume pres:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [([P pid1], [P pid2])] \<Longrightarrow> seq_sem I ([([P pid1], [P pid2])] ! i) = UNIV)"
   then have pre:"\<And>\<nu>. \<nu> \<in> fml_sem I (P pid1) \<Longrightarrow> \<nu> \<in> fml_sem I (P pid2)"
@@ -432,7 +432,7 @@ theorem K_valid: "valid Kaxiom"
   unfolding valid_def Kaxiom_def by (auto)
 
 lemma I_axiom_lemma:
-  fixes I::"('sf,'sc,'sz) interp" and \<nu>
+  fixes I::"interp" and \<nu>
   assumes "is_interp I"
   assumes IS:"\<nu> \<in> fml_sem I ([[$\<alpha> vid1**]](Predicational pid1 \<rightarrow>
                             [[$\<alpha> vid1]]Predicational pid1))"
@@ -474,7 +474,7 @@ theorem I_valid: "valid Iaxiom"
   apply(rule impI | rule allI)+
   apply(auto simp add: impl_sem)
 proof -
-  fix I::"('sf,'sc,'sz)interp" and a b c d
+  fix I::"interp" and a b c d
   assume good_interp:"is_interp I"
   assume P1:"(a, b) \<in> Contexts I pid1 UNIV"
   assume "\<forall>aa ba. ((a, b), aa, ba) \<in> (Programs I vid1)\<^sup>* \<longrightarrow>
@@ -521,24 +521,24 @@ theorem V_valid: "valid Vaxiom"
   apply(auto simp add: empty_def)
 done
   
-definition G_holds :: "('sf, 'sc, 'sz) formula \<Rightarrow> ('sf, 'sc, 'sz) hp \<Rightarrow> bool"
+definition G_holds :: "formula \<Rightarrow> hp \<Rightarrow> bool"
 where "G_holds \<phi> \<alpha> \<equiv> valid \<phi> \<longrightarrow> valid ([[\<alpha>]]\<phi>)"
 
-definition Skolem_holds :: "('sf, 'sc, 'sz) formula \<Rightarrow> 'sz \<Rightarrow> bool"
+definition Skolem_holds :: "formula \<Rightarrow> ident \<Rightarrow> bool"
 where "Skolem_holds \<phi> var \<equiv> valid \<phi> \<longrightarrow> valid (Forall var \<phi>)"
 
-definition MP_holds :: "('sf, 'sc, 'sz) formula \<Rightarrow> ('sf, 'sc, 'sz) formula \<Rightarrow> bool"
+definition MP_holds :: "formula \<Rightarrow> formula \<Rightarrow> bool"
 where "MP_holds \<phi> \<psi> \<equiv> valid (\<phi> \<rightarrow> \<psi>) \<longrightarrow> valid \<phi> \<longrightarrow> valid \<psi>"
 
-definition CT_holds :: "'sf \<Rightarrow> ('sf, 'sz) trm \<Rightarrow> ('sf, 'sz) trm \<Rightarrow> bool"
+definition CT_holds :: "ident \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> bool"
 where "CT_holds g \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>')
   \<longrightarrow> valid (Equals (Function g (singleton \<theta>)) (Function g (singleton \<theta>')))"
 
-definition CQ_holds :: "'sz \<Rightarrow> ('sf, 'sz) trm \<Rightarrow> ('sf, 'sz) trm \<Rightarrow> bool"
+definition CQ_holds :: "ident \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> bool"
 where "CQ_holds p \<theta> \<theta>' \<equiv> valid (Equals \<theta> \<theta>')
   \<longrightarrow> valid ((Prop p (singleton \<theta>)) \<leftrightarrow> (Prop p (singleton \<theta>')))"
 
-definition CE_holds :: "'sc \<Rightarrow> ('sf, 'sc, 'sz) formula \<Rightarrow> ('sf, 'sc, 'sz) formula \<Rightarrow> bool"
+definition CE_holds :: "ident \<Rightarrow> formula \<Rightarrow> formula \<Rightarrow> bool"
 where "CE_holds var \<phi> \<psi> \<equiv> valid (\<phi> \<leftrightarrow> \<psi>)
   \<longrightarrow> valid (InContext var \<phi> \<leftrightarrow> InContext var \<psi>)"
   
@@ -552,14 +552,14 @@ theorem Skolem_sound: "Skolem_holds \<phi> var"
 theorem MP_sound: "MP_holds \<phi> \<psi>"
   by (auto simp add: MP_holds_def valid_def)
 
-lemma CT_lemma:"\<And>I::('sf, 'sc, 'sz) interp. \<And> a::(real, 'sz) vec. \<And> b::(real, 'sz) vec. \<forall>I::('sf,'sc,'sz) interp. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b)) \<Longrightarrow>
+lemma CT_lemma:"\<And>I::interp. \<And> a::(real, ident) vec. \<And> b::(real, ident) vec. \<forall>I::interp. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b)) \<Longrightarrow>
              is_interp I \<Longrightarrow>
              Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = vid1 then \<theta> else  (Const (bword_zero))) (a, b))) =
              Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = vid1 then \<theta>' else (Const (bword_zero))) (a, b)))"
 proof -
-  fix I :: "('sf, 'sc, 'sz) interp" and a :: "(real, 'sz) vec" and b :: "(real, 'sz) vec"
+  fix I :: "interp" and a :: "(real, ident) vec" and b :: "(real, ident) vec"
   assume a1: "is_interp I"
-  assume "\<forall>I::('sf,'sc,'sz) interp. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b))"
+  assume "\<forall>I::interp. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b))"
   then have "\<forall>i. dterm_sem I (if i = vid1 then \<theta>' else (Const (bword_zero))) (a, b) = dterm_sem I (if i = vid1 then \<theta> else (Const (bword_zero))) (a, b)"
     using a1 by presburger
   then show "Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = vid1 then \<theta> else (Const (bword_zero))) (a, b)))
@@ -576,8 +576,8 @@ done
 
 theorem CQ_sound: "CQ_holds var \<theta> \<theta>'"
 proof (auto simp only: CQ_holds_def valid_def equals_sem vec_extensionality vec_eq_iff singleton.simps mem_Collect_eq)
-  fix I :: "('sf,'sc,'sz) interp" and a b
-  assume sem:"\<forall>I::('sf,'sc,'sz) interp. \<forall> \<nu>. is_interp I \<longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta>' \<nu>"
+  fix I :: "interp" and a b
+  assume sem:"\<forall>I::interp. \<forall> \<nu>. is_interp I \<longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I \<theta>' \<nu>"
   assume good:"is_interp I"
   have sem_eq:"dterm_sem I \<theta> (a,b) = dterm_sem I \<theta>' (a,b)"
     using sem good by auto

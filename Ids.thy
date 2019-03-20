@@ -1,21 +1,23 @@
 theory "Ids"
-imports Complex_Main
+  imports Complex_Main
+   "HOL-Library.Code_Target_Int"
+   "Finite_String"
 begin
 
 (*Differential dynamic logic can be defined for any finite types, given a 
   few elements of those types (so that we can generate axioms). *)
 locale ids =
-  fixes vid1 :: "('sz::{finite,linorder})"
-  fixes vid2 :: 'sz
-  fixes vid3 :: 'sz
-  fixes is_vid1 :: "'sz \<Rightarrow> bool"
-  fixes fid1 :: "('sf::finite)"
-  fixes fid2 :: 'sf
-  fixes fid3 :: 'sf
-  fixes pid1 :: "('sc::finite)"
-  fixes pid2 :: 'sc
-  fixes pid3 :: 'sc
-  fixes pid4 :: 'sc
+  fixes vid1 :: ident
+  fixes vid2 :: ident
+  fixes vid3 :: ident
+  fixes is_vid1 :: "ident \<Rightarrow> bool"
+  fixes fid1 :: ident
+  fixes fid2 :: ident
+  fixes fid3 :: ident
+  fixes pid1 :: ident
+  fixes pid2 :: ident
+  fixes pid3 :: ident
+  fixes pid4 :: ident
   assumes vne12:"vid1 \<noteq> vid2"
   assumes vne23:"vid2 \<noteq> vid3"
   assumes vne13:"vid1 \<noteq> vid3"

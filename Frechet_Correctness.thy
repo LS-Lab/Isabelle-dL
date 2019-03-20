@@ -17,12 +17,12 @@ text \<open>
 \<close>
 
 lemma inner_prod_eq:
-  fixes i::"'a::finite"
-  shows "(\<lambda>(v::'a Rvec). v \<bullet> axis i 1) = (\<lambda>(v::'a Rvec). v $ i)"
+  fixes i::ident
+  shows "(\<lambda>(v::Rvec). v \<bullet> axis i 1) = (\<lambda>(v::Rvec). v $ i)"
   unfolding cart_eq_inner_axis axis_def by (simp add: eq_commute)
 
 theorem svar_deriv:
-  fixes x:: "'sv::finite" and \<nu>:: "'sv Rvec" and F::"real filter"
+  fixes x:: "ident" and \<nu>:: "Rvec" and F::"real filter"
   shows "((\<lambda>v. v $ x) has_derivative (\<lambda>v'. v' \<bullet> (\<chi> i. if i = x then 1 else 0))) (at \<nu>)"
 proof -
   let ?f = "(\<lambda>v. v)"
@@ -96,7 +96,7 @@ proof -
           continuous_on UNIV (\<lambda>x. Blinfun ((THE f'. \<forall>x. (Functions I i has_derivative f' x) (at x)) x))"
   then have a1':"\<forall>x i. (Functions I i has_derivative (THE f'. \<forall>x. (Functions I i has_derivative f' x) (at x)) x) (at x)" by auto
   assume a2: "\<And>\<theta>. \<theta> \<in> range args \<Longrightarrow> (sterm_sem I \<theta> has_derivative frechet I \<theta> \<nu>) (at \<nu>)"
-  have "\<forall>f fa v. (\<exists>fb. \<not> (f (fb::'a) has_derivative fa fb (v::(real, 'a) vec)) (at v)) \<or> ((\<lambda>v. (\<chi> fa. (f fa v::real))) has_derivative (\<lambda>va. (\<chi> f. fa f v va))) (at v)"
+  have "\<forall>f fa v. (\<exists>fb. \<not> (f (fb::ident) has_derivative fa fb (v::(real, ident) vec)) (at v)) \<or> ((\<lambda>v. (\<chi> fa. (f fa v::real))) has_derivative (\<lambda>va. (\<chi> f. fa f v va))) (at v)"
     using has_derivative_vec by force
   then have "((\<lambda>v. \<chi> f. sterm_sem I (args f) v) has_derivative (\<lambda>v. \<chi> f. frechet I (args f) \<nu> v)) (at \<nu>)"
     by (auto simp add: a2 has_derivative_vec)
@@ -106,7 +106,7 @@ qed
 
 lemma func_lemma:
   "is_interp I \<Longrightarrow>
-  (\<And>\<theta> :: ('a::finite, 'c::finite) trm. \<theta> \<in> range args \<Longrightarrow> (sterm_sem I \<theta> has_derivative frechet I \<theta> \<nu>) (at \<nu>)) \<Longrightarrow>
+  (\<And>\<theta> :: trm. \<theta> \<in> range args \<Longrightarrow> (sterm_sem I \<theta> has_derivative frechet I \<theta> \<nu>) (at \<nu>)) \<Longrightarrow>
   (sterm_sem I ($f f args) has_derivative frechet I ($f f args) \<nu>) (at \<nu>)"
   apply(auto simp add: sfunction_case is_interp_def function_case_inner)
   apply(erule func_lemma2)
@@ -119,7 +119,7 @@ text \<open> The syntactic definition of term derivatives agrees with the semant
   us the axioms we want for differential terms essentially for free.
  \<close>
 lemma frechet_correctness:
-  fixes I :: "('a::finite, 'b::finite, 'c::finite) interp" and \<nu>
+  fixes I :: "interp" and \<nu>
   assumes good_interp: "is_interp I"
   shows "dfree \<theta> \<Longrightarrow> FDERIV (sterm_sem I \<theta>) \<nu> :> (frechet I \<theta> \<nu>)"
 proof (induct rule: dfree.induct)
@@ -132,10 +132,10 @@ qed auto
 
 text \<open>If terms are semantically equivalent in all states, so are their derivatives\<close>
 lemma sterm_determines_frechet:
-  fixes I ::"('a1::finite, 'b1::finite, 'c::finite) interp"
-    and J ::"('a2::finite, 'b2::finite, 'c::finite) interp"
-    and \<theta>1 :: "('a1::finite, 'c::finite) trm"
-    and \<theta>2 :: "('a2::finite, 'c::finite) trm"
+  fixes I ::"interp"
+    and J ::"interp"
+    and \<theta>1 :: "trm"
+    and \<theta>2 :: "trm"
     and \<nu> 
   assumes good_interp1:"is_interp I"
   assumes good_interp2:"is_interp J"
@@ -174,11 +174,11 @@ lemma the_all_deriv:
       done
     done
   
-typedef ('a, 'c) strm = "{\<theta>:: ('a,'c) trm. dfree \<theta>}"
+typedef strm = "{\<theta>:: trm. dfree \<theta>}"
   morphisms raw_term simple_term
   by(rule exI[where x= "Const (bword_zero)"], auto simp add: dfree_Const)
   
-typedef ('a, 'b, 'c) good_interp = "{I::('a::finite,'b::finite,'c::finite) interp. is_interp I}"
+typedef good_interp = "{I:: interp. is_interp I}"
   morphisms raw_interp good_interp
   apply(rule exI[where x="\<lparr> Functions = (\<lambda>f x. 0), Funls = (\<lambda>F v. 0), Predicates = (\<lambda>p x. True), Contexts = (\<lambda>C S. S), Programs = (\<lambda>a. {}), ODEs = (\<lambda>c sp v. (\<chi> i. 0)), ODEBV = \<lambda>c sp. {}\<rparr>"])
   apply(auto simp add: is_interp_def)
@@ -248,7 +248,7 @@ setup_lifting type_definition_good_interp
 
 setup_lifting type_definition_strm
 
-lift_definition blin_frechet::"('sf, 'sc, 'sz) good_interp \<Rightarrow> ('sf,'sz) strm \<Rightarrow> (real, 'sz) vec  \<Rightarrow> (real, 'sz) vec \<Rightarrow>\<^sub>L real" is "frechet"
+lift_definition blin_frechet::"good_interp \<Rightarrow> strm \<Rightarrow> (real, ident) vec  \<Rightarrow> (real, ident) vec \<Rightarrow>\<^sub>L real" is "frechet"
   using frechet_linear by auto
 
 lemmas [simp] = blin_frechet.rep_eq
@@ -284,7 +284,7 @@ lemma sterm_continuous':
   using sterm_continuous continuous_on_subset good_interp by blast
 
 lemma frechet_continuous:
-  fixes I :: "('sf, 'sc, 'sz) interp"
+  fixes I :: "interp"
   assumes good_interp:"is_interp I"
   shows "dfree \<theta> \<Longrightarrow> continuous_on UNIV (blin_frechet (good_interp I) (simple_term \<theta>))"    
 proof (induction rule: dfree.induct)
@@ -365,7 +365,7 @@ next
     apply(rule ext)
     apply(rule blinfun_eqI)
   proof -
-    fix v :: "(real, 'sz) vec" and i :: "(real, 'sz) vec"
+    fix v :: "(real, ident) vec" and i :: "(real, ident) vec"
     have "frechet I ($f f args) v i = blinfun_apply (blin_frechet (good_interp I) (simple_term ($f f args)) v) i"
       by (metis (no_types) bounded_linear_Blinfun_apply dfree_Fun_simps frechet_blin frechet_linear frees good_interp)
     then have "FunctionFrechet I f (\<chi> s. sterm_sem I (args s) v) (blinfun_apply (Blinfun (\<lambda>va. \<chi> s. frechet I (args s) v va)) i) = blinfun_apply (blin_frechet (good_interp I) (simple_term ($f f args)) v) i"

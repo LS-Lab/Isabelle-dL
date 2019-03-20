@@ -23,7 +23,7 @@ text \<open>This section introduces functions for computing properties of the st
   \<close>
 
 subsection \<open>Signature Definitions\<close>
-primrec SIGT :: "('a, 'c) trm \<Rightarrow> 'a set"
+primrec SIGT :: "trm \<Rightarrow> ident set"
 where
   "SIGT (Var var) = {}"
 | "SIGT (Const r) = {}"
@@ -39,7 +39,7 @@ where
 | "SIGT (DiffVar x) = {}"
 | "SIGT (Differential t) = SIGT t"
 
-primrec SIGO   :: "('a, 'c) ODE \<Rightarrow> ('a + 'c) set"
+primrec SIGO   :: "ODE \<Rightarrow> (ident + ident) set"
 where
   "SIGO (OVar c _) = {Inr c}"
 | "SIGO (OSing x \<theta>) =  {Inl x| x. x \<in> SIGT \<theta>}"
@@ -50,8 +50,8 @@ lemma SIGO_assoc:"SIGO (oprod ODE1 ODE2) = SIGO (OProd ODE1 ODE2)"
   by( auto)
 
 
-primrec SIGP   :: "('a, 'b, 'c) hp      \<Rightarrow> ('a + 'b + 'c) set"
-and     SIGF   :: "('a, 'b, 'c) formula \<Rightarrow> ('a + 'b + 'c) set"
+primrec SIGP   :: "hp      \<Rightarrow> (ident + ident + ident) set"
+and     SIGF   :: "formula \<Rightarrow> (ident + ident + ident) set"
 where
   "SIGP (Pvar var) = {Inr (Inr var)}"
 | "SIGP (Assign var t) = {Inl x | x. x \<in> SIGT t}"
@@ -70,7 +70,7 @@ where
 | "SIGF (Diamond a p) = SIGP a \<union> SIGF p"
 | "SIGF (InContext var p) = {Inr (Inl var)} \<union> SIGF p"
 
-fun primify :: "('a + 'a) \<Rightarrow> ('a + 'a) set"
+fun primify :: "(ident + ident) \<Rightarrow> (ident + ident) set"
 where
   "primify (Inl x) = {Inl x, Inr x}"
 | "primify (Inr x) = {Inl x, Inr x}"
@@ -82,7 +82,7 @@ text\<open>
   primed variables x'.
   \<close>
 text\<open>Free variables of a term \<close>
-primrec FVT :: "('a, 'c) trm \<Rightarrow> ('c + 'c) set"
+primrec FVT :: "trm \<Rightarrow> (ident + ident) set"
 where
   FVT_Var:"FVT (Var x) = {Inl x}"
 | FVT_Const:"FVT (Const x) = {}"
@@ -98,11 +98,11 @@ where
 | FVT_Diff:"FVT (Differential f) = (\<Union>x \<in> (FVT f). primify x)"
 | FVT_DiffVar:"FVT (DiffVar x) = {Inr x}"
 
-fun FVDiff :: "('a, 'c) trm \<Rightarrow> ('c + 'c) set"
+fun FVDiff :: "trm \<Rightarrow> (ident + ident) set"
 where "FVDiff f = (\<Union>x \<in> (FVT f). primify x)"
 
 text\<open> Free variables of an ODE includes both the bound variables and the terms \<close>
-fun FVO :: "('a, 'c) ODE \<Rightarrow> 'c set"
+fun FVO :: "ODE \<Rightarrow> ident set"
 where
   "FVO (OVar c (Some x)) = UNIV" 
 | "FVO (OVar c None) = UNIV" 
@@ -119,7 +119,7 @@ lemma FVO_assoc:"FVO (oprod ODE1 ODE2) = FVO (OProd ODE1 ODE2)"
   by(auto)
   
 text\<open> Bound variables of ODEs, formulas, programs \<close>
-fun BVO :: "('a, 'c) ODE \<Rightarrow> ('c + 'c) set"
+fun BVO :: "ODE \<Rightarrow> (ident + ident) set"
 where 
   "BVO (OVar c (Some x)) = -{Inl x, Inr x}"
 | "BVO (OVar c None) = UNIV"
@@ -135,8 +135,8 @@ lemma BVO_lr:"(Inl x \<in> BVO ODE) = (Inr x \<in> BVO ODE)"
   subgoal for x1 x2 by(cases x2,auto)
   subgoal for x1 x2 by(cases x2,auto) done
 
-fun BVF :: "('a, 'b, 'c) formula \<Rightarrow> ('c + 'c) set"
-and BVP :: "('a, 'b, 'c) hp \<Rightarrow> ('c + 'c) set"
+fun BVF :: "formula \<Rightarrow> (ident + ident) set"
+and BVP :: "hp \<Rightarrow> (ident + ident) set"
 where
   "BVF (Geq f g) = {}"
 | "BVF (Prop p dfun_args) = {}"
@@ -157,7 +157,7 @@ where
 | "BVP (Loop \<alpha>) = BVP \<alpha>"
 
 text\<open> Must-bound variables (of a program)\<close>
-fun MBV :: "('a, 'b, 'c) hp \<Rightarrow> ('c + 'c) set"
+fun MBV :: "hp \<Rightarrow> (ident + ident) set"
 where
   "MBV (Pvar a) = {}"
 | "MBV (Choice \<alpha> \<beta>) = MBV \<alpha> \<inter> MBV \<beta>"
@@ -168,8 +168,8 @@ where
 
 text\<open>Free variables of a formula,
  free variables of a program \<close>
-fun FVF :: "('a, 'b, 'c) formula \<Rightarrow> ('c + 'c) set"
-and FVP :: "('a, 'b, 'c) hp \<Rightarrow> ('c + 'c) set"
+fun FVF :: "formula \<Rightarrow> (ident + ident) set"
+and FVP :: "hp \<Rightarrow> (ident + ident) set"
 where
   "FVF (Geq f g) = FVT f \<union> FVT g"
 | "FVF (Prop p args) = (\<Union>i. FVT (args i))"
@@ -188,7 +188,7 @@ where
 | "FVP (Sequence \<alpha> \<beta>) = FVP \<alpha> \<union> (FVP \<beta> - MBV \<alpha>)"
 | "FVP (Loop \<alpha>) = FVP \<alpha>"
 
-fun FVSeq :: "('a,'b,'c) sequent \<Rightarrow> ('c + 'c) set"
+fun FVSeq :: "sequent \<Rightarrow> (ident + ident) set"
   where "FVSeq (A,S) = (List.foldr (\<lambda> x acc.  (acc \<union> (FVF x))) A {}) \<union> (List.foldr (\<lambda> x acc.  (acc \<union> (FVF x))) S {})"
 
 subsection \<open>Lemmas for reasoning about static semantics\<close> 
@@ -261,7 +261,7 @@ proof -
   assume agree:"Vagree \<nu> \<nu>' (FVDiff ($f var args))"
   have agree':"Vagree \<nu> \<nu>' ((\<Union>i. (\<Union>j \<in>(FVT (args i)). primify j)))"
     using fvdiff_plus1 FVDiff.simps agree by (auto)
-  fix i :: 'a
+  fix i :: ident
   have "\<And>S. \<not> S \<subseteq> (\<Union>f. UNION (FVT (args f)) primify) \<or> Vagree \<nu> \<nu>' S"
     using agree' agree_supset by blast
   then have "\<And>f. f \<notin> UNIV \<or> Vagree \<nu> \<nu>' (UNION (FVT (args f)) primify)"

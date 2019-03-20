@@ -73,7 +73,7 @@ where "DIAndCurry12 =
     SODEs = (\<lambda>_. None)
   \<rparr>"
   
-definition DIAnd :: "('sf,'sc,'sz) rule" 
+definition DIAnd :: "rule" 
 where "DIAnd = 
   ([([],[DIAndSG1]),([],[DIAndSG2])], 
   DIAndConcl)"

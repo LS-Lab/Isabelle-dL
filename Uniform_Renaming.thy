@@ -15,12 +15,12 @@ section \<open>Uniform and Bound Renaming\<close>
 text \<open>Definitions and soundness proofs for the renaming rules Uniform Renaming and Bound Renaming.
 Renaming in dL swaps the names of two variables x and y, as in the swap operator of Nominal Logic.
 \<close>
-fun swap ::"'sz \<Rightarrow> 'sz \<Rightarrow> 'sz \<Rightarrow> 'sz"
+fun swap ::"ident \<Rightarrow> ident \<Rightarrow> ident \<Rightarrow> ident"
 where "swap x y z = (if z = x then  y else if z = y then x else z)"
  
 subsection \<open>Uniform Renaming Definitions\<close>
 
-primrec TUrename :: "'sz \<Rightarrow> 'sz \<Rightarrow> ('sf, 'sz) trm \<Rightarrow> ('sf, 'sz) trm"
+primrec TUrename :: "ident \<Rightarrow> ident \<Rightarrow> trm \<Rightarrow> trm"
 where 
   "TUrename x y (Var z) = Var (swap x y z)"
 | "TUrename x y (DiffVar z) = DiffVar (swap x y z)"
@@ -36,7 +36,7 @@ where
 | "TUrename x y (Abs \<theta>1) = Abs (TUrename x y \<theta>1)"
 | "TUrename x y (Differential \<theta>) = Differential (TUrename x y \<theta>)"
 
-inductive TRadmit :: "('sf, 'sz) trm \<Rightarrow> bool"
+inductive TRadmit :: "trm \<Rightarrow> bool"
 where
   TRadmit_Var:"TRadmit (Var z)"
 | TRadmit_DiffVar:"TRadmit (DiffVar z)"
@@ -66,14 +66,14 @@ and TRadmit_min_simps[simp]: "TRadmit (Min t1 t2)"
 and TRadmit_abs_simps[simp]: "TRadmit (Abs t1)"
 and TRadmit_differential_simps[simp]: "TRadmit (Differential t)"
 
-primrec OUrename :: "'sz \<Rightarrow> 'sz \<Rightarrow> ('sf, 'sz) ODE \<Rightarrow> ('sf, 'sz) ODE"
+primrec OUrename :: "ident \<Rightarrow> ident \<Rightarrow> ODE \<Rightarrow> ODE"
 where
   "OUrename x y (OVar c sp) = undefined"
 | "OUrename x y (OSing z \<theta>) = OSing (swap x y z) (TUrename x y \<theta>)"
 | "OUrename x y (OProd ODE1 ODE2) = OProd (OUrename x y ODE1) (OUrename x y ODE2)"
 
 
-inductive ORadmit :: "('sf, 'sz) ODE \<Rightarrow> bool"
+inductive ORadmit :: "ODE \<Rightarrow> bool"
 where
   ORadmit_Sing:"TRadmit \<theta> \<Longrightarrow> dfree \<theta> \<Longrightarrow> ORadmit (OSing x \<theta>)"
 | ORadmit_Prod:"ORadmit ODE1 \<Longrightarrow> ORadmit ODE2 \<Longrightarrow> ORadmit (OProd ODE1 ODE2)"
@@ -83,8 +83,8 @@ inductive_simps
 and ORadmit_sing_simps[simp]: "ORadmit (OSing z t)"
 and ORadmit_prod_simps[simp]: "ORadmit (OProd o1 o2)"
 
-primrec PUrename :: "'sz \<Rightarrow> 'sz \<Rightarrow> ('sf, 'sc, 'sz) hp \<Rightarrow> ('sf, 'sc, 'sz) hp"
-  and   FUrename :: "'sz \<Rightarrow> 'sz \<Rightarrow> ('sf, 'sc, 'sz) formula \<Rightarrow> ('sf, 'sc, 'sz) formula"
+primrec PUrename :: "ident \<Rightarrow> ident \<Rightarrow> hp \<Rightarrow> hp"
+  and   FUrename :: "ident \<Rightarrow> ident \<Rightarrow> formula \<Rightarrow> formula"
 where
   "PUrename x y (Pvar a) = undefined"
 | "PUrename x y (Assign z \<theta>) = Assign (swap x y z) (TUrename x y \<theta>)"
@@ -104,13 +104,13 @@ where
 | "FUrename x y (Diamond \<alpha> \<phi>) = Diamond (PUrename x y \<alpha>) (FUrename x y \<phi>)"
 | "FUrename x y (InContext C \<phi>) = undefined"
 
-fun SUrename :: " 'sz \<Rightarrow> 'sz \<Rightarrow> ('sf,'sc,'sz) sequent \<Rightarrow> ('sf,'sc,'sz) sequent"
+fun SUrename :: " ident \<Rightarrow> ident \<Rightarrow> sequent \<Rightarrow> sequent"
   where "SUrename  x y (A,S) = (map (FUrename x y) A, map (FUrename x y) S)"
 
 subsection \<open>Uniform Renaming Admissibility\<close>
 
-inductive PRadmit :: "('sf, 'sc, 'sz) hp \<Rightarrow> bool"
-  and     FRadmit ::"('sf, 'sc, 'sz) formula \<Rightarrow> bool"
+inductive PRadmit :: "hp \<Rightarrow> bool"
+  and     FRadmit ::"formula \<Rightarrow> bool"
 where
   PRadmit_Assign:"TRadmit \<theta> \<Longrightarrow> PRadmit (Assign x \<theta>)"
 | PRadmit_AssignAny:"PRadmit (AssignAny x)"
@@ -148,10 +148,10 @@ and PRadmit_loop_simps[simp]: "PRadmit (Loop a)"
 and PRadmit_assign_simps[simp]: "PRadmit (Assign x e)"
 and PRadmit_Pvar_simps[simp]: "PRadmit (Pvar a)"
 
-definition RSadj :: "'sz \<Rightarrow> 'sz \<Rightarrow> 'sz simple_state \<Rightarrow> 'sz simple_state"
+definition RSadj :: "ident \<Rightarrow> ident \<Rightarrow> simple_state \<Rightarrow> simple_state"
 where "RSadj x y \<nu> = (\<chi> z. \<nu> $ (swap x y z))" 
 
-definition Radj :: "'sz \<Rightarrow> 'sz \<Rightarrow> 'sz state \<Rightarrow> 'sz state"
+definition Radj :: "ident \<Rightarrow> ident \<Rightarrow> state \<Rightarrow> state"
 where "Radj x y \<nu> = (RSadj x y (fst \<nu>), RSadj x y (snd \<nu>))" 
 
 lemma SUren: "dfree \<theta> \<Longrightarrow> sterm_sem I (TUrename x y \<theta>) \<nu> = sterm_sem I \<theta> (RSadj x y \<nu>)"
@@ -184,7 +184,7 @@ proof (induction rule: dfree.induct)
       qed
      subgoal
      proof -
-       have "\<And>v s. v \<bullet> (\<chi> sa. if sa = (s::'sz) then 1 else 0) = v $ s"
+       have "\<And>v s. v \<bullet> (\<chi> sa. if sa = (s::ident) then 1 else 0) = v $ s"
          subgoal for v s
            using inner_axis[of v s 1]
            by (auto simp add: axis_def)
@@ -196,7 +196,7 @@ proof (induction rule: dfree.induct)
     proof -
       assume a1: "i \<noteq> y"
       assume a2: "i \<noteq> x"
-      have "\<And>v s. v \<bullet> (\<chi> sa. if sa = (s::'sz) then 1 else 0) = v $ s"
+      have "\<And>v s. v \<bullet> (\<chi> sa. if sa = (s::ident) then 1 else 0) = v $ s"
         by (metis (no_types) inner_axis axis_def inner_prod_eq)
       then show ?thesis
         using a2 a1 by (auto simp add: axis_def)
@@ -246,13 +246,13 @@ next
 qed
 
 lemma state_eq: 
-  fixes \<nu> \<nu>' :: "'sz state"
+  fixes \<nu> \<nu>' :: "state"
   shows "(\<And>i. (fst \<nu>) $ i = (fst \<nu>') $ i) \<Longrightarrow> (\<And>i. (snd \<nu>) $ i = (snd \<nu>') $ i) \<Longrightarrow> \<nu>  = \<nu>'"
   apply (cases "\<nu>", cases "\<nu>'", auto)
    by(rule vec_extensionality, auto)+
   
 lemma Radj_repv1:
-  fixes x y z ::"'sz" 
+  fixes x y z ::"ident" 
   shows "(Radj x y (repv \<nu> y r)) = repv (Radj x y \<nu>) x r"
   apply(rule state_eq)
    subgoal for i
@@ -264,7 +264,7 @@ lemma Radj_repv1:
   done
 
 lemma Radj_repv2:
-  fixes x y z ::"'sz" 
+  fixes x y z ::"ident" 
   shows "(Radj x y (repv \<nu> x r)) = repv (Radj x y \<nu>) y r"
   apply(rule state_eq)
    subgoal for i
@@ -276,7 +276,7 @@ lemma Radj_repv2:
   done
 
 lemma Radj_repv3:
-  fixes x y z ::"'sz" 
+  fixes x y z ::"ident" 
   assumes zx:"z \<noteq> x" and zy:"z \<noteq> y"
   shows "(Radj x y (repv \<nu> z r)) = repv (Radj x y \<nu>) z r"
   apply(rule state_eq)
@@ -289,7 +289,7 @@ lemma Radj_repv3:
   done
 
 lemma Radj_repd1:
-  fixes x y z ::"'sz" 
+  fixes x y z ::"ident" 
   shows "(Radj x y (repd \<nu> y r)) = repd (Radj x y \<nu>) x r"
   apply(rule state_eq)
    subgoal for i
@@ -301,7 +301,7 @@ lemma Radj_repd1:
   done
 
 lemma Radj_repd2:
-  fixes x y z ::"'sz" 
+  fixes x y z ::"ident" 
   shows "(Radj x y (repd \<nu> x r)) = repd (Radj x y \<nu>) y r"
   apply(rule state_eq)
    subgoal for i
@@ -313,7 +313,7 @@ lemma Radj_repd2:
   done
 
 lemma Radj_repd3:
-  fixes x y z ::"'sz" 
+  fixes x y z ::"ident" 
   assumes zx:"z \<noteq> x" and zy:"z \<noteq> y"
   shows "(Radj x y (repd \<nu> z r)) = repd (Radj x y \<nu>) z r"
   apply(rule state_eq)
@@ -447,7 +447,7 @@ proof -
     using OUrename_preserves_ODE_vars[OF ORA]
     subgoal for i
     proof -
-      have f1: "\<forall>s sa i sb. (sb \<in> {sb. swap s sa sb \<in> ODE_vars (i::('sf, 'a, 'sz) interp) ODE}) = (if sb = s then sa \<in> ODE_vars i ODE else if sb = sa then s \<in> ODE_vars i ODE else sb \<in> ODE_vars i ODE)"
+      have f1: "\<forall>s sa i sb. (sb \<in> {sb. swap s sa sb \<in> ODE_vars (i::interp) ODE}) = (if sb = s then sa \<in> ODE_vars i ODE else if sb = sa then s \<in> ODE_vars i ODE else sb \<in> ODE_vars i ODE)"
         by simp
       then have f2: "i \<in> ODE_vars I (OUrename x y ODE) \<longrightarrow> (if i = x then y \<in> ODE_vars I ODE else if i = y then x \<in> ODE_vars I ODE else i \<in> ODE_vars I ODE)"
         using \<open>\<And>y x I. {z. swap x y z \<in> ODE_vars I ODE} = ODE_vars I (OUrename x y ODE)\<close> by blast
@@ -466,7 +466,7 @@ proof -
     subgoal for i
       using OUrename_preserves_ODE_vars[OF ORA]
     proof -
-      have f1: "\<forall>s sa i sb. (sb \<in> {sb. swap s sa sb \<in> ODE_vars (i::('sf, 'a, 'sz) interp) ODE}) = (if sb = s then sa \<in> ODE_vars i ODE else if sb = sa then s \<in> ODE_vars i ODE else sb \<in> ODE_vars i ODE)"
+      have f1: "\<forall>s sa i sb. (sb \<in> {sb. swap s sa sb \<in> ODE_vars (i::interp) ODE}) = (if sb = s then sa \<in> ODE_vars i ODE else if sb = sa then s \<in> ODE_vars i ODE else sb \<in> ODE_vars i ODE)"
         by simp
       then have f2: "i \<in> ODE_vars I (OUrename x y ODE) \<longrightarrow> (if i = x then y \<in> ODE_vars I ODE else if i = y then x \<in> ODE_vars I ODE else i \<in> ODE_vars I ODE)"
         using \<open>\<And>y x I. {z. swap x y z \<in> ODE_vars I ODE} = ODE_vars I (OUrename x y ODE)\<close> by blast
@@ -1184,7 +1184,7 @@ lemma SURename_sound:"FRadmit (seq2fml (A,S)) \<Longrightarrow> fsafe (seq2fml (
   using URename_sound[of "seq2fml (A,S)" x y] FUren[of I "seq2fml (A,S)" "(v,vv)" x y]  
 *)
 subsection \<open>Bound Renaming Rule Soundness\<close>
-fun FBrename :: " 'sz \<Rightarrow> 'sz \<Rightarrow>  ('sf,'sc,'sz) formula \<Rightarrow> ('sf,'sc,'sz) formula"
+fun FBrename :: " ident \<Rightarrow> ident \<Rightarrow> formula \<Rightarrow> formula"
   where "FBrename x y (Not (Diamond(Assign z \<theta>) (Not \<phi>))) = 
     (if(x = z) then  
        (Box(Assign y \<theta>)  (FUrename x y \<phi>)) 
@@ -1199,7 +1199,7 @@ fun FBrename :: " 'sz \<Rightarrow> 'sz \<Rightarrow>  ('sf,'sc,'sz) formula \<R
     else (Forall z  \<phi>))"
   | "FBrename x y f = f"
 
-fun SBrename :: " 'sz \<Rightarrow> 'sz \<Rightarrow> ('sf,'sc,'sz) sequent \<Rightarrow> ('sf,'sc,'sz) sequent"
+fun SBrename :: "ident \<Rightarrow> ident \<Rightarrow> sequent \<Rightarrow> sequent"
   where "SBrename  x y (A,S) = (map (FBrename x y) A, map (FBrename x y) S)"
 
 
@@ -1303,7 +1303,7 @@ proof -
   have dsafe:"dsafe \<theta>" using fsafe by (simp add: Box_def)
   have "\<And>I \<nu>. is_interp I \<Longrightarrow> \<nu> \<in> fml_sem I ([[y := \<theta>]]FUrename x y \<phi>)"
   proof -
-    fix I::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I::"interp" and \<nu>::"state"
     assume good_interp:"is_interp I"
     from FVF have sub:"FVF \<phi> \<subseteq> -{Inl y, Inr y, Inr x}" by auto
     have "Vagree (repv (Radj x y \<nu>) x (dterm_sem I \<theta> \<nu>)) (repv \<nu> x (dterm_sem I \<theta> \<nu>)) (-{Inl y, Inr y, Inr x})"

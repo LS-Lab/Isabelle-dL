@@ -21,25 +21,25 @@ where "join S [] = []"
   | "join S (S' # SS) = S' @ S @ (join S SS)"
 
  
-fun vid_to_string::"'sz \<Rightarrow> char list"
+fun vid_to_string::"ident \<Rightarrow> char list"
 where "vid_to_string vid = (if vid = vid1 then ''x'' else if vid = vid2 then ''y'' else if vid = vid3 then ''z'' else ''w'')" 
 
-fun oid_to_string::"'sz \<Rightarrow> char list"
+fun oid_to_string::"ident \<Rightarrow> char list"
 where "oid_to_string vid = (if vid = vid1 then ''c'' else if vid = vid2 then ''c2'' else if vid = vid3 then ''c3'' else ''c4'')" 
 
-fun cid_to_string::"'sc \<Rightarrow> char list"
+fun cid_to_string::"ident \<Rightarrow> char list"
 where "cid_to_string vid = (if vid = pid1 then ''C'' else if vid = pid2 then ''C2'' else if vid = pid3 then ''C3'' else ''C4'')" 
 
-fun ppid_to_string::"'sc \<Rightarrow> char list"
+fun ppid_to_string::"ident \<Rightarrow> char list"
 where "ppid_to_string vid = (if vid = pid1 then ''P'' else if vid = pid2 then ''Q'' else if vid = pid3 then ''R'' else ''H'')" 
 
-fun hpid_to_string::"'sz \<Rightarrow> char list"
+fun hpid_to_string::"ident \<Rightarrow> char list"
 where "hpid_to_string vid = (if vid = vid1 then ''a'' else if vid = vid2 then ''b'' else if vid = vid3 then ''a1'' else ''b1'')" 
 
-fun fid_to_string::"'sf \<Rightarrow> char list"
+fun fid_to_string::"ident \<Rightarrow> char list"
 where "fid_to_string vid = (if vid = fid1 then ''f'' else if vid = fid2 then ''g'' else if vid = fid3 then ''h'' else ''j'')" 
 
-primrec trm_to_string::"('sf,'sz) trm \<Rightarrow> char list"
+primrec trm_to_string::"trm \<Rightarrow> char list"
 where  
   "trm_to_string (Var x) = vid_to_string x"
 | "trm_to_string (Const r) = ''r''"
@@ -50,14 +50,14 @@ where
 | "trm_to_string (DiffVar x) = ''Dv{'' @ vid_to_string x @ ''}''"
 | "trm_to_string (Differential t) = ''D{'' @ trm_to_string t @ ''}''"
   
-primrec ode_to_string::"('sf,'sz) ODE \<Rightarrow> char list"
+primrec ode_to_string::"ODE \<Rightarrow> char list"
 where  
   "ode_to_string (OVar x sp) = oid_to_string x"
 | "ode_to_string (OSing x t) = ''d'' @ vid_to_string x @ ''='' @ trm_to_string t"
 | "ode_to_string (OProd ODE1 ODE2) = ode_to_string ODE1 @ '', '' @ ode_to_string ODE2 "
      
-fun fml_to_string ::"('sf, 'sc, 'sz) formula \<Rightarrow> char list"
-and hp_to_string ::"('sf, 'sc, 'sz) hp \<Rightarrow> char list"
+fun fml_to_string ::"formula \<Rightarrow> char list"
+and hp_to_string ::"hp \<Rightarrow> char list"
 where 
     "fml_to_string (Geq t1 t2) =  trm_to_string t1 @ ''>='' @ trm_to_string t2"
   | "fml_to_string (Prop p args) = []"

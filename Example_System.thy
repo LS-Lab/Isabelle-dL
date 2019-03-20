@@ -72,10 +72,10 @@ where "SystemCEFml2 = Geq (DiffVar vid1) (Const 0)"
 
 
 (*
-definition diff_const_axiom :: "('sf, 'sc, 'sz) formula"
+definition diff_const_axiom :: "formula"
   where [axiom_defs]:"diff_const_axiom \<equiv> Equals (Differential ($f fid1 empty)) (Const 0)"
 
-definition diff_var_axiom :: "('sf, 'sc, 'sz) formula"
+definition diff_var_axiom :: "formula"
   where [axiom_defs]:"diff_var_axiom \<equiv> Equals (Differential (Var vid1)) (DiffVar vid1)"*)
 
   

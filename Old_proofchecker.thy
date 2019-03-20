@@ -73,7 +73,7 @@ lemma sound_weaken_appR:"\<And>SG SGS C. sound (SG, C) \<Longrightarrow> sound (
     done
   done
 
-fun start_proof::"('sf,'sc,'sz) sequent \<Rightarrow> ('sf,'sc,'sz) rule"
+fun start_proof::"('sf,'sc,'sz) sequent \<Rightarrow> rule"
 where "start_proof S = ([S], S)"
   
 lemma start_proof_sound:"sound (start_proof S)"
@@ -200,15 +200,15 @@ datatype ('a, 'b, 'c) step =
 | Lrule lrule nat
 | CloseId nat nat
 | Cut "('a, 'b, 'c) formula"
-| DEAxiomSchema "('a,'c) ODE" "('a, 'b, 'c) subst"
+| DEAxiomSchema "ODE" "('a, 'b, 'c) subst"
   
 type_synonym ('a, 'b, 'c) derivation = "(nat * ('a, 'b, 'c) step) list"
-type_synonym ('a, 'b, 'c) pf = "('a,'b,'c) sequent * ('a, 'b, 'c) derivation"
+type_synonym ('a, 'b, 'c) pf = "sequent * ('a, 'b, 'c) derivation"
 
 fun seq_to_string :: "('sf, 'sc, 'sz) sequent \<Rightarrow> char list"
 where "seq_to_string (A,S) = join '', '' (map fml_to_string A) @ '' |- '' @ join '', '' (map fml_to_string S)"
   
-fun rule_to_string :: "('sf, 'sc, 'sz) rule \<Rightarrow> char list"
+fun rule_to_string :: "rule \<Rightarrow> char list"
 where "rule_to_string (SG, C) = (join '';;   '' (map seq_to_string SG)) @ ''            '' @  (*[char_of_nat 10] @ *)seq_to_string C"
 
 fun close :: "'a list \<Rightarrow> 'a \<Rightarrow>'a list"
@@ -279,7 +279,7 @@ where
 | Rstep_CohideRR:"Rrule_result CohideRR j (A,S) = [([], [nth S j])]"
 | Rstep_TrueR:"Rrule_result TrueR j (A,S) = []"
 
-fun step_result :: "('sf, 'sc, 'sz) rule \<Rightarrow> (nat * ('sf, 'sc, 'sz) step) \<Rightarrow>  ('sf, 'sc, 'sz) rule"
+fun step_result :: "rule \<Rightarrow> (nat * ('sf, 'sc, 'sz) step) \<Rightarrow>  rule"
 where
   Step_axiom:"step_result (SG,C) (i,Axiom a)   = (closeI SG i, C)"
 | Step_AxSubst:"step_result (SG,C) (i,AxSubst a \<sigma>)   = (closeI SG i, C)"
@@ -294,12 +294,12 @@ where
 | Step_CQ:"step_result (SG,C) (i, CQ \<theta>\<^sub>1 \<theta>\<^sub>2 \<sigma>) =  (closeI SG i, C)"
 | Step_default:"step_result R (i,S) = R"
   
-fun deriv_result :: "('sf, 'sc, 'sz) rule \<Rightarrow> ('sf, 'sc, 'sz) derivation \<Rightarrow> ('sf, 'sc, 'sz) rule"
+fun deriv_result :: "rule \<Rightarrow> ('sf, 'sc, 'sz) derivation \<Rightarrow> rule"
 where 
   "deriv_result R [] = R"
 | "deriv_result R (s # ss) = deriv_result (step_result R s) (ss)" 
   
-primrec proof_result :: "('sf, 'sc, 'sz) pf \<Rightarrow> ('sf, 'sc, 'sz) rule"
+primrec proof_result :: "('sf, 'sc, 'sz) pf \<Rightarrow> rule"
 where proof_result[code]:"proof_result (D,S) = deriv_result (start_proof D) S"
   
 inductive lrule_ok ::"('sf,'sc,'sz) sequent list \<Rightarrow> ('sf,'sc,'sz) sequent \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> lrule \<Rightarrow> bool"
@@ -365,7 +365,7 @@ and Rrule_CohideR_simps[prover]: "rrule_ok SG C i j CohideR"
 and Rrule_CohideRR_simps[prover]: "rrule_ok SG C i j CohideRR"
 and Rrule_TrueR_simps[prover]: "rrule_ok SG C i j TrueR"
 
-inductive step_ok  :: "('sf, 'sc, 'sz) rule \<Rightarrow> nat \<Rightarrow> ('sf, 'sc, 'sz) step \<Rightarrow> bool"
+inductive step_ok  :: "rule \<Rightarrow> nat \<Rightarrow> ('sf, 'sc, 'sz) step \<Rightarrow> bool"
 where
   Step_Axiom:"(nth SG i) = ([], [get_axiom a]) \<Longrightarrow> step_ok (SG,C) i (Axiom a)"
 | Step_AxSubst:"(nth SG i) = ([], [Fsubst (get_axiom a) \<sigma>]) \<Longrightarrow> Fadmit \<sigma> (get_axiom a) \<Longrightarrow> ssafe \<sigma> \<Longrightarrow> step_ok (SG,C) i (AxSubst a \<sigma>)"
@@ -423,7 +423,7 @@ and Step_DEAxiom_schema_simps[prover]: "step_ok (SG,C) i (DEAxiomSchema ODE \<si
 and Step_CE_simps[prover]: "step_ok (SG,C) i (CE \<phi> \<psi> \<sigma>)"
 and Step_CQ_simps[prover]: "step_ok (SG,C) i (CQ \<theta> \<theta>' \<sigma>)"
 
-inductive deriv_ok :: "('sf, 'sc, 'sz) rule \<Rightarrow> ('sf, 'sc, 'sz) derivation \<Rightarrow> bool"
+inductive deriv_ok :: "rule \<Rightarrow> ('sf, 'sc, 'sz) derivation \<Rightarrow> bool"
 where 
   Deriv_Nil:"deriv_ok R Nil"
 | Deriv_Cons:"step_ok R i S \<Longrightarrow> i \<ge> 0 \<Longrightarrow> i < length (fst R) \<Longrightarrow> deriv_ok (step_result R (i,S)) SS \<Longrightarrow> deriv_ok R ((i,S) # SS)"
@@ -708,9 +708,9 @@ next
             using \<Gamma> q by auto
           then show ?thesis
             proof -
-              have "\<forall>fs p i. (\<exists>f. List.member fs (f::('sf, 'sc, 'sz) formula) \<and> p \<notin> fml_sem i f) \<or> p \<in> fml_sem i (foldr op && fs TT)"
+              have "\<forall>fs p i. (\<exists>f. List.member fs (f::formula) \<and> p \<notin> fml_sem i f) \<or> p \<in> fml_sem i (foldr op && fs TT)"
                 using and_foldl_sem_conv by blast
-              then obtain ff :: "('sf, 'sc, 'sz) formula list \<Rightarrow> (real, 'sz) vec \<times> (real, 'sz) vec \<Rightarrow> ('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sc, 'sz) formula" where
+              then obtain ff :: "formula list \<Rightarrow> (real, 'sz) vec \<times> (real, 'sz) vec \<Rightarrow> ('sf, 'sc, 'sz) interp \<Rightarrow> formula" where
                 f1: "\<forall>fs p i. List.member fs (ff fs p i) \<and> p \<notin> fml_sem i (ff fs p i) \<or> p \<in> fml_sem i (foldr op && fs TT)"
                 by metis
               have "\<And>f. \<nu> \<in> fml_sem I f \<or> \<not> List.member \<Gamma> f"
@@ -1004,12 +1004,12 @@ next
         AIjeq Rrule_Imply.prems(2) SG_dec and_foldl_sem_conv close_sub impl_sem local.sublist_def member_rec(1) nth_member or_foldl_sem_conv seq_MP seq_semI snd_conv
         \<Gamma>_sub_sem and_foldl_sem or_foldl_sem seq_sem.simps sublistI
     proof -
-      have f1: "\<forall>fs p i. \<exists>f. (p \<in> fml_sem i (foldr op && fs (TT::('sf, 'sc, 'sz) formula)) \<or> List.member fs f) \<and> (p \<notin> fml_sem i f \<or> p \<in> fml_sem i (foldr op && fs TT))"
+      have f1: "\<forall>fs p i. \<exists>f. (p \<in> fml_sem i (foldr op && fs (TT::formula)) \<or> List.member fs f) \<and> (p \<notin> fml_sem i f \<or> p \<in> fml_sem i (foldr op && fs TT))"
         using and_foldl_sem_conv by blast
-      have "\<forall>p i fs. \<exists>f. \<forall>pa ia fa fb pb ib fc fd. p \<in> fml_sem i (f::('sf, 'sc, 'sz) formula) \<and> (pa \<in> fml_sem ia (fa::('sf, 'sc, 'sz) formula) \<or> pa \<in> fml_sem ia (fa \<rightarrow> fb)) \<and> (pb \<notin> fml_sem ib (fc::('sf, 'sc, 'sz) formula) \<or> pb \<in> fml_sem ib (fd \<rightarrow> fc)) \<and> (p \<notin> fml_sem i (foldr op || fs FF) \<or> List.member fs f)"
+      have "\<forall>p i fs. \<exists>f. \<forall>pa ia fa fb pb ib fc fd. p \<in> fml_sem i (f::formula) \<and> (pa \<in> fml_sem ia (fa::formula) \<or> pa \<in> fml_sem ia (fa \<rightarrow> fb)) \<and> (pb \<notin> fml_sem ib (fc::formula) \<or> pb \<in> fml_sem ib (fd \<rightarrow> fc)) \<and> (p \<notin> fml_sem i (foldr op || fs FF) \<or> List.member fs f)"
         by (metis impl_sem or_foldl_sem_conv)
-      then obtain ff :: "(real, 'sz) vec \<times> (real, 'sz) vec \<Rightarrow> ('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sc, 'sz) formula list \<Rightarrow> ('sf, 'sc, 'sz) formula" where
-        f2: "\<And>p i fs pa ia f fa pb ib fb fc. p \<in> fml_sem i (ff p i fs) \<and> (pa \<in> fml_sem ia (f::('sf, 'sc, 'sz) formula) \<or> pa \<in> fml_sem ia (f \<rightarrow> fa)) \<and> (pb \<notin> fml_sem ib (fb::('sf, 'sc, 'sz) formula) \<or> pb \<in> fml_sem ib (fc \<rightarrow> fb)) \<and> (p \<notin> fml_sem i (foldr op || fs FF) \<or> List.member fs (ff p i fs))"
+      then obtain ff :: "(real, 'sz) vec \<times> (real, 'sz) vec \<Rightarrow> ('sf, 'sc, 'sz) interp \<Rightarrow> formula list \<Rightarrow> formula" where
+        f2: "\<And>p i fs pa ia f fa pb ib fb fc. p \<in> fml_sem i (ff p i fs) \<and> (pa \<in> fml_sem ia (f::formula) \<or> pa \<in> fml_sem ia (f \<rightarrow> fa)) \<and> (pb \<notin> fml_sem ib (fb::formula) \<or> pb \<in> fml_sem ib (fc \<rightarrow> fb)) \<and> (p \<notin> fml_sem i (foldr op || fs FF) \<or> List.member fs (ff p i fs))"
         by metis
       then have "\<And>fs. \<nu> \<notin> fml_sem I (foldr op && (p # \<Gamma>) TT) \<or> \<not> local.sublist (close \<Delta> (p \<rightarrow> q)) fs \<or> ff \<nu> I (q # close \<Delta> (p \<rightarrow> q)) = q \<or> List.member fs (ff \<nu> I (q # close \<Delta> (p \<rightarrow> q)))"
         by (metis (no_types) AIjeq local.sublist_def member_rec(1) seq_MP sg)
@@ -1189,7 +1189,7 @@ next
       proof -
         assume a1: "\<nu> \<in> fml_sem I q"
         assume a2: "\<nu> \<notin> fml_sem I (foldr op || \<Delta> FF)"
-        obtain ff :: "('sf, 'sc, 'sz) formula" where
+        obtain ff :: "formula" where
           "\<nu> \<in> fml_sem I ff \<and> List.member (p # close \<Delta> (\<Delta> ! j)) ff"
           using a1 by (metis (no_types) \<open>\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>\<close> \<open>\<And>y. List.member (q # \<Gamma>) y = (q = y \<or> List.member \<Gamma> y)\<close> \<open>\<nu> \<in> fml_sem I (foldr op && (q # \<Gamma>) TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr op || (p # closeI \<Delta> j) FF)\<close> \<open>\<nu> \<in> fml_sem I (foldr op || (p # closeI \<Delta> j) FF) \<Longrightarrow> \<exists>\<phi>. \<nu> \<in> fml_sem I \<phi> \<and> List.member (p # closeI \<Delta> j) \<phi>\<close> and_foldl_sem_conv closeI.simps)
         then show ?thesis
@@ -1308,7 +1308,7 @@ next
   then show ?case 
     using SG_dec case_prod_conv
   proof -
-    have "(\<And>f. ((case nth SG i of (x, xa) \<Rightarrow> ((f x xa)::('sf, 'sc, 'sz) rule)) = (f \<Gamma> \<Delta>)))"
+    have "(\<And>f. ((case nth SG i of (x, xa) \<Rightarrow> ((f x xa)::rule)) = (f \<Gamma> \<Delta>)))"
       by (metis (no_types) SG_dec case_prod_conv)
     then show ?thesis
       by (simp add: \<open>sound ((\<phi> # \<Gamma>, \<Delta>) # (\<Gamma>, \<phi> # \<Delta>) # [y\<leftarrow>SG . y \<noteq> SG ! i], C)\<close>)

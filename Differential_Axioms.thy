@@ -16,20 +16,20 @@ The derivative axioms are all corollaries of the frechet correctness theorem. Th
 axioms are more involved, often requiring extensive use of the ODE libraries.\<close> 
 
 subsection \<open>Derivative Axioms\<close>
-definition diff_const_axiom :: "('sf, 'sc, 'sz) formula"
+definition diff_const_axiom :: "formula"
 where [axiom_defs]:"diff_const_axiom \<equiv> Equals (Differential ($f fid1 empty)) (Const (bword_zero))"
 
-definition diff_var_axiom :: "('sf, 'sc, 'sz) formula"
+definition diff_var_axiom :: "formula"
 where [axiom_defs]:"diff_var_axiom \<equiv> Equals (Differential (Var vid1)) (DiffVar vid1)"
   
-definition state_fun ::"'sf \<Rightarrow> ('sf, 'sz) trm"
+definition state_fun ::"ident \<Rightarrow> trm"
 where [axiom_defs]:"state_fun f = ($f f (\<lambda>i. Var i))"
   
-definition diff_plus_axiom :: "('sf, 'sc, 'sz) formula"
+definition diff_plus_axiom :: "formula"
 where [axiom_defs]:"diff_plus_axiom \<equiv> Equals (Differential (Plus (state_fun fid1) (state_fun fid2))) 
     (Plus (Differential (state_fun fid1)) (Differential (state_fun fid2)))"
 
-definition dMinusAxiom::"('sf,'sc,'sz) formula"
+definition dMinusAxiom::"formula"
   where [axiom_defs]:"dMinusAxiom \<equiv> 
 Equals
  (Differential (Minus (DFunl fid1) (DFunl fid2)))
@@ -37,23 +37,23 @@ Equals
 
 
 
-definition diff_times_axiom :: "('sf, 'sc, 'sz) formula"
+definition diff_times_axiom :: "formula"
 where [axiom_defs]:"diff_times_axiom \<equiv> Equals (Differential (Times (state_fun fid1) (state_fun fid2))) 
     (Plus (Times (Differential (state_fun fid1)) (state_fun fid2)) 
           (Times (state_fun fid1) (Differential (state_fun fid2))))"
 
 (* [y=g(x)][y'=1](f(g(x))' = f(y)')*)
-definition diff_chain_axiom::"('sf, 'sc, 'sz) formula"
+definition diff_chain_axiom::"formula"
 where [axiom_defs]:"diff_chain_axiom \<equiv> [[Assign vid2 (f1 fid2 vid1)]]([[DiffAssign vid2 (Const (bword_one))]] 
   (Equals (Differential ($f fid1 (singleton (f1 fid2 vid1)))) (Times (Differential (f1 fid1 vid2)) (Differential (f1 fid2 vid1)))))"
 
 subsection \<open>ODE Axioms\<close>
-definition DWaxiom :: "('sf, 'sc, 'sz) formula"
+definition DWaxiom :: "formula"
 (*
 [{c_&q_(||)}]p_(||) <-> ([{c_&q_(||)}](q_(||)->p_(||)))*)
   where [axiom_defs]:"DWaxiom =  Equiv([[EvolveODE (OVar vid1 None) (Pc pid2)]]Pc pid1) (([[EvolveODE (OVar vid1 None) (Pc pid2)]](Pc pid2 \<rightarrow> Pc pid1)))"
 
-definition DWaxiom' :: "('sf, 'sc, 'sz) formula"
+definition DWaxiom' :: "formula"
 where [axiom_defs]:"DWaxiom' = ([[EvolveODE (OSing vid1 (Function fid1 (singleton (Var vid1)))) (Prop vid2 (singleton (Var vid1)))]](Prop vid2 (singleton (Var vid1))))"
 
 (* ([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||) 
@@ -62,21 +62,21 @@ where [axiom_defs]:"DWaxiom' = ([[EvolveODE (OSing vid1 (Function fid1 (singleto
 [1&2]3 \<rightarrow> ([1&2]1 <-> [1&(2&3)]1)
 *)
 
-definition DCaxiom :: "('sf, 'sc, 'sz) formula"
+definition DCaxiom :: "formula"
 where [axiom_defs]:"DCaxiom = (
 ([[EvolveODE (OVar vid1 None) (Pc pid2)]]Pc pid3) \<rightarrow>
 (([[EvolveODE (OVar vid1 None) (Pc pid2)]](Pc pid1)) 
   \<leftrightarrow>  
    ([[EvolveODE (OVar vid1 None) (And (Pc pid2) (Pc pid3))]]Pc pid1)))"
 
-definition DEaxiom :: "('sf, 'sc, 'sz) formula"
+definition DEaxiom :: "formula"
 where [axiom_defs]:"DEaxiom = 
 (([[EvolveODE (OSing vid1 (f1 fid1 vid1)) (p1 vid2 vid1)]] (P pid1))
 \<leftrightarrow>
  ([[EvolveODE (OSing vid1 (f1 fid1 vid1)) (p1 vid2 vid1)]]
     [[DiffAssign vid1 (f1 fid1 vid1)]]P pid1))"
   
-definition DSaxiom :: "('sf, 'sc, 'sz) formula"
+definition DSaxiom :: "formula"
 where [axiom_defs]:"DSaxiom = 
 (([[EvolveODE (OSing vid1 (f0 fid1)) (p1 vid2 vid1)]]p1 vid3 vid1)
 \<leftrightarrow> 
@@ -102,7 +102,7 @@ p\<lparr>\<rparr> = pid1
 [{x_'=f(||),c&q(||)}]p(||) <-> [{c,x_'=f(||)&q(||)}][x_':=f(||);]p(||)
 *)
 (* TODO: fid1 \<rightarrow> fid2*)
-definition DiffEffectSysAxiom::"('sf,'sc,'sz) formula"
+definition DiffEffectSysAxiom::"formula"
   where [axiom_defs]:"DiffEffectSysAxiom \<equiv> 
 ([[EvolveODE (oprod (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) (P pid2)]]P pid1)
  \<leftrightarrow> ([[EvolveODE (oprod (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (P pid2)]]([[DiffAssign vid1 (DFunl fid1)]]P pid1))"
@@ -253,11 +253,11 @@ proof (unfold DiffEffectSysAxiom_def, simp)
        done done
    have obv:"\<And>I. is_interp I \<Longrightarrow> ODEBV I vid1 (Some vid1) \<subseteq> -{vid1}"
      unfolding is_interp_def by auto
-   have eq_mkv2:"\<And>I::('sf,'sc,'sz)interp. \<And>x y.  is_interp I \<Longrightarrow> 
+   have eq_mkv2:"\<And>I::interp. \<And>x y.  is_interp I \<Longrightarrow> 
            mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) x y = 
            mk_v I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) x y"
    proof -
-     fix I::"('sf,'sc,'sz) interp" and x y
+     fix I::"interp" and x y
      assume good:"is_interp I"
      show "mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) x y = mk_v I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) x y"
        apply(rule eq_mkv)
@@ -272,7 +272,7 @@ proof (unfold DiffEffectSysAxiom_def, simp)
     apply(auto simp only: DEaxiom_def valid_def Let_def iff_sem impl_sem)
     apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq box_sem f1_def p1_def P_def expand_singleton)
    proof -
-     fix I ::"('sf,'sc,'sz) interp"
+     fix I ::"interp"
        and aa ba ab bb sol 
        and t::real
        and ac bc
@@ -307,8 +307,8 @@ proof (unfold DiffEffectSysAxiom_def, simp)
        apply(rule conjI)
         apply(rule t)
        apply(rule conjI)
-        apply(rule solves_ode_cong[where ?ODE1.5="(\<lambda>_. ODE_sem I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)) ))" ,
-                       where ?X1.5="{x. mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) x \<in> fml_sem I (Pc pid2)}"])
+        apply(rule solves_ode_cong[where ?ODE1.0="(\<lambda>_. ODE_sem I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1)) ))" ,
+                       where ?X1.0="{x. mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) x \<in> fml_sem I (Pc pid2)}"])
        subgoal apply auto by(rule ext,rule ext, rule vec_extensionality,auto) 
        subgoal using comm_mkv[OF good] by auto
        apply(rule sol)
@@ -427,13 +427,13 @@ proof (unfold DiffEffectSysAxiom_def, simp)
                             (repd (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) vid1
         (dterm_sem I (DFunl fid1) (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t))) \<in> fml_sem I (Pc pid1))"
        using DFunl_def eq_mkv2 good sol_mkv_eq obv
-              by auto
+              by (auto,(presburger)+)
      show  "repd (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) vid1
         (dterm_sem I (DFunl fid1) (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)))
        \<in> fml_sem I (Pc pid1)"
        using bigRes sem_eq by blast
    next
-     fix I::"('sf,'sc,'sz)interp" 
+     fix I::"interp" 
      and aa ba ab bb sol 
      and t::real
      assume good_interp:"is_interp I"
@@ -464,8 +464,8 @@ proof (unfold DiffEffectSysAxiom_def, simp)
         apply(rule conjI)
          apply(rule t)
         apply(rule conjI)
-         apply(rule solves_ode_cong[where ?ODE1.5="(\<lambda>_. ODE_sem I (OProd (OSing vid1 (DFunl fid1))(OVar vid1 (Some vid1))))", 
-              where ?X1.5=" {x. mk_v I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) (ab, bb) x \<in> fml_sem I (Pc pid2)}"]) 
+         apply(rule solves_ode_cong[where ?ODE1.0="(\<lambda>_. ODE_sem I (OProd (OSing vid1 (DFunl fid1))(OVar vid1 (Some vid1))))", 
+              where ?X1.0=" {x. mk_v I (OProd (OSing vid1 (DFunl fid1)) (OVar vid1 (Some vid1))) (ab, bb) x \<in> fml_sem I (Pc pid2)}"]) 
        subgoal apply auto by(rule ext,rule ext, rule vec_extensionality,auto) 
        subgoal using comm_mkv[OF good_interp] by auto
        apply(rule sol)
@@ -612,13 +612,13 @@ proof (unfold DiffEffectSysAxiom_def, simp)
 (?my\<omega> \<in> fml_sem I (Pc pid1)) = 
                             (repd (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) vid1
         (dterm_sem I (DFunl fid1) (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t))) \<in> fml_sem I (Pc pid1))"
-       using DFunl_def eq_mkv2 good sol_mkv_eq obv by auto
+       using DFunl_def eq_mkv2 good sol_mkv_eq obv by (auto,(presburger)+)
       have sem_eq:
         "(repd ?my\<omega> vid1 (dterm_sem I (DFunl fid1) ?my\<omega>) \<in> fml_sem I (Pc pid1)) 
      = (mk_v I (OProd  (OSing vid1 (DFunl fid1))(OVar vid1 (Some vid1))) (ab, bb) (sol t) \<in> fml_sem I (Pc pid1)) "
-       using sem_eq' sem_eq'' DFunl_def eq_mkv2 good sol_mkv_eq obv 
-       by auto
-
+        using sem_eq' sem_eq'' DFunl_def eq_mkv2 good sol_mkv_eq obv 
+        apply auto
+        by presburger+
 (*        using notin1 by auto        *)
       have some_sem:"repd (mk_v I (OProd (OVar vid1 (Some vid1)) (OSing vid1 (DFunl fid1))) (ab, bb) (sol t)) vid1
                 (dterm_sem I (DFunl fid1)
@@ -650,7 +650,7 @@ qed
 ([{c&q(||)}]p(||) <-> [?q(||);]p(||))
  *)
 
-definition DIGeqaxiom :: "('sf,'sz) ODE \<Rightarrow> ('sf,'sz) trm \<Rightarrow> ('sf,'sz) trm \<Rightarrow> ('sf, 'sc, 'sz) formula"
+definition DIGeqaxiom :: "ODE \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> formula"
 where [axiom_defs]:"DIGeqaxiom ODE \<theta>1 \<theta>2 = 
 Implies 
   (Implies (DPredl vid1) (And (Geq \<theta>1 \<theta>2) 
@@ -658,7 +658,7 @@ Implies
   ([[EvolveODE ODE (DPredl vid1)]](Geq \<theta>1 \<theta>2))
 "
 
-definition DIEqaxiom :: "('sf,'sz) ODE \<Rightarrow> ('sf,'sz) trm \<Rightarrow> ('sf,'sz) trm \<Rightarrow> ('sf, 'sc, 'sz) formula"
+definition DIEqaxiom :: "ODE \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> formula"
 where [axiom_defs]:"DIEqaxiom ODE \<theta>1 \<theta>2 = 
 Implies 
   (Implies (DPredl vid1) (And (Equals \<theta>1 \<theta>2) 
@@ -675,7 +675,7 @@ g(x) > h(x) \<rightarrow> [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarrow> [
 \<rightarrow>
 ([c&Q](f(x) > g(x))) <-> (Q \<rightarrow> (f(x) > g(x))
 *)
-definition DIGraxiom :: "('sf,'sz) ODE \<Rightarrow> ('sf,'sz) trm \<Rightarrow> ('sf,'sz) trm \<Rightarrow> ('sf, 'sc, 'sz) formula"
+definition DIGraxiom :: "ODE \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> formula"
 where [axiom_defs]:"DIGraxiom ODE \<theta>1 \<theta>2 = 
 Implies 
   (Implies (DPredl vid1) (And (Greater \<theta>1 \<theta>2)
@@ -684,7 +684,7 @@ Implies
 
 (* [{1' = 1(1) & 1(1)}]2(1) <->
    \<exists>2. [{1'=1(1), 2' = 2(1)*2 + 3(1) & 1(1)}]2(1)*)
-definition DGaxiom :: "('sf, 'sc, 'sz) formula"
+definition DGaxiom :: "formula"
 where [axiom_defs]:"DGaxiom = (([[EvolveODE (OSing vid1 (f1 fid1 vid1)) (p1 vid1 vid1)]]p1 vid2 vid1) \<leftrightarrow> 
   (Exists vid2 
     ([[EvolveODE (oprod (OSing vid1 (f1 fid1 vid1)) (OSing vid2 (Plus (Times (f1 fid2 vid1) (Var vid2 )) (f1 fid3 vid1)))) (p1 vid1 vid1)]]
@@ -700,7 +700,7 @@ proof -
     apply auto
     apply(rule vec_extensionality)
     using local.empty_def Cart_lambda_cong frechet.simps(5) zero_vec_def
-    by (simp add: local.empty_def)
+    by (smt Frechet_Const)
   let ?x = "(vec_lambda (\<lambda>i. sterm_sem I (empty i) (fst \<nu>)))"
   from interp
   have has_deriv:"(Functions I id1 has_derivative FunctionFrechet I id1 ?x) (at ?x)"
@@ -735,7 +735,7 @@ theorem dMinusAxiom_valid: "valid dMinusAxiom"
  done
 
 (* (c_()*f_(||))' = c_()*(f_(||))' *)
-definition DiffLinearAxiom::"('sf,'sc,'sz) formula"
+definition DiffLinearAxiom::"formula"
   where [axiom_defs]:"DiffLinearAxiom \<equiv> 
  Equals 
   (Differential (Times (Function fid2 empty) (DFunl fid1)))
@@ -783,9 +783,9 @@ lemma DW_valid:"valid DWaxiom"
   done
 
 lemma DE_lemma:
-  fixes ab bb::"'sz simple_state"
-  and sol::"real \<Rightarrow> 'sz simple_state"
-  and I::"('sf, 'sc, 'sz) interp"
+  fixes ab bb::"simple_state"
+  and sol::"real \<Rightarrow> simple_state"
+  and I::"interp"
   shows
   "repd (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)) vid1 (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))
    = mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)"
@@ -845,7 +845,7 @@ proof -
     apply(auto simp only: DEaxiom_def valid_def Let_def iff_sem impl_sem)
      apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq box_sem)
    proof -
-     fix I::"('sf,'sc,'sz) interp"
+     fix I::"interp"
        and aa ba ab bb sol 
        and t::real
        and ac bc
@@ -875,7 +875,7 @@ proof -
          (dterm_sem I (f1 fid1 vid1) (mk_v I (OSing vid1 (f1 fid1 vid1)) (ab, bb) (sol t)))
         \<in> fml_sem I (P pid1)" using aaba aaba_sem truth by (auto)
    next
-     fix I::"('sf,'sc,'sz) interp" and  aa ba ab bb sol and t::real
+     fix I::"interp" and  aa ba ab bb sol and t::real
        assume "is_interp I"
        assume all:"\<forall>\<omega>. (\<exists>\<nu> sol t.
                 ((ab, bb), \<omega>) = (\<nu>, mk_v I (OSing vid1 (f1 fid1 vid1)) \<nu> (sol t)) \<and>
@@ -925,7 +925,7 @@ proof -
     apply(auto simp only: DEaxiom_def valid_def Let_def iff_sem impl_sem)
     apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq box_sem f1_def p1_def P_def expand_singleton)
    proof -
-     fix I ::"('sf,'sc,'sz) interp"
+     fix I ::"interp"
        and aa ba ab bb sol 
        and t::real
        and ac bc
@@ -1000,7 +1000,7 @@ proof -
      \<in> fml_sem I (Pc pid1)"
        using bigRes sem_eq by blast
    next
-     fix I::"('sf,'sc,'sz)interp" 
+     fix I::"interp" 
      and aa ba ab bb sol 
      and t::real
      assume good_interp:"is_interp I"
@@ -1088,7 +1088,7 @@ qed
 
 lemma DC_valid:"valid DCaxiom" 
 proof (auto simp only: fml_sem.simps prog_sem.simps DCaxiom_def valid_def iff_sem impl_sem box_sem, auto)
-  fix I::"('sf,'sc,'sz) interp" and aa ba bb sol t
+  fix I::"interp" and aa ba bb sol t
   assume "is_interp I"
     and all3:"\<forall>a b. (\<exists>sola. sol 0 = sola 0 \<and>
                   (\<exists>t. (a, b) = mk_v I (OVar vid1 None) (sola 0, bb) (sola t) \<and>
@@ -1128,7 +1128,7 @@ proof (auto simp only: fml_sem.simps prog_sem.simps DCaxiom_def valid_def iff_se
          using sol1 by auto
      done
 next
-  fix I::"('sf,'sc,'sz) interp" and  aa ba bb sol t
+  fix I::"interp" and  aa ba bb sol t
   assume "is_interp I"
   and all3:"\<forall>a b. (\<exists>sola. sol 0 = sola 0 \<and>
                      (\<exists>t. (a, b) = mk_v I (OVar vid1 None) (sola 0, bb) (sola t) \<and>
@@ -1206,7 +1206,7 @@ proof -
     apply(auto simp only: DSaxiom_def valid_def Let_def iff_sem impl_sem box_sem)
      apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq  iff_sem impl_sem box_sem forall_sem)
   proof -
-    fix I::"('sf,'sc,'sz) interp" 
+    fix I::"interp" 
       and a b r aa ba
     assume good_interp:"is_interp I"
     assume allW:"\<forall>\<omega>. (\<exists>\<nu> sol t.
@@ -1332,7 +1332,7 @@ proof -
        \<in> fml_sem I (p1 vid3 vid1)" 
     using aaba inPred' by (auto)
 next
-  fix I::"('sf,'sc,'sz) interp"
+  fix I::"interp"
   and aa ba ab bb sol 
   and t:: real
   assume good_interp:"is_interp I"
@@ -1611,7 +1611,7 @@ lemma frech_linear:
     
 lemma rift_in_space_time:
   fixes sol 
-    and I::"('sf,'sc,'sz) interp"
+    and I::"interp"
     and ODE \<psi> \<theta> t s b
   assumes good_interp:"is_interp I"
   assumes free:"dfree \<theta>"
@@ -1776,7 +1776,7 @@ g(x)\<ge> h(x) \<rightarrow>  [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarro
 *)                        
 (* DIEqaxiom ODE \<theta>1 \<theta>2 *)
 lemma DIGeq_valid:
-  fixes ODE::"('sf,'sz) ODE"  and \<theta>1 \<theta>2 ::"('sf,'sz)trm"
+  fixes ODE::"ODE"  and \<theta>1 \<theta>2 ::"trm"
   assumes osafe:"osafe ODE"
   assumes free1:"dfree \<theta>1"
   assumes free2:"dfree \<theta>2"
@@ -1787,8 +1787,8 @@ lemma DIGeq_valid:
   apply(unfold DIGeqaxiom_def valid_def impl_sem iff_sem)
   apply(auto) (* 2 goals*)
   proof -
-    fix I::"('sf,'sc,'sz) interp" and  b aa ba 
-      and sol::"real \<Rightarrow> 'sz simple_state" 
+    fix I::"interp" and  b aa ba 
+      and sol::"real \<Rightarrow>  simple_state" 
       and t::real
     assume good_interp:"is_interp I"
     let ?ODE = "ODE"
@@ -1810,8 +1810,8 @@ lemma DIGeq_valid:
     show "dterm_sem I (\<theta>2)  (mk_v I (ODE) (sol 0, b) (sol t)) \<le> dterm_sem I (\<theta>1) (mk_v I (ODE) (sol 0, b) (sol t))"
       using notin incon by auto
 next
-    fix I::"('sf,'sc,'sz) interp" and  b aa ba 
-      and sol::"real \<Rightarrow> 'sz simple_state" 
+    fix I::"interp" and  b aa ba 
+      and sol::"real \<Rightarrow> simple_state" 
       and t::real
     let ?ODE = "ODE"
     let ?\<phi> = "(\<lambda>t. mk_v I (?ODE) (sol 0, b) (sol t))"
@@ -1964,7 +1964,7 @@ next
 qed 
 
 lemma DIGr_valid:
-  fixes ODE::"('sf,'sz) ODE"  and \<theta>1 \<theta>2 ::"('sf,'sz)trm"
+  fixes ODE::"ODE"  and \<theta>1 \<theta>2 ::"trm"
   assumes osafe:"osafe ODE"
   assumes free1:"dfree \<theta>1"
   assumes free2:"dfree \<theta>2"
@@ -1975,8 +1975,8 @@ lemma DIGr_valid:
   apply(unfold DIGraxiom_def valid_def impl_sem iff_sem)
   apply(auto) (* 2 goals*)
   proof -
-    fix I::"('sf,'sc,'sz) interp" and  b aa ba 
-      and sol::"real \<Rightarrow> 'sz simple_state" 
+    fix I::"interp" and  b aa ba 
+      and sol::"real \<Rightarrow> simple_state" 
       and t::real
     assume good_interp:"is_interp I"
     let ?ODE = "ODE"
@@ -1998,8 +1998,8 @@ lemma DIGr_valid:
     show "dterm_sem I (\<theta>2)  (mk_v I (ODE) (sol 0, b) (sol t)) < dterm_sem I (\<theta>1) (mk_v I (ODE) (sol 0, b) (sol t))"
       using notin incon by auto
 next
-    fix I::"('sf,'sc,'sz) interp" and  b aa ba 
-      and sol::"real \<Rightarrow> 'sz simple_state" 
+    fix I::"interp" and  b aa ba 
+      and sol::"real \<Rightarrow> simple_state" 
       and t::real
     let ?ODE = "ODE"
     let ?\<phi> = "(\<lambda>t. mk_v I (?ODE) (sol 0, b) (sol t))"
@@ -2159,7 +2159,7 @@ g(x)\<ge> h(x) \<rightarrow>  [x'=f(x), c & p(x)](g(x)' \<ge> h(x)') \<rightarro
 *)                        
 (* DIEqaxiom ODE \<theta>1 \<theta>2 *)
 lemma DIEq_valid:
-  fixes ODE::"('sf,'sz) ODE"  and \<theta>1 \<theta>2 ::"('sf,'sz)trm"
+  fixes ODE::"ODE"  and \<theta>1 \<theta>2 ::"trm"
   assumes osafe:"osafe ODE"
   assumes free1:"dfree \<theta>1"
   assumes free2:"dfree \<theta>2"
@@ -2167,7 +2167,7 @@ lemma DIEq_valid:
   assumes BVO2:"FVT \<theta>2 \<subseteq> Inl ` ODE_dom ODE"
   shows "valid (DIEqaxiom ODE \<theta>1 \<theta>2)"
 proof (auto simp only: valid_def DIEqaxiom_def iff_sem impl_sem equals_sem box_sem)
-  fix I::"('sf,'sc,'sz) interp" and a b aa ba
+  fix I::"interp" and a b aa ba
   assume good_interp:"is_interp I"
   assume s1:"((a, b), aa, ba) \<in> prog_sem I (EvolveODE ODE (DPredl vid1))"
   assume s2:"(a, b) \<notin> fml_sem I (DPredl vid1)"
@@ -2184,7 +2184,7 @@ proof (auto simp only: valid_def DIEqaxiom_def iff_sem impl_sem equals_sem box_s
   show "dterm_sem I \<theta>1 (aa, ba) = dterm_sem I \<theta>2 (aa, ba)"
     using g1 g2 by auto
 next
-  fix I::"('sf,'sc,'sz) interp" and a b aa ba
+  fix I::"interp" and a b aa ba
   assume good_interp:"is_interp I"
   assume s1:"((a, b), aa, ba) \<in> prog_sem I (EvolveODE ODE (DPredl vid1))"
   assume s2:"(a, b) \<in> fml_sem I (Equals \<theta>1 \<theta>2 && [[EvolveODE ODE (DPredl vid1)]]Equals (Differential \<theta>1) (Differential \<theta>2))"

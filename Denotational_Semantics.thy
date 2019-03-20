@@ -28,18 +28,18 @@ text \<open>We formalize a state S as a pair $(S_V, S_V') : R^n \times R^n $, wh
   \<close>
 
 (* Vector of reals of length 'a *)
-type_synonym 'a Rvec = "real^('a::finite)"
+type_synonym Rvec = "real^ident"
 (* A state specifies one vector of values for unprimed variables x and a second vector for x'*)
-type_synonym 'a state = "'a Rvec \<times> 'a Rvec"
+type_synonym state = "Rvec \<times> Rvec"
 (* 'a simple_state is half a state - either the xs or the x's *)
-type_synonym 'a simple_state = "'a Rvec"
+type_synonym simple_state = "Rvec"
 
-definition Vagree :: "'c::finite state \<Rightarrow> 'c state \<Rightarrow> ('c + 'c) set \<Rightarrow> bool"
+definition Vagree :: "state \<Rightarrow> state \<Rightarrow> (ident + ident) set \<Rightarrow> bool"
 where "Vagree \<nu> \<nu>' V \<equiv>
    (\<forall>i. Inl i \<in> V \<longrightarrow> fst \<nu> $ i = fst \<nu>' $ i)
  \<and> (\<forall>i. Inr i \<in> V \<longrightarrow> snd \<nu> $ i = snd \<nu>' $ i)"
 
-definition VSagree :: "'c::finite simple_state \<Rightarrow> 'c simple_state \<Rightarrow> 'c set \<Rightarrow> bool"
+definition VSagree :: "simple_state \<Rightarrow> simple_state \<Rightarrow> ident set \<Rightarrow> bool"
 where "VSagree \<nu> \<nu>' V \<longleftrightarrow> (\<forall>i \<in> V. (\<nu> $ i) = (\<nu>' $ i))"
 
 (* Agreement lemmas *)
@@ -103,21 +103,20 @@ text\<open>
   The type parameters 'a, 'b, 'c are finite types whose cardinalities indicate the maximum number 
   of functions, contexts, and <everything else defined by the interpretation>, respectively.
 \<close>
-record ('a, 'b, 'c) interp =
-  Functions       :: "'a \<Rightarrow> 'c Rvec \<Rightarrow> real"
-(*  DFunls           :: "'a \<Rightarrow> 'c simple_state \<Rightarrow> real"*)
-  Funls           :: "'a \<Rightarrow> 'c state \<Rightarrow> real"
-  Predicates      :: "'c \<Rightarrow> 'c Rvec \<Rightarrow> bool"
-  Contexts        :: "'b \<Rightarrow> 'c state set \<Rightarrow> 'c state set"
-  Programs        :: "'c \<Rightarrow> ('c state * 'c state) set"
-  ODEs            :: "'c \<Rightarrow> 'c space \<Rightarrow> 'c simple_state \<Rightarrow> 'c simple_state"
-  ODEBV           :: "'c \<Rightarrow> 'c space \<Rightarrow> 'c set"
+record interp =
+  Functions       :: "ident \<Rightarrow> Rvec \<Rightarrow> real"
+  Funls           :: "ident \<Rightarrow> state \<Rightarrow> real"
+  Predicates      :: "ident \<Rightarrow> Rvec \<Rightarrow> bool"
+  Contexts        :: "ident \<Rightarrow> state set \<Rightarrow> state set"
+  Programs        :: "ident \<Rightarrow> (state * state) set"
+  ODEs            :: "ident \<Rightarrow> space \<Rightarrow> simple_state \<Rightarrow> simple_state"
+  ODEBV           :: "ident \<Rightarrow> space \<Rightarrow> ident set"
 
-fun FunctionFrechet :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> 'a \<Rightarrow> 'c Rvec \<Rightarrow> 'c Rvec \<Rightarrow> real"
+fun FunctionFrechet :: "interp \<Rightarrow> ident \<Rightarrow> Rvec \<Rightarrow> Rvec \<Rightarrow> real"
   where "FunctionFrechet I i = (THE f'. \<forall> x. (Functions I i has_derivative f' x) (at x))"
 
 (* For an interpretation to be valid, all functions must be differentiable everywhere.*)
-definition is_interp :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> bool"
+definition is_interp :: "interp \<Rightarrow> bool"
   where "is_interp I \<equiv>
    (\<forall>x. \<forall>i. ((FDERIV (Functions I i) x :> (FunctionFrechet I i x)) \<and> continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I i x))))
 \<and>  (\<forall> ode. \<forall> x. ODEBV I ode (NB x) \<subseteq> -{x})"
@@ -126,7 +125,7 @@ lemma is_interpD:"is_interp I \<Longrightarrow> \<forall>x. \<forall>i. (FDERIV 
   unfolding is_interp_def by auto
   
 (* Agreement between interpretations. *)
-definition Iagree :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a + 'b + 'c) set \<Rightarrow> bool"
+definition Iagree :: "interp \<Rightarrow> interp \<Rightarrow> (ident + ident + ident) set \<Rightarrow> bool"
 where "Iagree I J V \<equiv>
   (\<forall>i\<in>V.
     (\<forall>x. i = Inl x \<longrightarrow> Functions I x = Functions J x) \<and>
@@ -173,7 +172,7 @@ lemma Iagree_refl:"Iagree I I A"
 
 (* Semantics for differential-free terms. Because there are no differentials, depends only on the "x" variables
  * and not the "x'" variables. *)
-primrec sterm_sem :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'c) trm \<Rightarrow> 'c simple_state \<Rightarrow> real"
+primrec sterm_sem :: "interp \<Rightarrow> trm \<Rightarrow> simple_state \<Rightarrow> real"
 where
   ssem_Var:"sterm_sem I (Var x) v = v $ x"
 | ssem_Fun:"sterm_sem I (Function f args) v = Functions I f (\<chi> i. sterm_sem I (args i) v)"
@@ -193,7 +192,7 @@ where
  * I at state \<nu> (containing only the unprimed variables). The frechet derivative is a
  * linear map from the differential state \<nu> to reals.
  *)
-primrec frechet :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'c) trm \<Rightarrow> 'c simple_state \<Rightarrow> 'c simple_state \<Rightarrow> real"
+primrec frechet :: "interp \<Rightarrow> trm \<Rightarrow> simple_state \<Rightarrow> simple_state \<Rightarrow> real"
 where
   Frechet_Var:"frechet I (Var x) v = (\<lambda>v'. v' \<bullet> axis x 1)"
 | Frechet_Fun:"frechet I (Function f args) v =
@@ -208,12 +207,12 @@ where
 | Frechet_Diff:"frechet I (Differential d) v = undefined"
 | Frechet_Funl:"frechet I ($$F f) v = undefined"
 
-definition directional_derivative :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'c) trm \<Rightarrow> 'c state \<Rightarrow> real"
+definition directional_derivative :: "interp \<Rightarrow> trm \<Rightarrow> state \<Rightarrow> real"
 where "directional_derivative I t = (\<lambda>v. frechet I t (fst v) (snd v))"
 
 (* Sem for terms that are allowed to contain differentials.
  * Note there is some duplication with sterm_sem.*)
-primrec dterm_sem :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'c) trm \<Rightarrow> 'c state \<Rightarrow> real"
+primrec dterm_sem :: "interp \<Rightarrow> trm \<Rightarrow> state \<Rightarrow> real"
 where
   "dterm_sem I (Var x) = (\<lambda>v. fst v $ x)"
 | "dterm_sem I (DiffVar x) = (\<lambda>v. snd v $ x)"
@@ -236,7 +235,7 @@ text\<open> The semantics of an ODE is the vector field at a given point. ODE's 
   The safety predicate \texttt{osafe} ensures the domains of ODE1 and ODE2 are disjoint, so vector addition
   is equivalent to saying "take things defined from ODE1 from ODE1, take things defined
   by ODE2 from ODE2"\<close>
-fun ODE_sem:: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a, 'c) ODE \<Rightarrow> 'c Rvec \<Rightarrow> 'c Rvec"
+fun ODE_sem:: "interp \<Rightarrow> ODE \<Rightarrow> Rvec \<Rightarrow> Rvec"
   where
   ODE_sem_OVar:"ODE_sem I (OVar x sp) = (\<lambda>\<nu>. (\<chi> i. if i \<in> ODEBV I x sp then ODEs I x sp  \<nu> $ i else 0))"
 | ODE_sem_OSing:"ODE_sem I (OSing x \<theta>) =  (\<lambda>\<nu>. (\<chi> i. if i = x then sterm_sem I \<theta> \<nu> else 0))"
@@ -249,7 +248,7 @@ lemma ODE_sem_assoc:"ODE_sem I (oprod ODE1 ODE2) = ODE_sem I (OProd ODE1 ODE2)"
   by(auto)
 
 (* The bound variables of an ODE *)
-fun ODE_vars :: "('a,'b,'c) interp \<Rightarrow> ('a, 'c) ODE \<Rightarrow> 'c set"
+fun ODE_vars :: "interp \<Rightarrow> ODE \<Rightarrow> ident set"
   where 
   "ODE_vars I (OVar c sp) = ODEBV I c sp"
 | "ODE_vars I (OSing x \<theta>) = {x}"
@@ -259,35 +258,35 @@ lemma ODE_vars_assoc:"ODE_vars I (oprod ODE1 ODE2) = ODE_vars I (OProd ODE1 ODE2
   apply(induction ODE1 arbitrary:ODE2)
   by(auto)
 
-fun semBV ::"('a, 'b,'c) interp \<Rightarrow> ('a, 'c) ODE \<Rightarrow> ('c + 'c) set"
+fun semBV ::"interp \<Rightarrow> ODE \<Rightarrow> (ident + ident) set"
   where "semBV I ODE = Inl ` (ODE_vars I ODE) \<union> Inr ` (ODE_vars I ODE)"
 
 lemma ODE_vars_lr:
-  fixes x::"'sz" and ODE::"('sf,'sz) ODE" and I::"('sf,'sc,'sz) interp"
+  fixes x::"ident" and ODE::"ODE" and I::"interp"
   shows "Inl x \<in> semBV I ODE \<longleftrightarrow> Inr x \<in> semBV I ODE"
   by (induction "ODE", auto)
 
-fun mk_xode::"('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'c::finite) ODE \<Rightarrow> 'c::finite simple_state \<Rightarrow> 'c::finite state"
+fun mk_xode::"interp \<Rightarrow> ODE \<Rightarrow>  simple_state \<Rightarrow> state"
 where "mk_xode I ODE sol = (sol, ODE_sem I ODE sol)"
  
 text\<open> Given an initial state $\nu$ and solution to an ODE at some point, construct the resulting state $\omega$.
   This is defined using the SOME operator because the concrete definition is unwieldy. \<close>
-definition mk_v::"('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'c::finite) ODE \<Rightarrow> 'c::finite state \<Rightarrow> 'c::finite simple_state \<Rightarrow> 'c::finite state"
+definition mk_v::"interp \<Rightarrow> ODE \<Rightarrow> state \<Rightarrow> simple_state \<Rightarrow> state"
 where "mk_v I ODE \<nu> sol = (THE \<omega>. 
   Vagree \<omega> \<nu> (- semBV I ODE) 
 \<and> Vagree \<omega> (mk_xode I ODE sol) (semBV I ODE))"
 
 (* repv \<nu> x r replaces the value of (unprimed) variable x in the state \<nu> with r *)
-fun repv :: "'c::finite state \<Rightarrow> 'c \<Rightarrow> real \<Rightarrow> 'c state"
+fun repv :: "state \<Rightarrow> ident \<Rightarrow> real \<Rightarrow> state"
 where "repv v x r = ((\<chi> y. if x = y then r else vec_nth (fst v) y), snd v)"
 
 (* repd \<nu> x' r replaces the value of (primed) variable x' in the state \<nu> with r *)
-fun repd :: "'c::finite state \<Rightarrow> 'c \<Rightarrow> real \<Rightarrow> 'c state"
+fun repd :: "state \<Rightarrow> ident \<Rightarrow> real \<Rightarrow> state"
 where "repd v x r = (fst v, (\<chi> y. if x = y then r else vec_nth (snd v) y))"  
   
 (* Semantics for formulas, differential formulas, programs. *)
-fun fml_sem  :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) formula \<Rightarrow> 'c::finite state set" and
-  prog_sem :: "('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'b::finite, 'c::finite) hp \<Rightarrow> ('c::finite state * 'c::finite state) set"
+fun fml_sem  :: "interp \<Rightarrow> formula \<Rightarrow> state set" and
+  prog_sem :: "interp \<Rightarrow>  hp \<Rightarrow> (state * state) set"
 where
   "fml_sem I (Geq t1 t2) = {v. dterm_sem I t1 v \<ge> dterm_sem I t2 v}"
 | "fml_sem I (Prop P terms) = {\<nu>. Predicates I P (\<chi> i. dterm_sem I (terms i) \<nu>)}"
@@ -312,7 +311,7 @@ where
       sol 0 = fst \<nu>})"
 
 context ids begin
-definition valid :: "('sf, 'sc, 'sz) formula \<Rightarrow> bool"
+definition valid :: "formula \<Rightarrow> bool"
 where "valid \<phi> \<equiv> (\<forall> I. \<forall> \<nu>. is_interp I \<longrightarrow> \<nu> \<in> fml_sem I \<phi>)"
 end
 
@@ -320,7 +319,7 @@ text\<open> Because mk\_v is defined with the SOME operator, need to construct a
     ${\tt Vagree} \omega \nu (- {\tt ODE\_vars\ ODE}) 
      \wedge {\tt Vagree} \omega {\tt (mk\_xode\ I\ ODE\ sol)\ (ODE\_vars\ ODE)})$
     to do anything useful \<close>
-fun concrete_v::"('a::finite, 'b::finite, 'c::finite) interp \<Rightarrow> ('a::finite, 'c::finite) ODE \<Rightarrow> 'c::finite state \<Rightarrow> 'c::finite simple_state \<Rightarrow> 'c::finite state"
+fun concrete_v::"interp \<Rightarrow> ODE \<Rightarrow> state \<Rightarrow> simple_state \<Rightarrow> state"
 where "concrete_v I ODE \<nu> sol =
 ((\<chi> i. (if Inl i \<in> semBV I ODE then sol else (fst \<nu>)) $ i),
  (\<chi> i. (if Inr i \<in> semBV I ODE then ODE_sem I ODE sol else (snd \<nu>)) $ i))"
@@ -415,12 +414,12 @@ lemma iff_to_impl: "((\<nu> \<in> fml_sem I A) \<longleftrightarrow> (\<nu> \<in
      \<and> ((\<nu> \<in> fml_sem I B) \<longrightarrow> (\<nu> \<in> fml_sem I A)))"
   by (auto) 
     
-    fun seq2fml :: "('a,'b,'c) sequent \<Rightarrow> ('a,'b,'c) formula"
+    fun seq2fml :: "sequent \<Rightarrow> formula"
 where
   "seq2fml (ante,succ) = Implies (foldr And ante TT) (foldr Or succ FF)"
   
 context ids begin
-fun seq_sem ::"('sf, 'sc, 'sz) interp \<Rightarrow> ('sf, 'sc, 'sz) sequent \<Rightarrow> 'sz state set"
+fun seq_sem ::"interp \<Rightarrow> sequent \<Rightarrow> state set"
 where "seq_sem I S = fml_sem I (seq2fml S)"
 
 lemma and_foldl_sem:"\<nu> \<in> fml_sem I (foldr And \<Gamma> TT) \<Longrightarrow> (\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>)"
@@ -472,7 +471,7 @@ where "seq_valid S \<equiv> \<forall>I. is_interp I \<longrightarrow> seq_sem I 
 
 text\<open> Soundness for derived rules is local soundness, i.e. if the premisses are all true in the same interpretation,
   then the conclusion is also true in that same interpretation. \<close>
-definition sound :: "('sf, 'sc, 'sz) rule \<Rightarrow> bool"
+definition sound :: "rule \<Rightarrow> bool"
 where "sound R \<longleftrightarrow> (\<forall>I. is_interp I \<longrightarrow> (\<forall>i. i \<ge> 0 \<longrightarrow> i < length (fst R) \<longrightarrow> seq_sem I (nth (fst R) i) = UNIV) \<longrightarrow> seq_sem I (snd R) = UNIV)"
 
 lemma soundI:"(\<And>I. is_interp I \<Longrightarrow> (\<And>i. i \<ge> 0 \<Longrightarrow> i < length SG \<Longrightarrow> seq_sem I (nth SG i) = UNIV) \<Longrightarrow> seq_sem I G = UNIV) \<Longrightarrow> sound (SG,G)"

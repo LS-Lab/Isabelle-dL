@@ -27,9 +27,9 @@ text \<open>This proof checker defines a datatype for proof terms in dL and a fu
   
 lemma sound_weaken_gen:"\<And>A B C. sublist A B \<Longrightarrow> sound (A, C) \<Longrightarrow> sound (B,C)"
 proof (rule soundI_mem)
-  fix A B::"('sf,'sc,'sz) sequent list" 
-    and C::"('sf,'sc,'sz) sequent" 
-    and I::"('sf,'sc,'sz) interp"
+  fix A B::"sequent list" 
+    and C::"sequent" 
+    and I::"interp"
   assume sub:"sublist A B"
   assume good:"is_interp I"
   assume "sound (A, C)"
@@ -72,7 +72,7 @@ lemma sound_weaken_appR:"\<And>SG SGS C. sound (SG, C) \<Longrightarrow> sound (
     done
   done
 
-fun start_proof::"('sf,'sc,'sz) sequent \<Rightarrow> ('sf,'sc,'sz) rule"
+fun start_proof::"sequent \<Rightarrow> rule"
 where "start_proof S = ([S], S)"
   
 lemma start_proof_sound:"sound (start_proof S)"
@@ -80,19 +80,19 @@ lemma start_proof_sound:"sound (start_proof S)"
   
 section \<open>Proof Checker Implementation\<close>
 
-datatype ('a,'b,'c) rrule = ImplyR | AndR |CohideRR | TrueR | EquivR | Skolem | NotR
-  | HideR | CutRight "('a,'b,'c) formula" | EquivifyR | CommuteEquivR | BRenameR  'c 'c
+datatype rrule = ImplyR | AndR |CohideRR | TrueR | EquivR | Skolem | NotR
+  | HideR | CutRight "formula" | EquivifyR | CommuteEquivR | BRenameR  ident ident
   | ExchangeR nat | OrR
 
 (*  CohideR | *)
   
-datatype ('a,'b,'c) lrule = ImplyL | AndL | HideL | FalseL
-  | NotL | CutLeft "('a,'b,'c) formula" | EquivL | BRenameL  'c 'c 
+datatype lrule = ImplyL | AndL | HideL | FalseL
+  | NotL | CutLeft "formula" | EquivL | BRenameL ident ident
   | OrL
 (*  EquivForwardL | EquivBackwardL |  *)
 datatype  axRule =
 (*  CT
-|*) CQ (* "('a, 'c) trm" "('a, 'c) trm" "('a, 'b, 'c) subst" "('a, 'b, 'c) pt" (*"('c \<Rightarrow> ('a,'c) trm )" "('c \<Rightarrow> ('a,'c) trm )" *)"'c"*)
+|*) CQ (* "('a, 'c) trm" "('a, 'c) trm" "('a, 'b, 'c) subst" "('a, 'b, 'c) pt" (*"('c \<Rightarrow> trm )" "('c \<Rightarrow> trm )" *)"'c"*)
 | CE (* "('a, 'b, 'c) formula" "('a, 'b, 'c) formula" "('a, 'b, 'c) subst" "('a, 'b, 'c) derivation"*)
 | G
 | monb
@@ -109,34 +109,34 @@ datatype axiom =
 | ATrueImply | Adiamond | AdiamondModusPonens | AequalRefl | AlessEqualRefl
 | Aassignd | Atestd | Achoiced | Acomposed | Arandomd
 
-datatype ('a,'b,'c) ruleApp =
-  URename 'c 'c
+datatype ruleApp =
+  URename ident ident
 (*| BRename 'c 'c*)
-| RightRule "('a,'b,'c) rrule" nat
-| LeftRule "('a,'b,'c) lrule" nat
+| RightRule "rrule" nat
+| LeftRule "lrule" nat
 | CloseId nat nat
 | Cohide2 nat nat
-| Cut "('a, 'b, 'c) formula"
-| DIGeqSchema "('a,'c) ODE" "('a,'c) trm" "('a,'c) trm"
-| DIGrSchema "('a,'c) ODE" "('a,'c) trm" "('a,'c) trm"
-| DIEqSchema "('a,'c) ODE" "('a,'c) trm" "('a,'c) trm"
+| Cut "formula"
+| DIGeqSchema "ODE" "trm" "trm"
+| DIGrSchema "ODE" "trm" "trm"
+| DIEqSchema "ODE" "trm" "trm"
 
 (*| ARApp "('a,'b,'c) axRule"*)
 
-datatype ('a, 'b, 'c) pt =
-  FOLRConstant "('a,'b,'c) formula"
-| RuleApplication "('a,'b,'c)pt" "('a,'b,'c) ruleApp" nat
+datatype pt =
+  FOLRConstant "formula"
+| RuleApplication "pt" "ruleApp" nat
 | AxiomaticRule " axRule"
-| PrUSubst "('a,'b,'c) pt" "('a,'b,'c) subst"
+| PrUSubst " pt" "subst"
 | Ax axiom
-| FNC "('a,'b,'c)pt" "('a,'b,'c) sequent" "('a,'b,'c) ruleApp"
-| Pro "('a,'b,'c)pt" "('a,'b,'c) pt"
-| Start "('a,'b,'c)sequent"
-| Sub "('a,'b,'c)pt" "('a,'b,'c)pt" nat
+| FNC "pt" "sequent" "ruleApp"
+| Pro "pt" "pt"
+| Start "sequent"
+| Sub "pt" "pt" nat
 
-type_synonym ('a, 'b, 'c) pf = "('a,'b,'c) sequent * ('a, 'b, 'c) pt"
+type_synonym pf = "sequent * pt"
   
-fun get_axiom:: "axiom \<Rightarrow> ('sf,'sc,'sz) formula"
+fun get_axiom:: "axiom \<Rightarrow> formula"
 where 
   "get_axiom AloopIter = loop_iterate_axiom"
 | "get_axiom AI = Iaxiom"
@@ -182,7 +182,7 @@ where
 | "get_axiom Acomposed = composedAxiom"
 | "get_axiom Arandomd = randomdAxiom"
 
-fun get_axrule::"axRule \<Rightarrow> ('sf,'sc,'sz) rule"
+fun get_axrule::"axRule \<Rightarrow> rule"
   where  
     (*"get_axrule CT = CTaxrule"
   |*) "get_axrule CQ = CQaxrule"
@@ -342,10 +342,10 @@ next
   then show ?thesis by (simp add: randomd_valid)
 qed
 
-fun seq_to_string :: "('sf, 'sc, 'sz) sequent \<Rightarrow> char list"
+fun seq_to_string :: "sequent \<Rightarrow> char list"
 where "seq_to_string (A,S) = join '', '' (map fml_to_string A) @ '' |- '' @ join '', '' (map fml_to_string S)"
   
-fun rule_to_string :: "('sf, 'sc, 'sz) rule \<Rightarrow> char list"
+fun rule_to_string :: "rule \<Rightarrow> char list"
 where "rule_to_string (SG, C) = (join '';;   '' (map seq_to_string SG)) @ ''            '' @  (*[char_of_nat 10] @ *)seq_to_string C"
 
 fun close :: "'a list \<Rightarrow> 'a \<Rightarrow>'a list"
@@ -382,7 +382,7 @@ lemma close_app_comm:"close (A @ B) x  = close A x @ close B x"
 
 lemma close_provable_sound:"sound (SG, C) \<Longrightarrow> sound (close SG \<phi>, \<phi>) \<Longrightarrow> sound (close SG \<phi>, C)"
 proof (rule soundI_mem)
-  fix I::"('sf,'sc,'sz) interp"
+  fix I::"interp"
   assume S1:"sound (SG, C)"
   assume S2:"sound (close SG \<phi>, \<phi>)"
   assume good:"is_interp I"
@@ -410,16 +410,16 @@ proof (rule soundI_mem)
   qed
 
 
-datatype ('a, 'b, 'c) rule_ret =
-  Rok  "('a, 'b, 'c) sequent list"
-| Rerr "('a,'b,'c) sequent list"
+datatype rule_ret =
+  Rok  "sequent list"
+| Rerr "sequent list"
 
-datatype ('a, 'b, 'c) step_ret =
-  Sok  "('a, 'b, 'c) rule"
-| Serr "('a, 'b, 'c) rule list"
+datatype step_ret =
+  Sok  "rule"
+| Serr "rule list"
 
 
-fun LeftRule_result :: "('sf,'sc,'sz) lrule \<Rightarrow> nat \<Rightarrow> ('sf, 'sc, 'sz) sequent \<Rightarrow> ('sf, 'sc, 'sz) sequent list option"
+fun LeftRule_result :: "lrule \<Rightarrow> nat \<Rightarrow> sequent \<Rightarrow> sequent list option"
   where "LeftRule_result AndL j (A,S) = (case (nth A j) of And p q \<Rightarrow> 
 Some [((closeI A j) @ [p, q], S)] 
 | _ \<Rightarrow> None)"
@@ -479,7 +479,7 @@ Some [((closeI A j) @ [p, q], S)]
 (* Note: Some of the pattern-matching here is... interesting. The reason for this is that we can only
    match on things in the base grammar, when we would quite like to check things in the derived grammar.
    So all the pattern-matches have the definitions expanded, sometimes in a silly way. *)
-fun RightRule_result :: "('sf,'sc,'sz) rrule \<Rightarrow> nat \<Rightarrow> ('sf, 'sc, 'sz) sequent \<Rightarrow> ('sf, 'sc, 'sz) sequent list option"
+fun RightRule_result :: "rrule \<Rightarrow> nat \<Rightarrow> sequent \<Rightarrow> sequent list option"
   where 
   Rstep_Not:"RightRule_result NotR j (A,S) = (case (nth S j) of (Not p) \<Rightarrow> Some [(A @ [p], closeI S j)] | _ \<Rightarrow> None)"
 | Rstep_And:"RightRule_result AndR j (A,S) = (case (nth S j) of (And p q) \<Rightarrow> Some [(A, replaceI S j p), (A, replaceI S j q)] | _ \<Rightarrow> None)"
@@ -577,7 +577,7 @@ lemma fml_seq_valid:"valid \<phi> \<Longrightarrow> seq_valid ([], [\<phi>])"
 
 lemma closeI_provable_sound:"\<And>i. sound (SG, C) \<Longrightarrow> sound (closeI SG i, (nth SG i)) \<Longrightarrow> i < length SG \<Longrightarrow> sound (closeI SG i, C)"
 proof (rule soundI_mem)
-  fix i and I::"('sf,'sc,'sz) interp"
+  fix i and I::"interp"
   assume S1:"sound (SG, C)"
   assume S2:"sound (closeI SG i, SG ! i)"
   assume good:"is_interp I"
@@ -618,7 +618,7 @@ lemma sound_to_valid:"sound ([], A) \<Longrightarrow> seq_valid A"
 lemma closeI_valid_sound:"\<And>i. i < length SG \<Longrightarrow> sound (SG, C) \<Longrightarrow> seq_valid (nth SG i) \<Longrightarrow> sound (closeI SG i, C)"
   using valid_to_sound closeI_provable_sound by auto
   
-fun merge_rules :: "('sf,'sc,'sz) rule \<Rightarrow> ('sf,'sc,'sz) rule \<Rightarrow> nat \<Rightarrow> ('sf,'sc,'sz) rule option"
+fun merge_rules :: "rule \<Rightarrow> rule \<Rightarrow> nat \<Rightarrow> rule option"
   where 
     "merge_rules (P1,C1) (Nil,C2) i  = 
     (if (i < length P1 \<and> nth P1 i = C2) then
@@ -636,7 +636,7 @@ proof -
   have sound:"\<And>I. is_interp I \<Longrightarrow> 
       (\<And>i. i\<ge>0 \<Longrightarrow> i < length (fst (SG, C)) \<Longrightarrow> seq_sem I (fst (SG, C) ! i) = UNIV) \<Longrightarrow> seq_sem I C = UNIV"
     using snd[unfolded sound_def] by(auto)  
-  fix I::"('sf,'sc,'sz)interp"
+  fix I::"interp"
   assume good_interp:"is_interp I"
   assume pres:"(\<And>\<phi>. List.member SG \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV)"
   show "seq_sem I C = UNIV" 
@@ -683,7 +683,7 @@ lemma merge_front_sound:
   assumes S2:"sound (SG2,C2)"
   shows "sound (SG2 @ SG1,C)"
 proof (rule soundI_mem)
-  fix I::"('sf,'sc,'sz)interp"
+  fix I::"interp"
   assume good_interp:"is_interp I"
   assume pres:"(\<And>\<phi>. List.member (SG2 @ SG1) \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV)"
   have presL:"(\<And>\<phi>. List.member SG2 \<phi> \<Longrightarrow> seq_sem I \<phi> = UNIV)" 
@@ -759,7 +759,7 @@ next
     qed
 
 
-fun rule_result :: "('sf, 'sc, 'sz) rule \<Rightarrow> (nat * ('sf, 'sc, 'sz) ruleApp) \<Rightarrow>  ('sf, 'sc, 'sz) rule option"
+fun rule_result :: "rule \<Rightarrow> (nat * ruleApp) \<Rightarrow>  rule option"
   where
   Step_LeftRule:"rule_result (SG,C) (i,LeftRule L j) =  
    (if j \<ge> length (fst (nth SG i)) then None else
@@ -836,16 +836,16 @@ fun rule_result :: "('sf, 'sc, 'sz) rule \<Rightarrow> (nat * ('sf, 'sc, 'sz) ru
 
 
 
-fun fnc :: "('sf,'sc,'sz) rule \<Rightarrow> ('sf,'sc,'sz) sequent \<Rightarrow> ('sf,'sc,'sz)ruleApp \<Rightarrow> ('sf,'sc,'sz) rule option"
+fun fnc :: "rule \<Rightarrow> sequent \<Rightarrow> ruleApp \<Rightarrow> rule option"
   where "fnc r seq ra = 
   (case (rule_result (start_proof seq) (0,ra))   of
     Some rule \<Rightarrow> merge_rules rule r 0
   | None  \<Rightarrow> None)"
 
-fun pro :: "('sf,'sc,'sz) rule \<Rightarrow> ('sf,'sc,'sz) rule \<Rightarrow> ('sf,'sc,'sz) rule option"
+fun pro :: "rule \<Rightarrow> rule \<Rightarrow> rule option"
   where "pro r1 r2 = merge_rules r2 r1 0"
 
-fun pt_result :: "('sf, 'sc, 'sz) pt \<Rightarrow> ('sf, 'sc, 'sz) rule option"
+fun pt_result :: "pt \<Rightarrow> rule option"
 where
   "pt_result (FOLRConstant f) = Some ([], ([],[f]))"  
 | "pt_result (RuleApplication pt ra i) = (case (pt_result pt) of Some res \<Rightarrow> (if i \<ge> length (fst res) then None else rule_result res (i,ra)) | None \<Rightarrow> None)"
@@ -879,7 +879,7 @@ else None) | None \<Rightarrow> None)"
 
 thm Or_def
 thm Implies_def  
-inductive lrule_ok ::"('sf,'sc,'sz) sequent list \<Rightarrow> ('sf,'sc,'sz) sequent \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> ('sf,'sc,'sz)lrule \<Rightarrow> bool"
+inductive lrule_ok ::" sequent list \<Rightarrow> sequent \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> lrule \<Rightarrow> bool"
 where
   LeftRule_And:"(case (nth (fst (nth SG i)) j) of  (p && q) \<Rightarrow> True | _ \<Rightarrow> False) \<Longrightarrow> lrule_ok SG C i j AndL"
 | LeftRule_EquivForward:"(case (nth (fst (nth SG i)) j) of (!(!(PPPP && Q) && !(! PP && ! QQ))) \<Rightarrow> (PPPP = PP) \<and> (Q = QQ)| _ \<Rightarrow> False) \<Longrightarrow> lrule_ok SG C i j EquivForwardL"
@@ -895,7 +895,7 @@ and LeftRule_Imply[prover]: "lrule_ok SG C i j ImplyL"
 and LeftRule_Forward[prover]: "lrule_ok SG C i j EquivForwardL"
 and LeftRule_EquivBackward[prover]: "lrule_ok SG C i j EquivBackwardL"
 
-inductive rrule_ok ::"('sf,'sc,'sz) sequent list \<Rightarrow> ('sf,'sc,'sz) sequent \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> ('sf,'sc,'sz) rrule \<Rightarrow> bool"
+inductive rrule_ok ::"sequent list \<Rightarrow> sequent \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> rrule \<Rightarrow> bool"
 where
   RightRule_And:"(case (nth (snd (nth SG i)) j) of (p && q) \<Rightarrow> True | _ \<Rightarrow> False) \<Longrightarrow> rrule_ok SG C i j AndR"
 | RightRule_Imply:"(case (nth (snd (nth SG i)) j) of ( !(!Q && !(!PP))) \<Rightarrow> True | _ \<Rightarrow> False) \<Longrightarrow> rrule_ok SG C i j ImplyR"
@@ -915,11 +915,11 @@ and RightRule_CohideR_simps[prover]: "rrule_ok SG C i j CohideR"
 and RightRule_CohideRR_simps[prover]: "rrule_ok SG C i j CohideRR"
 and RightRule_TrueR_simps[prover]: "rrule_ok SG C i j TrueR"
 
-inductive sing_at::"('sz \<Rightarrow> ('sf,'sz) trm) \<Rightarrow> ('sf,'sz) trm \<Rightarrow> 'sz \<Rightarrow> bool"
+inductive sing_at::"(ident \<Rightarrow> trm) \<Rightarrow> trm \<Rightarrow> ident \<Rightarrow> bool"
   where sing_at_zero: "is_vid1 i \<Longrightarrow> f i = \<theta> \<Longrightarrow> sing_at f \<theta> i "
  |  sing_not_zero: "\<not>(is_vid1 i) \<Longrightarrow> f i = Const (bword_zero) \<Longrightarrow> sing_at f \<theta> i"
 
-inductive is_singleton :: "('sz \<Rightarrow> ('sf,'sz) trm) \<Rightarrow> ('sf,'sz) trm \<Rightarrow> bool"
+inductive is_singleton :: "(ident \<Rightarrow> trm) \<Rightarrow> trm \<Rightarrow> bool"
   where Is_singleton: "(\<forall>i. sing_at (\<lambda>i. if is_vid1 i then \<theta> else Const (bword_zero)) \<theta> i) \<Longrightarrow> is_singleton (\<lambda>i. if is_vid1 i then \<theta> else Const (bword_zero)) \<theta> "
 
 subsection \<open>Soundness\<close>
@@ -1446,7 +1446,7 @@ proof(cases L)
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I::"interp" and \<nu>::"state"
     assume good:"is_interp I"
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [(closeI \<Gamma> j, \<Delta> @ [p]), (replaceI \<Gamma> j q, \<Delta>)] \<Longrightarrow> \<nu> \<in> seq_sem I ([(closeI \<Gamma> j, \<Delta> @ [p]), (replaceI \<Gamma> j q, \<Delta>)] ! i))"
     assume ante:"\<nu> \<in> fml_sem I (foldr And \<Gamma> TT)"
@@ -1497,7 +1497,7 @@ next
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I::"interp" and \<nu>::"state"
     assume good:"is_interp I"
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [((closeI \<Gamma> j) @ [p, q], \<Delta>)] \<Longrightarrow> \<nu> \<in> seq_sem I ([((closeI \<Gamma> j) @ [p, q], \<Delta>)] ! i))"
     assume ante:"\<nu> \<in> fml_sem I (foldr And \<Gamma> TT)"
@@ -1542,7 +1542,7 @@ next
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I ::"interp" and \<nu>::"state"
     assume good:"is_interp I"
     assume ante:"\<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [(closeI \<Gamma> j, \<Delta>)] \<Longrightarrow> \<nu> \<in> seq_sem I ([(closeI \<Gamma> j, \<Delta>)] ! i))"
@@ -1582,7 +1582,7 @@ next
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I ::"interp" and \<nu>::"state"
     assume good:"is_interp I"
     assume ante:" \<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [(closeI \<Gamma> j, \<Delta> @ [p])] \<Longrightarrow> \<nu> \<in> seq_sem I ([(closeI \<Gamma> j, \<Delta> @ [p])] ! i))"
@@ -1619,7 +1619,7 @@ next
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I ::"interp" and \<nu>::"state"
     assume good:"is_interp I"
     assume ante:" \<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
     then have ante1:" \<nu> \<in> fml_sem I (foldr (&&) (nth \<Gamma> j #(closeI \<Gamma> j)) TT)" 
@@ -1703,7 +1703,7 @@ next
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I ::"interp" and \<nu>::"state"
     assume good:"is_interp I"
     assume ante:" \<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
     then have ante1:" \<nu> \<in> fml_sem I (foldr (&&) (nth \<Gamma> j #(closeI \<Gamma> j)) TT)" 
@@ -2094,7 +2094,7 @@ then have FRAwhat:"FRadmit (Forall what p)"
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I ::"interp" and \<nu>::"state"
     assume good_interp:"is_interp I"
     assume ante:" \<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> 
@@ -2452,7 +2452,7 @@ then have TRA:"TRadmit t"
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I ::"interp" and \<nu>::"state"
     assume good_interp:"is_interp I"
     assume ante:" \<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> 
@@ -2513,7 +2513,7 @@ next
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I::"('sf,'sc,'sz) interp" and \<nu>
+    fix I::"interp" and \<nu>
     assume good:"is_interp I"
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow>
              i < length [(replaceI \<Gamma> j p, \<Delta>), (replaceI \<Gamma> j q, \<Delta>)] \<Longrightarrow>
@@ -2566,7 +2566,7 @@ next
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I::"('sf,'sc,'sz) interp" and \<nu>
+    fix I::"interp" and \<nu>
     assume good:"is_interp I"
     assume ante:"\<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
     then have "\<nu> \<in> fml_sem I (foldr (&&) (FF # closeI \<Gamma> j) TT)"  
@@ -2614,7 +2614,7 @@ case ImplyR then have L:"L = ImplyR" by auto
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I ::"interp" and \<nu>::"state"
     assume "is_interp I"
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [(\<Gamma> @ [p], closeI \<Delta> j @ [q])] \<Longrightarrow> \<nu> \<in> seq_sem I ([(\<Gamma> @ [p], closeI \<Delta> j @ [q])] ! i))"
       have sg:"\<nu> \<in> seq_sem I (\<Gamma> @ [p], closeI \<Delta> j @ [q] )" using sgs[of 0] by auto
@@ -2678,7 +2678,7 @@ next
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I::"('sf,'sc,'sz) interp" and \<nu>
+    fix I::"interp" and \<nu>
     assume good:"is_interp I"
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow>
              i < length [(\<Gamma>, replaceI \<Delta> j p), (\<Gamma>, replaceI \<Delta> j q)] \<Longrightarrow>
@@ -2764,7 +2764,7 @@ next
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I::"('sf,'sc,'sz) interp" and \<nu>
+    fix I::" interp" and \<nu>
     assume good:"is_interp I"
     have "\<nu> \<in> fml_sem I (foldr (||) (TT # closeI \<Delta> j) FF)"  by(auto simp add: TT_def)
     then show "\<nu> \<in> fml_sem I (foldr (||) \<Delta>  FF)"
@@ -2823,7 +2823,7 @@ next
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I ::"interp" and \<nu>::"state"
     assume good:"is_interp I"
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [(\<Gamma> @ [p], (closeI \<Delta> j) @ [q]), (\<Gamma> @ [q], (closeI \<Delta> j) @ [p])] \<Longrightarrow> \<nu> \<in> seq_sem I ([(\<Gamma> @ [p], (closeI \<Delta> j) @ [q]), (\<Gamma> @ [q], (closeI \<Delta> j) @ [p])] ! i))"
          have duh:"\<And>S T x. x \<in> S \<Longrightarrow> S = T \<Longrightarrow> x \<in> T" by auto
@@ -2871,7 +2871,7 @@ next
         assume a1: "\<nu> \<in> fml_sem I q"
         assume a2: "\<nu> \<notin> fml_sem I (foldr (||) \<Delta> FF)"
         have blub:" sublist (closeI \<Delta> j) \<Delta>" using closeI_sub[OF j] SG_dec by(cases "SG ! i",auto) 
-        obtain ff :: "('sf, 'sc, 'sz) formula" where
+        obtain ff :: "formula" where
           "\<nu> \<in> fml_sem I ff \<and> List.member (p # closeI \<Delta> j) ff"
           using a1 by (metis (no_types) \<open>\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>\<close> \<open>\<And>y. List.member (q # \<Gamma>) y = (q = y \<or> List.member \<Gamma> y)\<close> \<open>\<nu> \<in> fml_sem I (foldr (&&) (q # \<Gamma>) TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr (||) (p # closeI \<Delta> j) FF)\<close> \<open>\<nu> \<in> fml_sem I (foldr (||) (p # closeI \<Delta> j) FF) \<Longrightarrow> \<exists>\<phi>. \<nu> \<in> fml_sem I \<phi> \<and> List.member (p # closeI \<Delta> j) \<phi>\<close> and_foldl_sem_conv closeI.simps)
         then show ?thesis
@@ -2954,7 +2954,7 @@ using eq apply(simp)
     apply(rule seq_sem_UNIV_I)
 (*    using  seq_semI'*)
   proof -
-    fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I ::"interp" and \<nu>::"state"
     assume good:"is_interp I"
     assume ante:" \<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
     assume "(\<And>i. 0 \<le> i \<Longrightarrow> i < length [(\<Gamma>, replaceI \<Delta> j p)] \<Longrightarrow> seq_sem I ([(\<Gamma>, replaceI \<Delta> j p)] ! i) = UNIV)"
@@ -3053,7 +3053,7 @@ next
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I ::"interp" and \<nu>::"state"
     assume good:"is_interp I"
     assume ante:" \<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [(\<Gamma> @ [p], closeI \<Delta> j)] \<Longrightarrow> \<nu> \<in> seq_sem I ([(\<Gamma> @ [p], closeI \<Delta> j)] ! i))"
@@ -3089,7 +3089,7 @@ next
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I ::"interp" and \<nu>::"state"
     assume good:"is_interp I"
     assume ante:" \<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [(\<Gamma>, closeI \<Delta> j)] \<Longrightarrow> \<nu> \<in> seq_sem I ([(\<Gamma>, closeI \<Delta> j)] ! i))"
@@ -3122,7 +3122,7 @@ next
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I ::"interp" and \<nu>::"state"
     assume good:"is_interp I"
     assume ante:" \<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [(\<Gamma>, replaceI \<Delta> j cutFml), (\<Gamma>, replaceI \<Delta> j (Implies cutFml (nth \<Delta> j)))] \<Longrightarrow> \<nu> \<in> seq_sem I ([(\<Gamma>, replaceI \<Delta> j cutFml), (\<Gamma>, replaceI \<Delta> j (Implies cutFml (nth \<Delta> j)))] ! i))"
@@ -3181,7 +3181,7 @@ next
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I ::"interp" and \<nu>::"state"
     assume good:"is_interp I"
     assume ante:" \<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [(\<Gamma>, replaceI \<Delta> j (Equiv p q))] \<Longrightarrow> \<nu> \<in> seq_sem I ([(\<Gamma>, replaceI \<Delta> j (Equiv p q))] ! i))"
@@ -3239,7 +3239,7 @@ next
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I ::"interp" and \<nu>::"state"
     assume good:"is_interp I"
     assume ante:" \<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [(\<Gamma>, replaceI \<Delta> j (Equiv q p))] \<Longrightarrow> \<nu> \<in> seq_sem I ([(\<Gamma>, replaceI \<Delta> j (Equiv q p))] ! i))"
@@ -3605,7 +3605,7 @@ then have FRAwhat:"FRadmit (Forall what p)"
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I ::"interp" and \<nu>::"state"
     assume good_interp:"is_interp I"
     assume ante:" \<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> 
@@ -3948,7 +3948,7 @@ then have TRA:"TRadmit t"
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I ::"interp" and \<nu>::"state"
     assume good_interp:"is_interp I"
     assume ante:" \<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> 
@@ -4025,7 +4025,7 @@ next
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I ::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I ::"interp" and \<nu>::"state"
     assume good:"is_interp I"
     assume ante:" \<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [(\<Gamma>, replaceI (replaceI \<Delta> j (nth \<Delta> k)) k (nth \<Delta> j))] \<Longrightarrow> 
@@ -4250,7 +4250,7 @@ next
     apply(rule soundI')
     apply(rule seq_semI')
   proof -
-    fix I::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+    fix I::"interp" and \<nu>::"state"
     assume good:"is_interp I"
     assume sgs:"(\<And>i. 0 \<le> i \<Longrightarrow> i < length [(\<Gamma>, (closeI \<Delta> j) @ [p, q])] \<Longrightarrow> \<nu> \<in> seq_sem I ([(\<Gamma>, (closeI \<Delta> j) @ [p, q])] ! i))"
     assume ante:"\<nu> \<in> fml_sem I (foldr And \<Gamma> TT)"
@@ -4314,7 +4314,7 @@ qed
 
 
 lemma core_rule_sound:
-  fixes R1 R2 :: "('sf,'sc,'sz) rule" and RA :: " ('sf,'sc,'sz) ruleApp" and n :: nat
+  fixes R1 R2 :: "rule" and RA :: " ruleApp" and n :: nat
   assumes sound:"sound R1"
   assumes i:"i < length (fst R1)"
   assumes some:"rule_result R1 (i,RA) = Some R2"
@@ -4324,7 +4324,7 @@ lemma core_rule_sound:
   (* urename *)
   subgoal for P A S what repl using sound some i using sound some apply (cases "FRadmit (seq2fml (P ! i)) \<and> FRadmit (seq2fml (SUrename what repl (P ! i))) \<and> fsafe (seq2fml (SUrename what repl (P ! i)))", auto)
   proof (rule soundI_mem, simp)
-    fix I::"('sf,'sc,'sz)interp"
+    fix I::"interp"
     assume sound:"sound (P, A, S)"
     assume i:"i < length P"
     assume good_interp:"is_interp I"
@@ -4427,7 +4427,7 @@ lemma core_rule_sound:
       by (metis snd_conv)
     have "\<And>I \<nu>. is_interp I \<Longrightarrow> \<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr (||) \<Delta> FF)"
     proof -
-      fix I::"('sf,'sc,'sz)interp" and \<nu>::"'sz state"
+      fix I::"interp" and \<nu>::"state"
       assume good:"is_interp I"
       assume \<Gamma>_sem:"\<nu> \<in> fml_sem I (foldr (&&) \<Gamma> TT)"
       have mem:"List.member \<Gamma> (\<Gamma> ! j)"
@@ -4455,7 +4455,7 @@ lemma core_rule_sound:
     apply(cases "length (fst (SG ! i)) \<le> j \<or> length (snd (SG ! i)) \<le> k", auto)
     apply(cases "i < length SG",auto)
   proof (rule soundI_mem, cases "SG ! i", simp)
-    fix I::"('sf,'sc,'sz) interp" and \<Gamma> \<Delta>::"('sf,'sc,'sz) formula list"
+    fix I::"interp" and \<Gamma> \<Delta>::"formula list"
     assume R1:"R1 = (SG, A, S)"
     assume RA:"RA = Cohide2 j k"
     assume sound:"sound (SG, A, S)"
@@ -4546,7 +4546,7 @@ lemma core_rule_sound:
            then show "List.member (replaceI L i y) x" using i mem by auto
          qed 
 
-         fix I::"('sf,'sc,'sz) interp" and \<nu>::"'sz state"
+         fix I::"interp" and \<nu>::"state"
          assume good:"is_interp I"
          assume sgs:"(\<And>\<phi>' \<nu>. List.member (replaceI SG i (\<Gamma> @ [cutFml], \<Delta>) @ [(\<Gamma>, \<Delta> @ [cutFml])]) \<phi>' \<Longrightarrow> \<nu> \<in> seq_sem I \<phi>')"
          then have sgs1:"(\<And>\<phi>' \<nu>. List.member ((\<Gamma>, \<Delta> @ [cutFml]) # replaceI SG i (\<Gamma> @ [cutFml], \<Delta>) ) \<phi>' \<Longrightarrow> \<nu> \<in> seq_sem I \<phi>')"
@@ -4727,7 +4727,7 @@ qed
 
   done
 
-inductive QEs_hold::"('sf,'sc,'sz)pt \<Rightarrow> bool"
+inductive QEs_hold::"pt \<Rightarrow> bool"
 where "valid f \<Longrightarrow> QEs_hold (FOLRConstant f)"
 | "QEs_hold pt \<Longrightarrow> QEs_hold (RuleApplication pt ra i)"
 | "QEs_hold (AxiomaticRule a)"
@@ -4817,7 +4817,7 @@ auto simp del: Rsubst.simps)
         apply(simp only: Rsubst.simps)
         apply(rule soundI)
       proof -
-        fix I::"('sf,'sc,'sz) interp"
+        fix I::"interp"
         assume pasEq:"(P, A, S) = ([([], [Equals ($$F fid1) ($$F fid2)])], [], [$\<phi> vid3 (singleton ($$F fid1)) \<leftrightarrow> $\<phi> vid3 (singleton ($$F fid2))])"
         assume "(\<And>a aa b. P = a \<and> A = aa \<and> S = b \<Longrightarrow> sound (a, aa, b))"
         then have soundPAS:"sound ([([], [Equals ($$F fid1) ($$F fid2)])], 
@@ -4828,7 +4828,7 @@ auto simp del: Rsubst.simps)
           (\<nu> \<in> seq_sem I ([], [Equals ($$F fid1) ($$F fid2)])) \<Longrightarrow>
           (\<nu> \<in> seq_sem I (([],[$\<phi> vid3 (singleton ($$F fid1)) \<leftrightarrow> $\<phi> vid3 (singleton ($$F fid2))])))"
         proof (auto simp add: TT_def Implies_def soundPAS sound_def)
-          fix I::"('sf,'sc,'sz) interp" and a b
+          fix I::"interp" and a b
           assume good:"is_interp I"
           assume predl:"Predicates I vid3 (\<chi> i. dterm_sem I (if i = vid1 then $$F fid1 else Const (bword_zero)) (a, b))"
             assume funls:" (Funls I fid1 (a, b) = Funls I fid2 (a, b))"
@@ -4840,7 +4840,7 @@ auto simp del: Rsubst.simps)
               apply(erule allE[where x=I])
               using predl funls good vec_eq by auto
           next
-          fix I::"('sf,'sc,'sz) interp" and a b
+          fix I::"interp" and a b
           assume good:"is_interp I"
           assume predl:"Predicates I vid3 (\<chi> i. dterm_sem I (if i = vid1 then $$F fid2 else Const (bword_zero)) (a, b))"
           assume funls:" Funls I fid1 (a, b) = Funls I fid2 (a, b)"
@@ -4888,11 +4888,12 @@ auto simp del: Rsubst.simps)
             apply (erule allE[where x=i])
             apply (erule allE[where x=i])
             apply (erule allE[where x=i])
+            apply (erule allE[where x=i])
             apply(erule allE[where x="NB x"])
             apply(erule allE[where x="x"])
             apply(cases " SODEs \<sigma> i (NB x)")
             subgoal by auto
-            subgoal by auto done done
+            subgoal by (metis option.case(2) ssafe ssafe_def) done done
         have ruleres:"\<And>\<nu>. \<nu> \<in> seq_sem (local.adjoint I \<sigma> \<nu>) ([], [$\<phi> vid3 (singleton ($$F fid1)) \<leftrightarrow> $\<phi> vid3 (singleton ($$F fid2))])"
           subgoal for \<nu>
             apply(rule apply_rule[of "adjoint I \<sigma> \<nu>" \<nu>])
@@ -4912,7 +4913,6 @@ auto simp del: Rsubst.simps)
       qed
       done
     done
-
 next
   case (Ax x)
   then show ?case 
@@ -4969,9 +4969,6 @@ next
         apply(rule merge_rules_sound[where R="rule",where ?SG1.0=P1, where ?C1.0="(C1A,C1S)",where ?SG2.0=P2, where ?C2.0="(C2A,C2S)",where i=branch])
         by auto done done       
 qed
-
-
-
 
 
 
@@ -5052,7 +5049,7 @@ where "DIAndCurry12 =
     SODEs = (\<lambda>_. None)
   \<rparr>"
   
-definition DIAnd :: "('sf,'sc,'sz) rule" 
+definition DIAnd :: "rule" 
 where "DIAnd = 
   ([([],[DIAndSG1]),([],[DIAndSG2])], 
   DIAndConcl)"
@@ -5230,10 +5227,10 @@ where "SystemCEFml2 = Geq (DiffVar vid1) (Const (bword_zero))"
 
 
 (*
-definition diff_const_axiom :: "('sf, 'sc, 'sz) formula"
+definition diff_const_axiom :: "formula"
   where [axiom_defs]:"diff_const_axiom \<equiv> Equals (Differential ($f fid1 empty)) (Const (bword_zero))"
 
-definition diff_var_axiom :: "('sf, 'sc, 'sz) formula"
+definition diff_var_axiom :: "formula"
   where [axiom_defs]:"diff_var_axiom \<equiv> Equals (Differential (Var vid1)) (DiffVar vid1)"*)
 
   

@@ -15,9 +15,9 @@ text \<open>The bound effect lemma says that a program can only modify its bound
 
 context ids begin
 lemma bound_effect:
-  fixes I::"('sf,'sc,'sz) interp"
+  fixes I::"interp"
   assumes good_interp:"is_interp I"
-  shows "\<And>\<nu> :: 'sz state. \<And>\<omega> ::'sz state. hpsafe \<alpha> \<Longrightarrow> (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<Longrightarrow> Vagree \<nu> \<omega> (- (BVP \<alpha>))"
+  shows "\<And>\<nu> :: state. \<And>\<omega> :: state. hpsafe \<alpha> \<Longrightarrow> (\<nu>, \<omega>) \<in> prog_sem I \<alpha> \<Longrightarrow> Vagree \<nu> \<omega> (- (BVP \<alpha>))"
 proof (induct rule: hp_induct)
   case Var then show "?case" 
     using agree_nil Compl_UNIV_eq BVP.simps(1) by fastforce
@@ -47,7 +47,7 @@ next
   then show "?case" 
     using agree_trans IH1 IH2 sem safes by fastforce
 next
-  fix ODE::"('sf,'sz) ODE" and P::"('sf,'sc,'sz) formula" and \<nu> \<omega>
+  fix ODE::"ODE" and P::"formula" and \<nu> \<omega>
   assume safe:"hpsafe (EvolveODE ODE P)"
   from safe have osafe:"osafe ODE" and fsafe:"fsafe P" by (auto dest: hpsafe.cases)
   show "(\<nu>, \<omega>) \<in> prog_sem I (EvolveODE ODE P) \<Longrightarrow> Vagree \<nu> \<omega> (- BVP (EvolveODE ODE P))"
