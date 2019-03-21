@@ -966,7 +966,7 @@ next
                  show"\<exists>sola ta. mk_v I ODE (sol 0, bb) (sol t) = mk_v I ODE (sol 0, bb) (sola ta) \<and>
                            0 \<le> ta \<and>
                            (sola solves_ode (\<lambda>a. ODE_sem I ODE)) {0..ta} {x. mk_v I ODE (sol 0, bb) x \<in> fml_sem I \<phi>} \<and>
-                           VSagree (sola 0) (sol 0) {x. (*Inl x \<in> BVO ODE \<or> *)Inl x \<in> Inl ` FVO ODE \<or> Inl x \<in> FVF \<phi>}"   
+                           VSagree (sola 0) (sol 0) {x. Inl x \<in> Inl ` FVO ODE \<or> Inl x \<in> FVF \<phi>}"   
                    apply(rule exI[where x=sol])
                    apply(rule exI[where x=t])
                    using fsafe t aaba sol apply auto
@@ -1018,199 +1018,193 @@ next
                 
                 have co_hp:"coincide_hp (EvolveODE ODE P) I J"
                   apply(unfold coincide_hp_def)
-                  using prog_sem.simps
                   apply (auto simp del: prog_sem.simps(9) simp add: alt_ode_semI  alt_ode_semJ)
                   proof -
-                    fix b aa ba ab bb V sol t
-                 from IH have IHF:"\<forall>a b aa ba . is_interp I \<longrightarrow> is_interp J \<longrightarrow> Iagree I J (SIGF P) \<longrightarrow> Vagree (a, b) (aa, ba) (FVF P) \<longrightarrow> ((a, b) \<in> fml_sem I P) = ((aa, ba) \<in> fml_sem J P)"
-                   unfolding coincide_fml_def by blast
-                 assume IA:"Iagree I J (SIGF P \<union> {Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
-                 and VA:"Vagree (sol 0, b) (aa, ba) V"
-                 and Osub:"Inl ` FVO ODE \<subseteq> V"
-                 and Fsub:"FVF P \<subseteq> V"
-                 and veq:"(ab, bb) = mk_v I ODE (sol 0, b) (sol t)"
-                 and t:"0 \<le> t"
-                 and sol:"(sol solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {x. mk_v I ODE (sol 0, b) x \<in> fml_sem I P}"
-(*                 and VSA:"VSagree (sol 0) (sol 0)  {uu. (*Inl uu \<in> BVO ODE \<or> *)Inl uu \<in> Inl ` FVO ODE \<or> Inl uu \<in> FVF P}"*)
-                 have semBVsub:"(semBV I ODE) \<subseteq> BVO ODE" 
-                 proof (induction ODE)
-                   case (OVar x1 x2)
-                   then show ?case apply(cases x2,auto)
-                     using goodI goodJ unfolding is_interp_def by auto
-                 next
-                   case (OSing x1 x2)
-                   then show ?case by auto
-                 next
-                   case (OProd ODE1 ODE2)
-                   then show ?case by auto
-                 qed
-                 have MBVBVsub:"(Inl ` ODE_dom ODE \<union> Inr ` ODE_dom ODE) \<subseteq> BVO ODE"
-                   apply(induction ODE)
-                   by auto
-                from sol 
-                have  solSem:"\<And>x. 0 \<le> x \<Longrightarrow> x \<le> t \<Longrightarrow> mk_v I ODE (sol 0, b) (sol x) \<in> fml_sem I P"
-                  and solDeriv:"\<And>x. 0 \<le> x \<Longrightarrow> x \<le> t \<Longrightarrow> (sol has_vector_derivative ODE_sem I ODE (sol x)) (at x within {0..t})"
-                  unfolding solves_ode_def has_vderiv_on_def by auto
-                have SIGFsub:"(SIGF P) \<subseteq> (SIGF P \<union> {Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})" by auto
-                from IA have IAP:"Iagree I J (SIGF P)"
-                  using Iagree_sub[OF SIGFsub] by auto
-                from IHF have IH':
-                  "\<forall>a b aa ba. Vagree (a, b) (aa, ba) (FVF P) \<longrightarrow> ((a, b) \<in> fml_sem I P) = ((aa, ba) \<in> fml_sem J P)"
-                  using IAP goodI goodJ by blast
-                from VA 
-                have VAOV:"Vagree (sol 0,b) (aa,ba) (Inl ` FVO ODE)"
-                  using agree_sub[OF Osub] by auto
-                have ag:"\<And>s. Vagree (mk_v I ODE (sol 0, b) (sol s)) (sol 0, b) (- semBV I ODE)" 
-                     "\<And>s. Vagree (mk_v I ODE (sol 0, b) (sol s)) (mk_xode I ODE (sol s)) (semBV I ODE)"
-                     "\<And>s. Vagree (mk_v J ODE (aa, ba) (sol s)) (aa, ba) (- semBV J ODE)"
-                     "\<And>s. Vagree (mk_v J ODE (aa, ba) (sol s)) (mk_xode J ODE (sol s)) (semBV J ODE)"
-                  subgoal for s using mk_v_agree[of I ODE "(sol 0,b)" "sol s"] by auto
-                  subgoal for s using mk_v_agree[of I ODE "(sol 0,b)" "sol s"] by auto
-                  subgoal for s using mk_v_agree[of J ODE "(aa,ba)" "sol s"] by auto
-                  subgoal for s using mk_v_agree[of J ODE "(aa,ba)" "sol s"] by auto
-                  done  
-                have sem_sub_BVO:"\<And>I::interp. is_interp I \<Longrightarrow> semBV I ODE \<subseteq> BVO ODE"
-                 proof (induction ODE)
-                   case (OVar x1 x2)
-                   then show ?case apply(cases x2,auto)
-                     using goodI goodJ unfolding is_interp_def by auto
-                 next
-                   case (OSing x1 x2)
-                   then show ?case by auto
-                 next
-                   case (OProd ODE1 ODE2)
-                    assume IH1:"\<And>I::interp. is_interp I \<Longrightarrow> semBV I ODE1 \<subseteq> BVO ODE1"
-                    assume IH2:"\<And>I::interp. is_interp I \<Longrightarrow> semBV I ODE2 \<subseteq> BVO ODE2"
-                    assume good:"is_interp I"
-                   then show ?case using IH1[OF good] IH2[OF good] by auto
-                 qed
-                have MBV_sub_sem:"\<And>I. (Inl ` ODE_dom ODE \<union> Inr ` ODE_dom ODE) \<subseteq> semBV I ODE"
-                  subgoal for I by (induction ODE, auto) done
-                have ag_BVO:
-                  "\<And>s. Vagree (mk_v I ODE (sol 0, b) (sol s)) (sol 0, b) (- BVO ODE)"
-                  "\<And>s. Vagree (mk_v J ODE (aa, ba) (sol s)) (aa, ba) (- BVO ODE)"
-                  using ag(1) ag(3)  sem_sub_BVO[of I] sem_sub_BVO[of J] agree_sub  goodI goodJ by blast+
-                have ag_semBV:
-                     "\<And>s. Vagree (mk_v I ODE (sol 0, b) (sol s)) (mk_xode I ODE (sol s)) (Inl ` ODE_dom ODE \<union> Inr ` ODE_dom ODE)"
-                     "\<And>s. Vagree (mk_v J ODE (aa, ba) (sol s)) (mk_xode J ODE (sol s)) (Inl ` ODE_dom ODE \<union> Inr ` ODE_dom ODE)"
-                  using ag(2) ag(4)  MBV_sub_sem[of I] MBV_sub_sem[of J]
-                  by (simp add: agree_sub)+
-                have IOsub:"({Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE}) \<subseteq> (SIGF P \<union> {Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
-                  by auto
-                from IA 
-                have IAO:"Iagree I J ({Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
-                  using Iagree_sub[OF IOsub] by auto
-                have IOsub':"({Inr (Inr x) |x. Inr x \<in> SIGO ODE}) \<subseteq> ({Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
-                  by auto
-                from IAO
-                have IAO':"Iagree I J ({Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
-                  using Iagree_sub[OF IOsub'] by auto
-                have VAsol:"\<And>s \<nu>'. Vagree ((sol s), \<nu>') ((sol s), \<nu>')  (Inl `FVO ODE)" unfolding Vagree_def by auto
-                have Osem:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> ODE_sem I ODE (sol s) = ODE_sem J ODE (sol s)"
-                  subgoal for s
-                    using coincidence_ode[OF goodI goodJ osafe VAsol[of s] IAO] by auto
-                  done
-                from Osem
-                have Oag:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> VSagree (ODE_sem I ODE (sol s)) (ODE_sem J ODE (sol s)) {x. Inr x \<in> BVO ODE}"
-                  unfolding VSagree_def by auto
-                from Osem
-                have Oagsem:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> VSagree (ODE_sem I ODE (sol s)) (ODE_sem J ODE (sol s)) {x. Inr x \<in> (semBV I ODE)}"
-                  unfolding VSagree_def by auto
-                from Osem
-                have halp:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow>  Vagree (mk_xode I ODE (sol s)) (mk_xode J ODE (sol s)) (semBV I ODE)"
-                  apply(auto)
-                  using Oag unfolding Vagree_def VSagree_def by blast
-                then have halpp:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (sol s, ODE_sem I ODE (sol s)) (sol s, ODE_sem J ODE (sol s)) (semBV I ODE)"
-                  by auto
-                have neat:"\<And>ODE. Iagree I J ({Inr (Inr x) |x. Inr x \<in> SIGO ODE}) \<Longrightarrow> semBV I ODE = semBV J ODE"
-                  subgoal for ODE
-                  proof (induction ODE)
-                    case (OVar x)
-                    then show ?case unfolding Iagree_def by auto
-                  next
-                    case (OSing x1a x2)
-                    then show ?case by auto
-                  next
-                    case (OProd ODE1 ODE2)
-                    assume IH1:"Iagree I J {Inr (Inr x) |x. Inr x \<in> SIGO ODE1} \<Longrightarrow> semBV I ODE1 = semBV J ODE1"
-                    assume IH2:"Iagree I J {Inr (Inr x) |x. Inr x \<in> SIGO ODE2} \<Longrightarrow> semBV I ODE2 = semBV J ODE2"
-                    assume agree:"Iagree I J {Inr (Inr x) |x. Inr x \<in> SIGO (OProd ODE1 ODE2)}"
-                    from agree have agree1:"Iagree I J {Inr (Inr x) |x. Inr x \<in> SIGO ( ODE1 )}" and agree2:"Iagree I J {Inr (Inr x) |x. Inr x \<in> SIGO ( ODE2)}"
-                      unfolding Iagree_def by auto
-                    show ?case using IH1[OF agree1] IH2[OF agree2] by auto
-                  qed
-                  done
-                note semBVeq = neat[OF IAO']
-                          then have halpp':"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (sol 0, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) (semBV I ODE)"
-                            subgoal for s 
-                              using ag[of s] ag_semBV[of s] Oagsem agree_trans semBVeq
-                    unfolding Vagree_def using Osem by force
-                  done
-                have VAbar:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (sol 0, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) (V \<inter> (-(semBV I ODE)))"
-                  subgoal for s
-                    apply(unfold Vagree_def)
-                    apply(rule conjI | rule allI)+
-                    subgoal for i
-                      apply auto
-                      using VA ag[of s] semBVeq unfolding Vagree_def apply auto 
-                      by (metis Un_iff)
+                    fix a b aa ba ab bb V sol t
+                    from IH have IHF:"\<forall>a b aa ba . is_interp I \<longrightarrow> is_interp J \<longrightarrow> Iagree I J (SIGF P) \<longrightarrow> Vagree (a, b) (aa, ba) (FVF P) \<longrightarrow> ((a, b) \<in> fml_sem I P) = ((aa, ba) \<in> fml_sem J P)"
+                      unfolding coincide_fml_def by blast
+                    assume IA:"Iagree I J (SIGF P \<union> {Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
+                      and VA:"Vagree (a, b) (aa, ba) V"
+                      and Osub:"Inl ` FVO ODE \<subseteq> V"
+                      and Fsub:"FVF P \<subseteq> V"
+                      and veq:"(ab, bb) = mk_v I ODE (a, b) (sol t)"
+                      and t:"0 \<le> t"
+                      and sol:"(sol solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {x. mk_v I ODE (a, b) x \<in> fml_sem I P}"
+                      and VSA:"VSagree (sol 0) a  {uu. (*Inl uu \<in> BVO ODE \<or> *)Inl uu \<in> Inl ` FVO ODE \<or> Inl uu \<in> FVF P}"
+                    have semBVsub:"(semBV I ODE) \<subseteq> BVO ODE" 
+                    proof (induction ODE)
+                      case (OVar x1 x2)
+                      then show ?case apply(cases x2,auto)
+                        using goodI goodJ unfolding is_interp_def by auto
+                    next
+                      case (OSing x1 x2)
+                      then show ?case by auto
+                    next
+                      case (OProd ODE1 ODE2)
+                      then show ?case by auto
+                    qed
+                    have MBVBVsub:"(Inl ` ODE_dom ODE \<union> Inr ` ODE_dom ODE) \<subseteq> BVO ODE"
+                      apply(induction ODE)
+                      by auto
+                    from sol 
+                    have  solSem:"\<And>x. 0 \<le> x \<Longrightarrow> x \<le> t \<Longrightarrow> mk_v I ODE (a, b) (sol x) \<in> fml_sem I P"
+                      and solDeriv:"\<And>x. 0 \<le> x \<Longrightarrow> x \<le> t \<Longrightarrow> (sol has_vector_derivative ODE_sem I ODE (sol x)) (at x within {0..t})"
+                      unfolding solves_ode_def has_vderiv_on_def by auto
+                    have SIGFsub:"(SIGF P) \<subseteq> (SIGF P \<union> {Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})" by auto
+                    from IA have IAP:"Iagree I J (SIGF P)"
+                      using Iagree_sub[OF SIGFsub] by auto
+                    from IHF have IH':
+                      "\<forall>a b aa ba. Vagree (a, b) (aa, ba) (FVF P) \<longrightarrow> ((a, b) \<in> fml_sem I P) = ((aa, ba) \<in> fml_sem J P)"
+                      using IAP goodI goodJ by blast
+                    from VA 
+                    have VAOV:"Vagree (a,b) (aa,ba) (Inl ` FVO ODE)"
+                      using agree_sub[OF Osub] by auto
+                    have ag:"\<And>s. Vagree (mk_v I ODE (a, b) (sol s)) (a, b) (- semBV I ODE)" 
+                      "\<And>s. Vagree (mk_v I ODE (a, b) (sol s)) (mk_xode I ODE (sol s)) (semBV I ODE)"
+                      "\<And>s. Vagree (mk_v J ODE (aa, ba) (sol s)) (aa, ba) (- semBV J ODE)"
+                      "\<And>s. Vagree (mk_v J ODE (aa, ba) (sol s)) (mk_xode J ODE (sol s)) (semBV J ODE)"
+                      subgoal for s using mk_v_agree[of I ODE "(a,b)" "sol s"] by auto
+                      subgoal for s using mk_v_agree[of I ODE "(a,b)" "sol s"] by auto
+                      subgoal for s using mk_v_agree[of J ODE "(aa,ba)" "sol s"] by auto
+                      subgoal for s using mk_v_agree[of J ODE "(aa,ba)" "sol s"] by auto
+                      done  
+                    have sem_sub_BVO:"\<And>I::interp. is_interp I \<Longrightarrow> semBV I ODE \<subseteq> BVO ODE"
+                    proof (induction ODE)
+                      case (OVar x1 x2)
+                      then show ?case apply(cases x2,auto)
+                        using goodI goodJ unfolding is_interp_def by auto
+                    next
+                      case (OSing x1 x2)
+                      then show ?case by auto
+                    next
+                      case (OProd ODE1 ODE2)
+                      assume IH1:"\<And>I::interp. is_interp I \<Longrightarrow> semBV I ODE1 \<subseteq> BVO ODE1"
+                      assume IH2:"\<And>I::interp. is_interp I \<Longrightarrow> semBV I ODE2 \<subseteq> BVO ODE2"
+                      assume good:"is_interp I"
+                      then show ?case using IH1[OF good] IH2[OF good] by auto
+                    qed
+                    have MBV_sub_sem:"\<And>I. (Inl ` ODE_dom ODE \<union> Inr ` ODE_dom ODE) \<subseteq> semBV I ODE"
+                      subgoal for I by (induction ODE, auto) done
+                    have ag_BVO:
+                      "\<And>s. Vagree (mk_v I ODE (a, b) (sol s)) (a, b) (- BVO ODE)"
+                      "\<And>s. Vagree (mk_v J ODE (aa, ba) (sol s)) (aa, ba) (- BVO ODE)"
+                      using ag(1) ag(3)  sem_sub_BVO[of I] sem_sub_BVO[of J] agree_sub  goodI goodJ by blast+
+                    have ag_semBV:
+                      "\<And>s. Vagree (mk_v I ODE (a, b) (sol s)) (mk_xode I ODE (sol s)) (Inl ` ODE_dom ODE \<union> Inr ` ODE_dom ODE)"
+                      "\<And>s. Vagree (mk_v J ODE (aa, ba) (sol s)) (mk_xode J ODE (sol s)) (Inl ` ODE_dom ODE \<union> Inr ` ODE_dom ODE)"
+                      using ag(2) ag(4)  MBV_sub_sem[of I] MBV_sub_sem[of J]
+                      by (simp add: agree_sub)+
+                    have IOsub:"({Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE}) \<subseteq> (SIGF P \<union> {Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
+                      by auto
+                    from IA 
+                    have IAO:"Iagree I J ({Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
+                      using Iagree_sub[OF IOsub] by auto
+                    have IOsub':"({Inr (Inr x) |x. Inr x \<in> SIGO ODE}) \<subseteq> ({Inl x |x. Inl x \<in> SIGO ODE} \<union> {Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
+                      by auto
+                    from IAO
+                    have IAO':"Iagree I J ({Inr (Inr x) |x. Inr x \<in> SIGO ODE})"
+                      using Iagree_sub[OF IOsub'] by auto
+                    have VAsol:"\<And>s \<nu>'. Vagree ((sol s), \<nu>') ((sol s), \<nu>')  (Inl `FVO ODE)" unfolding Vagree_def by auto
+                    have Osem:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> ODE_sem I ODE (sol s) = ODE_sem J ODE (sol s)"
+                      subgoal for s
+                        using coincidence_ode[OF goodI goodJ osafe VAsol[of s] IAO] by auto
+                      done
+                    from Osem
+                    have Oag:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> VSagree (ODE_sem I ODE (sol s)) (ODE_sem J ODE (sol s)) {x. Inr x \<in> BVO ODE}"
+                      unfolding VSagree_def by auto
+                    from Osem
+                    have Oagsem:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> VSagree (ODE_sem I ODE (sol s)) (ODE_sem J ODE (sol s)) {x. Inr x \<in> (semBV I ODE)}"
+                      unfolding VSagree_def by auto
+                    from Osem
+                    have halp:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow>  Vagree (mk_xode I ODE (sol s)) (mk_xode J ODE (sol s)) (semBV I ODE)"
+                      apply(auto)
+                      using Oag unfolding Vagree_def VSagree_def by blast
+                    then have halpp:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (sol s, ODE_sem I ODE (sol s)) (sol s, ODE_sem J ODE (sol s)) (semBV I ODE)"
+                      by auto
+                    have neat:"\<And>ODE. Iagree I J ({Inr (Inr x) |x. Inr x \<in> SIGO ODE}) \<Longrightarrow> semBV I ODE = semBV J ODE"
+                      subgoal for ODE
+                      proof (induction ODE)
+                        case (OVar x)
+                        then show ?case unfolding Iagree_def by auto
+                      next
+                        case (OSing x1a x2)
+                        then show ?case by auto
+                      next
+                        case (OProd ODE1 ODE2)
+                        assume IH1:"Iagree I J {Inr (Inr x) |x. Inr x \<in> SIGO ODE1} \<Longrightarrow> semBV I ODE1 = semBV J ODE1"
+                        assume IH2:"Iagree I J {Inr (Inr x) |x. Inr x \<in> SIGO ODE2} \<Longrightarrow> semBV I ODE2 = semBV J ODE2"
+                        assume agree:"Iagree I J {Inr (Inr x) |x. Inr x \<in> SIGO (OProd ODE1 ODE2)}"
+                        from agree have agree1:"Iagree I J {Inr (Inr x) |x. Inr x \<in> SIGO ( ODE1 )}" and agree2:"Iagree I J {Inr (Inr x) |x. Inr x \<in> SIGO ( ODE2)}"
+                          unfolding Iagree_def by auto
+                        show ?case using IH1[OF agree1] IH2[OF agree2] by auto
+                      qed
+                      done
+                    note semBVeq = neat[OF IAO']
+                    then have halpp':"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (a, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) (semBV I ODE)"
+                      subgoal for s 
+                        using ag[of s] ag_semBV[of s] Oagsem agree_trans semBVeq
+                        unfolding Vagree_def using Osem by force
+                      done
+                    have VAbar:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (a, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) (V \<inter> (-(semBV I ODE)))"
+                      subgoal for s
+                        apply(unfold Vagree_def)
+                        apply(rule conjI | rule allI)+
+                        subgoal for i
+                          apply auto
+                          using VA ag[of s] semBVeq unfolding Vagree_def apply auto 
+                          by (metis Un_iff)
                       
-                    apply(rule allI)+
-                    subgoal for i
-                      using VA ag[of s] semBVeq unfolding Vagree_def by auto
-                    done
-                  done
-                have VAfoo:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (sol 0, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) V"
-                  using agree_union[OF halpp' VAbar] apply (auto simp add: Vagree_def)
-                  by blast
-                have duhSub:"FVF P \<subseteq> UNIV" by auto
-                from VAfoo 
-                have VA'foo:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (sol 0, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) V"
-                  using agree_sub[OF duhSub] by auto
-                then have VA''foo:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (sol 0, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) (FVF P)"
-                  using agree_sub[OF Fsub] by auto
-                from VA''foo IH' 
-                have fmlSem:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> (mk_v I ODE (sol 0, b) (sol s)) \<in> fml_sem I P \<longleftrightarrow> (mk_v J ODE (aa, ba) (sol s)) \<in> fml_sem J P"
-                  using IAP coincide_fml_def hpsafe_Evolve.IH goodI goodJ by blast
-                from VA 
-                have VAO:"Vagree (sol 0, b) (aa, ba) (Inl `FVO ODE)" 
-                  using agree_sub[OF Osub] by auto
-                have sol':"(sol solves_ode (\<lambda>_. ODE_sem J ODE)) {0..t} {x. mk_v J ODE (aa, ba) x \<in> fml_sem J P}"
-                  apply(auto simp add: solves_ode_def has_vderiv_on_def)
-                  subgoal for s
-                    using solDeriv[of s] Osem[of s] by auto
-                  subgoal for s
-                    using solSem[of s] fmlSem[of s] by auto
-                  done
-                have VSA':"VSagree (sol 0) aa {uu. Inl uu \<in> Inl `FVO ODE \<or> Inl uu \<in> FVF P}"
-                  using (*VSA *)VA Osub unfolding VSagree_def Vagree_def (*ovsub *)
-                  apply auto
-                  using Osub Fsub Osem by blast
-                show "       \<exists>a bb.
-          (\<exists>sol. aa = sol 0 \<and>
-                 (\<exists>t. (a, bb) = mk_v J ODE (sol 0, ba) (sol t) \<and>
-                      0 \<le> t \<and> (sol solves_ode (\<lambda>a. ODE_sem J ODE)) {0..t} {x. mk_v J ODE (sol 0, ba) x \<in> fml_sem J P})) \<and>
-          Vagree (mk_v I ODE (sol 0, b) (sol t)) (a, bb) (Inl ` ODE_dom ODE \<union> Inr ` ODE_dom ODE \<union> V) "
-                  apply(rule exI[where x="fst (mk_v J ODE (aa, ba) (sol t))"])
-                  apply(rule exI[where x="snd (mk_v J ODE (aa, ba) (sol t))"])
-                  apply(rule conjI)
-                  subgoal
-                    apply(rule exI[where x="sol"])
-                    apply(rule conjI)
-                    subgoal  sledgehammer (*using VSA' unfolding VSagree_def sledgehammer*) sorry
-                    apply(rule exI[where x=t])
-                    apply(rule conjI)
-                    subgoal
-                      by (simp add: \<open>aa = sol 0\<close>)
-                    subgoal
+                        apply(rule allI)+
+                        subgoal for i
+                          using VA ag[of s] semBVeq unfolding Vagree_def by auto
+                        done
+                      done
+                    have VAfoo:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (a, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) V"
+                      using agree_union[OF halpp' VAbar] apply (auto simp add: Vagree_def)
+                      by blast
+                    have duhSub:"FVF P \<subseteq> UNIV" by auto
+                    from VAfoo 
+                    have VA'foo:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (a, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) V"
+                      using agree_sub[OF duhSub] by auto
+                    then have VA''foo:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> Vagree (mk_v I ODE (a, b) (sol s)) (mk_v J ODE (aa, ba) (sol s)) (FVF P)"
+                      using agree_sub[OF Fsub] by auto
+                    from VA''foo IH' 
+                    have fmlSem:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> (mk_v I ODE (a, b) (sol s)) \<in> fml_sem I P \<longleftrightarrow> (mk_v J ODE (aa, ba) (sol s)) \<in> fml_sem J P"
+                      using IAP coincide_fml_def hpsafe_Evolve.IH goodI goodJ by blast
+                    from VA 
+                    have VAO:"Vagree (a, b) (aa, ba) (Inl `FVO ODE)" 
+                      using agree_sub[OF Osub] by auto
+                    have sol':"(sol solves_ode (\<lambda>_. ODE_sem J ODE)) {0..t} {x. mk_v J ODE (aa, ba) x \<in> fml_sem J P}"
+                      apply(auto simp add: solves_ode_def has_vderiv_on_def)
+                      subgoal for s
+                        using solDeriv[of s] Osem[of s] by auto
+                      subgoal for s
+                        using solSem[of s] fmlSem[of s] by auto
+                      done
+                    have VSA':"VSagree (a) aa {uu. Inl uu \<in> Inl `FVO ODE \<or> Inl uu \<in> FVF P}"
+                      using VSA VA Osub unfolding VSagree_def Vagree_def (*ovsub *)
+                      apply auto
+                      using Osub Fsub Osem by blast
+                    show " \<exists>ab bb.
+          (\<exists>sol t.
+              (ab, bb) = mk_v J ODE (aa, ba) (sol t) \<and>
+              0 \<le> t \<and>
+              (sol solves_ode (\<lambda>a. ODE_sem J ODE)) {0..t} {x. mk_v J ODE (aa, ba) x \<in> fml_sem J P} \<and>
+              VSagree (sol 0) aa {uu. Inl uu \<in> Inl ` FVO ODE \<or> Inl uu \<in> FVF P}) \<and>
+          Vagree (mk_v I ODE (a, b) (sol t)) (ab, bb) (Inl ` ODE_dom ODE \<union> Inr ` ODE_dom ODE \<union> V)"
+                      apply(rule exI[where x="fst (mk_v J ODE (aa, ba) (sol t))"])
+                      apply(rule exI[where x="snd (mk_v J ODE (aa, ba) (sol t))"])
                       apply(rule conjI)
-                      subgoal by (rule t)
-                      using sol sol' \<open>aa = sol 0\<close> by blast done
-                apply(auto)
-                using mk_v_agree[of I ODE "(sol 0,b)" "(sol t)"]
-                      mk_v_agree[of J ODE "(aa,ba)" "(sol t)"]
-                using agree_refl t VA'foo Osub Un_absorb1 
-                by (smt MBV_sub_sem agree_sub agree_union halpp')
+                      subgoal
+                        apply(rule exI[where x="sol"])
+                        subgoal using VSA' unfolding VSagree_def
+                          by (smt Collect_cong VSA VSagree_def image_iff prod.collapse sol' sum.inject(1) t)
+                        done
+                        using mk_v_agree[of I ODE "(sol 0,b)" "(sol t)"]
+                          mk_v_agree[of J ODE "(aa,ba)" "(sol t)"]
+                        using agree_refl t VA'foo Osub Un_absorb1 
+                         MBV_sub_sem agree_sub agree_union halpp'
+                        by (smt prod.collapse)
               qed
               show "coincide_hp (EvolveODE ODE P) I J \<and> ode_sem_equiv (EvolveODE ODE P) I" using co_hp equiv[of I] 
                 using goodI goodJ by auto
@@ -1700,8 +1694,7 @@ is_interp I \<Longrightarrow> osafe ODE \<Longrightarrow> fsafe \<phi>  \<Longri
 {(\<nu>, mk_v I ODE \<nu> (sol t)) | \<nu> sol t.
       t \<ge> 0 \<and>
       (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu> x \<in> fml_sem I \<phi>} \<and>
-      VSagree (sol 0) (fst \<nu>) {x | x. Inl x \<in> FVP (EvolveODE ODE \<phi>)}}
-" 
+      VSagree (sol 0) (fst \<nu>) {x | x. Inl x \<in> FVP (EvolveODE ODE \<phi>)}}"
   subgoal for I ODE \<phi>
     using ode_sem_eq[of I I ODE \<phi> ] by auto
   done
