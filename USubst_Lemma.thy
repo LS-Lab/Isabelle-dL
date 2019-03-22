@@ -998,7 +998,23 @@ next
     done
 qed (auto)  
 
-lemma arg_base:
+lemma arg_rebaseL:
+  assumes ai:"args_to_id f = Inl a"
+  shows "rebase f = a"
+  sorry
+
+lemma arg_rebaseR:
+  assumes ai:"args_to_id f = Inr a"
+  shows "rebase f = a"
+  sorry
+(*
+"dfree (\<sigma> (rebase f))"
+"args_to_id f = Inl a"
+"dfree (\<sigma> a)"
+ *)
+
+
+lemma arg_debaseR:
   assumes ai:"args_to_id x = Inr a"
   shows "x = debase a"
 proof -
@@ -1428,7 +1444,7 @@ next
       then have feq:"args_to_id F = Inr b" by auto
       have VAsub:"Vagree \<nu> \<omega> (FVT (\<sigma> b))"
         using feq VA unfolding Vagree_def
-        using arg_base by fastforce
+        using arg_debaseR by fastforce
       show "dterm_sem I (\<sigma> b) \<nu> = dterm_sem I (\<sigma> b) \<omega>"
         using VAsub by (simp add: coincidence_dterm dfree) 
     qed 
@@ -1446,7 +1462,7 @@ next
       unfolding Vagree_def SIGT.simps using rangeI by blast
     have SIGT:"x1a \<in> SIGT ($f x1a x2a)" by auto
     have VAsub:"\<And>a. args_to_id x1a = Inr a\<Longrightarrow> (FVT (\<sigma> a)) \<subseteq> (\<Union> i\<in>{i. debase i \<in> SIGT ($f x1a x2a)}. FVT (\<sigma> i))"
-      using SIGT arg_base by auto
+      using SIGT arg_debaseR by auto
     have VAf:"\<And>a. args_to_id x1a = Inr a \<Longrightarrow> Vagree \<nu> \<omega> (FVT (\<sigma> a))"
       using agree_sub[OF VAsub VA] by auto
   then show ?case 
@@ -2641,10 +2657,23 @@ proof (induction rule: TadmitFFO.induct)
   done
     
 next
-  case (TadmitFFO_Fun2 \<sigma> args f)
-  then show ?case
-    apply(auto simp add: adjointFO_def) 
-(*    by (simp add: dsem_to_ssem)*) sorry
+  case (TadmitFFO_Fun2 \<sigma> args f) then
+  have FFOs:"\<And>i. TadmitFFO \<sigma> (args i)"
+     and IH:"\<And>i.((\<forall>x. dsafe (\<sigma> x)) \<Longrightarrow> sterm_sem I (TsubstFO (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjointFO I \<sigma> \<nu>) (args i) (fst \<nu>))"
+     and nb:"\<not> is_base f"
+     and rb:"dfree (\<sigma> (rebase f))"
+     and safes:"\<And>i. dsafe (\<sigma> i)" by auto
+  then show ?case proof (cases "args_to_id f")
+    case (Inl a) then have ai:"args_to_id f = Inl a" by auto
+      then have free:"dfree (\<sigma> a)" using arg_rebaseL[OF ai] rb by auto
+      note sems = dsem_to_ssem[OF free]
+    then show ?thesis using ai IH adjointFO_def safes by auto
+  next
+    case (Inr b) then have ai:"args_to_id f = Inr b" by auto
+    then have free:"dfree (\<sigma> b)" using arg_rebaseR[OF ai] rb by auto
+      note sems = dsem_to_ssem[OF free]
+    then show ?thesis using ai IH adjointFO_def safes by auto
+  qed
 qed (auto)
 
 lemma nsubst_sterm':
