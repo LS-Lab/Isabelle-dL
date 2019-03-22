@@ -118,73 +118,6 @@ next
     done
 qed
 
-
-(*        have eq:"(\<lambda>x. blinfun_compose(Blinfun((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
-                        (\<chi> j. dterm_sem
-                               (extendf I x)
-                               (args i) \<nu>) )) (Blinfun(\<lambda> b. (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b))))
-                        = 
-        (\<lambda>x. Blinfun
-         (\<lambda>b. (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
-               (\<chi> i. dterm_sem
-                      \<lparr>Functions = \<lambda>f. case args_to_id f of Inl x \<Rightarrow> Functions I x | Inr f' \<Rightarrow> \<lambda>_. x $ f',
-                         Funls = \<lambda>f. case args_to_id f of Inl x \<Rightarrow> Funls I x | Inr f' \<Rightarrow> \<lambda>_. x $ f', Predicates = Predicates I,
-                         Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
-                      (args i) \<nu>)
-               (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b)))"
-        apply(rule ext)
-        apply(rule blinfun_eqI)
-        apply(auto simp del: args_to_id.simps)
-
-        sorry*)
-(*        have eq:"(\<lambda>x. Blinfun (\<lambda>b. (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
-                          (\<chi> i. dterm_sem
-                                 (extendf I x)
-                                 (args i) \<nu>)
-                          (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b)))
-                          = 
-                (\<lambda>x. blinfun_compose(Blinfun((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
-                          (\<chi> i. dterm_sem
-                                 (extendf I x)
-                                 (args i) \<nu>) )) (Blinfun(\<lambda> b. (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b))))"
-          apply(rule ext)
-          apply(rule blinfun_eqI)
-          subgoal for x ia
-            using boundedG[of x]  blinfun_apply_blinfun_compose bounded_linear_Blinfun_apply
-          proof -
-            have f1: "bounded_linear (\<lambda>v. FunctionFrechet I a (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>) (\<chi> s. extendf_deriv I i (args s) \<nu> x v))"
-              using FunctionFrechet.simps \<open>bounded_linear (\<lambda>b. (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y)) (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>) (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b))\<close>
-              by fastforce          
-            have "bounded_linear (FunctionFrechet I a (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>))"
-              using good_interp is_interp_def by blast
-            then have "blinfun_apply (Blinfun (FunctionFrechet I a (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>))) (\<chi> s. extendf_deriv I i (args s) \<nu> x ia) = blinfun_apply (Blinfun (\<lambda>v. FunctionFrechet I a (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>) (\<chi> s. extendf_deriv I i (args s) \<nu> x v))) ia"
-              using f1 by (simp add: bounded_linear_Blinfun_apply)
-            then have "blinfun_apply (Blinfun (FunctionFrechet I a (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>))) (\<chi> s. extendf_deriv I i (args s) \<nu> x ia) = blinfun_apply (Blinfun (\<lambda>v. FunctionFrechet I a (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>) (\<chi> s. extendf_deriv I i (args s) \<nu> x v))) ia \<and> bounded_linear (\<lambda>v. \<chi> s. extendf_deriv I i (args s) \<nu> x v)"
-              by (metis \<open>bounded_linear (\<lambda>b. \<chi> ia. extendf_deriv I i (args ia) \<nu> x b)\<close>) (* failed *)
-            then show ?thesis
-              by (simp add: bounded_linear_Blinfun_apply)
-          qed
-        done*)
-(*      
-      have req:"\<And>x . blinfun_compose (Blinfun (?f x)) (Blinfun (?g x) ) =  Blinfun (extendf_deriv I i ($f f args) \<nu> x)"
-        sledgehammer sorry*)
-(*      have eq:"\<And>x. (extendf_deriv I i ($f f args) \<nu> x) = ?h x"
-        sorry*)
-(*      have eqq:"\<And>ia. (\<lambda>x. blinfun_apply (Blinfun (extendf_deriv I i ($f f args) \<nu> x)) ia)
-                  = (\<lambda>x.  extendf_deriv I i ($f f args) \<nu> x ia)"
-        by (metis "3.IH" bounded_linear_Blinfun_apply dfree_Fun_simps extendf_deriv_bounded good_interp)*)
-(*      have contH:"continuous_on UNIV (\<lambda>x. (blinfun_compose (Blinfun (?f x)) (Blinfun (?g x))))"
-        apply(rule continuous_intros) 
-         apply(rule linear_continuous_on)
-
-        using boundedF        sledgehammer*)
-    (*
-        apply(simp only: eqq)
-        apply(simp only: eq)
-        apply(rule linear_continuous_on)
-        subgoal for b
-        using boundedH
-        using  boundedH eq extendf_deriv.simps cs args_to_id.simps *)
 lemma extendf_deriv_continuous:
   fixes f'::"trm" and I::"interp"
   assumes free:"dfree f'"
@@ -460,25 +393,17 @@ lemma extendf_deriv:
   assumes good_interp:"is_interp I"
    shows "\<exists>f''. \<forall>x. ((\<lambda>R. dterm_sem (extendf I R) f' \<nu>) has_derivative (extendf_deriv I i_f f' \<nu> x)) (at x)"
   using free apply (induction rule: dfree.induct)
-  apply(auto simp del: args_to_id.simps)+
+  apply(auto simp del: args_to_id.simps  extendf.simps)
    defer
    subgoal for \<theta>\<^sub>1 \<theta>\<^sub>2 x
-     apply(rule has_derivative_mult)
-      by auto
+     apply(rule has_derivative_mult) by auto
    subgoal for args i x
      apply(cases "args_to_id i")
       defer
 (*      apply auto*)
      subgoal for a
      proof -
-     assume IHH:"\<forall>i. dfree (args i) \<and>
-        (\<forall>x. ((\<lambda>R. dterm_sem
-                    \<lparr>Functions = \<lambda>f. case args_to_id f of Inl x \<Rightarrow> Functions I x | Inr f' \<Rightarrow> \<lambda>_. R $ f',
-                       Funls = \<lambda>f. case args_to_id f of Inl x \<Rightarrow> Funls I x | Inr f' \<Rightarrow> \<lambda>_. R $ f', Predicates = Predicates I, Contexts = Contexts I,
-                       Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
-                    (args i) \<nu>) has_derivative
-              extendf_deriv I i_f (args i) \<nu> x)
-              (at x))"
+     assume IHH:"\<forall>i. dfree (args i) \<and> (\<forall>x. ((\<lambda>R. dterm_sem (extendf I R) (args i) \<nu>) has_derivative extendf_deriv I i_f (args i) \<nu> x) (at x))"
      then have IH1':"(\<And>ia. \<And>x. ((\<lambda>R. dterm_sem
                       \<lparr>Functions = \<lambda>f. case args_to_id f of Inl x \<Rightarrow> Functions I x | Inr f' \<Rightarrow> \<lambda>_. R $ f', 
                       Funls = \<lambda>f. case args_to_id f of Inl x \<Rightarrow> Funls I x | Inr f' \<Rightarrow> \<lambda>_. R $ f', Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
@@ -535,24 +460,11 @@ lemma extendf_deriv:
         using fg_eq a by auto
       using has_derivative_proj' by auto
   qed
-  apply(auto simp del: args_to_id.simps)
+  apply(auto simp del: args_to_id.simps extendf.simps)
   subgoal for a
      proof -
-     assume IHH:"\<forall>i. dfree (args i) \<and>
-        (\<forall>x. ((\<lambda>R. dterm_sem
-                    \<lparr>Functions = \<lambda>f. case args_to_id f of Inl x \<Rightarrow> Functions I x | Inr f' \<Rightarrow> \<lambda>_. R $ f',
-                       Funls = \<lambda>f. case args_to_id f of Inl x \<Rightarrow> Funls I x | Inr f' \<Rightarrow> \<lambda>_. R $ f', Predicates = Predicates I, Contexts = Contexts I,
-                       Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
-                    (args i) \<nu>) has_derivative
-              extendf_deriv I i_f (args i) \<nu> x)
-              (at x))"
-     then have IH1':"(\<And>ia. \<And>x. ((\<lambda>R. dterm_sem
-                      \<lparr>Functions = \<lambda>f. case args_to_id f of Inl x \<Rightarrow> Functions I x | Inr f' \<Rightarrow> \<lambda>_. R $ f', 
-                      Funls = \<lambda>f. case args_to_id f of Inl x \<Rightarrow> Funls I x | Inr f' \<Rightarrow> \<lambda>_. R $ f', Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
-                         ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
-                      (args ia) \<nu>) has_derivative
-                extendf_deriv I i_f (args ia) \<nu> x)
-                (at x))"
+     assume IHH:"\<forall>i. dfree (args i) \<and> (\<forall>x. ((\<lambda>R. dterm_sem (extendf I R) (args i) \<nu>) has_derivative extendf_deriv I i_f (args i) \<nu> x) (at x))"
+     then have IH1':"(\<And>ia. \<And>x. ((\<lambda>R. dterm_sem (extendf I R) (args ia) \<nu>) has_derivative extendf_deriv I i_f (args ia) \<nu> x) (at x))"
      and dfrees:"\<And>i. dfree (args i)"
        by auto
      assume a:"args_to_id i = Inl a"
@@ -560,29 +472,17 @@ lemma extendf_deriv:
       (g has_derivative g') (at (f x) within f ` s) \<Longrightarrow> (g \<circ> f has_derivative g' \<circ> f') (at x within s)"
        by (auto intro: derivative_intros)
      let ?f = "(\<lambda>x. Functions I a x)"
-     let ?g = "(\<lambda> R. (\<chi> i. dterm_sem
-                       \<lparr>Functions = \<lambda>f. case args_to_id f of Inl x \<Rightarrow> Functions I i | Inr f' \<Rightarrow> \<lambda>_. R $ f', 
-                        Funls = \<lambda>f. case args_to_id f of Inl x \<Rightarrow> Funls I x | Inr f' \<Rightarrow> \<lambda>_. R $ f', 
-                        Predicates = Predicates I, Contexts = Contexts I,
-                          Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
-                       (args i) \<nu>))"
+     let ?g = "(\<lambda> R. (\<chi> i. dterm_sem (extendf I R) (args i) \<nu>))"
      let ?myf' = "(\<lambda>x. (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y)) (?g x))"
      let ?myg' = "(\<lambda>x. (\<lambda>\<nu>'. \<chi> ia. extendf_deriv I i_f (args ia) \<nu> x \<nu>'))"
-     have fg_eq:"(\<lambda>R. Functions I a
-           (\<chi> i. dterm_sem
-                  \<lparr>Functions = \<lambda>f. case args_to_id f of Inl a \<Rightarrow> Functions I i | Inr f' \<Rightarrow> \<lambda>_. R $ f', 
-                   Funls = \<lambda>f. case args_to_id f of Inl x \<Rightarrow> Funls I x | Inr f' \<Rightarrow> \<lambda>_. R $ f', 
-                   Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
-                     ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
-                  (args i) \<nu>)) = (?f \<circ> ?g)"
+     have fg_eq:"(\<lambda>R. Functions I a (\<chi> i. dterm_sem (extendf I R)(args i) \<nu>)) = (?f \<circ> ?g)"
        by auto
      have "\<And>x. ((?f o ?g) has_derivative (?myf' x \<circ> ?myg' x)) (at x)"
        apply (rule diff_chain_at)
        subgoal for xa
          apply (rule has_derivative_vec)
          subgoal for i 
-           using IH1'[of i xa] 
-(*           by(auto)*) sorry
+           using IH1'[of i xa] by auto
          done
        subgoal for xa 
        proof -
@@ -596,7 +496,7 @@ lemma extendf_deriv:
       done
     then have der:"((?f o ?g) has_derivative (?myf' x \<circ> ?myg' x)) (at x)" by auto
     show "?thesis"
-       using fg_eq a der  has_derivative_proj' sorry
+       using fg_eq a der  has_derivative_proj' by auto
    qed 
    done
   done
