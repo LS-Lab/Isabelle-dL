@@ -2852,8 +2852,8 @@ next
   assume spred:"\<And>i f'. SPredicates \<sigma> i = Some f' \<Longrightarrow> fsafe f'"
   assume sfunl:"\<And>i f'. SFunls \<sigma> i = Some f' \<Longrightarrow> dsafe f'"
   assume ode_bvo_safe:"(\<And>i x ODE. SODEs \<sigma> i (Some x) = Some ODE \<Longrightarrow> Inl x \<notin> BVO ODE)"
-  note safe = Tadmit_Fun1.prems(1) and sfree = Tadmit_Fun1.prems(2) and TA = Tadmit_Fun1.hyps(1)
-    and some = Tadmit_Fun1.hyps(2) (*and NTA = Tadmit_Fun1.hyps(3)*)
+  note safe = Tadmit_Fun1.prems(1) and sfree = Tadmit_Fun1.prems(2) and TO = Tadmit_Fun1.hyps(2)
+    and some = Tadmit_Fun1.hyps(1)
   hence safes:"\<And>i. dsafe (args i)" by auto
   have IH:"(\<And>\<nu>'. \<And>i. dsafe (args i) \<Longrightarrow>
       dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
@@ -2864,9 +2864,9 @@ next
   have subSafe:"(\<And>i. dsafe (?sub i))"
     using  sfunl
     by (simp add: safes sfree tsubst_preserves_safe)
-  have freef:"dfree f'" using sfree some TA by auto
+  have freef:"dfree f'" using sfree some TO by auto
   have IH2:"dterm_sem I (TsubstFO f' ?sub) \<nu> = dterm_sem (adjointFO I ?sub \<nu>) f' \<nu>"
-    using nsubst_dterm'[OF good_interp] some freef subSafe by blast
+    using nsubst_dterm'[OF good_interp] some freef subSafe TO by blast
   have vec:"(\<chi> i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) = (\<chi> i. dterm_sem (local.adjoint I \<sigma> \<nu>) (args i) \<nu>)"
     apply(auto simp add: vec_eq_iff)
     subgoal for i
@@ -2874,9 +2874,18 @@ next
       by auto
     done
   show "?case" 
-    using IH safes eqs TA sfree apply (auto simp add:  IH2  some good_interp TA sfree)
-    using some sfree TA unfolding adjoint_def adjointFO_def sorry
-   (* sledgehammer*)
+    apply(auto simp add: some adjoint_def simp del: args_to_id.simps)
+    using IH safes eqs TO sfree  IH2 good_interp adjoint_def adjointFO_def vec
+  proof -
+    have f1: "\<forall>f. ($) (vec_lambda (f::Finite_String.ident \<Rightarrow> real)) = f"
+      by (meson UNIV_I vec_lambda_inverse)
+    then have "dterm_sem \<lparr>Functions = \<lambda>i. case args_to_id i of Inl x \<Rightarrow> Functions I x | Inr i \<Rightarrow> \<lambda>v. dterm_sem (local.adjoint I \<sigma> \<nu>) (args i) \<nu>, Funls = \<lambda>i. case args_to_id i of Inl x \<Rightarrow> Funls I x | Inr i \<Rightarrow> \<lambda>p. dterm_sem (local.adjoint I \<sigma> \<nu>) (args i) \<nu>, Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr> f' \<nu> = dterm_sem I (TsubstFO f' (\<lambda>i. Tsubst (args i) \<sigma>)) \<nu>"
+      by (metis IH2 adjointFO_def vec)
+    then have "dterm_sem \<lparr>Functions = \<lambda>i. case args_to_id i of Inl x \<Rightarrow> Functions I x | Inr i \<Rightarrow> \<lambda>v. dterm_sem \<lparr>Functions = \<lambda>i. case SFunctions \<sigma> i of None \<Rightarrow> Functions I i | Some t \<Rightarrow> \<lambda>v. dterm_sem (extendf I v) t \<nu>, Funls = \<lambda>i. case SFunls \<sigma> i of None \<Rightarrow> Funls I i | Some t \<Rightarrow> \<lambda>p. dterm_sem I t \<nu>, Predicates = \<lambda>i. case SPredicates \<sigma> i of None \<Rightarrow> Predicates I i | Some f \<Rightarrow> \<lambda>v. \<nu> \<in> fml_sem (extendf I v) f, Contexts = \<lambda>i. case SContexts \<sigma> i of None \<Rightarrow> Contexts I i | Some f \<Rightarrow> \<lambda>r. fml_sem (extendc I r) f, Programs = \<lambda>i. case SPrograms \<sigma> i of None \<Rightarrow> Programs I i | Some x \<Rightarrow> prog_sem I x, ODEs = \<lambda>i z. case SODEs \<sigma> i z of None \<Rightarrow> ODEs I i z | Some x \<Rightarrow> ODE_sem I x, ODEBV = \<lambda>i z. case SODEs \<sigma> i z of None \<Rightarrow> ODEBV I i z | Some x \<Rightarrow> ODE_vars I x\<rparr> (args i) \<nu>, Funls = \<lambda>i. case args_to_id i of Inl x \<Rightarrow> Funls I x | Inr i \<Rightarrow> \<lambda>p. dterm_sem \<lparr>Functions = \<lambda>i. case SFunctions \<sigma> i of None \<Rightarrow> Functions I i | Some t \<Rightarrow> \<lambda>v. dterm_sem (extendf I v) t \<nu>, Funls = \<lambda>i. case SFunls \<sigma> i of None \<Rightarrow> Funls I i | Some t \<Rightarrow> \<lambda>p. dterm_sem I t \<nu>, Predicates = \<lambda>i. case SPredicates \<sigma> i of None \<Rightarrow> Predicates I i | Some f \<Rightarrow> \<lambda>v. \<nu> \<in> fml_sem (extendf I v) f, Contexts = \<lambda>i. case SContexts \<sigma> i of None \<Rightarrow> Contexts I i | Some f \<Rightarrow> \<lambda>r. fml_sem (extendc I r) f, Programs = \<lambda>i. case SPrograms \<sigma> i of None \<Rightarrow> Programs I i | Some x \<Rightarrow> prog_sem I x, ODEs = \<lambda>i z. case SODEs \<sigma> i z of None \<Rightarrow> ODEs I i z | Some x \<Rightarrow> ODE_sem I x, ODEBV = \<lambda>i z. case SODEs \<sigma> i z of None \<Rightarrow> ODEBV I i z | Some x \<Rightarrow> ODE_vars I x\<rparr> (args i) \<nu>, Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr> f' \<nu> = dterm_sem I (TsubstFO f' (\<lambda>i. Tsubst (args i) \<sigma>)) \<nu>"
+    by (metis local.adjoint_def)
+      then show "dterm_sem I (TsubstFO f' (\<lambda>i. Tsubst (args i) \<sigma>)) \<nu> = dterm_sem \<lparr>Functions = \<lambda>i. case args_to_id i of Inl x \<Rightarrow> Functions I x | Inr i \<Rightarrow> \<lambda>v. (\<chi> i. dterm_sem \<lparr>Functions = \<lambda>i. case SFunctions \<sigma> i of None \<Rightarrow> Functions I i | Some t \<Rightarrow> \<lambda>v. dterm_sem (extendf I v) t \<nu>, Funls = \<lambda>i. case SFunls \<sigma> i of None \<Rightarrow> Funls I i | Some t \<Rightarrow> \<lambda>p. dterm_sem I t \<nu>, Predicates = \<lambda>i. case SPredicates \<sigma> i of None \<Rightarrow> Predicates I i | Some f \<Rightarrow> \<lambda>v. \<nu> \<in> fml_sem (extendf I v) f, Contexts = \<lambda>i. case SContexts \<sigma> i of None \<Rightarrow> Contexts I i | Some f \<Rightarrow> \<lambda>r. fml_sem (extendc I r) f, Programs = \<lambda>i. case SPrograms \<sigma> i of None \<Rightarrow> Programs I i | Some x \<Rightarrow> prog_sem I x, ODEs = \<lambda>i z. case SODEs \<sigma> i z of None \<Rightarrow> ODEs I i z | Some x \<Rightarrow> ODE_sem I x, ODEBV = \<lambda>i z. case SODEs \<sigma> i z of None \<Rightarrow> ODEBV I i z | Some x \<Rightarrow> ODE_vars I x\<rparr> (args i) \<nu>) $ i, Funls = \<lambda>i. case args_to_id i of Inl x \<Rightarrow> Funls I x | Inr i \<Rightarrow> \<lambda>p. (\<chi> i. dterm_sem \<lparr>Functions = \<lambda>i. case SFunctions \<sigma> i of None \<Rightarrow> Functions I i | Some t \<Rightarrow> \<lambda>v. dterm_sem (extendf I v) t \<nu>, Funls = \<lambda>i. case SFunls \<sigma> i of None \<Rightarrow> Funls I i | Some t \<Rightarrow> \<lambda>p. dterm_sem I t \<nu>, Predicates = \<lambda>i. case SPredicates \<sigma> i of None \<Rightarrow> Predicates I i | Some f \<Rightarrow> \<lambda>v. \<nu> \<in> fml_sem (extendf I v) f, Contexts = \<lambda>i. case SContexts \<sigma> i of None \<Rightarrow> Contexts I i | Some f \<Rightarrow> \<lambda>r. fml_sem (extendc I r) f, Programs = \<lambda>i. case SPrograms \<sigma> i of None \<Rightarrow> Programs I i | Some x \<Rightarrow> prog_sem I x, ODEs = \<lambda>i z. case SODEs \<sigma> i z of None \<Rightarrow> ODEs I i z | Some x \<Rightarrow> ODE_sem I x, ODEBV = \<lambda>i z. case SODEs \<sigma> i z of None \<Rightarrow> ODEBV I i z | Some x \<Rightarrow> ODE_vars I x\<rparr> (args i) \<nu>) $ i, Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr> f' \<nu>"
+        using f1 by presburger
+    qed
   next
   case (Tadmit_Fun2 \<sigma> args f \<nu>) 
   note safeTA = Tadmit_Fun2.prems(1) and sfree = Tadmit_Fun2.prems(2) 
