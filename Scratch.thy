@@ -144,7 +144,9 @@ and ddl_assignAnyAxiom = "ddl.assignAnyAxiom"
 and ddl_equalCommuteAxiom = "ddl.equalCommuteAxiom"
 and ddl_Rsafe = "ddl.Rsafe"
   apply(standard, auto simp add: Ix_def Iy_def Iz_def Iw_def is_i1.intros)
-  sorry
+  using Ix.abs_eq Ix.rep_eq Iy.abs_eq Iy.rep_eq Iy.abs_eq Iz.rep_eq Iw.abs_eq Iw.rep_eq Iz_def Iw_def Ix_def Iy_def apply auto
+  done
+
 
 
     
@@ -235,11 +237,6 @@ where "ssafe \<sigma> \<equiv>
   (\<forall> C. case SContexts \<sigma> C   of Some C' \<Rightarrow> fsafe C' | None \<Rightarrow> True)"
 *)
 
-(*lemma [code abstype]: "Abs_ident (Rep_ident a) = a" 
-  sorry*)
-(*lemma [code]:"ident_of_str (s) \<equiv> Abs_ident (if size ( s) > MAX_STR then '''' else  ( s))"
-  sorry*)
-
 (*
 definition string_enum :: "string list" 
   where "string_enum = vals_inner"
@@ -255,9 +252,6 @@ lift_definition ident_enum_all::"(ident \<Rightarrow> bool) \<Rightarrow> bool" 
 lift_definition ident_enum_ex::"(ident \<Rightarrow> bool) \<Rightarrow> bool" is string_enum_ex
   done
 *)
-(*lemma [code]: "enum_ident_inst.enum_all_ident = ident_enum_all"
-  sorry*)
-
 export_code "ident_upto" in Scala
 
 export_code "ddl_ssafe" in Scala
@@ -265,7 +259,7 @@ export_code "ddl_start_proof" in Scala
   code_pred (modes: i \<Rightarrow> i \<Rightarrow> bool as fadmit_i) "ddl.Fadmit" 
   done
 
-export_code "ddl_pt_result" in Scala
+(*export_code "ddl_pt_result" in Scala*)
 
 
 export_code ddl_rule_to_string in Scala

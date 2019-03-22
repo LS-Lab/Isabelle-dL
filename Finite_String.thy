@@ -10,18 +10,41 @@ typedef ident = "{s::string. size s \<le> MAX_STR}"
   apply(auto)
   apply(rule exI[where x=Nil])
   by(auto simp add: max_str)
+(*
 
 definition cr_ident::"string \<Rightarrow> ident \<Rightarrow> bool"
   where "cr_ident x y \<equiv> Abs_ident x = y"
-
+*)
+(*
 lemma Quotient_ident:
-  "Quotient (\<lambda> x y. x = y \<and> size x \<le> MAX_STR) Abs_ident Rep_ident cr_ident"
+  "Quotient (\<lambda> x y. x = y \<and> ((size x \<le> MAX_STR) = (size y \<le> MAX_STR))) Abs_ident Rep_ident cr_ident"
+  apply(auto simp add: max_str)
+  apply(rule Quotient3_to_Quotient)
+   apply(rule Quotient3I)
+  subgoal for a using Rep_ident_inverse by auto
+  subgoal by simp
+  subgoal for r s
+    apply(auto)(* falseness *)
+(*    subgoal Rep_ident_inverse Rep_ident sledgehammer
+  unfolding cr_ident_def by(auto)*)
+    sorry
+(*  apply(rule Lifting.QuotientI)
+  defer
+  using Rep_ident max_str mem_Collect_eq
+  using apply auto[1] sledgehammer
+  using Rep_ident max_str mem_Collect_eq
+  using \<open>\<And>s r. Abs_ident r = Abs_ident s \<Longrightarrow> r = s\<close> apply auto[1]
+  unfolding cr_ident_def
+  using Rep_ident max_str mem_Collect_eq by simp*)
   sorry
+*)
+(*
+lemma reflp_ident: "reflp (\<lambda>x y. x = y \<and> ((size x \<le> MAX_STR) = (size y \<le> MAX_STR)))"
+  apply(rule Relation.reflpI)
+  by(auto)
+*)
 
-lemma reflp_ident: "reflp (\<lambda>x y. x = y \<and> size x \<le> MAX_STR)"
-  sorry
-
-setup_lifting  Quotient_ident reflp_ident
+setup_lifting  Finite_String.ident.type_definition_ident (*Quotient_ident reflp_ident *)
 
 instantiation ident :: finite begin
 instance proof 
@@ -64,7 +87,7 @@ fun lleq :: "char list \<Rightarrow> char list \<Rightarrow> bool"
 | "lleq (x # xs)(y # ys) = 
    (if x = y then lleq xs ys else x < y)"
 
-lift_definition less_eq_ident::"ident \<Rightarrow> ident \<Rightarrow> bool" is lleq sorry
+lift_definition less_eq_ident::"ident \<Rightarrow> ident \<Rightarrow> bool" is lleq done
 
 (*fun less_eq_ident :: "ident \<Rightarrow> ident \<Rightarrow> bool"
   where [code]:"less_eq_ident X Y = lleq (Rep_ident X) (Rep_ident Y)"*)
@@ -85,9 +108,15 @@ fun string_expose::"string \<Rightarrow> (unit + (char * string))"
   where "string_expose Nil = Inl ()"
   | "string_expose (c#cs) = Inr(c,cs)"
 
-lift_definition ident_empty::ident is "''''" done
-lift_definition ident_cons::"char \<Rightarrow> ident \<Rightarrow> ident" is "(#)" sorry
-lift_definition ident_expose::"ident \<Rightarrow> (unit + (char*ident))" is string_expose sorry
+fun string_cons::"char \<Rightarrow> string \<Rightarrow> string"
+  where "string_cons c s = (if length s = MAX_STR then s else c # s)" 
+
+lift_definition ident_empty::ident is "''''" by(auto simp add: max_str)
+lift_definition ident_cons::"char \<Rightarrow> ident \<Rightarrow> ident" is "string_cons" by auto
+lift_definition ident_expose::"ident \<Rightarrow> (unit + (char*ident))" is string_expose 
+  by (smt dual_order.trans le_add_same_cancel1 lessI less_imp_le list.size(4) pred_prod_inject pred_sum.simps string_expose.elims top1I)
+(*  apply(auto)
+  by (smt ge_eq_refl order_refl prod.rel_eq prod.rel_mono reflp_ge_eq reflp_ident sum.rel_eq sum.rel_mono)*)
 
 
 fun ident_upto :: "nat \<Rightarrow> ident list"
@@ -102,13 +131,13 @@ else if n > 0 then
     concat (map (\<lambda> c. map (\<lambda>s. ident_cons c  s) r) ab))
 else Nil)"
 
-lift_definition Ix::ident is "''x''::string"  
+lift_definition Ix::ident is "''x''::string"   apply(auto simp add: max_str)
   done
-lift_definition Iy::ident is "''y''::string"
+lift_definition Iy::ident is "''y''::string"apply(auto simp add: max_str)
   done
-lift_definition Iz::ident is "''z''::string"
+lift_definition Iz::ident is "''z''::string"apply(auto simp add: max_str)
   done
-lift_definition Iw::ident is "''w''::string"
+lift_definition Iw::ident is "''w''::string"apply(auto simp add: max_str)
   done
 
 (*lift_definition (code_dt) ident_upto::"nat \<Rightarrow> ident list" is "str_upto::nat \<Rightarrow> string list"*)
@@ -152,7 +181,8 @@ instantiation ident :: equal begin
 definition equal_ident :: "ident \<Rightarrow> ident \<Rightarrow> bool"
   where [code]:"equal_ident X Y = (X \<le> Y \<and> Y \<le> X)"
 instance
-  sorry
+  apply(standard)
+  by(auto simp add: equal_ident_def)
 end
 
 
