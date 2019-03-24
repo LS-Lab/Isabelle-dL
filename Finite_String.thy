@@ -140,6 +140,22 @@ lift_definition Iz::ident is "''z''::string"apply(auto simp add: max_str)
 lift_definition Iw::ident is "''w''::string"apply(auto simp add: max_str)
   done
 
+definition [simp]:"fid1 =  Ix"
+definition [simp]:"pid1 =  Ix"
+definition [simp]:"vid1 =  Ix"
+
+definition [simp]:"fid2 =  Iy"
+definition [simp]:"pid2 =  Iy"
+definition [simp]:"vid2 =  Iy"
+
+definition [simp]:"fid3 =  Iz"
+definition [simp]:"pid3 =  Iz"
+definition [simp]:"vid3 =  Iz"
+
+definition [simp]:"fid4 =  Iw"
+definition [simp]:"pid4 =  Iw"
+definition [simp]:"vid4 =  Iw"
+
 (*lift_definition (code_dt) ident_upto::"nat \<Rightarrow> ident list" is "str_upto::nat \<Rightarrow> string list"*)
 code_thms ident_upto
 print_theorems
@@ -213,6 +229,9 @@ fun is_base :: "ident \<Rightarrow> bool"
   where "is_base f = (case (ident_expose f) of Inl () \<Rightarrow> True | Inr(c,cs) \<Rightarrow> c \<noteq> FSENT)"
 fun nonbase :: "ident \<Rightarrow> bool"
   where "nonbase f = (case (ident_expose f) of Inl () \<Rightarrow> False | Inr(c,cs) \<Rightarrow> c = FSENT \<or> c = SSENT)"
+
+lift_definition ilength::"ident \<Rightarrow> nat" is length done
+
 
 lemma nonbase_nonemp:"(nonbase x) \<Longrightarrow> x \<noteq> ident_empty" 
   apply(auto simp add: FSENT_def SSENT_def ident_empty_def)

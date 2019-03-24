@@ -1,11 +1,9 @@
 theory "Pretty_Printer" 
 imports
   Ordinary_Differential_Equations.ODE_Analysis
-  "Ids"
   "Lib"
   "Syntax"
 begin
-context ids begin
 
 section\<open>Syntax Pretty-Printer\<close>
 text \<open>
@@ -86,4 +84,4 @@ where
   | "hp_to_string (Sequence a b) = hp_to_string a @ '';'' @ hp_to_string b"
   | "hp_to_string (Loop a) = hp_to_string a @ ''*''"
     
-end end
+end

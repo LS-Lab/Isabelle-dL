@@ -45,8 +45,6 @@ record  subst =
   SPrograms        :: "'c \<rightharpoonup> ('a, 'b, 'c) hp"
   SODEs            :: "'c \<Rightarrow> 'c space \<Rightarrow> ('a, 'c) ODE option"*)
 
-context ids begin
-
 
 (* definition NTUadmit :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'c) trm \<Rightarrow> ('c + 'c) set \<Rightarrow> bool" *)
 definition NTUadmit :: "(ident \<Rightarrow> trm) \<Rightarrow>  trm \<Rightarrow> (ident + ident) set \<Rightarrow> bool"
@@ -583,4 +581,4 @@ Radmit \<sigma> R \<longleftrightarrow> (list_all (Sadmit \<sigma>) (fst R) \<an
   using list_all_length by blast+
 
 
-end end
+end

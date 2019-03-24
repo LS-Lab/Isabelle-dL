@@ -3,7 +3,7 @@ imports
   Complex_Main
   Word_Lib.Word_Lib
   Word_Lib.Word_Lemmas
-  "./Ids"
+  Finite_String
 begin 
 section \<open>Syntax\<close>
 text \<open>
@@ -253,41 +253,23 @@ where "Predicational P = InContext P (Geq (Const (bword_zero)) (Const (bword_zer
 
 (* Abbreviations for common syntactic constructs in order to make axiom definitions, etc. more
  * readable. *)
-context ids begin
 (* "Empty" function argument tuple, encoded as tuple where all arguments assume a constant value. *)
 definition empty::" ident \<Rightarrow> trm"
 where "empty \<equiv> \<lambda>i.(Const (bword_zero))"
 
 (* Function argument tuple with (effectively) one argument, where all others have a constant value. *)
 fun singleton :: "trm \<Rightarrow> (ident \<Rightarrow> trm)"
-where "singleton t i = (if i = vid1 then t else (Const (bword_zero)))"
+where "singleton t i = (if i = Ix then t else (Const (bword_zero)))"
 
-lemma expand_singleton:"singleton t = (\<lambda>i. (if i = vid1 then t else (Const (bword_zero))))"
+lemma expand_singleton:"singleton t = (\<lambda>i. (if i = Ix then t else (Const (bword_zero))))"
   by auto
-
-(* Function applied to one argument *)
-definition f1::"ident \<Rightarrow> ident \<Rightarrow> trm"
-where "f1 f x = Function f (singleton (Var x))"
-
-(* Function applied to zero arguments (simulates a constant symbol given meaning by the interpretation) *)
-definition f0::"ident \<Rightarrow> trm"
-where "f0 f = Function f empty"
-
-(* Predicate applied to one argument *)
-definition p1::"ident \<Rightarrow> ident \<Rightarrow> formula"
-where "p1 p x = Prop p (singleton (Var x))"
-
-(* Predicational *)
-definition P::"ident \<Rightarrow> formula"
-where "P p = Predicational p"
-end
 
 subsection \<open>Well-Formedness predicates\<close>
 inductive dfree :: "trm \<Rightarrow> bool"
 where
   dfree_Var: "dfree (Var i)"
 | dfree_Const: "dfree (Const r)"
-| dfree_Fun: "(\<forall>i. dfree (args i)) \<Longrightarrow> dfree (Function i args)"
+| dfree_Fun: "nonbase i \<Longrightarrow> nonbase (debase i) \<Longrightarrow> ilength i < MAX_STR \<Longrightarrow> (\<forall>i. dfree (args i)) \<Longrightarrow> dfree (Function i args)"
 | dfree_Plus: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dfree_Neg: "dfree \<theta> \<Longrightarrow> dfree (Neg \<theta>)"
 | dfree_Times: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
@@ -298,7 +280,7 @@ inductive dsafe :: "trm \<Rightarrow> bool"
 where
   dsafe_Var: "dsafe (Var i)"
 | dsafe_Const: "dsafe (Const r)"
-| dsafe_Fun: "(\<forall>i. dsafe (args i)) \<Longrightarrow> dsafe (Function i args)"
+| dsafe_Fun: " nonbase i \<Longrightarrow> nonbase (debase i) \<Longrightarrow> ilength i < MAX_STR \<Longrightarrow> (\<forall>i. dsafe (args i)) \<Longrightarrow> dsafe (Function i args)"
 (* | dsafe_DFunl: "dsafe ($$F' i)" *)
 | dsafe_Funl: "dsafe ($$F i)"
 | dsafe_Neg: "dsafe \<theta> \<Longrightarrow> dsafe (Neg \<theta>)"
@@ -626,12 +608,11 @@ lemma fml_induct:
   \<Longrightarrow> P \<phi>"
   by (induction rule: formula.induct) (auto)
 
-context ids begin
 lemma proj_sing1:"(singleton \<theta> vid1) = \<theta>"
   by (auto)
 
 lemma proj_sing2:"vid1 \<noteq> y  \<Longrightarrow> (singleton \<theta> y) = (Const (bword_zero))"
   by (auto)
-end
+
 
 end

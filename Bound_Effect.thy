@@ -13,7 +13,6 @@ section \<open>Bound Effect Theorem\<close>
 text \<open>The bound effect lemma says that a program can only modify its bound variables and nothing else.
   This is one of the major lemmas for showing correctness of uniform substitution. \<close>
 
-context ids begin
 lemma bound_effect:
   fixes I::"interp"
   assumes good_interp:"is_interp I"
@@ -93,4 +92,4 @@ next
     subgoal for y z using IH[of y z, OF asafe] sem by (auto simp add: Vagree_def)
     done
 qed (auto simp add: Vagree_def)
-end end
+end 

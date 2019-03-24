@@ -1,12 +1,12 @@
 theory "Ids"
   imports Complex_Main
    "HOL-Library.Code_Target_Int"
-   "Finite_String"
+   "Syntax"
 begin
 
 (*Differential dynamic logic can be defined for any finite types, given a 
   few elements of those types (so that we can generate axioms). *)
-locale ids =
+(*locale ids =
   fixes vid1 :: ident
   fixes vid2 :: ident
   fixes vid3 :: ident
@@ -30,16 +30,45 @@ locale ids =
   assumes pne14:"pid1 \<noteq> pid4"
   assumes pne24:"pid2 \<noteq> pid4"
   assumes pne34:"pid3 \<noteq> pid4"
-context ids begin
+context ids begin*)
+  lemma vne12:"Ix \<noteq> Iy" apply (auto simp add: Ix_def Iy_def Iz_def Iw_def)using Ix.abs_eq Ix.rep_eq Iy.abs_eq Iy.rep_eq  Iz.abs_eq Iz.rep_eq Iw.abs_eq Iw.rep_eq by auto
+  lemma vne23:"Iy \<noteq> Iz" apply (auto simp add: Ix_def Iy_def Iz_def Iw_def)using Ix.abs_eq Ix.rep_eq Iy.abs_eq Iy.rep_eq  Iz.abs_eq Iz.rep_eq Iw.abs_eq Iw.rep_eq by auto
+  lemma vne13:"Ix \<noteq> Iz" apply (auto simp add: Ix_def Iy_def Iz_def Iw_def)using Ix.abs_eq Ix.rep_eq Iy.abs_eq Iy.rep_eq  Iz.abs_eq Iz.rep_eq Iw.abs_eq Iw.rep_eq by auto
+  lemma fne12:"Ix \<noteq> Iy" apply (auto simp add: Ix_def Iy_def Iz_def Iw_def)using Ix.abs_eq Ix.rep_eq Iy.abs_eq Iy.rep_eq  Iz.abs_eq Iz.rep_eq Iw.abs_eq Iw.rep_eq by auto
+  lemma fne23:"Iy \<noteq> Iz" apply (auto simp add: Ix_def Iy_def Iz_def Iw_def)using Ix.abs_eq Ix.rep_eq Iy.abs_eq Iy.rep_eq  Iz.abs_eq Iz.rep_eq Iw.abs_eq Iw.rep_eq by auto
+  lemma fne13:"Ix \<noteq> Iz" apply (auto simp add: Ix_def Iy_def Iz_def Iw_def)using Ix.abs_eq Ix.rep_eq Iy.abs_eq Iy.rep_eq  Iz.abs_eq Iz.rep_eq Iw.abs_eq Iw.rep_eq by auto
+  lemma pne12:"Ix \<noteq> Iy" apply (auto simp add: Ix_def Iy_def Iz_def Iw_def)using Ix.abs_eq Ix.rep_eq Iy.abs_eq Iy.rep_eq  Iz.abs_eq Iz.rep_eq Iw.abs_eq Iw.rep_eq by auto
+  lemma pne23:"Iy \<noteq> Iz" apply (auto simp add: Ix_def Iy_def Iz_def Iw_def)using Ix.abs_eq Ix.rep_eq Iy.abs_eq Iy.rep_eq  Iz.abs_eq Iz.rep_eq Iw.abs_eq Iw.rep_eq by auto
+  lemma pne13:"Ix \<noteq> Iz" apply (auto simp add: Ix_def Iy_def Iz_def Iw_def)using Ix.abs_eq Ix.rep_eq Iy.abs_eq Iy.rep_eq  Iz.abs_eq Iz.rep_eq Iw.abs_eq Iw.rep_eq by auto
+  lemma pne14:"Ix \<noteq> Iw" apply (auto simp add: Ix_def Iy_def Iz_def Iw_def)using Ix.abs_eq Ix.rep_eq Iy.abs_eq Iy.rep_eq  Iz.abs_eq Iz.rep_eq Iw.abs_eq Iw.rep_eq by auto
+  lemma pne24:"Iy \<noteq> Iw" apply (auto simp add: Ix_def Iy_def Iz_def Iw_def)using Ix.abs_eq Ix.rep_eq Iy.abs_eq Iy.rep_eq  Iz.abs_eq Iz.rep_eq Iw.abs_eq Iw.rep_eq by auto
+  lemma pne34:"Iz \<noteq> Iw" apply (auto simp add: Ix_def Iy_def Iz_def Iw_def)using Ix.abs_eq Ix.rep_eq Iy.abs_eq Iy.rep_eq  Iz.abs_eq Iz.rep_eq Iw.abs_eq Iw.rep_eq by auto
+
   lemma id_simps:
-    "(vid1 = vid2) = False" "(vid2 = vid3) = False" "(vid1 = vid3) = False"
-    "(fid1 = fid2) = False" "(fid2 = fid3) = False" "(fid1 = fid3) = False"
-    "(pid1 = pid2) = False" "(pid2 = pid3) = False" "(pid1 = pid3) = False" 
-    "(pid1 = pid4) = False" "(pid2 = pid4) = False" "(pid3 = pid4) = False"
-    "(vid2 = vid1) = False" "(vid3 = vid2) = False" "(vid3 = vid1) = False"
-    "(fid2 = fid1) = False" "(fid3 = fid2) = False" "(fid3 = fid1) = False"
-    "(pid2 = pid1) = False" "(pid3 = pid2) = False" "(pid3 = pid1) = False" 
-    "(pid4 = pid1) = False" "(pid4 = pid2) = False" "(pid4 = pid3) = False"
+    "(Ix = Iy) = False" "(Iy = Iz) = False" "(Ix = Iz) = False"
+    "(Ix = Iy) = False" "(Iy = Iz) = False" "(Ix = Iz) = False"
+    "(Ix = Iy) = False" "(Iy = Iz) = False" "(Ix = Iz) = False" 
+    "(Ix = Iw) = False" "(Iy = Iw) = False" "(Iz = Iw) = False"
+    "(Iy = Ix) = False" "(Iz = Iy) = False" "(Iz = Ix) = False"
+    "(Iy = Ix) = False" "(Iz = Iy) = False" "(Iz = Ix) = False"
+    "(Iy = Ix) = False" "(Iz = Iy) = False" "(Iz = Ix) = False" 
+    "(Iw = Ix) = False" "(Iw = Iy) = False" "(Iw = Iz) = False"
     using vne12 vne23 vne13 fne12 fne23 fne13 pne12 pne23 pne13 pne14 pne24 pne34 by auto
-  end
+
+(* Function applied to one argument *)
+definition f1::"ident \<Rightarrow> ident \<Rightarrow> trm"
+where "f1 f x = Function f (singleton (Var x))"
+
+(* Function applied to zero arguments (simulates a constant symbol given meaning by the interpretation) *)
+definition f0::"ident \<Rightarrow> trm"
+where "f0 f = Function f empty"
+
+(* Predicate applied to one argument *)
+definition p1::"ident \<Rightarrow> ident \<Rightarrow> formula"
+where "p1 p x = Prop p (singleton (Var x))"
+
+(* Predicational *)
+definition P::"ident \<Rightarrow> formula"
+where "P p = Predicational p"
+
 end

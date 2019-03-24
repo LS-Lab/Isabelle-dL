@@ -2,7 +2,6 @@ theory "Denotational_Semantics"
 imports
   Ordinary_Differential_Equations.ODE_Analysis
   "./Lib"
-  "./Ids"
   "./Syntax"
 begin
 subsection \<open>Denotational Semantics\<close>
@@ -310,10 +309,8 @@ where
       (sol solves_ode (\<lambda>_. ODE_sem I ODE)) {0..t} {x. mk_v I ODE \<nu> x \<in> fml_sem I \<phi>} \<and>
       sol 0 = fst \<nu>})"
 
-context ids begin
 definition valid :: "formula \<Rightarrow> bool"
 where "valid \<phi> \<equiv> (\<forall> I. \<forall> \<nu>. is_interp I \<longrightarrow> \<nu> \<in> fml_sem I \<phi>)"
-end
 
 text\<open> Because mk\_v is defined with the SOME operator, need to construct a state that satisfies
     ${\tt Vagree} \omega \nu (- {\tt ODE\_vars\ ODE}) 
@@ -418,7 +415,6 @@ lemma iff_to_impl: "((\<nu> \<in> fml_sem I A) \<longleftrightarrow> (\<nu> \<in
 where
   "seq2fml (ante,succ) = Implies (foldr And ante TT) (foldr Or succ FF)"
   
-context ids begin
 fun seq_sem ::"interp \<Rightarrow> sequent \<Rightarrow> state set"
 where "seq_sem I S = fml_sem I (seq2fml S)"
 
@@ -501,5 +497,4 @@ lemma soundD_memv:"sound (SG,C) \<Longrightarrow> (\<And>I. is_interp I \<Longri
   using soundD_mem
   by (metis UNIV_I UNIV_eq_I)
 
-end
 end

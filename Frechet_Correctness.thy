@@ -6,8 +6,8 @@ imports
   "Denotational_Semantics"
   "Ids"
 begin
-context ids begin
 section \<open>Characterization of Term Derivatives\<close>
+
 text \<open>
  This section builds up to a proof that in well-formed interpretations, all
  terms have derivatives, and those derivatives agree with the expected rules
@@ -218,7 +218,7 @@ next
   case (dfree_Const r)
   then show ?case by auto
 next
-  case (dfree_Fun args i)
+  case (dfree_Fun i args)
   have blin1:"\<And>x. bounded_linear(FunctionFrechet I i x)"
     using good_interp unfolding is_interp_def using has_derivative_bounded_linear
     by blast
@@ -262,7 +262,7 @@ lemma sterm_continuous:
   assumes good_interp:"is_interp I"
   shows "dfree \<theta> \<Longrightarrow> continuous_on UNIV (sterm_sem I \<theta>)"
 proof(induction rule: dfree.induct)
-  case (dfree_Fun args i)
+  case (dfree_Fun i args)
   assume IH:"\<forall> i. dfree (args i) \<and> continuous_on UNIV (sterm_sem I (args i))"
   have con1:"continuous_on UNIV (Functions I i)"
     using good_interp unfolding is_interp_def
@@ -318,11 +318,15 @@ next
     by (smt blinfun.zero_left zero_blinfun_def)
   then show ?case by (metis cont)
 next
-  case (dfree_Fun args f)
+  case (dfree_Fun f args) then have nbf:"nonbase f"
+    and nbdf:"nonbase (debase f)"
+    and ilf:"ilength f < MAX_STR"
+    and IHs:"\<forall>i. dfree (args i) \<and> continuous_on UNIV (blin_frechet (good_interp I) (simple_term (args i)))" by auto
   assume trueIH:"\<forall>i. dfree (args i) \<and> continuous_on UNIV (blin_frechet (good_interp I) (simple_term (args i)))"
   from trueIH have IH:"\<And>i.  continuous_on UNIV (blin_frechet (good_interp I) (simple_term (args i)))" by auto
   from trueIH have frees:"(\<And>i. dfree (args i))" by auto
-  then have free:"dfree ($f f args)" by (auto)
+  then have free:"dfree ($f f args)"
+    using dfree.dfree_Fun ilf nbdf nbf by blast
   have great_interp:"\<And>f. continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I f x))" using good_interp unfolding is_interp_def by auto
   have cont1:"\<And>v. continuous_on UNIV (\<lambda>v'. (\<chi> i. frechet I (args i) v v'))"
     apply(rule continuous_on_vec_lambda)
@@ -367,7 +371,8 @@ next
   proof -
     fix v :: "(real, ident) vec" and i :: "(real, ident) vec"
     have "frechet I ($f f args) v i = blinfun_apply (blin_frechet (good_interp I) (simple_term ($f f args)) v) i"
-      by (metis (no_types) bounded_linear_Blinfun_apply dfree_Fun_simps frechet_blin frechet_linear frees good_interp)
+      using bounded_linear_Blinfun_apply dfree_Fun_simps frechet_blin frechet_linear frees good_interp
+      by (smt free)
     then have "FunctionFrechet I f (\<chi> s. sterm_sem I (args s) v) (blinfun_apply (Blinfun (\<lambda>va. \<chi> s. frechet I (args s) v va)) i) = blinfun_apply (blin_frechet (good_interp I) (simple_term ($f f args)) v) i"
       by (simp add: blin_frech_vec bounded_linear_Blinfun_apply)
     then show "blinfun_apply (blin_frechet (good_interp I) (simple_term ($f f args)) v) i = blinfun_apply (Blinfun (FunctionFrechet I f (\<chi> s. sterm_sem I (args s) v)) o\<^sub>L Blinfun (\<lambda>va. \<chi> s. frechet I (args s) v va)) i"
@@ -463,5 +468,5 @@ next
     by auto
   then show ?case by (metis cont)
 qed
-end end
+end
 

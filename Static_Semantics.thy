@@ -1,7 +1,6 @@
 theory "Static_Semantics"
 imports
   Ordinary_Differential_Equations.ODE_Analysis
-  "./Ids"
   "./Lib"
   "./Syntax"
   "./Denotational_Semantics"
@@ -65,7 +64,7 @@ where
 | "SIGF (Geq t1 t2) = {Inl x | x. x \<in> SIGT t1 \<union> SIGT t2}"
 | "SIGF (Prop var args) = {Inr (Inr var)} \<union> {Inl x | x. x \<in> (\<Union>i. SIGT (args i))}"
 | "SIGF (Not p) = SIGF p"
-| "SIGF (And p1 p2) = SIGF p1 \<union> SIGF p2"
+| "SIGF (And pp p2) = SIGF pp \<union> SIGF p2"
 | "SIGF (Exists var p) = SIGF p"
 | "SIGF (Diamond a p) = SIGP a \<union> SIGF p"
 | "SIGF (InContext var p) = {Inr (Inl var)} \<union> SIGF p"

@@ -26,7 +26,6 @@ text \<open>This section proves coincidence: semantics of terms, odes, formulas 
   proof in the coincidence proof, they are proved by simultaneous induction.
   \<close>
 
-context ids begin
 subsection \<open>Term Coincidence Theorems\<close>               
 lemma coincidence_sterm:"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> sterm_sem I  \<theta> (fst \<nu>) = sterm_sem I \<theta> (fst \<nu>')"
   apply(induct "\<theta>") (* 7 subgoals *)
@@ -35,7 +34,7 @@ lemma coincidence_sterm:"Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> st
 
 lemma coincidence_sterm':"dfree \<theta> \<Longrightarrow>  Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT \<theta>} \<Longrightarrow> sterm_sem I  \<theta> (fst \<nu>) = sterm_sem J \<theta> (fst \<nu>')"
 proof (induction rule: dfree.induct)
-  case (dfree_Fun args i)
+  case (dfree_Fun i args )
     then show ?case
     proof (auto)
       from dfree_Fun.IH have free:"(\<And>i. dfree (args i))"
@@ -113,7 +112,7 @@ next
   case dfree_Const then show ?case
     by auto
 next
-  case (dfree_Fun args var)
+  case (dfree_Fun var args)
   have free:"(\<And>i. dfree (args i))"
   and IH:"(\<And>i. Vagree \<nu> \<nu>' (FVDiff (args i)) \<Longrightarrow> frechet I (args i) (fst \<nu>) (snd \<nu>) = frechet I (args i) (fst \<nu>') (snd \<nu>'))"
   and agree:"Vagree \<nu> \<nu>' (FVDiff ($f var args))"
@@ -190,7 +189,7 @@ next
   case dfree_Const then show ?case
     by auto
 next
-  case (dfree_Fun args var)
+  case (dfree_Fun var args)
   have free:"(\<And>i. dfree (args i))"
   and IH:"(\<And>i. Vagree \<nu> \<nu>' (FVDiff (args i)) \<Longrightarrow> Iagree I J {Inl x |x. x \<in> SIGT (args i)} \<Longrightarrow> frechet I (args i) (fst \<nu>) (snd \<nu>) = frechet J (args i) (fst \<nu>') (snd \<nu>'))"
   and agree:"Vagree \<nu> \<nu>' (FVDiff ($f var args))"
@@ -298,7 +297,7 @@ proof (induction rule: dsafe.induct)
   then show "?case"
     using agree_UNIV_eq[OF agree] by auto
 next
-  case (dsafe_Fun args f)
+  case (dsafe_Fun f args)
   have safe:"(\<And>i. dsafe (args i))"
   and IH:"\<And>i. Vagree \<nu> \<nu>' (FVT (args i)) \<Longrightarrow> dterm_sem I (args i) \<nu> = dterm_sem I (args i) \<nu>'"
   and agree:"Vagree \<nu> \<nu>' (FVT ($f f args))" 
@@ -313,7 +312,7 @@ lemma coincidence_dterm':
   fixes I J :: "interp" and \<nu> :: "state" and \<nu>'::"state"
   shows "dsafe \<theta> \<Longrightarrow> Vagree \<nu> \<nu>' (FVT \<theta>) \<Longrightarrow> Iagree I J {Inl x | x. x \<in> (SIGT \<theta>)} \<Longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem J \<theta> \<nu>'"
 proof (induction rule: dsafe.induct)
-  case (dsafe_Fun args f) then 
+  case (dsafe_Fun f args) then 
     have safe:"(\<And>i. dsafe (args i))"
     and IH:"\<And>i. Vagree \<nu> \<nu>' (FVT (args i)) \<Longrightarrow> Iagree I J {Inl x | x. x \<in> (SIGT (args i))} \<Longrightarrow>  dterm_sem I (args i) \<nu> = dterm_sem J (args i) \<nu>'"
     and agree:"Vagree \<nu> \<nu>' (FVT ($f f args))"
@@ -1698,5 +1697,4 @@ is_interp I \<Longrightarrow> osafe ODE \<Longrightarrow> fsafe \<phi>  \<Longri
   subgoal for I ODE \<phi>
     using ode_sem_eq[of I I ODE \<phi> ] by auto
   done
-end
 end 
