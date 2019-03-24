@@ -188,20 +188,22 @@ end
 
 definition "FSENTINEL = ''.''"
 definition "CSENTINEL = ''_''"
+definition "SSENTINEL = ''$''"
 definition "FSENT = hd FSENTINEL"
 definition "CSENT = hd CSENTINEL"
+definition "SSENT = hd SSENTINEL"
 
 fun args_to_id::"ident \<Rightarrow> (ident + ident)"
   where "args_to_id z = 
       (case (ident_expose z) of 
-       Inl _ \<Rightarrow> Inl ident_empty
-     | Inr (x,xs) \<Rightarrow> (if x#Nil = FSENTINEL then Inr xs else Inl z))"
+       Inl _ \<Rightarrow> undefined
+     | Inr (x,xs) \<Rightarrow> (if x = FSENT then Inr xs else if x = SSENT then Inl xs else undefined))"
 
 fun arg_to_id::"ident \<Rightarrow> (ident + unit)"
   where "arg_to_id  z = 
       (case (ident_expose z) of 
-       Inl _ \<Rightarrow> Inl ident_empty
-     | Inr (x,xs) \<Rightarrow> (if x#Nil = CSENTINEL then Inr () else Inl z))"
+       Inl _ \<Rightarrow> undefined
+     | Inr (x,xs) \<Rightarrow> (if x = CSENT then Inr () else if x = SSENT then Inl xs else undefined))"
 
 fun debase :: "ident \<Rightarrow> ident"
   where "debase f = ident_cons FSENT f"
@@ -209,6 +211,10 @@ fun rebase :: "ident \<Rightarrow> ident"
   where "rebase f = (case ident_expose f of Inl () \<Rightarrow> f | Inr (c,cs) \<Rightarrow> cs)"
 fun is_base :: "ident \<Rightarrow> bool"
   where "is_base f = (case (ident_expose f) of Inl () \<Rightarrow> True | Inr(c,cs) \<Rightarrow> c \<noteq> FSENT)"
+fun nonbase :: "ident \<Rightarrow> bool"
+  where "nonbase f = (case (ident_expose f) of Inl () \<Rightarrow> False | Inr(c,cs) \<Rightarrow> c = FSENT \<or> c = SSENT)"
 
-
+lemma nonbase_nonemp:"(nonbase x) \<Longrightarrow> x \<noteq> ident_empty" 
+  apply(auto simp add: FSENT_def SSENT_def ident_empty_def)
+  by (metis (mono_tags, lifting) id_apply ident_empty.rep_eq ident_empty_def ident_expose_def map_fun_apply map_sum.simps(1) old.sum.simps(5) old.unit.case string_expose.simps(1))
 end
