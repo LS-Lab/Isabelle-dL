@@ -724,7 +724,7 @@ lemma adjointFO_safe:
     subgoal for f'
       using good_subst[of f'] 
     proof -
-      assume "(case ident_expose i of Inl () \<Rightarrow> Inl ident_empty | Inr (xa, xs) \<Rightarrow> if [xa] = FSENTINEL then Inr xs else Inl (ident_cons xa xs)) = Inr f'" then
+      assume "(case ident_expose i of Inl x \<Rightarrow> Inl ident_empty | Inr (xa, xs) \<Rightarrow> if [xa] = FSENTINEL then Inr xs else Inl i) = Inr f'" then
       have some:"args_to_id i = Inr f'" by auto
       have free:"dsafe (\<sigma> f')" using good_subst by auto
       let ?f = "(\<lambda>R. dterm_sem I (\<sigma> f') \<nu>)"
@@ -815,10 +815,10 @@ lemma adjoint_consequence:
       assume agrees:"Vagree \<nu> \<omega> (\<Union>x. SFV \<sigma> x)"
       assume some:"SPredicates \<sigma> xa = Some a"
       assume sem:"\<nu> \<in> fml_sem \<lparr>Functions =
-             \<lambda>f. case case ident_expose f of Inl () \<Rightarrow> Inl ident_empty | Inr (xa, xs) \<Rightarrow> if [xa] = FSENTINEL then Inr xs else Inl (ident_cons xa xs) of
+             \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Inl ident_empty | Inr (xa, xs) \<Rightarrow> if [xa] = FSENTINEL then Inr xs else Inl f of
                  Inl x \<Rightarrow> Functions I x | Inr f' \<Rightarrow> \<lambda>_. xaa $ f',
              Funls =
-               \<lambda>f. case case ident_expose f of Inl () \<Rightarrow> Inl ident_empty | Inr (xa, xs) \<Rightarrow> if [xa] = FSENTINEL then Inr xs else Inl (ident_cons xa xs) of
+               \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Inl ident_empty | Inr (xa, xs) \<Rightarrow> if [xa] = FSENTINEL then Inr xs else Inl f of
                    Inl x \<Rightarrow> Funls I x | Inr f' \<Rightarrow> \<lambda>_. xaa $ f',
              Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr> a"
       from safes some have safe:"fsafe a" by auto
@@ -830,10 +830,10 @@ lemma adjoint_consequence:
       then have agree:"Vagree \<nu> \<omega> (FVF a)"
         using some by auto
       let ?I' = "\<lparr>Functions =
-             \<lambda>f. case case ident_expose f of Inl () \<Rightarrow> Inl ident_empty | Inr (xa, xs) \<Rightarrow> if [xa] = FSENTINEL then Inr xs else Inl (ident_cons xa xs) of
+             \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Inl ident_empty | Inr (xa, xs) \<Rightarrow> if [xa] = FSENTINEL then Inr xs else Inl f of
                  Inl x \<Rightarrow> Functions I x | Inr f' \<Rightarrow> \<lambda>_. xaa $ f',
              Funls =
-               \<lambda>f. case case ident_expose f of Inl () \<Rightarrow> Inl ident_empty | Inr (xa, xs) \<Rightarrow> if [xa] = FSENTINEL then Inr xs else Inl (ident_cons xa xs) of
+               \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Inl ident_empty | Inr (xa, xs) \<Rightarrow> if [xa] = FSENTINEL then Inr xs else Inl f of
                    Inl x \<Rightarrow> Funls I x | Inr f' \<Rightarrow> \<lambda>_. xaa $ f',
              Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>"
       have good_interp':"is_interp ?I'" using good_interp using extendf_safe by auto
@@ -852,10 +852,10 @@ lemma adjoint_consequence:
       assume agrees:"Vagree \<nu> \<omega> (\<Union>x. SFV \<sigma> x)"
       assume some:"SPredicates \<sigma> xa = Some a"
       assume sem:"\<omega> \<in> fml_sem \<lparr>Functions =
-             \<lambda>f. case case ident_expose f of Inl () \<Rightarrow> Inl ident_empty | Inr (xa, xs) \<Rightarrow> if [xa] = FSENTINEL then Inr xs else Inl (ident_cons xa xs) of
+             \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Inl ident_empty | Inr (xa, xs) \<Rightarrow> if [xa] = FSENTINEL then Inr xs else Inl f of
                  Inl x \<Rightarrow> Functions I x | Inr f' \<Rightarrow> \<lambda>_. xaa $ f',
              Funls =
-               \<lambda>f. case case ident_expose f of Inl () \<Rightarrow> Inl ident_empty | Inr (xa, xs) \<Rightarrow> if [xa] = FSENTINEL then Inr xs else Inl (ident_cons xa xs) of
+               \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Inl ident_empty | Inr (xa, xs) \<Rightarrow> if [xa] = FSENTINEL then Inr xs else Inl f of
                    Inl x \<Rightarrow> Funls I x | Inr f' \<Rightarrow> \<lambda>_. xaa $ f',
              Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr> a
         "
@@ -868,10 +868,10 @@ lemma adjoint_consequence:
       then have agree:"Vagree \<nu> \<omega> (FVF a)"
         using some by auto
       let ?I' = "\<lparr>Functions =
-             \<lambda>f. case case ident_expose f of Inl () \<Rightarrow> Inl ident_empty | Inr (xa, xs) \<Rightarrow> if [xa] = FSENTINEL then Inr xs else Inl (ident_cons xa xs) of
+             \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Inl ident_empty | Inr (xa, xs) \<Rightarrow> if [xa] = FSENTINEL then Inr xs else Inl f of
                  Inl x \<Rightarrow> Functions I x | Inr f' \<Rightarrow> \<lambda>_. xaa $ f',
              Funls =
-               \<lambda>f. case case ident_expose f of Inl () \<Rightarrow> Inl ident_empty | Inr (xa, xs) \<Rightarrow> if [xa] = FSENTINEL then Inr xs else Inl (ident_cons xa xs) of
+               \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Inl ident_empty | Inr (xa, xs) \<Rightarrow> if [xa] = FSENTINEL then Inr xs else Inl f of
                    Inl x \<Rightarrow> Funls I x | Inr f' \<Rightarrow> \<lambda>_. xaa $ f',
              Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>"
       have IA:"\<And>S. Iagree ?I' ?I' (SIGF a)" using Iagree_refl by auto
@@ -1001,49 +1001,94 @@ qed (auto)
 lemma arg_rebaseL:
   assumes ai:"args_to_id f = Inl a"
   shows "rebase f = a"
-  sorry
+proof -
+  have emp:" ident_expose f = Inl () \<Longrightarrow> f = ident_empty"
+    unfolding ident_expose_def 
+    apply(auto simp add: ident_empty_def)
+    apply(cases "string_expose (Rep_ident f)")
+    apply(auto) by (metis Inl_Inr_False Rep_ident_inverse map_tailrec_rev.elims string_expose.simps(2))
 
+  have c1:"ident_expose f = Inl () \<Longrightarrow> f = a"
+    using ai[unfolded args_to_id.simps] apply simp
+    apply(auto simp add: ident_expose_def)
+    using emp by (simp add: ident_expose_def)
+  have c2:"\<And> c cs. ident_expose f = Inr (c,cs) \<Longrightarrow> cs = a"
+    using ai[unfolded args_to_id.simps] apply simp
+    apply(auto simp add: ident_expose_def)
+    subgoal for c cs
+      apply(cases "[c] = FSENTINEL")
+      apply(auto simp add: FSENTINEL_def)
+    apply(cases "string_expose (Rep_ident f)")
+      subgoal for b
+        using Inl_Inr_False Rep_ident_inverse Abs_ident_inverse map_tailrec_rev.elims string_expose.simps 
+        by simp
+      subgoal for b
+        apply(auto)
+        using ai Inl_Inr_False Rep_ident_inverse Abs_ident_inverse map_tailrec_rev.elims string_expose.simps 
+        sledgehammer      
+    sorry
+  show ?thesis
+    apply auto
+    apply(cases "ident_expose f")
+    using c1 old.unit.case apply force
+    using c2  by auto
+  qed
 lemma arg_rebaseR:
   assumes ai:"args_to_id f = Inr a"
   shows "rebase f = a"
   sorry
-(*
-"dfree (\<sigma> (rebase f))"
-"args_to_id f = Inl a"
-"dfree (\<sigma> a)"
- *)
 
-
-lemma arg_debaseR:
-  assumes ai:"args_to_id x = Inr a"
-  shows "x = debase a"
-proof -
-  obtain inj::"(ident + ident)" where abrv:"args_to_id x = inj" 
+(*  have cont:"ident_expose x = Inl () \<Longrightarrow> False"
+    using ai apply(simp) *)
+(*  obtain p where "ident_expose x = Inr p"
+    apply(cases "ident_expose x::(unit + char \<times> Finite_String.ident)")
+    subgoal for aa using Nitpick.case_unit_unfold ai sledgehammer
+    by(auto)*)
+(*    using ai sledgehammer*)
+(* 
+      (case (ident_expose z) of 
+       Inl () \<Rightarrow> Inl ident_empty
+     | Inr (x,xs) \<Rightarrow> (if x#Nil = FSENTINEL then Inr xs else Inl (ident_cons x xs)))"
+*)
+(* (if x#Nil = FSENTINEL then Inr xs else Inl (ident_cons x xs)))*)
+(*    
+   xabs:"x = Abs_ident (CHR ''.'' # ys)"*)
+(*    apply(cases "inj")
+    using abrv AI FSENTINEL_def ident_cons_def ident_expose_def
+    using Inl_Inr_False Rep_ident_inverse id_apply map_sum.simps(1) old.sum.simps(5) old.unit.case string_expose.elims
+     apply blast
+    apply(simp add: AI abrv FSENTINEL_def)
+    apply(cases "ident_expose x")
+    apply(auto)
+    sledgehammer
+        using abrv AI FSENTINEL_def ident_cons_def ident_expose_def
+    Inl_Inr_False Rep_ident_inverse id_apply map_sum.simps(1) old.sum.simps(5) old.unit.case string_expose.elims*)
+(*  obtain inj::"(ident + ident)" where abrv:"args_to_id x = inj" 
     by auto
-  then have AI:"inj = Inr a" using ai by auto
-  obtain y and ys where 
-   xabs:"x = Abs_ident (y # ys)"
-    apply(cases "inj")
-    using abrv AI apply (auto simp add: FSENTINEL_def ident_cons_def ident_expose_def)
-    by (metis (no_types, lifting) Inl_Inr_False Rep_ident_inverse id_apply map_sum.simps(1) old.sum.simps(5) old.unit.case string_expose.elims)
-  have ys:"ys = Rep_ident a"
+  then have AI:"inj = Inr a" using ai by auto *)
+(*  have ys:"ys = Rep_ident a"
     apply(cases "inj")
     using abrv AI apply(auto simp add: FSENTINEL_def ident_cons_def ident_expose_def)
     apply(cases " map_sum id (map_prod id Abs_ident) (string_expose (Rep_ident x))")
      apply (simp add: case_unit_Unity)
     sorry
   have y:"y = CHR ''.''"
-(*    apply(cases "inj")
-    using abrv AI apply(auto simp add: FSENTINEL_def ident_cons_def ident_expose_def)
-    apply(cases " map_sum id (map_prod id Abs_ident) (string_expose (Rep_ident x))")
-    apply (simp add: case_unit_Unity)
-    using Inl_Inr_False old.sum.simps(5) old.unit.case old.unit.exhaust*)
-    sorry
-  have base:"ident_cons FSENT a = Abs_ident (y # ys)"
+    sorry*)
+lemma arg_debaseR:
+  assumes ai:"args_to_id x = Inr a"
+  shows "x = debase a"
+proof -
+  obtain  ys where 
+           ie:"ident_expose x = Inr (CHR ''.'',ys)"
+      and aiy:"args_to_id x = Inr ys"
+    sorry 
+(*  have base:"ident_cons FSENT a = Abs_ident (y # ys)"
     apply(auto simp add: ident_cons_def FSENT_def FSENTINEL_def)
-    using xabs ai abrv sorry
+    using xabs ai abrv sorry*)
   show ?thesis
-    apply(auto) sorry
+    using ie aiy
+    apply(auto simp add: FSENTINEL_def FSENT_def ident_cons_def ident_expose_def max_str)
+    sorry
 qed
 
 
@@ -1123,11 +1168,7 @@ next
        assume sems:"(\<And>j. \<forall>x. sterm_sem (adjointFO I \<sigma> \<nu>) (x2a j) x = sterm_sem (adjointFO I \<sigma> \<omega>) (x2a j) x)"
        assume some:"args_to_id x1a = Inr a"
        have base:"x1a = debase a" 
-         using some apply (auto simp add: ident_empty_def FSENTINEL_def ident_cons_def FSENT_def ident_expose_def)
-         apply(cases "x1a")
-         apply(simp)
-         subgoal for y
-           sorry sorry
+         using arg_debaseR some by blast
        note FVT = VAf[OF base]
        from dsafe have dsafer:"\<And>i. dsafe (\<sigma> i)" using dfree_is_dsafe by auto
        have dsem:"dterm_sem I (\<sigma> a) \<nu> = dterm_sem I (\<sigma> a) \<omega>"
@@ -2652,7 +2693,7 @@ proof (induction rule: TadmitFFO.induct)
     using vIH b ds tffo 
      apply (simp add: adjointFO_def)
     subgoal for b
-    using tffo apply (auto)
+    using tffo apply (auto) 
     sorry
   done
     

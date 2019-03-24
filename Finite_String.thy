@@ -109,7 +109,7 @@ fun string_expose::"string \<Rightarrow> (unit + (char * string))"
   | "string_expose (c#cs) = Inr(c,cs)"
 
 fun string_cons::"char \<Rightarrow> string \<Rightarrow> string"
-  where "string_cons c s = (if length s = MAX_STR then s else c # s)" 
+  where "string_cons c s = (if length s \<ge> MAX_STR then s else c # s)" 
 
 lift_definition ident_empty::ident is "''''" by(auto simp add: max_str)
 lift_definition ident_cons::"char \<Rightarrow> ident \<Rightarrow> ident" is "string_cons" by auto
@@ -192,16 +192,16 @@ definition "FSENT = hd FSENTINEL"
 definition "CSENT = hd CSENTINEL"
 
 fun args_to_id::"ident \<Rightarrow> (ident + ident)"
-  where "args_to_id  z = 
+  where "args_to_id z = 
       (case (ident_expose z) of 
-       Inl () \<Rightarrow> Inl ident_empty
-     | Inr (x,xs) \<Rightarrow> (if x#Nil = FSENTINEL then Inr xs else Inl (ident_cons x xs)))"
+       Inl _ \<Rightarrow> Inl ident_empty
+     | Inr (x,xs) \<Rightarrow> (if x#Nil = FSENTINEL then Inr xs else Inl z))"
 
 fun arg_to_id::"ident \<Rightarrow> (ident + unit)"
   where "arg_to_id  z = 
       (case (ident_expose z) of 
-       Inl () \<Rightarrow> Inl ident_empty
-     | Inr (x,xs) \<Rightarrow> (if x#Nil = CSENTINEL then Inr () else Inl (ident_cons x xs)))"
+       Inl _ \<Rightarrow> Inl ident_empty
+     | Inr (x,xs) \<Rightarrow> (if x#Nil = CSENTINEL then Inr () else Inl z))"
 
 fun debase :: "ident \<Rightarrow> ident"
   where "debase f = ident_cons FSENT f"
