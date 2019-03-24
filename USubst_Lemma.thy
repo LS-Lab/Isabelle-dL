@@ -1102,12 +1102,10 @@ lemma nonbase_debase:
   sorry
 lemma arg_debaseR:
   assumes nb:"nonbase a"
+  assumes spacious:"MAX_STR > ilength a"
   assumes ai:"args_to_id x = Inr a"
   shows "x = debase a"
 proof -
-(*  have base:"ident_cons FSENT a = Abs_ident (y # ys)"
-    apply(auto simp add: ident_cons_def FSENT_def FSENTINEL_def)
-    using xabs ai abrv sorry*)
   show ?thesis
   proof (cases "ident_expose x")
     case (Inl c) then have xc:" ident_expose x = Inl c" by auto
@@ -1157,13 +1155,17 @@ proof -
       then obtain d ds where ds:"ident_expose (debase a) = Inr(d,ds)"
         apply auto
         using old.prod.exhaust by blast
-      have cd:"cs = ds" sorry
-      have fact:"MAX_STR > length (Rep_ident a)" sorry
+      from spacious
+      have fact:"MAX_STR > length (Rep_ident a)"
+        unfolding ilength_def by auto
       note nbb = nonbase_a2i[OF nb ai]
-(*      have contra:"ident_expose x = Inl () \<Longrightarrow> False"
-        using nbb unfolding nonbase.simps
-        by (simp add: case_unit_Unity)*)
-(*      have c:"c = CHR ''.''" sorry*)
+      have ied:"ident_expose (debase a) = Inr (FSENT, cs)"
+        using cs  fact nbb nb ai
+        apply(auto simp add: fact ident_expose_def ident_cons_def Rep_ident_inverse[of a] Abs_ident_inverse fact)
+       using fact apply linarith+
+       by (simp add: hd)
+        have cd:"cs = ds" 
+          using ied cs ds by auto
       have "Rep_ident x = FSENT # Rep_ident ds"
         using cs apply(auto simp add: Rep_ident_inverse Abs_ident_inverse cs)
         unfolding ident_expose_def ident_cons_def
