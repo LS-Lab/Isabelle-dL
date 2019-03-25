@@ -9,7 +9,7 @@ imports
   "./Static_Semantics"
   "./Coincidence"
   "./Bound_Effect"
-begin context ids begin
+begin
 
 section \<open>Uniform and Bound Renaming\<close>
 text \<open>Definitions and soundness proofs for the renaming rules Uniform Renaming and Bound Renaming.
@@ -1332,4 +1332,4 @@ qed
   
 
 
-end end
+end 

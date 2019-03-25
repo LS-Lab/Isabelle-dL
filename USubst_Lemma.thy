@@ -1027,87 +1027,6 @@ proof -
     using c2  by auto
 qed
 
-(*  have cont:"ident_expose x = Inl () \<Longrightarrow> False"
-    using ai apply(simp) *)
-(*  obtain p where "ident_expose x = Inr p"
-    apply(cases "ident_expose x::(unit + char \<times> Finite_String.ident)")
-    subgoal for aa using Nitpick.case_unit_unfold ai sledgehammer
-    by(auto)*)
-(*    using ai sledgehammer*)
-(* 
-      (case (ident_expose z) of 
-       Inl () \<Rightarrow> Inl ident_empty
-     | Inr (x,xs) \<Rightarrow> (if x#Nil = FSENTINEL then Inr xs else Inl (ident_cons x xs)))"
-*)
-(* (if x#Nil = FSENTINEL then Inr xs else Inl (ident_cons x xs)))*)
-(*    
-   xabs:"x = Abs_ident (CHR ''.'' # ys)"*)
-(*    apply(cases "inj")
-    using abrv AI FSENTINEL_def ident_cons_def ident_expose_def
-    using Inl_Inr_False Rep_ident_inverse id_apply map_sum.simps(1) old.sum.simps(5) old.unit.case string_expose.elims
-     apply blast
-    apply(simp add: AI abrv FSENTINEL_def)
-    apply(cases "ident_expose x")
-    apply(auto)
-    sledgehammer
-        using abrv AI FSENTINEL_def ident_cons_def ident_expose_def
-    Inl_Inr_False Rep_ident_inverse id_apply map_sum.simps(1) old.sum.simps(5) old.unit.case string_expose.elims*)
-(*  obtain inj::"(ident + ident)" where abrv:"args_to_id x = inj" 
-    by auto
-  then have AI:"inj = Inr a" using ai by auto *)
-(*  have ys:"ys = Rep_ident a"
-    apply(cases "inj")
-    using abrv AI apply(auto simp add: FSENTINEL_def ident_cons_def ident_expose_def)
-    apply(cases " map_sum id (map_prod id Abs_ident) (string_expose (Rep_ident x))")
-     apply (simp add: case_unit_Unity)
-    sorry
-  have y:"y = CHR ''.''"
-
-    sorry*)
-
-
-(*lemma nonbase_a2i:
-  assumes nb:"nonbase x"
-  assumes ai:"args_to_id x = Inr a"
-  shows "nonbase a"
-proof -
-(*  have contra:" ident_expose x = Inl () \<Longrightarrow> False"
-    using ai apply(auto simp add: ident_expose_def )
-    apply(cases "(Rep_ident x)")
-    using ai apply(auto simp add: ident_expose_def)
-(*    sledgehammer*)*)
-  obtain c cs where 
-    cs:"ident_expose x = Inr (c, cs)"
-    and c:"c = FSENT \<or> c = SSENT"
-    using nb apply(cases "ident_expose x") 
-     apply auto
-    using nb apply(cases "ident_expose a") 
-      apply (simp add: Nitpick.case_unit_unfold)+
-    subgoal for b
-      apply(cases b)
-      apply auto
-      using ai apply (auto simp add: ident_expose_def)
-      sledgehammer
-
-  show ?thesis   
-    using ai apply(auto)
-    apply(cases "ident_expose x")
-    unfolding ident_expose_def
-     apply(simp)
-     defer
-     apply(simp)
-    subgoal for b
-      apply(cases "b")
-      apply(simp)
-      subgoal for aa ba
-        apply(cases "aa = FSENT")
-        apply(auto)
-        apply(cases "aa =SSENT")
-         apply(auto simp add: c cs)
-        using nb c cs apply auto 
-    by (simp add: ident_expose_def)+
-*)
-
 lemma arg_rebaseR:
   assumes nb:"nonbase f"
   assumes ai:"args_to_id f = Inr a"
@@ -1237,57 +1156,6 @@ proof -
     qed
   qed
 qed
-(*
-        apply(cases "string_expose (Rep_ident a)")
-         apply(auto)
-          apply(auto simp add: FSENT_def FSENTINEL_def)
-        apply(cases "Rep_ident a")
-          apply(auto)
-          apply(auto)
-          apply(cases "Rep_ident x")
-           apply(auto)
-        subgoal for bb
-
-
-    qed
-      using ai
-      apply(auto simp add: ident_cons_def Rep_ident_inverse)
-       apply(cases "c = FSENT")
-        apply(auto simp add: ident_expose_def)
-      defer
-      apply auto
-
-      sledgehammer
-  qed
-    using ai apply auto
-    apply(cases "ident_expose x")
-     apply(auto)
-    subgoal using nb apply auto
-      apply(cases "ident_expose a")
-      sorry
-    subgoal for c cs
-      using ai
-      apply(cases "c = FSENT")
-       apply(auto)
-      subgoal
-        apply(auto simp add: ident_cons_def ident_expose_def)
-        apply(cases "(string_expose (Rep_ident x))")
-          apply(auto)
-        subgoal for b
-        sledgehammer
-
-       apply(auto simp add: FSENT_def FSENTINEL_def)
-      apply(auto simp add: ident_expose_def ident_cons_def Rep_ident_inverse Abs_ident_inverse)
-      apply(cases "(Rep_ident x)")
-        apply(auto simp add: ident_expose_def ident_cons_def Rep_ident_inverse Abs_ident_inverse)
-      subgoal for list
-        apply(auto simp add: ident_expose_def ident_cons_def Rep_ident_inverse Abs_ident_inverse)
-
-      using FSENTINEL_def FSENT_def ident_cons_def ident_expose_def max_str  Rep_ident_inverse Abs_ident_inverse
-(*    apply(auto simp add: FSENTINEL_def FSENT_def ident_cons_def ident_expose_def max_str)*)
-    sorry
-qed
-*)
 
 (* Not used, but good practice for dterm adjoint *)
 lemma uadmit_sterm_adjoint:
@@ -1689,8 +1557,7 @@ next
       assume "(case ident_expose F of Inr (xa, xs) \<Rightarrow> if xa = FSENT then Inr xs else if xa = SSENT then Inl xs else undefined) = Inr b"
       then have feq:"args_to_id F = Inr b" by auto
       have VAsub:"Vagree \<nu> \<omega> (FVT (\<sigma> b))"
-        using feq VA unfolding Vagree_def
-        using arg_debaseR sorry
+        using feq VA unfolding Vagree_def sorry
       show "dterm_sem I (\<sigma> b) \<nu> = dterm_sem I (\<sigma> b) \<omega>"
         using VAsub by (simp add: coincidence_dterm dfree) 
     qed 
@@ -2934,8 +2801,19 @@ lemma nsubst_sterm':
 lemma ntsubst_preserves_free:
 "dfree \<theta> \<Longrightarrow> (\<And>i. dfree (\<sigma> i)) \<Longrightarrow> dfree(TsubstFO \<theta> \<sigma>)"
 proof (induction rule: dfree.induct) 
-  case (dfree_Fun i args) then show "?case"
-    sorry
+  case (dfree_Fun i args) then show "?case" proof (cases "args_to_id i")
+    case (Inl a)
+    then show ?thesis proof (cases "ident_expose i")
+      case (Inl c)
+      then show ?thesis sorry
+    next
+      case (Inr d)
+      then show ?thesis sorry
+    qed
+  next
+    case (Inr b)
+    then show ?thesis sorry
+  qed
 qed (auto intro: dfree.intros)
 
 lemma tsubst_preserves_free:
