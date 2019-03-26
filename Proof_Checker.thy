@@ -15,7 +15,7 @@ imports
   "./USubst_Lemma"
   "./Pretty_Printer"
   
-begin context ids begin
+begin 
 section \<open>Proof Checker\<close>
 text \<open>This proof checker defines a datatype for proof terms in dL and a function for checking proof
  terms, with a soundness proof that any proof accepted by the checker is a proof of a sound rule or
@@ -205,10 +205,19 @@ next
   then show ?thesis using sound_monbrule by auto
 qed
 
+lemma invX:"Rep_ident (Abs_ident ''$x'') = ''$x''"
+    apply(rule Abs_ident_inverse)
+    by(auto simp add: max_str)
+lemma invY:"Rep_ident (Abs_ident ''$y'') = ''$y''"
+    apply(rule Abs_ident_inverse)
+    by(auto simp add: max_str)
+lemma invZ:"Rep_ident (Abs_ident ''$z'') = ''$z''"
+    apply(rule Abs_ident_inverse)
+    by(auto simp add: max_str)
 lemma axiom_safe:"fsafe (get_axiom a)"
   by(cases a, auto simp add: axiom_defs Box_def Or_def Equiv_def Implies_def empty_def Equals_def 
    f1_def p1_def P_def f0_def expand_singleton Forall_def Greater_def id_simps DFunl_def Minus_def 
-  TT_def Leq_def)
+  TT_def Leq_def invX invY invZ ident_expose_def Ix_def Iy_def Iz_def SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def max_str ilength_def) 
 
 lemma axiom_valid:"valid (get_axiom a)"
 proof (cases a)
@@ -2844,7 +2853,7 @@ next
         by(auto)
  
       then show "\<nu> \<in> fml_sem I (foldr (||) \<Delta> FF)"
-        using AIjeq SG_dec closeI_sub[of  j \<Delta>] iff_sem[of "\<nu>" I p q] j local.sublist_def
+        using AIjeq SG_dec closeI_sub[of  j \<Delta>] iff_sem[of "\<nu>" I p q] j sublist_def
         member_rec(1)[of q "closeI \<Delta> j"] sem snd_conv
         or_foldl_sem_conv[of \<nu> I "q # closeI \<Delta>  j"]
         or_foldl_sem[of "\<Delta>", where I=I and \<nu>=\<nu>]
@@ -2859,7 +2868,7 @@ next
           and_foldl_sem[OF \<Gamma>_sem]
           and_foldl_sem_conv
           closeI.simps
-          local.sublist_def
+          sublist_def
           member_rec(1)[of "p" "closeI \<Delta> j"]
           member_rec(1)[of "q" "\<Gamma>"]
           or_foldl_sem[of "\<Delta>"]
@@ -2875,7 +2884,7 @@ next
           "\<nu> \<in> fml_sem I ff \<and> List.member (p # closeI \<Delta> j) ff"
           using a1 by (metis (no_types) \<open>\<And>\<phi>. List.member \<Gamma> \<phi> \<Longrightarrow> \<nu> \<in> fml_sem I \<phi>\<close> \<open>\<And>y. List.member (q # \<Gamma>) y = (q = y \<or> List.member \<Gamma> y)\<close> \<open>\<nu> \<in> fml_sem I (foldr (&&) (q # \<Gamma>) TT) \<Longrightarrow> \<nu> \<in> fml_sem I (foldr (||) (p # closeI \<Delta> j) FF)\<close> \<open>\<nu> \<in> fml_sem I (foldr (||) (p # closeI \<Delta> j) FF) \<Longrightarrow> \<exists>\<phi>. \<nu> \<in> fml_sem I \<phi> \<and> List.member (p # closeI \<Delta> j) \<phi>\<close> and_foldl_sem_conv closeI.simps)
         then show ?thesis
-          using blub a2 by (metis (no_types) \<open>\<And>\<phi> \<nu> I. \<lbrakk>List.member \<Delta> \<phi>; \<nu> \<in> fml_sem I \<phi>\<rbrakk> \<Longrightarrow> \<nu> \<in> fml_sem I (foldr (||) \<Delta> FF)\<close> \<open>\<And>y. List.member (p # closeI \<Delta> j) y = (p = y \<or> List.member (closeI \<Delta> j) y)\<close> closeI.simps  local.sublist_def sem )
+          using blub a2 by (metis (no_types) \<open>\<And>\<phi> \<nu> I. \<lbrakk>List.member \<Delta> \<phi>; \<nu> \<in> fml_sem I \<phi>\<rbrakk> \<Longrightarrow> \<nu> \<in> fml_sem I (foldr (||) \<Delta> FF)\<close> \<open>\<And>y. List.member (p # closeI \<Delta> j) y = (p = y \<or> List.member (closeI \<Delta> j) y)\<close> closeI.simps  sublist_def sem )
       qed
       show "\<nu> \<in> fml_sem I (foldr (||) \<Delta> FF)"
         by (metis AIjeq SG_dec \<open>\<lbrakk>\<nu> \<in> fml_sem I q; \<nu> \<notin> fml_sem I (foldr (||) \<Delta> FF)\<rbrakk> \<Longrightarrow> False\<close> iff_sem j nth_member or_foldl_sem sem snd_eqD)
@@ -4611,8 +4620,8 @@ qed
   done
 (* DIGeqSchema*)
   subgoal for SG A S ODE T1 T2 using sound some apply auto
-    apply(cases "([], [(DPredl vid1 \<rightarrow> (Geq T1 T2 && [[EvolveODE ODE (DPredl vid1)]]Geq (Differential T1) (Differential T2))) \<rightarrow>
-              [[EvolveODE ODE (DPredl vid1)]]Geq T1 T2]) =
+    apply(cases "([], [(DPredl Ix \<rightarrow> (Geq T1 T2 && [[EvolveODE ODE (DPredl Ix)]]Geq (Differential T1) (Differential T2))) \<rightarrow>
+              [[EvolveODE ODE (DPredl Ix)]]Geq T1 T2]) =
         SG ! i \<and>
   osafe ODE \<and>
   dfree T1 \<and>
@@ -4631,13 +4640,13 @@ qed
     assume BVO1:"FVT T1 \<subseteq> Inl ` ODE_dom ODE"
     assume BVO2:"FVT T2 \<subseteq> Inl ` ODE_dom ODE"
     have ii:"i < length SG" using i PAS by auto
-    assume seq_eq:"([], [(DPredl vid1 \<rightarrow> (Geq T1 T2 && [[EvolveODE ODE (DPredl vid1)]]Geq (Differential T1) (Differential T2))) \<rightarrow>
-          [[EvolveODE ODE (DPredl vid1)]]Geq T1 T2]) = SG ! i"
+    assume seq_eq:"([], [(DPredl Ix \<rightarrow> (Geq T1 T2 && [[EvolveODE ODE (DPredl Ix)]]Geq (Differential T1) (Differential T2))) \<rightarrow>
+          [[EvolveODE ODE (DPredl Ix)]]Geq T1 T2]) = SG ! i"
     obtain \<Gamma> \<Delta> where SG_dec:"(\<Gamma>, \<Delta>) = SG ! i" 
       using prod.collapse by blast
     have fml_to_seq:"\<And>\<phi>. valid \<phi> \<Longrightarrow> seq_valid ([],[\<phi>])"
       by(auto simp add: seq_valid_def valid_def)
-    have val:"valid ((DPredl vid1 \<rightarrow> (Geq T1 T2 && [[EvolveODE ODE (DPredl vid1)]]Geq (Differential T1) (Differential T2))) \<rightarrow>
+    have val:"valid ((DPredl vid1 \<rightarrow> (Geq T1 T2 && [[EvolveODE ODE (DPredl Ix)]]Geq (Differential T1) (Differential T2))) \<rightarrow>
         [[EvolveODE ODE (DPredl vid1)]]Geq T1 T2)"
       using DIGeq_valid[OF osafe free1 free2 BVO1 BVO2] 
       unfolding DIGeqaxiom_def
@@ -4647,10 +4656,10 @@ qed
       using fml_to_seq[OF val] by auto
  show " sound (closeI SG i, A, S)" 
    using closeI_valid_sound[OF ii sound ] sval seq_eq by simp
-qed
+qed 
   subgoal for SG A S ODE T1 T2 using sound some apply auto
-    apply(cases "([], [(DPredl vid1 \<rightarrow> (Greater T1 T2 && [[EvolveODE ODE (DPredl vid1)]]Geq (Differential T1) (Differential T2))) \<rightarrow>
-              [[EvolveODE ODE (DPredl vid1)]]Greater T1 T2]) =
+    apply(cases "([], [(DPredl Ix \<rightarrow> (Greater T1 T2 && [[EvolveODE ODE (DPredl Ix)]]Geq (Differential T1) (Differential T2))) \<rightarrow>
+              [[EvolveODE ODE (DPredl Ix)]]Greater T1 T2]) =
         SG ! i \<and>
   osafe ODE \<and>
   dfree T1 \<and>
@@ -4669,8 +4678,8 @@ qed
     assume BVO1:"FVT T1 \<subseteq> Inl ` ODE_dom ODE"
     assume BVO2:"FVT T2 \<subseteq> Inl ` ODE_dom ODE"
     have ii:"i < length SG" using i PAS by auto
-    assume seq_eq:"([], [(DPredl vid1 \<rightarrow> (Greater T1 T2 && [[EvolveODE ODE (DPredl vid1)]]Geq (Differential T1) (Differential T2))) \<rightarrow>
-          [[EvolveODE ODE (DPredl vid1)]]Greater T1 T2]) = SG ! i"
+    assume seq_eq:"([], [(DPredl Ix \<rightarrow> (Greater T1 T2 && [[EvolveODE ODE (DPredl Ix)]]Geq (Differential T1) (Differential T2))) \<rightarrow>
+          [[EvolveODE ODE (DPredl Ix)]]Greater T1 T2]) = SG ! i"
     obtain \<Gamma> \<Delta> where SG_dec:"(\<Gamma>, \<Delta>) = SG ! i" 
       using prod.collapse by blast
     have fml_to_seq:"\<And>\<phi>. valid \<phi> \<Longrightarrow> seq_valid ([],[\<phi>])"
@@ -4687,8 +4696,8 @@ qed
     using closeI_valid_sound[OF ii sound ] sval seq_eq by simp
 qed
   subgoal for SG A S ODE T1 T2 using sound some apply auto
-    apply(cases "([], [(DPredl vid1 \<rightarrow> (Equals T1 T2 && [[EvolveODE ODE (DPredl vid1)]]Equals (Differential T1) (Differential T2))) \<rightarrow>
-              [[EvolveODE ODE (DPredl vid1)]]Equals T1 T2]) =
+    apply(cases "([], [(DPredl Ix \<rightarrow> (Equals T1 T2 && [[EvolveODE ODE (DPredl Ix)]]Equals (Differential T1) (Differential T2))) \<rightarrow>
+              [[EvolveODE ODE (DPredl Ix)]]Equals T1 T2]) =
         SG ! i \<and>
   osafe ODE \<and>
   dfree T1 \<and>
@@ -4707,19 +4716,19 @@ qed
     assume BVO1:"FVT T1 \<subseteq> Inl ` ODE_dom ODE"
     assume BVO2:"FVT T2 \<subseteq> Inl ` ODE_dom ODE"
     have ii:"i < length SG" using i PAS by auto
-    assume seq_eq:"([], [(DPredl vid1 \<rightarrow> (Equals T1 T2 && [[EvolveODE ODE (DPredl vid1)]]Equals (Differential T1) (Differential T2))) \<rightarrow>
-          [[EvolveODE ODE (DPredl vid1)]]Equals T1 T2]) = SG ! i"
+    assume seq_eq:"([], [(DPredl Ix \<rightarrow> (Equals T1 T2 && [[EvolveODE ODE (DPredl Ix)]]Equals (Differential T1) (Differential T2))) \<rightarrow>
+          [[EvolveODE ODE (DPredl Ix)]]Equals T1 T2]) = SG ! i"
     obtain \<Gamma> \<Delta> where SG_dec:"(\<Gamma>, \<Delta>) = SG ! i" 
       using prod.collapse by blast
     have fml_to_seq:"\<And>\<phi>. valid \<phi> \<Longrightarrow> seq_valid ([],[\<phi>])"
       by(auto simp add: seq_valid_def valid_def)
-    have val:"valid ((DPredl vid1 \<rightarrow> (Equals T1 T2 && [[EvolveODE ODE (DPredl vid1)]]Equals (Differential T1) (Differential T2))) \<rightarrow>
-        [[EvolveODE ODE (DPredl vid1)]]Equals T1 T2)"
+    have val:"valid ((DPredl vid1 \<rightarrow> (Equals T1 T2 && [[EvolveODE ODE (DPredl Ix)]]Equals (Differential T1) (Differential T2))) \<rightarrow>
+        [[EvolveODE ODE (DPredl Ix)]]Equals T1 T2)"
       using DIEq_valid[OF osafe free1 free2 BVO1 BVO2] 
       unfolding DIEqaxiom_def
       by auto
-    then have sval:"seq_valid ([],[(DPredl vid1 \<rightarrow> (Equals T1 T2 && [[EvolveODE ODE (DPredl vid1)]]Equals (Differential T1) (Differential T2))) \<rightarrow>
-        [[EvolveODE ODE (DPredl vid1)]]Equals T1 T2])"
+    then have sval:"seq_valid ([],[(DPredl Ix \<rightarrow> (Equals T1 T2 && [[EvolveODE ODE (DPredl Ix)]]Equals (Differential T1) (Differential T2))) \<rightarrow>
+        [[EvolveODE ODE (DPredl Ix)]]Equals T1 T2])"
       using fml_to_seq[OF val] by auto
  show " sound (closeI SG i, A, S)" 
     using closeI_valid_sound[OF ii sound ] sval seq_eq by simp
@@ -4818,11 +4827,11 @@ auto simp del: Rsubst.simps)
         apply(rule soundI)
       proof -
         fix I::"interp"
-        assume pasEq:"(P, A, S) = ([([], [Equals ($$F fid1) ($$F fid2)])], [], [$\<phi> vid3 (singleton ($$F fid1)) \<leftrightarrow> $\<phi> vid3 (singleton ($$F fid2))])"
+        assume pasEq:"(P, A, S) = ([([], [Equals ($$F Ix) ($$F Iy)])], [], [$\<phi> Iz (singleton ($$F Ix)) \<leftrightarrow> $\<phi> Iz (singleton ($$F Iy))])"
         assume "(\<And>a aa b. P = a \<and> A = aa \<and> S = b \<Longrightarrow> sound (a, aa, b))"
-        then have soundPAS:"sound ([([], [Equals ($$F fid1) ($$F fid2)])], 
-                                     [], [$\<phi> vid3 (singleton ($$F fid1)) 
-                                       \<leftrightarrow> $\<phi> vid3 (singleton ($$F fid2))])" 
+        then have soundPAS:"sound ([([], [Equals ($$F Ix) ($$F Iy)])], 
+                                     [], [$\<phi> Iz (singleton ($$F Ix)) 
+                                       \<leftrightarrow> $\<phi> Iz (singleton ($$F Iy))])" 
           using pasEq by auto
         have apply_rule:"\<And>I \<nu>. is_interp I \<Longrightarrow>
           (\<nu> \<in> seq_sem I ([], [Equals ($$F fid1) ($$F fid2)])) \<Longrightarrow>
@@ -4830,55 +4839,55 @@ auto simp del: Rsubst.simps)
         proof (auto simp add: TT_def Implies_def soundPAS sound_def)
           fix I::"interp" and a b
           assume good:"is_interp I"
-          assume predl:"Predicates I vid3 (\<chi> i. dterm_sem I (if i = vid1 then $$F fid1 else Const (bword_zero)) (a, b))"
-            assume funls:" (Funls I fid1 (a, b) = Funls I fid2 (a, b))"
-            have vec_eq:"(\<chi> i. dterm_sem I (if i = vid1 then $$F fid1 else Const (bword_zero)) (a, b)) = (\<chi> i. dterm_sem I (if i = vid1 then $$F fid2 else Const (bword_zero)) (a, b))"
+          assume predl:"Predicates I Iz (\<chi> i. dterm_sem I (if i = Ix then $$F Ix else Const (bword_zero)) (a, b))"
+            assume funls:" (Funls I Ix (a, b) = Funls I Iy (a, b))"
+            have vec_eq:"(\<chi> i. dterm_sem I (if i = Ix then $$F Ix else Const (bword_zero)) (a, b)) = (\<chi> i. dterm_sem I (if i = Ix then $$F Iy else Const (bword_zero)) (a, b))"
               apply(rule vec_extensionality)
               by(auto simp add: funls)
-            show " Predicates I vid3 (\<chi> i. dterm_sem I (if i = vid1 then $$F fid2 else Const (bword_zero)) (a, b))"  
+            show " Predicates I Iz (\<chi> i. dterm_sem I (if i = Ix then $$F Iy else Const (bword_zero)) (a, b))"  
               using soundPAS unfolding sound_def apply (auto simp add: TT_def Implies_def)
               apply(erule allE[where x=I])
               using predl funls good vec_eq by auto
           next
           fix I::"interp" and a b
           assume good:"is_interp I"
-          assume predl:"Predicates I vid3 (\<chi> i. dterm_sem I (if i = vid1 then $$F fid2 else Const (bword_zero)) (a, b))"
-          assume funls:" Funls I fid1 (a, b) = Funls I fid2 (a, b)"
-          have vec_eq:"(\<chi> i. dterm_sem I (if i = vid1 then $$F fid2 else Const (bword_zero)) (a, b)) = (\<chi> i. dterm_sem I (if i = vid1 then $$F fid1 else Const (bword_zero)) (a, b))"
+          assume predl:"Predicates I Iz (\<chi> i. dterm_sem I (if i = Ix then $$F Iy else Const (bword_zero)) (a, b))"
+          assume funls:" Funls I Ix (a, b) = Funls I Iy (a, b)"
+          have vec_eq:"(\<chi> i. dterm_sem I (if i = Ix then $$F Iy else Const (bword_zero)) (a, b)) = (\<chi> i. dterm_sem I (if i = Ix then $$F Ix else Const (bword_zero)) (a, b))"
             apply(rule vec_extensionality)
             by(auto simp add: funls)
-          show " Predicates I vid3 (\<chi> i. dterm_sem I (if i = vid1 then $$F fid1 else Const (bword_zero)) (a, b))"  
+          show " Predicates I Iz (\<chi> i. dterm_sem I (if i = Ix then $$F Ix else Const (bword_zero)) (a, b))"  
               using soundPAS unfolding sound_def apply (auto simp add: TT_def Implies_def)
               apply(erule allE[where x=I])
               using predl vec_eq by auto
           qed
-        assume "rule = (map (\<lambda>\<phi>. Ssubst \<phi> \<sigma>) [([], [Equals ($$F fid1) ($$F fid2)])],
-                 Ssubst ([], [$\<phi> vid3 (singleton ($$F fid1)) \<leftrightarrow> $\<phi> vid3 (singleton ($$F fid2))]) \<sigma>)"
+        assume "rule = (map (\<lambda>\<phi>. Ssubst \<phi> \<sigma>) [([], [Equals ($$F Ix) ($$F Iy)])],
+                 Ssubst ([], [$\<phi> Iz (singleton ($$F Ix)) \<leftrightarrow> $\<phi> Iz (singleton ($$F Iy))]) \<sigma>)"
         assume ssafe:"ssafe \<sigma>"
         then have frees:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
           subgoal for i f'
           apply (auto simp add: ssafe_def) apply(erule allE[where x=i]) by(auto) done
-        assume Radmit:"Radmit \<sigma> ([([], [Equals ($$F fid1) ($$F fid2)])], [], [$\<phi> vid3 (singleton ($$F fid1)) \<leftrightarrow> $\<phi> vid3 (singleton ($$F fid2))])"
+        assume Radmit:"Radmit \<sigma> ([([], [Equals ($$F Ix) ($$F Iy)])], [], [$\<phi> Iz (singleton ($$F Ix)) \<leftrightarrow> $\<phi> Iz (singleton ($$F Iy))])"
         assume Rsafe:"\<forall>i<length P. (\<forall>ia<length (fst (P ! i)). fsafe (fst (P ! i) ! ia)) \<and> (\<forall>ia<length (snd (P ! i)). fsafe (snd (P ! i) ! ia))"
        "  \<forall>i<length A. fsafe (A ! i) "
          "\<forall>i<length S. fsafe (S ! i)"
         then have RRsafe:"Rsafe (P,A,S)" by auto
            
         assume good_interp:" is_interp I"
-        have Fad:"Fadmit \<sigma> (Equals ($$F fid1) ($$F fid2))" 
+        have Fad:"Fadmit \<sigma> (Equals ($$F Ix) ($$F Iy))" 
           using Radmit 
           by(auto simp add: Equals_def Radmit_def Sadmit_def)
-        have fsafe:"fsafe (Equals ($$F fid1) ($$F fid2)) " 
-          by(auto simp add: Equals_def)
+        have fsafe:"fsafe (Equals ($$F Ix) ($$F Iy)) " 
+          by(auto simp add: Equals_def Ix_def Iy_def max_str ilength_def FSENT_def SSENT_def FSENTINEL_def SSENTINEL_def invX invY ident_expose_def)
         assume mems:"(\<And>i. 0 \<le> i \<Longrightarrow>
-               i < length (map (\<lambda>\<phi>. Ssubst \<phi> \<sigma>) [([], [Equals ($$F fid1) ($$F fid2)])]) \<Longrightarrow>
-               seq_sem I (nth (map (\<lambda>\<phi>. Ssubst \<phi> \<sigma>) [([], [Equals ($$F fid1) ($$F fid2)])])  i) = UNIV)"
-        then have "seq_sem I (Ssubst([], [Equals ($$F fid1) ($$F fid2)]) \<sigma>) = UNIV" by (auto)
-        then have "fml_sem I (Fsubst(Equals ($$F fid1) ($$F fid2)) \<sigma>) = UNIV" by (auto)
-        then have "\<And>\<nu>. \<nu> \<in> fml_sem I (Fsubst(Equals ($$F fid1) ($$F fid2)) \<sigma>)" by (auto)
-        then have "\<And>\<nu>. \<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) (Equals ($$F fid1) ($$F fid2)) "
-          using subst_fml[OF good_interp,where \<phi>="(Equals ($$F fid1) ($$F fid2))", where \<sigma>=\<sigma>, OF Fad fsafe ssafe] by auto
-        then have Feq_adj:"\<And>\<nu>. \<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) ([], [Equals ($$F fid1) ($$F fid2)])"  by (auto)
+               i < length (map (\<lambda>\<phi>. Ssubst \<phi> \<sigma>) [([], [Equals ($$F Ix) ($$F Iy)])]) \<Longrightarrow>
+               seq_sem I (nth (map (\<lambda>\<phi>. Ssubst \<phi> \<sigma>) [([], [Equals ($$F Ix) ($$F Iy)])])  i) = UNIV)"
+        then have "seq_sem I (Ssubst([], [Equals ($$F Ix) ($$F Iy)]) \<sigma>) = UNIV" by (auto)
+        then have "fml_sem I (Fsubst(Equals ($$F Ix) ($$F Iy)) \<sigma>) = UNIV" by (auto)
+        then have "\<And>\<nu>. \<nu> \<in> fml_sem I (Fsubst(Equals ($$F Ix) ($$F Iy)) \<sigma>)" by (auto)
+        then have "\<And>\<nu>. \<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) (Equals ($$F Ix) ($$F Iy)) "
+          using subst_fml[OF good_interp,where \<phi>="(Equals ($$F Ix) ($$F Iy))", where \<sigma>=\<sigma>, OF Fad fsafe ssafe] by auto
+        then have Feq_adj:"\<And>\<nu>. \<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) ([], [Equals ($$F Ix) ($$F Iy)])"  by (auto)
         have safes:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
                    "(\<And>i x ODE. SODEs \<sigma> i (NB x) = Some ODE \<Longrightarrow> Inl x \<notin> BVO ODE)"
           using ssafe unfolding ssafe_def  apply auto
@@ -4894,7 +4903,7 @@ auto simp del: Rsubst.simps)
             apply(cases " SODEs \<sigma> i (NB x)")
             subgoal by auto
             subgoal by (metis option.case(2) ssafe ssafe_def) done done
-        have ruleres:"\<And>\<nu>. \<nu> \<in> seq_sem (local.adjoint I \<sigma> \<nu>) ([], [$\<phi> vid3 (singleton ($$F fid1)) \<leftrightarrow> $\<phi> vid3 (singleton ($$F fid2))])"
+        have ruleres:"\<And>\<nu>. \<nu> \<in> seq_sem (adjoint I \<sigma> \<nu>) ([], [$\<phi> vid3 (singleton ($$F fid1)) \<leftrightarrow> $\<phi> vid3 (singleton ($$F fid2))])"
           subgoal for \<nu>
             apply(rule apply_rule[of "adjoint I \<sigma> \<nu>" \<nu>])
              apply(rule adjoint_safe)
@@ -4903,12 +4912,13 @@ auto simp del: Rsubst.simps)
             subgoal for i x ODE using safes by auto     
             using Feq_adj by auto
           done
-        have Sad:"Sadmit \<sigma> ([], [$\<phi> vid3 (singleton ($$F fid1)) \<leftrightarrow> $\<phi> vid3 (singleton ($$F fid2))])" 
+        have Sad:"Sadmit \<sigma> ([], [$\<phi> Iz (singleton ($$F Ix)) \<leftrightarrow> $\<phi> Iz (singleton ($$F Iy))])" 
           using Radmit by(auto simp add: Radmit_def)
-          have Ssafe:"Ssafe ([], [$\<phi> vid3 (singleton ($$F fid1)) \<leftrightarrow> $\<phi> vid3 (singleton ($$F fid2))])" 
-            using Rsafe by (auto simp add: Ssafe_def Rsafe_def expand_singleton Equiv_def Or_def )
+          have Ssafe:"Ssafe ([], [$\<phi> Iz (singleton ($$F Ix)) \<leftrightarrow> $\<phi> Iz (singleton ($$F Iy))])" 
+            using Rsafe apply (auto simp add: Ssafe_def Rsafe_def expand_singleton Equiv_def Or_def)
+          by(auto simp add: Equals_def Ix_def Iy_def Iz_def max_str ilength_def FSENT_def SSENT_def FSENTINEL_def SSENTINEL_def invX invY invZ ident_expose_def)
           have ssafe:"ssafe \<sigma>" by (rule ssafe)
-        show "seq_sem I (Ssubst ([], [$\<phi> vid3 (singleton ($$F fid1)) \<leftrightarrow> $\<phi> vid3 (singleton ($$F fid2))]) \<sigma>) = UNIV" 
+        show "seq_sem I (Ssubst ([], [$\<phi> Iz (singleton ($$F Ix)) \<leftrightarrow> $\<phi> Iz (singleton ($$F Iy))]) \<sigma>) = UNIV" 
         using subst_sequent[OF good_interp Sad Ssafe ssafe] ruleres  by auto
       qed
       done
@@ -5629,5 +5639,5 @@ lemma DIAnd_result_correct:"proof_result (proof_take 61 DIAndProof) = DIAnd"
 theorem DIAnd_sound: "sound DIAnd"
   using DIAndSound_lemma DIAnd_result_correct by auto
 *)
-end end
+end
  

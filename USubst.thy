@@ -56,7 +56,7 @@ inductive TadmitFFO :: "(ident \<Rightarrow> trm) \<Rightarrow> trm \<Rightarrow
 where 
   TadmitFFO_Diff:"TadmitFFO \<sigma> \<theta> \<Longrightarrow> NTUadmit \<sigma> \<theta> UNIV \<Longrightarrow> TadmitFFO \<sigma> (Differential \<theta>)"
 | TadmitFFO_Fun1:"(\<forall>i. TadmitFFO \<sigma> (args i)) \<Longrightarrow> is_base f \<Longrightarrow> TadmitFFO \<sigma> (Function f args)"
-| TadmitFFO_Fun2:"(\<forall>i. TadmitFFO \<sigma> (args i)) \<Longrightarrow> \<not>is_base f \<Longrightarrow> dfree (\<sigma> (rebase f)) \<Longrightarrow> TadmitFFO \<sigma> (Function f args)"
+| TadmitFFO_Fun2:"(\<forall>i. TadmitFFO \<sigma> (args i)) \<Longrightarrow> nonbase f \<Longrightarrow> dfree (\<sigma> (rebase f)) \<Longrightarrow> TadmitFFO \<sigma> (Function f args)"
 | TadmitFFO_Plus:"TadmitFFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFFO \<sigma> \<theta>2 \<Longrightarrow> TadmitFFO \<sigma> (Plus \<theta>1 \<theta>2)"
 | TadmitFFO_Times:"TadmitFFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFFO \<sigma> \<theta>2 \<Longrightarrow> TadmitFFO \<sigma> (Times \<theta>1 \<theta>2)"
 | TadmitFFO_Max:"TadmitFFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFFO \<sigma> \<theta>2 \<Longrightarrow> TadmitFFO \<sigma> (Max \<theta>1 \<theta>2)"
@@ -86,11 +86,11 @@ where
 | TFO_DiffVar:"TsubstFO (DiffVar v) \<sigma> = DiffVar v"
 | TFO_Const:"TsubstFO (Const r) \<sigma> = Const r"  
 (* TODO: So weird to replicate between function vs. funl case but might actually work*)
-| TFO_Funl:"TsubstFO ($$F f) \<sigma> = (case args_to_id f of Inl ff \<Rightarrow> ($$F ff) | Inr ff \<Rightarrow> \<sigma> ff)"
+| TFO_Funl:"TsubstFO ($$F f) \<sigma> = (case args_to_id f of Some (Inl ff) \<Rightarrow> ($$F f) | Some (Inr ff) \<Rightarrow> \<sigma> ff)"
 | TFO_Funl_rep:"TsubstFO (Function f args) \<sigma> =
     (case args_to_id f of 
-      Inl f' \<Rightarrow> Function f' (\<lambda> i. TsubstFO (args i) \<sigma>) 
-    | Inr f' \<Rightarrow> \<sigma> f')"  
+      Some (Inl f') \<Rightarrow> Function f (\<lambda> i. TsubstFO (args i) \<sigma>) 
+    | Some (Inr f') \<Rightarrow> \<sigma> f')"  
 | TFO_Neg:"TsubstFO (Neg \<theta>1) \<sigma> = Neg (TsubstFO \<theta>1 \<sigma>)"  
 | TFO_Plus:"TsubstFO (Plus \<theta>1 \<theta>2) \<sigma> = Plus (TsubstFO \<theta>1 \<sigma>) (TsubstFO \<theta>2 \<sigma>)"  
 | TFO_Times:"TsubstFO (Times \<theta>1 \<theta>2) \<sigma> = Times (TsubstFO \<theta>1 \<sigma>) (TsubstFO \<theta>2 \<sigma>)"  
@@ -198,7 +198,7 @@ where
 | "PFsubst (And \<phi> \<psi>) \<sigma> = And (PFsubst \<phi> \<sigma>) (PFsubst \<psi> \<sigma>)"
 | "PFsubst (Exists x \<phi>) \<sigma> = Exists x (PFsubst \<phi> \<sigma>)"
 | "PFsubst (Diamond \<alpha> \<phi>) \<sigma> = Diamond (PPsubst \<alpha> \<sigma>) (PFsubst \<phi> \<sigma>)"
-| "PFsubst (InContext C \<phi>) \<sigma> = (case args_to_id C of Inl C' \<Rightarrow> InContext C' (PFsubst \<phi> \<sigma>) | Inr p' \<Rightarrow> \<sigma> p')"
+| "PFsubst (InContext C \<phi>) \<sigma> = (case args_to_id C of Some (Inl C') \<Rightarrow> InContext C' (PFsubst \<phi> \<sigma>) | Some (Inr p') \<Rightarrow> \<sigma> p')"
 
   
 fun Psubst::"hp \<Rightarrow> subst \<Rightarrow> hp"
@@ -473,8 +473,8 @@ inductive_simps
     
 fun extendf :: "interp \<Rightarrow>  Rvec \<Rightarrow> interp"
 where "extendf I R =
-\<lparr>Functions = (\<lambda>f. case args_to_id f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> (\<lambda>_. R $ f')),
- Funls = (\<lambda>f. case args_to_id f of Inl f' \<Rightarrow> Funls I f' | Inr f' \<Rightarrow> (\<lambda>_. R $ f')),
+\<lparr>Functions = (\<lambda>f. case args_to_id f of Some (Inl f') \<Rightarrow> Functions I f' | Some (Inr f') \<Rightarrow> (\<lambda>_. R $ f') | None \<Rightarrow> Functions I f),
+ Funls = (\<lambda>f. case args_to_id f of Some (Inl f') \<Rightarrow> Funls I f' | Some (Inr f') \<Rightarrow> (\<lambda>_. R $ f')  | None \<Rightarrow> Funls I f),
  Predicates = Predicates I,
  Contexts = Contexts I,
  Programs = Programs I,
@@ -487,7 +487,7 @@ where "extendc I R =
 \<lparr>Functions =  Functions I,
  Funls = Funls I,
  Predicates = Predicates I,
- Contexts = (\<lambda>C. case args_to_id C of Inl C' \<Rightarrow> Contexts I C' | Inr _ \<Rightarrow> (\<lambda>_.  R)),
+ Contexts = (\<lambda>C. case args_to_id C of Some (Inl C') \<Rightarrow> Contexts I C' | Some (Inr _) \<Rightarrow> (\<lambda>_.  R) | None \<Rightarrow> Contexts I C),
  Programs = Programs I,
  ODEs = ODEs I,
  ODEBV = ODEBV I\<rparr>"
@@ -508,8 +508,8 @@ lemma dsem_to_ssem:"dfree \<theta> \<Longrightarrow> dterm_sem I \<theta> \<nu> 
 
 definition adjointFO::"interp \<Rightarrow> (ident \<Rightarrow> trm) \<Rightarrow> state \<Rightarrow> interp" 
 where "adjointFO I \<sigma> \<nu> =
-\<lparr>Functions =   (\<lambda>f. case args_to_id f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> (\<lambda>_. dterm_sem I (\<sigma> f') \<nu>)),
- Funls =  (\<lambda>f. case args_to_id f of Inl f' \<Rightarrow> Funls I f' | Inr f' \<Rightarrow> (\<lambda>_. dterm_sem I (\<sigma> f') \<nu>)),
+\<lparr>Functions =   (\<lambda>f. case args_to_id f of Some (Inl f') \<Rightarrow> Functions I f | Some (Inr f') \<Rightarrow> (\<lambda>_. dterm_sem I (\<sigma> f') \<nu>) | None \<Rightarrow> Functions I f),
+ Funls =  (\<lambda>f. case args_to_id f of Some (Inl f') \<Rightarrow> Funls I f | Some (Inr f') \<Rightarrow> (\<lambda>_. dterm_sem I (\<sigma> f') \<nu>) | None \<Rightarrow> Funls I f),
  Predicates = Predicates I,
  Contexts = Contexts I,
  Programs = Programs I,
@@ -535,8 +535,8 @@ lemma adjoint_free:
   using sfree[of x ]  sledgehammer*)
 
 lemma adjointFO_free:"(\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (adjointFO I \<sigma> \<nu> =
-\<lparr>Functions =   (\<lambda>f. case args_to_id f of Inl f' \<Rightarrow> Functions I f' | Inr f' \<Rightarrow> (\<lambda>_. sterm_sem I (\<sigma> f') (fst \<nu>))),
- Funls =   (\<lambda>f. case args_to_id f of Inl f' \<Rightarrow> Funls I f' | Inr f' \<Rightarrow> (\<lambda>_. sterm_sem I (\<sigma> f') (fst \<nu>))),
+\<lparr>Functions =   (\<lambda>f. case args_to_id f of Some (Inl f') \<Rightarrow> Functions I f | Some (Inr f') \<Rightarrow> (\<lambda>_. sterm_sem I (\<sigma> f') (fst \<nu>)) | None \<Rightarrow> Functions I f),
+ Funls =   (\<lambda>f. case args_to_id f of Some (Inl f') \<Rightarrow> Funls I f | Some (Inr f') \<Rightarrow> (\<lambda>_. sterm_sem I (\<sigma> f') (fst \<nu>)) | None \<Rightarrow> Funls I f),
  Predicates = Predicates I,
  Contexts = Contexts I,
  Programs = Programs I,
@@ -550,7 +550,7 @@ where "PFadjoint I \<sigma> =
 \<lparr>Functions =  Functions I,
  Funls =  Funls I,
  Predicates = Predicates I,
- Contexts = (\<lambda>f. case args_to_id f of Inl f' \<Rightarrow> Contexts I f' | Inr f' \<Rightarrow> (\<lambda>_. fml_sem I (\<sigma> f'))),
+ Contexts = (\<lambda>f. case args_to_id f of Some (Inl f') \<Rightarrow> Contexts I f' | Some (Inr f') \<Rightarrow> (\<lambda>_. fml_sem I (\<sigma> f')) | None \<Rightarrow> Contexts I f),
  Programs = Programs I,
  ODEs = ODEs I,
  ODEBV = ODEBV I\<rparr>"

@@ -215,16 +215,19 @@ qed
 
 theorem DiffEffectSys_valid:"valid DiffEffectSysAxiom"
 proof (unfold DiffEffectSysAxiom_def, simp)
-  have dsafe:"dsafe ($f Ix (singleton (trm.Var Ix)))" unfolding singleton_def Ix_def Iy_def Iz_def Iw_def 
-    apply(auto intro: dsafe.intros)
-    sorry
-  have osafe:"osafe(OSing Ix (f1 Ix Ix))" unfolding f1_def empty_def singleton_def Ix_def Iy_def Iz_def Iw_def using dsafe osafe.intros dsafe.intros
-    apply (simp add: osafe_Sing dfree_Const) 
-    sorry
-  have fsafe:"fsafe (p1 Iy Ix)" unfolding p1_def singleton_def Ix_def Iy_def Iz_def Iw_def using hpsafe_fsafe.intros(10)
-    using dsafe dsafe_Fun_simps image_iff
-    by (simp add: dfree_Const)
-     have solves_ode_cong:"\<And> SOL ODE1 ODE2 T X1 X2.
+  have invX:"Rep_ident (Abs_ident ''$x'') = ''$x''"
+    apply(rule Abs_ident_inverse)
+    by(auto simp add: max_str)
+  have invY:"Rep_ident (Abs_ident ''$y'') = ''$y''"
+    apply(rule Abs_ident_inverse)
+    by(auto simp add: max_str)
+  have dsafe:"dsafe ($f Ix (singleton (trm.Var Ix)))" 
+    by(auto simp add: f1_def p1_def Ix_def ident_expose_def Abs_ident_inverse invX SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def max_str ilength_def)
+  have osafe:"osafe(OSing Ix (f1 Ix Ix))"
+    by(auto simp add: f1_def p1_def Ix_def ident_expose_def Abs_ident_inverse invX SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def max_str ilength_def)
+  have fsafe:"fsafe (p1 Iy Ix)" 
+    by(auto simp add: p1_def Iy_def ident_expose_def Abs_ident_inverse invY SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def) 
+  have solves_ode_cong:"\<And> SOL ODE1 ODE2 T X1 X2.
      ODE1 = ODE2 \<Longrightarrow> X1 = X2 \<Longrightarrow> (SOL solves_ode ODE1) T X1 \<Longrightarrow> (SOL solves_ode ODE2) T X2"
        by(auto)
      have comm_sem:"\<And>I. (\<lambda>_. ODE_sem I (OProd (OVar Ix (Some Ix)) (OSing Ix (DFunl Ix)))) 
@@ -396,7 +399,7 @@ proof (unfold DiffEffectSysAxiom_def, simp)
                             (repd (mk_v I (OProd (OVar Ix (Some Ix)) (OSing Ix (DFunl Ix))) (ab, bb) (sol t)) Ix
         (dterm_sem I (DFunl Ix) (mk_v I (OProd (OVar Ix (Some Ix)) (OSing Ix (DFunl Ix))) (ab, bb) (sol t))) \<in> fml_sem I (Pc Ix))"
        apply(rule coincidence_formula)
-       subgoal by simp
+       subgoal using dsafe by auto
        apply(rule good)
        apply(rule good)
        subgoal by (rule Iagree_refl)
@@ -565,7 +568,8 @@ proof (unfold DiffEffectSysAxiom_def, simp)
                    (mk_v I (OProd  (OSing Ix (DFunl Ix))(OVar Ix (Some Ix))) (ab, bb) (sol t)))  \<in> fml_sem I (Pc Ix)
          = (repd ?my\<omega> Ix (dterm_sem I (DFunl Ix) ?my\<omega>) \<in> fml_sem I (Pc Ix))"
         apply(rule coincidence_formula)
-          subgoal by simp apply(rule good_interp) apply(rule good_interp)
+        subgoal using dsafe by auto
+          apply(rule good_interp) apply(rule good_interp)
           subgoal by (rule Iagree_refl)
        using mk_v_agree[of "I" "(OProd  (OSing Ix (DFunl Ix))(OVar Ix (Some Ix)))" "(ab, bb)" "(sol t)"]
        unfolding Vagree_def 
@@ -581,7 +585,7 @@ proof (unfold DiffEffectSysAxiom_def, simp)
                             (repd (mk_v I (OProd (OVar Ix (Some Ix)) (OSing Ix (DFunl Ix))) (ab, bb) (sol t)) Ix
         (dterm_sem I (DFunl Ix) (mk_v I (OProd (OVar Ix (Some Ix)) (OSing Ix (DFunl Ix))) (ab, bb) (sol t))) \<in> fml_sem I (Pc Ix))"
        apply(rule coincidence_formula)
-       subgoal by simp
+       subgoal using dsafe by simp
        apply(rule good)
        apply(rule good)
        subgoal by (rule Iagree_refl)
@@ -863,12 +867,15 @@ qed
 
 lemma DE_valid:"valid DEaxiom"
 proof -
-  have dsafe:"dsafe ($f Ix (singleton (Syntax.Var Ix)))" unfolding singleton_def apply(auto intro: dsafe.intros) sorry
-  have osafe:"osafe(OSing Ix (f1 Ix Ix))" unfolding f1_def empty_def singleton_def using dsafe osafe.intros dsafe.intros
-    by (simp add: osafe_Sing dfree_Const) 
-  have fsafe:"fsafe (p1 Iy Ix)" unfolding p1_def singleton_def using hpsafe_fsafe.intros(10)
-    using dsafe dsafe_Fun_simps image_iff
-    by (simp add: dfree_Const)
+  have invX:"Rep_ident (Abs_ident ''$x'') = ''$x''"
+    apply(rule Abs_ident_inverse)
+    by(auto simp add: max_str)
+  have invY:"Rep_ident (Abs_ident ''$y'') = ''$y''"
+    apply(rule Abs_ident_inverse)
+    by(auto simp add: max_str)
+  have dsafe:"dsafe ($f Ix (singleton (Syntax.Var Ix)))" by(auto simp add: f1_def p1_def Ix_def ident_expose_def Abs_ident_inverse invX SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def max_str ilength_def)
+  have osafe:"osafe(OSing Ix (f1 Ix Ix))" by(auto simp add: f1_def p1_def Ix_def ident_expose_def Abs_ident_inverse invX SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def max_str ilength_def)
+  have fsafe:"fsafe (p1 Iy Ix)" by(auto simp add: Iy_def f1_def p1_def Ix_def ident_expose_def Abs_ident_inverse invX SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def max_str ilength_def)
   show "valid DEaxiom"
     apply(auto simp only: DEaxiom_def valid_def Let_def iff_sem impl_sem)
      apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq box_sem)
@@ -941,12 +948,15 @@ lemma DE_sys_valid:
  ([[EvolveODE ((oprod  (OSing Ix (f1 Ix Ix))ODE)) (p1 Iy Ix)]]
     [[DiffAssign Ix (f1 Ix Ix)]]P Ix))"
 proof -
-  have dsafe:"dsafe ($f Ix (singleton (trm.Var Ix)))" unfolding singleton_def apply(auto intro: dsafe.intros) sorry
-  have osafe:"osafe(OSing Ix (f1 Ix Ix))" unfolding f1_def empty_def singleton_def using dsafe osafe.intros dsafe.intros
-    by (simp add: osafe_Sing dfree_Const) 
-  have fsafe:"fsafe (p1 Iy Ix)" unfolding p1_def singleton_def using hpsafe_fsafe.intros(10)
-    using dsafe dsafe_Fun_simps image_iff
-    by (simp add: dfree_Const)
+  have invX:"Rep_ident (Abs_ident ''$x'') = ''$x''"
+    apply(rule Abs_ident_inverse)
+    by(auto simp add: max_str)
+  have invY:"Rep_ident (Abs_ident ''$y'') = ''$y''"
+    apply(rule Abs_ident_inverse)
+    by(auto simp add: max_str) 
+  have dsafe:"dsafe ($f Ix (singleton (trm.Var Ix)))" by(auto simp add: Iy_def f1_def p1_def Ix_def ident_expose_def Abs_ident_inverse invX SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def max_str ilength_def)
+  have osafe:"osafe(OSing Ix (f1 Ix Ix))" by(auto simp add: Iy_def f1_def p1_def Ix_def ident_expose_def Abs_ident_inverse invX SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def max_str ilength_def)
+  have fsafe:"fsafe (p1 Iy Ix)" by(auto simp add: Iy_def f1_def p1_def Ix_def ident_expose_def Abs_ident_inverse invX SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def max_str ilength_def)
   show "valid (([[EvolveODE (oprod (OSing Ix (f1 Ix Ix)) ODE) (p1 Iy Ix)]] (P Ix)) \<leftrightarrow>
  ([[EvolveODE ((oprod (OSing Ix (f1 Ix Ix)) ODE)) (p1 Iy Ix)]]
     [[DiffAssign Ix (f1 Ix Ix)]]P Ix))"
@@ -1013,7 +1023,8 @@ proof -
      (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))
        (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t)))) \<in> fml_sem I (Pc Ix))"
        apply(rule coincidence_formula)
-         subgoal by simp apply(rule good) apply(rule good)
+       subgoal using dsafe by auto 
+        apply(rule good) apply(rule good)
         subgoal by (rule Iagree_refl)
        using mk_v_agree[of "I" "(oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE)" "(ab, bb)" "(sol t)"]
        unfolding Vagree_def 
@@ -1070,7 +1081,7 @@ proof -
                    (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t)))  \<in> fml_sem I (Pc Ix)
          = (repd ?my\<omega> Ix (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) ?my\<omega>) \<in> fml_sem I (Pc Ix))"
         apply(rule coincidence_formula)
-          subgoal by simp apply(rule good_interp) apply (rule good_interp)
+          subgoal using dsafe by simp apply(rule good_interp) apply (rule good_interp)
          subgoal by (rule Iagree_refl)
         by(simp add: Vagree_def)
       have notin1:"Inl Ix \<notin> BVO ODE" using disj by auto
@@ -1089,7 +1100,7 @@ proof -
         "(repd ?my\<omega> Ix (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) ?my\<omega>) \<in> fml_sem I (Pc Ix)) 
      = (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t) \<in> fml_sem I (Pc Ix)) "
         apply(rule coincidence_formula)
-          subgoal by simp apply(rule good_interp) apply(rule good_interp)
+          subgoal using dsafe by simp apply(rule good_interp) apply(rule good_interp)
          subgoal by (rule Iagree_refl)
         using mk_v_agree[of I "(OProd  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE)" "(ab, bb)" "(sol t)"]
         unfolding Vagree_def apply simp
@@ -1220,16 +1231,18 @@ qed
 
 lemma DS_valid:"valid DSaxiom"
 proof -
-  have dsafe:"dsafe($f Ix (\<lambda>i. Const (bword_zero)))"
-    using dsafe_Const apply auto sorry
-  have osafe:"osafe(OSing Ix (f0 Ix))"
-    unfolding f0_def empty_def
-    using dsafe osafe.intros
-    by (simp add: osafe_Sing dfree_Const)
-  have fsafe:"fsafe(p1 Iy Ix)"
-    unfolding p1_def
-    apply(rule fsafe_Prop)
-    using singleton.simps dsafe_Const by (auto intro: dfree.intros)
+  have invX:"Rep_ident (Abs_ident ''$x'') = ''$x''"
+    apply(rule Abs_ident_inverse)
+    by(auto simp add: max_str)
+  have invY:"Rep_ident (Abs_ident ''$y'') = ''$y''"
+    apply(rule Abs_ident_inverse)
+    by(auto simp add: max_str) 
+  have invZ:"Rep_ident (Abs_ident ''$z'') = ''$z''"
+    apply(rule Abs_ident_inverse)
+    by(auto simp add: max_str) 
+  have dsafe:"dsafe($f Ix (\<lambda>i. Const (bword_zero)))"  by(auto simp add: p1_def Ix_def f1_def invX Iy_def ident_expose_def Abs_ident_inverse invY SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def ilength_def max_str)
+  have osafe:"osafe(OSing Ix (f0 Ix))" by(auto simp add: f0_def p1_def Ix_def f1_def invX Iy_def ident_expose_def Abs_ident_inverse invY SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def ilength_def max_str empty_def)
+  have fsafe:"fsafe(p1 Iy Ix)" by(auto simp add: f0_def p1_def Ix_def f1_def invX Iy_def ident_expose_def Abs_ident_inverse invY SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def ilength_def max_str empty_def)
   show "valid DSaxiom"
     apply(auto simp only: DSaxiom_def valid_def Let_def iff_sem impl_sem box_sem)
      apply(auto simp only: fml_sem.simps prog_sem.simps mem_Collect_eq  iff_sem impl_sem box_sem forall_sem)
@@ -1349,9 +1362,10 @@ proof -
     using req1 leq req3 req4 thisW by fastforce
   have sem_eq:"?abba \<in> fml_sem I (p1 Iz Ix) \<longleftrightarrow> (aa,ba) \<in> fml_sem I (p1 Iz Ix)"
     apply (rule coincidence_formula)
-      apply (auto simp add: aaba Vagree_def p1_def f0_def empty_def) apply(rule good_interp) apply(rule good_interp)
+    subgoal by (auto simp add: aaba Vagree_def p1_def f0_def empty_def Iz_def ident_expose_def invZ SSENT_def SSENTINEL_def) 
+    apply(rule good_interp) apply(rule good_interp)
     subgoal using Iagree_refl by auto
-    done
+    by(auto simp add: aaba Vagree_def p1_def)
   from inPred sem_eq have  inPred':"(aa,ba) \<in> fml_sem I (p1 Iz Ix)"
     by auto
   (* thus by lemma 6 consequence for formulas *)
@@ -1825,7 +1839,16 @@ lemma DIGeq_valid:
       and sol:"(sol solves_ode (\<lambda>a b. ODE_sem I ODE b)) {0..t}
       {x. mk_v I (ODE) (sol 0, b) x \<in> fml_sem I (DPredl Ix)}"
       and notin:" (sol 0, b) \<notin> fml_sem I (DPredl Ix)"
-    have fsafe:"fsafe (DPredl Ix)" by (auto simp add: empty_def DPredl_def)
+  have invX:"Rep_ident (Abs_ident ''$x'') = ''$x''"
+    apply(rule Abs_ident_inverse)
+    by(auto simp add: max_str)
+  have invY:"Rep_ident (Abs_ident ''$y'') = ''$y''"
+    apply(rule Abs_ident_inverse)
+    by(auto simp add: max_str) 
+  have invZ:"Rep_ident (Abs_ident ''$z'') = ''$z''"
+    apply(rule Abs_ident_inverse)
+    by(auto simp add: max_str) 
+  have fsafe:"fsafe (DPredl Ix)" by(auto simp add: DPredl_def p1_def Ix_def f1_def invX Iy_def ident_expose_def Abs_ident_inverse invY SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def ilength_def max_str)
     have VA:"Vagree (sol 0, b) (mk_v I (ODE) (sol 0, b) (sol 0)) (FVF (DPredl Ix))" 
       using mk_v_agree[of I "?ODE" "(sol 0, b)" "sol 0"] unfolding Vagree_def DPredl_def apply auto 
        by metis
@@ -2013,7 +2036,10 @@ lemma DIGr_valid:
       and sol:"(sol solves_ode (\<lambda>a b. ODE_sem I ODE b)) {0..t}
       {x. mk_v I (ODE) (sol 0, b) x \<in> fml_sem I (DPredl Ix)}"
       and notin:" (sol 0, b) \<notin> fml_sem I (DPredl Ix)"
-    have fsafe:"fsafe (DPredl Ix)" by (auto simp add: empty_def DPredl_def)
+    have invX:"Rep_ident (Abs_ident ''$x'') = ''$x''"
+      apply(rule Abs_ident_inverse)
+      by(auto simp add: max_str)
+    have fsafe:"fsafe (DPredl Ix)" by(auto simp add: DPredl_def p1_def Ix_def f1_def invX Iy_def ident_expose_def Abs_ident_inverse  SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def ilength_def max_str)
     have VA:"Vagree (sol 0, b) (mk_v I (ODE) (sol 0, b) (sol 0)) (FVF (DPredl Ix))" 
       using mk_v_agree[of I "?ODE" "(sol 0, b)" "sol 0"] unfolding Vagree_def DPredl_def apply auto 
        by metis

@@ -131,13 +131,13 @@ else if n > 0 then
     concat (map (\<lambda> c. map (\<lambda>s. ident_cons c  s) r) ab))
 else Nil)"
 
-lift_definition Ix::ident is "''x''::string"   apply(auto simp add: max_str)
+lift_definition Ix::ident is "''$x''::string"   apply(auto simp add: max_str)
   done
-lift_definition Iy::ident is "''y''::string"apply(auto simp add: max_str)
+lift_definition Iy::ident is "''$y''::string"apply(auto simp add: max_str)
   done
-lift_definition Iz::ident is "''z''::string"apply(auto simp add: max_str)
+lift_definition Iz::ident is "''$z''::string"apply(auto simp add: max_str)
   done
-lift_definition Iw::ident is "''w''::string"apply(auto simp add: max_str)
+lift_definition Iw::ident is "''$w''::string"apply(auto simp add: max_str)
   done
 
 definition [simp]:"fid1 =  Ix"
@@ -209,18 +209,18 @@ definition "FSENT = hd FSENTINEL"
 definition "CSENT = hd CSENTINEL"
 definition "SSENT = hd SSENTINEL"
 
-fun args_to_id::"ident \<Rightarrow> (ident + ident)"
+fun args_to_id::"ident \<Rightarrow> (ident + ident) option"
   where "args_to_id z = 
       (case (ident_expose z) of 
-       Inl _ \<Rightarrow> undefined
-     | Inr (x,xs) \<Rightarrow> (if x = FSENT then Inr xs else if x = SSENT then Inl xs else undefined))"
+       Inl _ \<Rightarrow> None
+     | Inr (x,xs) \<Rightarrow> (if x = FSENT then Some (Inr xs) else if x = SSENT then Some (Inl xs) else None))"
 
-fun arg_to_id::"ident \<Rightarrow> (ident + unit)"
+(*fun arg_to_id::"ident \<Rightarrow> (ident + unit) option"
   where "arg_to_id  z = 
       (case (ident_expose z) of 
-       Inl _ \<Rightarrow> undefined
-     | Inr (x,xs) \<Rightarrow> (if x = CSENT then Inr () else if x = SSENT then Inl xs else undefined))"
-
+       Inl _ \<Rightarrow> None
+     | Inr (x,xs) \<Rightarrow> (if x = CSENT then Some (Inr ()) else if x = SSENT then Some (Inl xs) else None))"
+*)
 fun debase :: "ident \<Rightarrow> ident"
   where "debase f = ident_cons FSENT f"
 fun rebase :: "ident \<Rightarrow> ident"
@@ -236,4 +236,145 @@ lift_definition ilength::"ident \<Rightarrow> nat" is length done
 lemma nonbase_nonemp:"(nonbase x) \<Longrightarrow> x \<noteq> ident_empty" 
   apply(auto simp add: FSENT_def SSENT_def ident_empty_def)
   by (metis (mono_tags, lifting) id_apply ident_empty.rep_eq ident_empty_def ident_expose_def map_fun_apply map_sum.simps(1) old.sum.simps(5) old.unit.case string_expose.simps(1))
+
+lemma nonbase_debase:
+  assumes spacious:"MAX_STR > ilength a"
+  shows "nonbase (debase a)"
+  using spacious 
+  by(auto simp add: ident_cons_def Rep_ident_inverse ilength_def ident_expose_def Abs_ident_inverse) 
+
+lemma nonbase_some:
+  assumes nb:"nonbase x"
+  obtains inj where "args_to_id x = Some inj"
+  using nb apply auto
+  apply(cases "ident_expose x")
+  apply (simp add: case_unit_Unity)+
+  by fastforce
+
+lemma arg_lengthR:
+  assumes ai:"args_to_id x = Some(Inr y)"
+  shows "ilength y + 1 = ilength x"
+  using ai apply(auto)
+  apply(cases "ident_expose x")
+   apply(auto)
+  subgoal for a b
+    apply(cases "a = FSENT")
+     apply(auto simp add: ilength_def ident_expose_def)
+     apply(cases "string_expose (Rep_ident x)")
+      apply(auto)
+    apply (metis (no_types, lifting) Inl_Inr_False Inr_inject Rep_ident eq_onp_same_args ilength.abs_eq ilength.rep_eq impossible_Cons le_cases le_trans length_Suc_conv mem_Collect_eq snd_conv string_expose.elims)
+    apply(cases "a = SSENT")
+    by(auto simp add: ilength_def ident_expose_def)
+  done
+
+lemma arg_lengthL:
+  assumes ai:"args_to_id x = Some(Inl y)"
+  shows "ilength y + 1 = ilength x"
+  using ai apply(auto)
+  apply(cases "ident_expose x")
+   apply(auto)
+  subgoal for a b
+    apply(cases "a = FSENT")
+     apply(auto simp add: ilength_def ident_expose_def)
+     apply(cases "string_expose (Rep_ident x)")
+      apply(auto)
+    apply(cases "a = SSENT")
+    apply(auto simp add: FSENT_def SSENT_def FSENTINEL_def SSENTINEL_def)
+    using Inl_Inr_False Inl_inject Rep_ident eq_onp_same_args ilength.abs_eq ilength.rep_eq impossible_Cons le_cases le_trans length_Suc_conv mem_Collect_eq snd_conv string_expose.elims
+    by (metis Inr_inject)
+  done
+lemma arg_debaseR:
+(*  assumes nb:"nonbase a"
+  assumes nbb:"nonbase x"*)
+  assumes spacious:"MAX_STR > ilength a"
+  assumes ai:"args_to_id x = Some (Inr a)"
+  shows "x = debase a"
+proof -
+  show ?thesis
+  proof (cases "ident_expose x")
+    case (Inl c) then have xc:" ident_expose x = Inl c" by auto
+    then show ?thesis  apply (auto)
+    proof (cases "ident_expose a")
+      case (Inl d)
+      then show "x = ident_cons FSENT a"
+        apply(auto simp add: ident_expose_def ident_cons_def)
+        using Inl_Inr_False Rep_ident_inverse ident_empty.abs_eq map_sum.simps(2) nonbase_nonemp 
+              string_expose.elims ilength.rep_eq spacious apply auto
+        using ai xc by auto
+    next
+      case (Inr e) then have xe:" ident_expose a = Inr e" by auto
+      have contra:"ident_expose x = Inl () \<Longrightarrow> False"
+         unfolding nonbase.simps
+        using case_unit_Unity ai by auto
+      from xe show "x = ident_cons FSENT a" 
+        using xc apply(auto)
+        using contra by auto
+    qed
+  next
+    case (Inr b)
+    then obtain c cs where cs:"ident_expose x = Inr(c,cs)"
+      apply auto
+      unfolding ident_expose_def
+      using old.prod.exhaust by blast
+    have hd:"c = FSENT"
+      using ai apply(simp)
+      using cs apply(simp)
+      apply(cases "c = FSENT") apply(auto)
+      apply(cases "c = SSENT") by(auto)
+    then show ?thesis
+    proof (cases "ident_expose (debase a)")
+      case (Inl e) then have xe:" ident_expose (debase a) = Inl e" by auto
+       note nbb = nonbase_debase[of a, OF spacious]
+      have contra:"\<And>x. ident_expose (debase a) = Inl x \<Longrightarrow> False"
+        using nbb unfolding nonbase.simps
+        by (simp add: case_unit_Unity)
+      show "?thesis" 
+        using contra[OF xe] by auto
+    next
+      case (Inr e) then have xe:" ident_expose (debase a) = Inr e" by auto
+      then obtain d ds where ds:"ident_expose (debase a) = Inr(d,ds)"
+        apply auto
+        using old.prod.exhaust by blast
+      from spacious
+      have fact:"MAX_STR > length (Rep_ident a)"
+        unfolding ilength_def by auto
+      have ied:"ident_expose (debase a) = Inr (FSENT, cs)"
+        using cs  fact ai
+        apply(auto simp add: fact ident_expose_def ident_cons_def Rep_ident_inverse[of a] Abs_ident_inverse fact)
+       using fact apply linarith+
+       by (simp add: hd)
+        have cd:"cs = ds" 
+          using ied cs ds by auto
+      have "Rep_ident x = FSENT # Rep_ident ds"
+        using cs apply(auto simp add: Rep_ident_inverse Abs_ident_inverse cs)
+        unfolding ident_expose_def ident_cons_def
+        using cs ds
+        apply(auto simp add: ident_expose_def ident_cons_def Rep_ident_inverse)
+        apply(cases "MAX_STR \<le> length (Rep_ident a)")
+        using fact cs apply(auto simp add: Rep_ident_inverse Abs_ident_inverse cs )
+        apply(cases "string_expose (Rep_ident x)")
+        using cs apply(auto simp add: Rep_ident_inverse Abs_ident_inverse cs )
+          apply(cases "Rep_ident x")
+         apply(auto simp add: hd)
+        subgoal for bb
+        using Rep_ident_inverse[of ds] Abs_ident_inverse[of bb]  cd fact apply auto
+        by (metis Rep_ident impossible_Cons le_cases le_trans mem_Collect_eq)
+      done
+      then show "x = debase a"
+        using cs apply(auto simp add: Rep_ident_inverse Abs_ident_inverse cs)
+        unfolding ident_expose_def ident_cons_def
+        using cs ds
+        apply(auto simp add: ident_expose_def ident_cons_def Rep_ident_inverse)
+        subgoal using fact by auto
+        using cs apply(auto simp add: Rep_ident_inverse Abs_ident_inverse cs )
+        apply(cases "string_expose (Rep_ident x)")
+        using cs apply(auto simp add: Rep_ident_inverse Abs_ident_inverse cs )
+          apply(cases "Rep_ident x")
+         apply(auto)
+        using Rep_ident_inverse Abs_ident_inverse
+        by metis
+    qed
+  qed
+qed
+
 end

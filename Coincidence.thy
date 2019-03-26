@@ -1430,7 +1430,7 @@ next
   qed
   show "?case" using almost unfolding coincide_fml_def by blast
 next
-  case (fsafe_Prop args p)
+  case (fsafe_Prop p args)
     then have safes:"\<And>arg. arg \<in> range args \<Longrightarrow> dsafe arg" using dfree_is_dsafe by auto
     have almost:"\<And>\<nu> \<nu>'. \<And> I J::interp. Iagree I J (SIGF (Prop p args)) \<Longrightarrow> Vagree \<nu> \<nu>' (FVF (Prop p args)) \<Longrightarrow> (\<nu> \<in> fml_sem I (Prop p args)) = (\<nu>' \<in> fml_sem J (Prop p args))" 
     proof -
@@ -1606,7 +1606,7 @@ next
   qed
   then show "?case" unfolding coincide_fml_def by blast
 next
-  case (fsafe_InContext \<phi>) then 
+  case (fsafe_InContext C \<phi>) then 
   have safe:"fsafe \<phi>"
     and IH:"(\<forall> \<nu> \<nu>' I J. is_interp I \<longrightarrow> is_interp J \<longrightarrow> Iagree I J (SIGF \<phi>) \<longrightarrow> Vagree \<nu> \<nu>' (FVF \<phi>) \<longrightarrow> \<nu> \<in> fml_sem I \<phi> \<longleftrightarrow> \<nu>' \<in> fml_sem J \<phi>)"
     by (unfold coincide_fml_def)

@@ -155,9 +155,9 @@ definition Radj :: "ident \<Rightarrow> ident \<Rightarrow> state \<Rightarrow> 
 where "Radj x y \<nu> = (RSadj x y (fst \<nu>), RSadj x y (snd \<nu>))" 
 
 lemma SUren: "dfree \<theta> \<Longrightarrow> sterm_sem I (TUrename x y \<theta>) \<nu> = sterm_sem I \<theta> (RSadj x y \<nu>)"
-  apply (induction \<theta>, auto simp add: RSadj_def)
-  using dfree.cases
-  by blast
+  by (induction \<theta>, auto simp add: RSadj_def)
+(*  using dfree.cases
+  by blast*)
    
 lemma ren_preserves_dfree:"dfree \<theta> \<Longrightarrow> dfree (TUrename x y \<theta>)"
   by(induction rule: dfree.induct, auto intro: dfree.intros)

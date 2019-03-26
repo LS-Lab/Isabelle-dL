@@ -117,7 +117,7 @@ fun FunctionFrechet :: "interp \<Rightarrow> ident \<Rightarrow> Rvec \<Rightarr
 (* For an interpretation to be valid, all functions must be differentiable everywhere.*)
 definition is_interp :: "interp \<Rightarrow> bool"
   where "is_interp I \<equiv>
-   (\<forall>x. \<forall>i. ((FDERIV (Functions I i) x :> (FunctionFrechet I i x)) \<and> continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I i x))))
+   (\<forall>x. \<forall>i.  ((FDERIV (Functions I i) x :> (FunctionFrechet I i x)) \<and> continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I i x))))
 \<and>  (\<forall> ode. \<forall> x. ODEBV I ode (NB x) \<subseteq> -{x})"
 
 lemma is_interpD:"is_interp I \<Longrightarrow> \<forall>x. \<forall>i. (FDERIV (Functions I i) x :> (FunctionFrechet I i x))"

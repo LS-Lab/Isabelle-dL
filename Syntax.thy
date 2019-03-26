@@ -269,20 +269,22 @@ inductive dfree :: "trm \<Rightarrow> bool"
 where
   dfree_Var: "dfree (Var i)"
 | dfree_Const: "dfree (Const r)"
-| dfree_Fun: "nonbase i \<Longrightarrow> nonbase (debase i) \<Longrightarrow> ilength i < MAX_STR \<Longrightarrow> (\<forall>i. dfree (args i)) \<Longrightarrow> dfree (Function i args)"
+| dfree_Fun: "nonbase f \<Longrightarrow> (*nonbase (debase i) \<Longrightarrow> *)ilength f < MAX_STR \<Longrightarrow> (\<forall>j. dfree (args j)) \<Longrightarrow> dfree (Function f args)"
 | dfree_Plus: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dfree_Neg: "dfree \<theta> \<Longrightarrow> dfree (Neg \<theta>)"
 | dfree_Times: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
 (* regular functionals are not dfree because they can depend on differential state, that's what dfunctionals are for *)
 (*| dfree_DFunctional: "dfree ($$F' fid)"*)
+
+inductive_simps dfree_Functional_simps[simp]: "dfree (Functional F)"
   
 inductive dsafe :: "trm \<Rightarrow> bool"
 where
   dsafe_Var: "dsafe (Var i)"
 | dsafe_Const: "dsafe (Const r)"
-| dsafe_Fun: " nonbase i \<Longrightarrow> nonbase (debase i) \<Longrightarrow> ilength i < MAX_STR \<Longrightarrow> (\<forall>i. dsafe (args i)) \<Longrightarrow> dsafe (Function i args)"
+| dsafe_Fun: "nonbase f \<Longrightarrow> ilength f < MAX_STR \<Longrightarrow> (\<forall>j. dsafe (args j)) \<Longrightarrow> dsafe (Function f args)"(*nonbase (debase i) \<Longrightarrow> *) 
 (* | dsafe_DFunl: "dsafe ($$F' i)" *)
-| dsafe_Funl: "dsafe ($$F i)"
+| dsafe_Funl: "nonbase i \<Longrightarrow> ilength i < MAX_STR \<Longrightarrow> dsafe ($$F i)"
 | dsafe_Neg: "dsafe \<theta> \<Longrightarrow> dsafe (Neg \<theta>)"
 | dsafe_Plus: "dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dsafe_Times: "dsafe \<theta>\<^sub>1 \<Longrightarrow> dsafe \<theta>\<^sub>2 \<Longrightarrow> dsafe (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
@@ -332,8 +334,6 @@ proof -
     apply(induction ODE1 arbitrary:ODE2)
        apply(auto)
     by (metis (no_types, lifting) ODE.distinct ODE.inject ODE_dom.simps ODE_dom_assoc Un_empty inf_sup_distrib1 inf_sup_distrib2 osafe.cases osafe_Prod)
-
-(*    by (metis (no_types, lifting) ODE.distinct(3) ODE.distinct(5) ODE.inject(3) ODE_dom.simps(3) ODE_dom_assoc Un_empty inf_sup_distrib1 inf_sup_distrib2 osafe.cases osafe_Prod)*)
   have rl:"osafe (oprod ODE1 ODE2) \<Longrightarrow> osafe (OProd ODE1 ODE2)"
     apply(induction ODE1 arbitrary:ODE2)
       apply(auto)
@@ -380,12 +380,12 @@ where
  | hpsafe_Loop:"hpsafe a \<Longrightarrow> hpsafe (Loop a)"
 
  | fsafe_Geq:"dsafe t1 \<Longrightarrow> dsafe t2 \<Longrightarrow> fsafe (Geq t1 t2)"
- | fsafe_Prop:"(\<forall>i. dsafe (args i)) \<Longrightarrow> fsafe (Prop p args)"
+ | fsafe_Prop:"nonbase p \<Longrightarrow> (\<forall>i. dsafe (args i)) \<Longrightarrow> fsafe (Prop p args)"
  | fsafe_Not:"fsafe p \<Longrightarrow> fsafe (Not p)"
  | fsafe_And:"fsafe p \<Longrightarrow> fsafe q \<Longrightarrow> fsafe (And p q)"
  | fsafe_Exists:"fsafe p \<Longrightarrow> fsafe (Exists x p)"
  | fsafe_Diamond:"hpsafe a \<Longrightarrow> fsafe p \<Longrightarrow> fsafe (Diamond a p)"
- | fsafe_InContext:"fsafe f \<Longrightarrow> fsafe (InContext C f)"
+ | fsafe_InContext:"nonbase C \<Longrightarrow> ilength C < MAX_STR \<Longrightarrow> fsafe f \<Longrightarrow> fsafe (InContext C f)"
 
 inductive hpexec:: "hp \<Rightarrow> bool"
   and     fexec::  "formula \<Rightarrow> bool"

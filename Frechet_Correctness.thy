@@ -319,14 +319,13 @@ next
   then show ?case by (metis cont)
 next
   case (dfree_Fun f args) then have nbf:"nonbase f"
-    and nbdf:"nonbase (debase f)"
     and ilf:"ilength f < MAX_STR"
     and IHs:"\<forall>i. dfree (args i) \<and> continuous_on UNIV (blin_frechet (good_interp I) (simple_term (args i)))" by auto
   assume trueIH:"\<forall>i. dfree (args i) \<and> continuous_on UNIV (blin_frechet (good_interp I) (simple_term (args i)))"
   from trueIH have IH:"\<And>i.  continuous_on UNIV (blin_frechet (good_interp I) (simple_term (args i)))" by auto
   from trueIH have frees:"(\<And>i. dfree (args i))" by auto
   then have free:"dfree ($f f args)"
-    using dfree.dfree_Fun ilf nbdf nbf by blast
+    using dfree.dfree_Fun ilf  nbf by blast
   have great_interp:"\<And>f. continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I f x))" using good_interp unfolding is_interp_def by auto
   have cont1:"\<And>v. continuous_on UNIV (\<lambda>v'. (\<chi> i. frechet I (args i) v v'))"
     apply(rule continuous_on_vec_lambda)
