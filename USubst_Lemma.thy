@@ -415,10 +415,6 @@ lemma extendf_deriv:
   assumes good_interp:"is_interp I"
   shows "\<exists>f''. \<forall>x. ((\<lambda>R. dterm_sem (extendf I R) f' \<nu>) has_derivative (extendf_deriv I i_f f' \<nu> x)) (at x)"
   using free proof (induction rule: dfree.induct)
-(*next
-  case (dfree_Const r)
-  then show ?case sorry
-next*)
   case (dfree_Fun f args) then have
     nb:"nonbase f"
     and l:"ilength f < MAX_STR"
@@ -1481,107 +1477,141 @@ qed
 lemma uadmit_dterm_ntadjoint':
   assumes dfree:"\<And>i. dsafe (\<sigma> i)"
   assumes good_interp:"is_interp I"
-  shows  "\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta> \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta> = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>"
+  shows  "\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta> \<or> Debase i \<in> SIGT \<theta>}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta> \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta> = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>"
 proof (induct "\<theta>")
   case (Plus \<theta>1 \<theta>2 \<nu> \<omega>)
-  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>1 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>1"
-  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>2 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>2"
-  assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT (Plus \<theta>1 \<theta>2)}. FVT (\<sigma> i))"
-  then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
-    and VA2:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i))"
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1 \<or> Debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>1 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>1"
+  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2 \<or> Debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>2 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>2"
+  assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT (Plus \<theta>1 \<theta>2) \<or> Debase i \<in> SIGT (Plus \<theta>1 \<theta>2)}. FVT (\<sigma> i))"
+  then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1 \<or> Debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
+    and VA2:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2 \<or> Debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i))"
     unfolding Vagree_def by auto
   assume safe:"dsafe (Plus \<theta>1 \<theta>2)"
   show ?case 
     using IH1[OF VA1] IH2[OF VA2] safe by auto
 next
   case (Times \<theta>1 \<theta>2 \<nu> \<omega>)
-  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>1 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>1"
-  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>2 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>2"
-  assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT (Times \<theta>1 \<theta>2)}. FVT (\<sigma> i))"
-  then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
-    and VA2:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i))"
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1 \<or> Debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>1 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>1"
+  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2 \<or> Debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>2 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>2"
+  assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT (Times \<theta>1 \<theta>2) \<or> Debase i \<in> SIGT (Times \<theta>1 \<theta>2)}. FVT (\<sigma> i))"
+  then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1 \<or> Debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
+    and VA2:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2 \<or> Debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i))"
     unfolding Vagree_def by auto
   assume safe:"dsafe (Times \<theta>1 \<theta>2)"
   show ?case 
     using IH1[OF VA1] IH2[OF VA2] safe by auto
 next
   case (Max \<theta>1 \<theta>2 \<nu> \<omega>)
-  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>1 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>1"
-  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>2 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>2"
-  assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT (Max \<theta>1 \<theta>2)}. FVT (\<sigma> i))"
-  then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
-    and VA2:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i))"
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1 \<or> Debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>1 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>1"
+  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2 \<or> Debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>2 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>2"
+  assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT (Max \<theta>1 \<theta>2) \<or> Debase i \<in> SIGT (Max \<theta>1 \<theta>2)}. FVT (\<sigma> i))"
+  then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1 \<or> Debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
+    and VA2:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2 \<or> Debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i))"
     unfolding Vagree_def by auto
   assume safe:"dsafe (Max \<theta>1 \<theta>2)"
   show ?case 
     using IH1[OF VA1] IH2[OF VA2] safe by auto
 next
   case (Min \<theta>1 \<theta>2 \<nu> \<omega>)
-  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>1 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>1"
-  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>2 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>2"
-  assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT (Min \<theta>1 \<theta>2)}. FVT (\<sigma> i))"
-  then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
-    and VA2:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i))"
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1 \<or> Debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>1 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>1"
+  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2 \<or> Debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>2 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>2"
+  assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT (Min \<theta>1 \<theta>2) \<or> Debase i \<in> SIGT (Min \<theta>1 \<theta>2)}. FVT (\<sigma> i))"
+  then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1 \<or> Debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
+    and VA2:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2 \<or> Debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i))"
     unfolding Vagree_def by auto
   assume safe:"dsafe (Min \<theta>1 \<theta>2)"
   show ?case 
     using IH1[OF VA1] IH2[OF VA2] safe by auto
 next
   case (Div \<theta>1 \<theta>2 \<nu> \<omega>)
-  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>1 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>1"
-  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>2 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>2"
-  assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT (Div \<theta>1 \<theta>2)}. FVT (\<sigma> i))"
-  then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
-    and VA2:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i))"
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1 \<or> Debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>1 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>1"
+  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2 \<or> Debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>2 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>2 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>2"
+  assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT (Div \<theta>1 \<theta>2) \<or> Debase i \<in> SIGT (Div \<theta>1 \<theta>2)}. FVT (\<sigma> i))"
+  then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1 \<or> Debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
+    and VA2:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>2 \<or> Debase i \<in> SIGT \<theta>2}. FVT (\<sigma> i))"
     unfolding Vagree_def by auto
   assume safe:"dsafe (Div \<theta>1 \<theta>2)"
   show ?case 
     using IH1[OF VA1] IH2[OF VA2] safe by auto
 next
   case (Abs \<theta>1 \<nu> \<omega>)
-  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>1 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>1"
-  assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT (Abs \<theta>1)}. FVT (\<sigma> i))"
-  then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1 \<or> Debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta>1 \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta>1 = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>1"
+  assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT (Abs \<theta>1) \<or> Debase i \<in> SIGT (Abs \<theta>1)}. FVT (\<sigma> i))"
+  then have VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>1 \<or> Debase i \<in> SIGT \<theta>1}. FVT (\<sigma> i))"
     unfolding Vagree_def by auto
   assume safe:"dsafe (Abs \<theta>1)"
   show ?case 
     using IH1[OF VA1] safe by auto
 next
   case (Functional F)
-    assume safe:"dsafe ($$F F)"
-    assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT ($$F F)}. FVT (\<sigma> i))"
-    show ?case
-      apply(auto simp add: adjointFO_def, cases "args_to_id F", auto simp add: fun_eq_iff)
-      subgoal for a aa b apply(cases "a") apply auto
-    proof -
-      fix b 
-      assume "(case ident_expose F of Inl x \<Rightarrow> Map.empty x
-          | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None) =
-         Some (Inr b)"
-      then have feq:"args_to_id F = Some (Inr b)" by auto
-      have VAsub:"Vagree \<nu> \<omega> (FVT (\<sigma> b))"
-        using feq VA unfolding Vagree_def sorry
-      show "dterm_sem I (\<sigma> b) \<nu> = dterm_sem I (\<sigma> b) \<omega>"
-        using VAsub by (simp add: coincidence_dterm dfree) 
-    qed done
+  assume safe:"dsafe ($$F F)"
+  then have nb:"nonbase F" 
+    and l:"ilength F < MAX_STR" by auto
+  then obtain inj where inj:"args_to_id F = Some inj" using nb nonbase_some by auto
+  assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT ($$F F) \<or> Debase i \<in> SIGT ($$F F)}. FVT (\<sigma> i))"
+  then have  VA1:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT ($$F F)}. FVT (\<sigma> i))" by(auto simp add: Vagree_def)
+  show ?case                                                              
+  proof (cases inj)                                            
+    case (Inl a) assume a:"inj = Inl a" then have cs:"args_to_id F = Some (Inl a)" using inj by auto
+    have lb:"ilength a < MAX_STR" using l \<open>args_to_id F = Some (Inl a)\<close> arg_lengthL by fastforce
+    have subset:"(FVT (\<sigma> a)) \<subseteq> (\<Union> i\<in>{i. debase i \<in> SIGT ($$F F) \<or> Debase i \<in> SIGT ($$F F)}. FVT (\<sigma> i))"
+      apply(auto simp add: ident_cons_def)
+      subgoal for v
+        apply(rule exI[where x=a])
+        apply(rule conjI)
+         using lb unfolding ilength_def apply(auto simp add: Rep_ident_inverse[of a])
+         by (metis Debase.simps  Rep_ident_inverse  \<open>args_to_id F = Some (Inl a)\<close> arg_debaseL  ident_cons.rep_eq lb not_less string_cons.elims) 
+       done        
+     have VAsub:"Vagree \<nu> \<omega> (FVT (\<sigma> a))"
+       using VA subset 
+       by (simp add: Vagree_def subset_eq)   
+    then show ?thesis using cs by (auto simp add: adjointFO_def)
+  next                                   
+    case (Inr b) assume b:"inj = Inr b" then have cs:"args_to_id F = Some (Inr b)" using inj by auto
+    have lb:"ilength b < MAX_STR" using l \<open>args_to_id F = Some (Inr b)\<close> arg_lengthR by fastforce
+    have subset:"(FVT (\<sigma> b)) \<subseteq> (\<Union> i\<in>{i. debase i \<in> SIGT ($$F F) \<or> Debase i \<in> SIGT ($$F F)}. FVT (\<sigma> i))"
+      apply(auto simp add: ident_cons_def)
+      subgoal for v
+        apply(rule exI[where x=b])
+        apply(rule conjI)
+         using lb unfolding ilength_def apply(auto simp add: Rep_ident_inverse[of b])
+         by (metis Rep_ident_inverse \<open>args_to_id F = Some (Inr b)\<close> arg_debaseR debase.elims ident_cons.rep_eq lb not_less string_cons.elims)
+       done        
+     have VAsub:"Vagree \<nu> \<omega> (FVT (\<sigma> b))"
+       using VA subset 
+       by (simp add: Vagree_def subset_eq)   
+     show "dterm_sem (adjointFO I \<sigma> \<nu>) ($$F F) = dterm_sem (adjointFO I \<sigma> \<omega>) ($$F F)"
+       using cs apply(auto simp add: adjointFO_def simp del: args_to_id.simps)
+       using VAsub coincidence_dterm dfree by blast
+   qed
 next
   case (Function x1a x2a)
-    assume IH:"\<And>x. \<And>\<nu> \<omega>. x \<in> range x2a \<Longrightarrow> Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT x}. FVT (\<sigma> i)) \<Longrightarrow>
+    assume IH:"\<And>x. \<And>\<nu> \<omega>. x \<in> range x2a \<Longrightarrow> Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT x \<or> Debase i \<in> SIGT x}. FVT (\<sigma> i)) \<Longrightarrow>
       dsafe x \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) x = dterm_sem (adjointFO I \<sigma> \<omega>) x"
     assume safe:"dsafe (Function x1a x2a)"
     from safe have safes:"\<And>j. dsafe (x2a j)" by auto
     from safe have nb:"nonbase x1a" by auto
-    from IH have IH':"\<And>j. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT (x2a j)}. FVT (\<sigma> i)) \<Longrightarrow>
+    from safe have l:"ilength x1a < MAX_STR" by auto
+    from IH have IH':"\<And>j. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT (x2a j) \<or> Debase i \<in> SIGT (x2a j)}. FVT (\<sigma> i)) \<Longrightarrow>
       dterm_sem (adjointFO I \<sigma> \<nu>) (x2a j) = dterm_sem (adjointFO I \<sigma> \<omega>) (x2a j)"
       using rangeI safes by auto
-    assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT ($f x1a x2a)}. FVT (\<sigma> i))"
-    from VA have VAs:"\<And>j. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT (x2a j)}. FVT (\<sigma> i))"
-      unfolding Vagree_def SIGT.simps using rangeI by blast
+    assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT ($f x1a x2a) \<or> Debase i \<in> SIGT ($f x1a x2a)}. FVT (\<sigma> i))"
+    from VA have VAs:"\<And>j. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT (x2a j)\<or> Debase i \<in> SIGT (x2a j)}. FVT (\<sigma> i))"
+      unfolding Vagree_def SIGT.simps using rangeI apply(auto) 
+      by blast+
     have SIGT:"x1a \<in> SIGT ($f x1a x2a)" by auto
-
-    have VAsub:"\<And>a. args_to_id x1a = Some (Inr a) \<Longrightarrow> (FVT (\<sigma> a)) \<subseteq> (\<Union> i\<in>{i. debase i \<in> SIGT ($f x1a x2a)}. FVT (\<sigma> i))"
-      using SIGT arg_debaseR  sorry
-    have VAf:"\<And>a. args_to_id x1a = Some (Inr a) \<Longrightarrow> Vagree \<nu> \<omega> (FVT (\<sigma> a))"
+    have VAsub:"\<And>a. args_to_id x1a = Some (Inr a) \<Longrightarrow> (FVT (\<sigma> a)) \<subseteq> (\<Union> i\<in>{i. debase i \<in> SIGT ($f x1a x2a) \<or> Debase i \<in> SIGT ($f x1a x2a)}. FVT (\<sigma> i))"
+    proof -
+      fix a assume cs:"args_to_id x1a = Some (Inr a)"
+      show"(FVT (\<sigma> a)) \<subseteq> (\<Union> i\<in>{i.  debase i \<in> SIGT ($f x1a x2a) \<or>  Debase i \<in> SIGT ($f x1a x2a)}. FVT (\<sigma> i))" 
+        apply (auto simp add: ident_cons_def)
+        subgoal for x
+          apply(rule exI[where x=a]) apply(rule conjI) using l apply(auto simp add: Rep_ident_inverse Abs_ident_inverse ilength_def)
+         using arg_lengthR[OF cs] l unfolding ilength_def apply(auto simp add: Rep_ident_inverse[of a]) 
+         using Rep_ident_inverse  arg_debaseR debase.elims ident_cons.rep_eq l not_less string_cons.elims 
+         by (metis Suc_lessD cs ilength.rep_eq) done
+   qed
+   have VAf:"\<And>a. args_to_id x1a = Some (Inr a) \<Longrightarrow> Vagree \<nu> \<omega> (FVT (\<sigma> a))"
       using agree_sub[OF VAsub VA] by auto
   then show ?case 
     using IH'[OF VAs] apply (auto simp add: fun_eq_iff)
@@ -1616,17 +1646,19 @@ next
   using  nonbase_some[OF nb] by fastforce
 next
   case (Differential \<theta>)
-  assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta> \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta> = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>"
-  assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT (Differential \<theta>)}. FVT (\<sigma> i))"
+  assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta> \<or> Debase i \<in> SIGT \<theta>}. FVT (\<sigma> i)) \<Longrightarrow> dsafe \<theta> \<Longrightarrow> dterm_sem (adjointFO I \<sigma> \<nu>) \<theta> = dterm_sem (adjointFO I \<sigma> \<omega>) \<theta>"
+  assume VA:"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT (Differential \<theta>) \<or> Debase i \<in> SIGT (Differential \<theta>)}. FVT (\<sigma> i))"
   assume safe:"dsafe (Differential \<theta>)"
   then have free:"dfree \<theta>" by (auto dest: dsafe.cases)
-  from VA have VA':"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase  i \<in> SIGT \<theta>}. FVT (\<sigma> i))"
+  from VA have VA':"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase  i \<in> SIGT \<theta> \<or> Debase i \<in> SIGT \<theta>}. FVT (\<sigma> i))"
     by auto
+  from VA have VA'':"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase  i \<in> SIGT (Differential \<theta>) }. FVT (\<sigma> i))"
+    by (auto simp add: Vagree_def)
   have dsafe:"\<And>i. dsafe (\<sigma> i)"
     using dfree dfree_is_dsafe by auto
   have sem:"sterm_sem (adjointFO I \<sigma> \<nu>) \<theta> = sterm_sem (adjointFO I \<sigma> \<omega>) \<theta>"
-    using uadmit_sterm_ntadjoint' safe dsafe free  VA'
-    using dfree_is_dsafe by blast
+    using uadmit_sterm_ntadjoint'[OF dsafe safe VA'']
+    using VA'' dfree_is_dsafe dsafe free uadmit_sterm_ntadjoint' by auto
   have good1:"is_interp (adjointFO I \<sigma> \<nu>)" using adjointFO_safe[OF good_interp dsafe, of "\<lambda>i. i"] by auto
   have good2:"is_interp (adjointFO I \<sigma> \<omega>)" using adjointFO_safe[OF good_interp dsafe, of "\<lambda>i. i"] by auto
   have frech:"frechet (adjointFO I \<sigma> \<nu>) \<theta> = frechet (adjointFO I \<sigma> \<omega>) \<theta>"
@@ -1650,13 +1682,14 @@ proof -
     by auto
   have duh:"\<And>A B. A \<inter> B = {} \<Longrightarrow> A \<subseteq> -B"
     by auto
-  have "\<And>x. x \<in> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>}. FVT (\<sigma> i)) \<Longrightarrow> x \<in> (-U)"
+  have "\<And>x. x \<in> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta> \<or> Debase i \<in> SIGT \<theta>}. FVT (\<sigma> i)) \<Longrightarrow> x \<in> (-U)"
     using TUA unfolding NTUadmit_def by auto
-  then have sub1:"(\<Union> i\<in>{i. debase i \<in> SIGT \<theta>}. FVT (\<sigma> i)) \<subseteq> -U"
+  then have sub1:"(\<Union> i\<in>{i. debase i \<in> SIGT \<theta> \<or> Debase i \<in> SIGT \<theta>}. FVT (\<sigma> i)) \<subseteq> -U"
     by auto
-  then have VA':"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta>}. FVT (\<sigma> i))"
+  then have VA':"Vagree \<nu> \<omega> (\<Union> i\<in>{i. debase i \<in> SIGT \<theta> \<or> Debase i \<in> SIGT \<theta>}. FVT (\<sigma> i))"
     using agree_sub[OF sub1 VA] by auto
-  then show "?thesis" using uadmit_dterm_ntadjoint'[OF dfree good_interp VA' dsafe] 
+  then show "?thesis" 
+    using uadmit_dterm_ntadjoint'[OF dfree good_interp VA' dsafe] 
     by auto
 qed
 
@@ -2490,19 +2523,19 @@ lemma uadmit_prog_fml_ntadjoint':
   fixes \<sigma> I
   assumes ssafe:"\<And>i. dsafe (\<sigma> i)"
   assumes good_interp:"is_interp I"
-  shows "\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>x\<in>{x. Inl (debase x) \<in> SIGP \<alpha>}. FVT (\<sigma> x)) \<Longrightarrow> hpsafe \<alpha> \<Longrightarrow> prog_sem (adjointFO I \<sigma> \<nu>) \<alpha> = prog_sem (adjointFO I \<sigma> \<omega>) \<alpha>"
-  and "\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>x\<in>{x. Inl (debase x) \<in> SIGF \<phi>}. FVT (\<sigma> x)) \<Longrightarrow> fsafe \<phi> \<Longrightarrow> fml_sem (adjointFO I \<sigma> \<nu>) \<phi> = fml_sem (adjointFO I \<sigma> \<omega>) \<phi>"
+  shows "\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>x\<in>{x. Inl (debase x) \<in> SIGP \<alpha> \<or> Inl (Debase x) \<in> SIGP \<alpha>}. FVT (\<sigma> x)) \<Longrightarrow> hpsafe \<alpha> \<Longrightarrow> prog_sem (adjointFO I \<sigma> \<nu>) \<alpha> = prog_sem (adjointFO I \<sigma> \<omega>) \<alpha>"
+  and "\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>x\<in>{x. Inl (debase x) \<in> SIGF \<phi> \<or> Inl (Debase x) \<in> SIGF \<phi>}. FVT (\<sigma> x)) \<Longrightarrow> fsafe \<phi> \<Longrightarrow> fml_sem (adjointFO I \<sigma> \<nu>) \<phi> = fml_sem (adjointFO I \<sigma> \<omega>) \<phi>"
 proof (induct "\<alpha>" and "\<phi>")
   case (Pvar x)
   then show ?case unfolding adjointFO_def by auto
 next
   case (Assign x e)
-  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (Assign x e)}. FVT (\<sigma> y))"
+  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (Assign x e) \<or> Inl (Debase y) \<in> SIGP (Assign x e)}. FVT (\<sigma> y))"
   assume safe:"hpsafe (x := e)"
   from safe have dsafe:"dsafe e" by (auto dest: hpsafe.cases)
-  have sub:"(\<Union>y\<in>{y. debase y \<in> SIGT e}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (Assign x e)}. FVT (\<sigma> y))"
+  have sub:"(\<Union>y\<in>{y. debase y \<in> SIGT e \<or> Debase y \<in> SIGT e}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (Assign x e) \<or> Inl (Debase y) \<in> SIGP (Assign x e)}. FVT (\<sigma> y))"
     using ntadj_sub_assign[of \<sigma> e x] by auto
-  have VA':"(Vagree \<nu> \<omega> (\<Union>i\<in>{i. debase i \<in> SIGT e}. FVT (\<sigma> i)))"
+  have VA':"(Vagree \<nu> \<omega> (\<Union>i\<in>{i. debase i \<in> SIGT e \<or> Debase i \<in> SIGT e}. FVT (\<sigma> i)))"
     using agree_sub[OF sub VA] by auto
   have "dterm_sem (adjointFO I \<sigma> \<nu>) e = dterm_sem (adjointFO I \<sigma> \<omega>) e"
     using uadmit_dterm_ntadjoint'[of \<sigma> I \<nu> \<omega> e] ssafe good_interp agree_sub[OF sub VA] dsafe by auto
@@ -2512,39 +2545,43 @@ next
   then show ?case by (auto simp add: vec_eq_iff)
 next
   case (DiffAssign x e)
-  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (DiffAssign x e)}. FVT (\<sigma> y))"
+  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (DiffAssign x e) \<or> Inl (Debase y) \<in> SIGP (DiffAssign x e)}. FVT (\<sigma> y))"
   assume safe:"hpsafe (DiffAssign x e)"
   from safe have dsafe:"dsafe e" by (auto dest: hpsafe.cases)
-  have sub:"(\<Union>y\<in>{y. debase y \<in> SIGT e}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (DiffAssign x e)}. FVT (\<sigma> y))"
+  have sub:"(\<Union>y\<in>{y. debase y \<in> SIGT e \<or> Debase y \<in> SIGT e}. FVT (\<sigma> y)) 
+          \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (DiffAssign x e) \<or> Inl (Debase y) \<in> SIGP (DiffAssign x e)}. FVT (\<sigma> y))"
     using ntadj_sub_assign[of \<sigma> e x] by auto
-  have VA':"(Vagree \<nu> \<omega> (\<Union>i\<in>{i. debase i \<in> SIGT e}. FVT (\<sigma> i)))"
+  have VA':"(Vagree \<nu> \<omega> (\<Union>i\<in>{i. debase i \<in> SIGT e \<or>  (Debase i) \<in> SIGT e}. FVT (\<sigma> i)))"
     using agree_sub[OF sub VA] by auto
   have "dterm_sem (adjointFO I \<sigma> \<nu>) e = dterm_sem (adjointFO I \<sigma> \<omega>) e"
     using uadmit_dterm_ntadjoint'[of \<sigma> I \<nu> \<omega> e] ssafe good_interp agree_sub[OF sub VA] dsafe by auto
   then show ?case by (auto simp add: vec_eq_iff)
 next
   case (Test x)
-  assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x \<Longrightarrow> fml_sem (adjointFO I \<sigma> \<nu>) x = fml_sem (adjointFO I \<sigma> \<omega>) x"
-  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (? x)}. FVT (\<sigma> y))"
+  assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x \<or> Inl (Debase y) \<in> SIGF x}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x \<Longrightarrow> fml_sem (adjointFO I \<sigma> \<nu>) x = fml_sem (adjointFO I \<sigma> \<omega>) x"
+  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (? x) \<or> Inl (Debase y) \<in> SIGP (? x)}. FVT (\<sigma> y))"
   assume hpsafe:"hpsafe (? x)"
   then have fsafe:"fsafe x" by (auto dest: hpsafe.cases)
-  have sub:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (? x)}. FVT (\<sigma> y))"
+  have sub:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x \<or> Inl (Debase y) \<in> SIGF x}. FVT (\<sigma> y)) 
+   \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (? x) \<or> Inl (Debase y) \<in> SIGP (? x)}. FVT (\<sigma> y))"
     by auto
   have "fml_sem (adjointFO I \<sigma> \<nu>) x = fml_sem (adjointFO I \<sigma> \<omega>) x"
     using IH[OF agree_sub[OF sub VA] fsafe] by auto
   then show ?case by auto
 next
   case (EvolveODE x1 x2)
-  assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (adjointFO I \<sigma> \<nu>) x2 = fml_sem (adjointFO I \<sigma> \<omega>) x2"
-  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (EvolveODE x1 x2)}. FVT (\<sigma> y))"
+  assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2 \<or> Inl (Debase y) \<in> SIGF x2}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (adjointFO I \<sigma> \<nu>) x2 = fml_sem (adjointFO I \<sigma> \<omega>) x2"
+  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (EvolveODE x1 x2) \<or> Inl (Debase y) \<in> SIGP (EvolveODE x1 x2)}. FVT (\<sigma> y))"
   assume safe:"hpsafe (EvolveODE x1 x2)"
   then have osafe:"osafe x1" and fsafe:"fsafe x2" by (auto dest: hpsafe.cases)
-  have sub1:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (EvolveODE x1 x2)}. FVT (\<sigma> y))"
+  have sub1:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2 \<or> Inl (Debase y) \<in> SIGF x2}. FVT (\<sigma> y)) 
+    \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (EvolveODE x1 x2) \<or>  Inl (Debase y) \<in> SIGP (EvolveODE x1 x2)}. FVT (\<sigma> y))"
     by auto
-  then have VAF:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2}. FVT (\<sigma> y))"
+  then have VAF:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2 \<or> Inl (Debase y) \<in> SIGF x2}. FVT (\<sigma> y))"
     using agree_sub[OF sub1 VA] by auto 
   note IH' = IH[OF VAF fsafe]
-  have sub:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGO x1}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (EvolveODE x1 x2)}. FVT (\<sigma> y))"
+  have sub:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGO x1 }. FVT (\<sigma> y)) 
+   \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (EvolveODE x1 x2) \<or> Inl (Debase y) \<in> SIGP (EvolveODE x1 x2)}. FVT (\<sigma> y))"
     by auto
   moreover have IH2:"ODE_sem (adjointFO I \<sigma> \<nu>) x1 = ODE_sem (adjointFO I \<sigma> \<omega>) x1"
     apply (rule uadmit_ode_ntadjoint')
@@ -2578,53 +2615,60 @@ next
     done
 next
   case (Choice x1 x2)
-  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP x1}. FVT (\<sigma> y)) \<Longrightarrow> hpsafe x1 \<Longrightarrow> prog_sem (adjointFO I \<sigma> \<nu>) x1 = prog_sem (adjointFO I \<sigma> \<omega>) x1"
-  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP x2}. FVT (\<sigma> y)) \<Longrightarrow> hpsafe x2 \<Longrightarrow> prog_sem (adjointFO I \<sigma> \<nu>) x2 = prog_sem (adjointFO I \<sigma> \<omega>) x2"
-  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x1 \<union>\<union> x2)}. FVT (\<sigma> y))"
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP x1 \<or> Inl (Debase y) \<in> SIGP x1}. FVT (\<sigma> y)) \<Longrightarrow> hpsafe x1 \<Longrightarrow> prog_sem (adjointFO I \<sigma> \<nu>) x1 = prog_sem (adjointFO I \<sigma> \<omega>) x1"
+  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP x2 \<or> Inl (Debase y) \<in> SIGP x2}. FVT (\<sigma> y)) \<Longrightarrow> hpsafe x2 \<Longrightarrow> prog_sem (adjointFO I \<sigma> \<nu>) x2 = prog_sem (adjointFO I \<sigma> \<omega>) x2"
+  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x1 \<union>\<union> x2) \<or> Inl (Debase y) \<in> SIGP (x1 \<union>\<union> x2)}. FVT (\<sigma> y))"
   assume safe:"hpsafe (x1 \<union>\<union> x2)"
   from safe have
     safe1:"hpsafe x1"
     and safe2:"hpsafe x2"
     by (auto dest: hpsafe.cases)
-  have sub1:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x1)}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x1 \<union>\<union> x2)}. FVT (\<sigma> y))"
+  have sub1:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x1) \<or> Inl (Debase y) \<in> SIGP (x1)}. FVT (\<sigma> y)) 
+  \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x1 \<union>\<union> x2) \<or> Inl (Debase y) \<in> SIGP (x1 \<union>\<union> x2)}. FVT (\<sigma> y))"
     by auto
-  have sub2:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x2)}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x1 \<union>\<union> x2)}. FVT (\<sigma> y))"
+  have sub2:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x2) \<or> Inl (Debase y) \<in> SIGP (x2)}. FVT (\<sigma> y)) 
+           \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x1 \<union>\<union> x2) \<or>  Inl (Debase y) \<in> SIGP (x1 \<union>\<union> x2)}. FVT (\<sigma> y))"
     by auto
   then show ?case using IH1[OF agree_sub[OF sub1 VA] safe1] IH2[OF agree_sub[OF sub2 VA] safe2] by auto
 next
   case (Sequence x1 x2)
-  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP x1}. FVT (\<sigma> y)) \<Longrightarrow> hpsafe x1 \<Longrightarrow> prog_sem (adjointFO I \<sigma> \<nu>) x1 = prog_sem (adjointFO I \<sigma> \<omega>) x1"
-  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP x2}. FVT (\<sigma> y)) \<Longrightarrow> hpsafe x2 \<Longrightarrow> prog_sem (adjointFO I \<sigma> \<nu>) x2 = prog_sem (adjointFO I \<sigma> \<omega>) x2"
-  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x1 ;; x2)}. FVT (\<sigma> y))"
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP x1 \<or> Inl (Debase y) \<in> SIGP x1}. FVT (\<sigma> y)) \<Longrightarrow> hpsafe x1 \<Longrightarrow> prog_sem (adjointFO I \<sigma> \<nu>) x1 = prog_sem (adjointFO I \<sigma> \<omega>) x1"
+  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP x2 \<or> Inl (Debase y) \<in> SIGP x2}. FVT (\<sigma> y)) \<Longrightarrow> hpsafe x2 \<Longrightarrow> prog_sem (adjointFO I \<sigma> \<nu>) x2 = prog_sem (adjointFO I \<sigma> \<omega>) x2"
+  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x1 ;; x2) \<or> Inl (Debase y) \<in> SIGP (x1 ;; x2)}. FVT (\<sigma> y))"
   assume safe:"hpsafe (x1 ;; x2)"
   from safe have
     safe1:"hpsafe x1"
     and safe2:"hpsafe x2"
     by (auto dest: hpsafe.cases)
-  have sub1:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGP x1}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x1 ;; x2)}. FVT (\<sigma> y))"
+  have sub1:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGP x1 \<or> Inl (Debase y) \<in> SIGP x1}. FVT (\<sigma> y)) 
+           \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x1 ;; x2) \<or> Inl (Debase y) \<in> SIGP (x1 ;; x2)}. FVT (\<sigma> y))"
     by auto
-  have sub2:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGP x2}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x1 ;; x2)}. FVT (\<sigma> y))"
+  have sub2:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGP x2 \<or> Inl (Debase y) \<in> SIGP x2}. FVT (\<sigma> y)) 
+           \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x1 ;; x2) \<or> Inl (Debase y) \<in> SIGP (x1 ;; x2)}. FVT (\<sigma> y))"
     by auto
   then show ?case using IH1[OF agree_sub[OF sub1 VA] safe1] IH2[OF agree_sub[OF sub2 VA] safe2] by auto
 next
   case (Loop x)
-  assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP x}. FVT (\<sigma> y)) \<Longrightarrow> hpsafe x \<Longrightarrow> prog_sem (adjointFO I \<sigma> \<nu>) x = prog_sem (adjointFO I \<sigma> \<omega>) x"
-  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x** )}. FVT (\<sigma> y))"
+  assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP x \<or> Inl (Debase y) \<in> SIGP x}. FVT (\<sigma> y)) \<Longrightarrow> hpsafe x \<Longrightarrow> prog_sem (adjointFO I \<sigma> \<nu>) x = prog_sem (adjointFO I \<sigma> \<omega>) x"
+  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x**) \<or> Inl (Debase y) \<in> SIGP (x** )}. FVT (\<sigma> y))"
   assume safe:"hpsafe (x** )"
   from safe have
     safe:"hpsafe x"
     by (auto dest: hpsafe.cases)
-  have sub:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x)}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x** )}. FVT (\<sigma> y))"
+  have sub:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x) \<or> Inl (Debase y) \<in> SIGP (x)}. FVT (\<sigma> y)) 
+          \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP (x** ) \<or> Inl (Debase y) \<in> SIGP (x** )}. FVT (\<sigma> y))"
     by auto
   show ?case using IH[OF agree_sub[OF sub VA] safe] by auto
 next
   case (Geq x1 x2)
-  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Geq x1 x2)}. FVT (\<sigma> y))"
+  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Geq x1 x2) \<or> Inl (Debase y) \<in> SIGF (Geq x1 x2)}. FVT (\<sigma> y))"
   assume safe:"fsafe (Geq x1 x2)"
   then have dsafe1:"dsafe x1" and dsafe2:"dsafe x2" by (auto dest: fsafe.cases)
-  have sub1:"(\<Union>y\<in>{y. debase y \<in> SIGT x1}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Geq x1 x2)}. FVT (\<sigma> y))"
+  have sub1:"(\<Union>y\<in>{y. debase y \<in> SIGT x1 \<or> Debase y \<in> SIGT x1}. FVT (\<sigma> y)) 
+      \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Geq x1 x2) \<or> Inl (Debase y) \<in> SIGF (Geq x1 x2)}. FVT (\<sigma> y))"
     by auto
-  have sub2:"(\<Union>y\<in>{y. debase y \<in> SIGT x2}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Geq x1 x2)}. FVT (\<sigma> y))"
+  have sub2:"(\<Union>y\<in>{y. debase y \<in> SIGT x2 \<or> Debase y \<in> SIGT x2}. FVT (\<sigma> y)) 
+           \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Geq x1 x2) \<or> Inl (Debase y) \<in> SIGF (Geq x1 x2)}. FVT (\<sigma> y))"
     by auto
   have "dterm_sem (adjointFO I \<sigma> \<nu>) x1 = dterm_sem (adjointFO I \<sigma> \<omega>) x1"
     by (rule uadmit_dterm_ntadjoint'[OF ssafe good_interp agree_sub[OF sub1 VA] dsafe1])
@@ -2633,17 +2677,18 @@ next
   ultimately show ?case by auto
 next
   case (Prop x1 x2 \<nu> \<omega>)
-  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF ($\<phi> x1 x2)}. FVT (\<sigma> y))"
+  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF ($\<phi> x1 x2) \<or> Inl (Debase y) \<in> SIGF ($\<phi> x1 x2)}. FVT (\<sigma> y))"
   assume safe:"fsafe ($\<phi> x1 x2)"
   then have safes:"\<And>i. dsafe (x2 i)" using dfree_is_dsafe by auto
-  have subs:"\<And>j. (\<Union>y\<in>{y. debase y \<in> SIGT (x2 j)}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF ($\<phi> x1 x2)}. FVT (\<sigma> y))"
+  have subs:"\<And>j. (\<Union>y\<in>{y. debase y \<in> SIGT (x2 j) \<or> Debase y \<in> SIGT (x2 j)}. FVT (\<sigma> y)) 
+               \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF ($\<phi> x1 x2) \<or> Inl (Debase y) \<in> SIGF ($\<phi> x1 x2)}. FVT (\<sigma> y))"
     subgoal for j  by auto
     done
   have "\<And>i. dterm_sem (adjointFO I \<sigma> \<nu>) (x2 i) = dterm_sem (adjointFO I \<sigma> \<omega>) (x2 i)"
     by (rule uadmit_dterm_ntadjoint'[OF ssafe good_interp agree_sub[OF subs VA] safes])
   then have vec_eq:"\<And>R. (\<chi> i. dterm_sem (adjointFO I \<sigma> \<nu>) (x2 i) R) = (\<chi> i. dterm_sem (adjointFO I \<sigma> \<omega>) (x2 i) R)"
     by (auto simp add: vec_eq_iff)
-  from VA have VAs:"\<And>j. Vagree \<nu> \<omega> (\<Union>y\<in>{y. debase y \<in> SIGT (x2 j)}. FVT (\<sigma> y))"
+  from VA have VAs:"\<And>j. Vagree \<nu> \<omega> (\<Union>y\<in>{y. debase y \<in> SIGT (x2 j) \<or> Debase y \<in> SIGT (x2 j)}. FVT (\<sigma> y))"
     subgoal for j 
       using agree_sub[OF subs[of j] VA] by auto
     done
@@ -2651,63 +2696,70 @@ next
     using vec_eq by (auto simp add: adjointFO_def)
 next
   case (Not x)
-  assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x \<Longrightarrow> fml_sem (adjointFO I \<sigma> \<nu>) x = fml_sem (adjointFO I \<sigma> \<omega>) x"
-  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Not x)}. FVT (\<sigma> y))"
+  assume IH:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x \<or> Inl (Debase y) \<in> SIGF x}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x \<Longrightarrow> fml_sem (adjointFO I \<sigma> \<nu>) x = fml_sem (adjointFO I \<sigma> \<omega>) x"
+  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Not x) \<or> Inl (Debase y) \<in> SIGF (Not x)}. FVT (\<sigma> y))"
   assume safe:"fsafe (Not x)"
   from safe have
     safe:"fsafe x"
     by (auto dest: fsafe.cases)
-  have sub:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Not x)}. FVT (\<sigma> y))"
+  have sub:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x \<or> Inl (Debase y) \<in> SIGF x}. FVT (\<sigma> y)) 
+          \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Not x) \<or> Inl (Debase y) \<in> SIGF (Not x)}. FVT (\<sigma> y))"
     by auto
   show ?case using IH[OF agree_sub[OF sub VA] safe] by auto
 next
   case (And x1 x2)
-  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x1}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x1 \<Longrightarrow> fml_sem (adjointFO I \<sigma> \<nu>) x1 = fml_sem (adjointFO I \<sigma> \<omega>) x1"
-  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (adjointFO I \<sigma> \<nu>) x2 = fml_sem (adjointFO I \<sigma> \<omega>) x2"
-  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (And x1 x2)}. FVT (\<sigma> y))"
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x1 \<or> Inl (Debase y) \<in> SIGF x1}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x1 \<Longrightarrow> fml_sem (adjointFO I \<sigma> \<nu>) x1 = fml_sem (adjointFO I \<sigma> \<omega>) x1"
+  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2 \<or> Inl (Debase y) \<in> SIGF x2}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (adjointFO I \<sigma> \<nu>) x2 = fml_sem (adjointFO I \<sigma> \<omega>) x2"
+  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (And x1 x2) \<or> Inl (Debase y) \<in> SIGF (And x1 x2)}. FVT (\<sigma> y))"
   assume safe:"fsafe (And x1 x2)"
   from safe have
     safe1:"fsafe x1"
 and safe2:"fsafe x2"
     by (auto dest: fsafe.cases)
-  have sub1:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x1}. FVT (\<sigma> y))  \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (And x1 x2)}. FVT (\<sigma> y))"
+  have sub1:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x1 \<or> Inl (Debase y) \<in> SIGF x1}. FVT (\<sigma> y))  
+           \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (And x1 x2) \<or> Inl (Debase y) \<in> SIGF (And x1 x2)}. FVT (\<sigma> y))"
     by auto
-  have sub2:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2}. FVT (\<sigma> y))  \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (And x1 x2)}. FVT (\<sigma> y))"
+  have sub2:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2 \<or> Inl (Debase y) \<in> SIGF x2}. FVT (\<sigma> y))  
+           \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (And x1 x2) \<or> Inl (Debase y) \<in> SIGF (And x1 x2)}. FVT (\<sigma> y))"
     by auto
   show ?case using IH1[OF agree_sub[OF sub1 VA] safe1] IH2[OF agree_sub[OF sub2 VA] safe2] by auto
 next
   case (Exists x1 x2)
-  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (adjointFO I \<sigma> \<nu>) x2 = fml_sem (adjointFO I \<sigma> \<omega>) x2"
-  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Exists x1 x2)}. FVT (\<sigma> y))"
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2 \<or> Inl (Debase y) \<in> SIGF x2}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (adjointFO I \<sigma> \<nu>) x2 = fml_sem (adjointFO I \<sigma> \<omega>) x2"
+  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Exists x1 x2) \<or> Inl (Debase y) \<in> SIGF (Exists x1 x2)}. FVT (\<sigma> y))"
   assume safe:"fsafe (Exists x1 x2)"
   from safe have safe1:"fsafe x2"
     by (auto dest: fsafe.cases)
-  have sub1:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Exists x1 x2)}. FVT (\<sigma> y))"
+  have sub1:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2 \<or> Inl (Debase y) \<in> SIGF x2}. FVT (\<sigma> y)) 
+           \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Exists x1 x2) \<or> Inl (Debase y) \<in> SIGF (Exists x1 x2)}. FVT (\<sigma> y))"
     by auto
   show ?case using IH1[OF agree_sub[OF sub1 VA] safe1] by auto
 next
   case (Diamond x1 x2)
-  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP x1}. FVT (\<sigma> y)) \<Longrightarrow> hpsafe x1 \<Longrightarrow> prog_sem (adjointFO I \<sigma> \<nu>) x1 = prog_sem (adjointFO I \<sigma> \<omega>) x1"
-  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (adjointFO I \<sigma> \<nu>) x2 = fml_sem (adjointFO I \<sigma> \<omega>) x2"
-  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Diamond x1 x2)}. FVT (\<sigma> y))"
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGP x1 \<or> Inl (Debase y) \<in> SIGP x1}. FVT (\<sigma> y)) \<Longrightarrow> hpsafe x1 \<Longrightarrow> prog_sem (adjointFO I \<sigma> \<nu>) x1 = prog_sem (adjointFO I \<sigma> \<omega>) x1"
+  assume IH2:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2 \<or> Inl (Debase y) \<in> SIGF x2}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (adjointFO I \<sigma> \<nu>) x2 = fml_sem (adjointFO I \<sigma> \<omega>) x2"
+  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Diamond x1 x2) \<or> Inl (Debase y) \<in> SIGF (Diamond x1 x2)}. FVT (\<sigma> y))"
   assume safe:"fsafe (Diamond x1 x2)"
   from safe have
     safe1:"hpsafe x1"
 and safe2:"fsafe x2"
     by (auto dest: fsafe.cases)
-  have sub1:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGP x1}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Diamond x1 x2)}. FVT (\<sigma> y))"
+  have sub1:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGP x1 \<or> Inl (Debase y) \<in> SIGP x1}. FVT (\<sigma> y)) 
+          \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Diamond x1 x2) \<or> Inl (Debase y) \<in> SIGF (Diamond x1 x2)}. FVT (\<sigma> y))"
     by auto
-  have sub2:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Diamond x1 x2)}. FVT (\<sigma> y))"
+  have sub2:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2 \<or> Inl (Debase y) \<in> SIGF x2}. FVT (\<sigma> y)) 
+           \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (Diamond x1 x2) \<or> Inl (Debase y) \<in> SIGF (Diamond x1 x2)}. FVT (\<sigma> y))"
     by auto
   show ?case using IH1[OF agree_sub[OF sub1 VA] safe1] IH2[OF agree_sub[OF sub2 VA] safe2] by auto
 next
   case (InContext x1 x2)
-  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (adjointFO I \<sigma> \<nu>) x2 = fml_sem (adjointFO I \<sigma> \<omega>) x2"
-  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (InContext x1 x2)}. FVT (\<sigma> y))"
+  assume IH1:"\<And>\<nu> \<omega>. Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2 \<or> Inl (Debase y) \<in> SIGF x2}. FVT (\<sigma> y)) \<Longrightarrow> fsafe x2 \<Longrightarrow> fml_sem (adjointFO I \<sigma> \<nu>) x2 = fml_sem (adjointFO I \<sigma> \<omega>) x2"
+  assume VA:"Vagree \<nu> \<omega> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (InContext x1 x2) \<or> Inl (Debase y) \<in> SIGF (InContext x1 x2)}. FVT (\<sigma> y))"
   assume safe:"fsafe (InContext x1 x2)"
   from safe have  safe1:"fsafe x2"
     by (auto dest: fsafe.cases)
-  have sub:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2}. FVT (\<sigma> y)) \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (InContext x1 x2)}. FVT (\<sigma> y))"
+  have sub:"(\<Union>y\<in>{y. Inl (debase y) \<in> SIGF x2 \<or> Inl (Debase y) \<in> SIGF x2}. FVT (\<sigma> y)) 
+          \<subseteq> (\<Union>y\<in>{y. Inl (debase y) \<in> SIGF (InContext x1 x2) \<or> Inl (Debase y) \<in> SIGF (InContext x1 x2)}. FVT (\<sigma> y))"
     by auto
   show ?case using IH1[OF agree_sub[OF sub VA] safe1]  
     unfolding adjointFO_def by auto
@@ -2721,8 +2773,8 @@ lemma uadmit_prog_ntadjoint:
   assumes good_interp:"is_interp I"
   shows  "prog_sem (adjointFO I \<sigma> \<nu>) \<alpha> = prog_sem (adjointFO I \<sigma> \<omega>) \<alpha>"
 proof -
-  have sub:"(\<Union>x\<in>{x. Inl (debase x) \<in> SIGP \<alpha>}. FVT (\<sigma> x)) \<subseteq> -U" using TUA unfolding PUadmitFO_def by auto
-  have VA':"Vagree \<nu> \<omega> (\<Union>x\<in>{x. Inl (debase x) \<in> SIGP \<alpha>}. FVT (\<sigma> x))" using agree_sub[OF sub VA] by auto
+  have sub:"(\<Union>x\<in>{x. Inl (debase x) \<in> SIGP \<alpha> \<or> Inl (Debase x) \<in> SIGP \<alpha>}. FVT (\<sigma> x)) \<subseteq> -U" using TUA unfolding PUadmitFO_def by auto
+  have VA':"Vagree \<nu> \<omega> (\<Union>x\<in>{x. Inl (debase x) \<in> SIGP \<alpha> \<or> Inl (Debase x) \<in> SIGP \<alpha>}. FVT (\<sigma> x))" using agree_sub[OF sub VA] by auto
   show ?thesis 
     apply(rule uadmit_prog_fml_ntadjoint'[OF dfree good_interp])
      subgoal by (rule VA')
@@ -2738,8 +2790,8 @@ lemma uadmit_fml_ntadjoint:
   assumes good_interp:"is_interp I"
   shows  "fml_sem (adjointFO I \<sigma> \<nu>) \<phi> = fml_sem (adjointFO I \<sigma> \<omega>) \<phi>"
 proof -
-  have sub:"(\<Union>x\<in>{x. Inl (debase x) \<in> SIGF \<phi>}. FVT (\<sigma> x)) \<subseteq> -U" using TUA unfolding FUadmitFO_def by auto
-  have VA':"Vagree \<nu> \<omega> (\<Union>x\<in>{x. Inl (debase x) \<in> SIGF \<phi>}. FVT (\<sigma> x))" using agree_sub[OF sub VA] by auto
+  have sub:"(\<Union>x\<in>{x. Inl (debase x) \<in> SIGF \<phi> \<or> Inl (Debase x) \<in> SIGF \<phi>}. FVT (\<sigma> x)) \<subseteq> -U" using TUA unfolding FUadmitFO_def by auto
+  have VA':"Vagree \<nu> \<omega> (\<Union>x\<in>{x. Inl (debase x) \<in> SIGF \<phi> \<or> Inl (Debase x) \<in> SIGF \<phi>}. FVT (\<sigma> x))" using agree_sub[OF sub VA] by auto
   show ?thesis 
     apply(rule uadmit_prog_fml_ntadjoint'[OF dfree good_interp])
      subgoal by (rule VA')
@@ -2753,59 +2805,28 @@ lemma nsubst_sterm:
   fixes \<nu>::"state"
   shows "TadmitFFO \<sigma> \<theta>  \<Longrightarrow> (\<And>i. dsafe (\<sigma> i)) \<Longrightarrow> sterm_sem I (TsubstFO \<theta> \<sigma>) (fst \<nu>) = sterm_sem (adjointFO I \<sigma> \<nu>) \<theta> (fst \<nu>)"
 proof (induction rule: TadmitFFO.induct)
-  case (TadmitFFO_Fun1 \<sigma> args f) then
-  have b:"is_base f" and ds:"\<And>i. dsafe (\<sigma> i)"
-       and tffo:"\<And>i. TadmitFFO \<sigma> (args i)"
-       and IH:"\<And>i. ((\<forall>x. dsafe (\<sigma> x)) \<longrightarrow> sterm_sem I (TsubstFO (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjointFO I \<sigma> \<nu>) (args i) (fst \<nu>))"
+  case (TadmitFFO_Fun \<sigma> args f) then
+  have nb:"nonbase f" and ds:"\<And>i. dsafe (\<sigma> i)"
+    and l:"ilength f < MAX_STR"
+    and tffo:"\<And>i. TadmitFFO \<sigma> (args i)"
+    and IH:"\<And>i. ((\<forall>x. dsafe (\<sigma> x)) \<longrightarrow> sterm_sem I (TsubstFO (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjointFO I \<sigma> \<nu>) (args i) (fst \<nu>))"
+    and safes:"\<And>i. dsafe (\<sigma> i)"
+    and rb:"dfree (\<sigma> (rebase f))"
     by auto
   have IH':"\<And>i. sterm_sem I (TsubstFO (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjointFO I \<sigma> \<nu>) (args i) (fst \<nu>)"
     using IH ds by auto
   then have vIH:"(\<chi> i. sterm_sem I (TsubstFO (args i) \<sigma>) (fst \<nu>)) = (\<chi> i. sterm_sem (adjointFO I \<sigma> \<nu>) (args i) (fst \<nu>))"
     by auto
-(*  from tffo have "undefined = 1"
-    using tffo apply(auto) sorry
-  obtain x where meh:"args_to_id f =  Inl x" 
-    using b apply auto
-    sledgehammer*)
-(*  have bluh:"\<And>i. sterm_sem (adjointFO I \<sigma> \<nu>) (args i) (fst \<nu>) = undefined"
-    subgoal for i
-      apply(unfold adjointFO_def)
-  have huh:"Functions (adjointFO I \<sigma> \<nu>) f (\<chi> i. sterm_sem (adjointFO I \<sigma> \<nu>) (args i) (fst \<nu>)) = undefined"
-    apply auto*)
-  then show ?case
-    apply(simp only: TsubstFO.simps)
-    apply(cases "args_to_id f")
-     apply(auto simp del: args_to_id.simps)
-    using vIH b ds tffo 
-     apply (simp add: adjointFO_def)
-    using tffo apply (auto) 
-    sorry
-    
-next                
-  case (TadmitFFO_Fun2 \<sigma> args f) then
-  have FFOs:"\<And>i. TadmitFFO \<sigma> (args i)"
-     and IH:"\<And>i.((\<forall>x. dsafe (\<sigma> x)) \<Longrightarrow> sterm_sem I (TsubstFO (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjointFO I \<sigma> \<nu>) (args i) (fst \<nu>))"
-     and nb:"nonbase f"
-     and rb:"dfree (\<sigma> (rebase f))"
-     and safes:"\<And>i. dsafe (\<sigma> i)" by auto
-  then show ?case proof (cases "args_to_id f")
-    case None then have ai:"args_to_id f = None" by auto
-    then show ?thesis using nonbase_some[OF nb] ai by auto
+  obtain inj where inj:"args_to_id f = Some inj" using nb nonbase_some by auto
+  then show ?case proof (cases inj)
+    case (Inl a) assume "inj = Inl a" then have cs:"args_to_id f = Some (Inl a)" using inj by auto
+    then show ?thesis 
+    using cs vIH  ds tffo by(auto simp del: args_to_id.simps simp add: adjointFO_def)
   next
-    case (Some inj) then have s:"args_to_id f = Some inj" by auto
-    show ?thesis
-    proof (cases inj)
-      case (Inl a)
-      then have ai:"args_to_id f = Some (Inl a)" using s by auto
-      then have free:"dfree (\<sigma> a)" using arg_rebaseL ai rb sorry
+    case (Inr b) assume "inj = Inr b" then have cs:"args_to_id f = Some (Inr b)" using inj by auto
+      then have free:"dfree (\<sigma> b)" using arg_rebaseR cs rb nb by blast
       note sems = dsem_to_ssem[OF free]
-      then show ?thesis using ai IH adjointFO_def safes by auto
-    next
-      case (Inr b) then have ai:"args_to_id f = Some (Inr b)" using s by auto
-      then have free:"dfree (\<sigma> b)" using arg_rebaseR ai rb sorry
-      note sems = dsem_to_ssem[OF free]
-      then show ?thesis using ai IH adjointFO_def safes by auto
-    qed
+      then show ?thesis using cs IH adjointFO_def safes by auto
   qed
 qed (auto)
   
@@ -2836,14 +2857,7 @@ proof (induction rule: dfree.induct)
     next
       case (Inr d) then have ie:"ident_expose i = Inr d" by auto
       then show ?thesis using nb apply auto apply(cases d) apply (auto simp add: FSENT_def SSENT_def FSENTINEL_def SSENTINEL_def)
-            using sub cs apply blast+ sorry
-(*        subgoal for b
-          apply(cases b)
-          apply(auto)
-          subgoal for y
-            apply(cases "ident_expose (Abs_ident y)")
-            subgoal for a*)
-(*              using nb sub l frees            sledgehammer*)
+        using sub cs l dfree_Fun.IH by blast+      
     qed
   next
     case (Inr b) then have a:"inj = Inr b" by auto from a inj have cs:"args_to_id i = Some (Inr b)" by auto

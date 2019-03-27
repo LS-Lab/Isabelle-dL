@@ -223,6 +223,8 @@ fun args_to_id::"ident \<Rightarrow> (ident + ident) option"
 *)
 fun debase :: "ident \<Rightarrow> ident"
   where "debase f = ident_cons FSENT f"
+fun Debase :: "ident \<Rightarrow> ident"
+  where "Debase f = ident_cons SSENT f"
 fun rebase :: "ident \<Rightarrow> ident"
   where "rebase f = (case ident_expose f of Inl () \<Rightarrow> f | Inr (c,cs) \<Rightarrow> cs)"
 fun is_base :: "ident \<Rightarrow> bool"
@@ -283,9 +285,100 @@ lemma arg_lengthL:
     using Inl_Inr_False Inl_inject Rep_ident eq_onp_same_args ilength.abs_eq ilength.rep_eq impossible_Cons le_cases le_trans length_Suc_conv mem_Collect_eq snd_conv string_expose.elims
     by (metis Inr_inject)
   done
+lemma arg_debaseL:
+  assumes spacious:"MAX_STR > ilength a"
+  assumes ai:"args_to_id x = Some (Inl a)"
+  shows "x = Debase a"
+proof -
+  show ?thesis
+  proof (cases "ident_expose x")
+    case (Inl c) then have xc:" ident_expose x = Inl c" by auto
+    then show ?thesis  apply (auto)
+    proof (cases "ident_expose a")
+      case (Inl d)
+      then show "x = ident_cons SSENT a"
+        apply(auto simp add: ident_expose_def ident_cons_def)
+        using Inl_Inr_False Rep_ident_inverse ident_empty.abs_eq map_sum.simps(2) nonbase_nonemp 
+              string_expose.elims ilength.rep_eq spacious apply auto
+        using ai xc by auto
+    next
+      case (Inr e) then have xe:" ident_expose a = Inr e" by auto
+      have contra:"ident_expose x = Inl () \<Longrightarrow> False"
+         unfolding nonbase.simps
+        using case_unit_Unity ai by auto
+      from xe show "x = ident_cons SSENT a" 
+        using xc apply(auto)
+        using contra by auto
+    qed
+  next
+    case (Inr b)
+    then obtain c cs where cs:"ident_expose x = Inr(c,cs)"
+      apply auto
+      unfolding ident_expose_def
+      using old.prod.exhaust by blast
+    have hd:"c = SSENT"
+      using ai apply(simp)
+      using cs apply(simp)
+      apply(cases "c = FSENT") apply(auto)
+      apply(cases "c = SSENT") by auto 
+    then show ?thesis
+    proof (cases "ident_expose (debase a)")
+      case (Inl e) then have xe:" ident_expose (debase a) = Inl e" by auto
+       note nbb = nonbase_debase[of a, OF spacious]
+      have contra:"\<And>x. ident_expose (debase a) = Inl x \<Longrightarrow> False"
+        using nbb unfolding nonbase.simps
+        by (simp add: case_unit_Unity)
+      show "?thesis" 
+        using contra[OF xe] by auto
+    next
+      case (Inr e) then have xe:" ident_expose (debase a) = Inr e" by auto
+      then obtain d ds where ds:"ident_expose (debase a) = Inr(d,ds)"
+        apply auto
+        using old.prod.exhaust by blast
+      from spacious
+      have fact:"MAX_STR > length (Rep_ident a)"
+        unfolding ilength_def by auto
+      have ied:"ident_expose (debase a) = Inr (FSENT, cs)"
+        using cs fact ai
+        apply(auto simp add:  ident_expose_def ident_cons_def Rep_ident_inverse[of a] Abs_ident_inverse fact)
+        using fact apply linarith+
+        apply(cases "c = SSENT")
+        using hd  by (auto simp add: hd FSENT_def SSENT_def FSENTINEL_def SSENTINEL_def)
+        have cd:"cs = ds" 
+          using ied cs ds by auto
+      have "Rep_ident x = SSENT # Rep_ident ds"
+        using cs apply(auto simp add: Rep_ident_inverse Abs_ident_inverse cs)
+        unfolding ident_expose_def ident_cons_def
+        using cs ds
+        apply(auto simp add: ident_expose_def ident_cons_def Rep_ident_inverse)
+        apply(cases "MAX_STR \<le> length (Rep_ident a)")
+        using fact cs apply(auto simp add: Rep_ident_inverse Abs_ident_inverse cs )
+        apply(cases "string_expose (Rep_ident x)")
+        using cs apply(auto simp add: Rep_ident_inverse Abs_ident_inverse cs )
+          apply(cases "Rep_ident x")
+         apply(auto simp add: hd)
+        subgoal for bb
+        using Rep_ident_inverse[of ds] Abs_ident_inverse[of bb]  cd fact apply auto
+        by (metis Rep_ident impossible_Cons le_cases le_trans mem_Collect_eq)
+      done
+      then show "x = Debase a"
+        using cs apply(auto simp add: Rep_ident_inverse Abs_ident_inverse cs)
+        unfolding ident_expose_def ident_cons_def
+        using cs ds
+        apply(auto simp add: ident_expose_def ident_cons_def Rep_ident_inverse)
+        subgoal using fact by auto
+        using cs apply(auto simp add: Rep_ident_inverse Abs_ident_inverse cs )
+        apply(cases "string_expose (Rep_ident x)")
+        using cs apply(auto simp add: Rep_ident_inverse Abs_ident_inverse cs )
+          apply(cases "Rep_ident x")
+         apply(auto)
+        using Rep_ident_inverse Abs_ident_inverse ds ied
+        by metis
+    qed
+  qed
+qed
+
 lemma arg_debaseR:
-(*  assumes nb:"nonbase a"
-  assumes nbb:"nonbase x"*)
   assumes spacious:"MAX_STR > ilength a"
   assumes ai:"args_to_id x = Some (Inr a)"
   shows "x = debase a"
@@ -340,7 +433,7 @@ proof -
         unfolding ilength_def by auto
       have ied:"ident_expose (debase a) = Inr (FSENT, cs)"
         using cs  fact ai
-        apply(auto simp add: fact ident_expose_def ident_cons_def Rep_ident_inverse[of a] Abs_ident_inverse fact)
+        apply(auto simp add:  ident_expose_def ident_cons_def Rep_ident_inverse[of a] Abs_ident_inverse fact)
        using fact apply linarith+
        by (simp add: hd)
         have cd:"cs = ds" 

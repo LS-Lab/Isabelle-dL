@@ -48,15 +48,15 @@ record  subst =
 
 (* definition NTUadmit :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'c) trm \<Rightarrow> ('c + 'c) set \<Rightarrow> bool" *)
 definition NTUadmit :: "(ident \<Rightarrow> trm) \<Rightarrow>  trm \<Rightarrow> (ident + ident) set \<Rightarrow> bool"
-where "NTUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> {i. (debase i) \<in> SIGT \<theta>}. FVT (\<sigma> i)) \<inter> U) = {}"
+where "NTUadmit \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> {i. (debase i) \<in> SIGT \<theta> \<or> (Debase i) \<in> SIGT \<theta>}. FVT (\<sigma> i)) \<inter> U) = {}"
 
 
 (* TadmitFFO :: "('d \<Rightarrow> ('a, 'c) trm) \<Rightarrow> ('a + 'd, 'c) trm \<Rightarrow> bool *)
 inductive TadmitFFO :: "(ident \<Rightarrow> trm) \<Rightarrow> trm \<Rightarrow> bool"
 where 
   TadmitFFO_Diff:"TadmitFFO \<sigma> \<theta> \<Longrightarrow> NTUadmit \<sigma> \<theta> UNIV \<Longrightarrow> TadmitFFO \<sigma> (Differential \<theta>)"
-| TadmitFFO_Fun1:"(\<forall>i. TadmitFFO \<sigma> (args i)) \<Longrightarrow> is_base f \<Longrightarrow> TadmitFFO \<sigma> (Function f args)"
-| TadmitFFO_Fun2:"(\<forall>i. TadmitFFO \<sigma> (args i)) \<Longrightarrow> nonbase f \<Longrightarrow> dfree (\<sigma> (rebase f)) \<Longrightarrow> TadmitFFO \<sigma> (Function f args)"
+| TadmitFFO_Fun:"(\<forall>i. TadmitFFO \<sigma> (args i)) \<Longrightarrow> ilength f < MAX_STR \<Longrightarrow> nonbase f \<Longrightarrow> dfree (\<sigma> (rebase f)) \<Longrightarrow> TadmitFFO \<sigma> (Function f args)"
+(*| TadmitFFO_Fun2:"(\<forall>i. TadmitFFO \<sigma> (args i)) \<Longrightarrow> ilength f < MAX_STR \<Longrightarrow> nonbase f \<Longrightarrow> dfree (\<sigma> (rebase f)) \<Longrightarrow> TadmitFFO \<sigma> (Function f args)"*)
 | TadmitFFO_Plus:"TadmitFFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFFO \<sigma> \<theta>2 \<Longrightarrow> TadmitFFO \<sigma> (Plus \<theta>1 \<theta>2)"
 | TadmitFFO_Times:"TadmitFFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFFO \<sigma> \<theta>2 \<Longrightarrow> TadmitFFO \<sigma> (Times \<theta>1 \<theta>2)"
 | TadmitFFO_Max:"TadmitFFO \<sigma> \<theta>1 \<Longrightarrow> TadmitFFO \<sigma> \<theta>2 \<Longrightarrow> TadmitFFO \<sigma> (Max \<theta>1 \<theta>2)"
@@ -338,10 +338,10 @@ inductive_simps
   and OadmitFO_OSing_simps[simp]: "OadmitFO \<sigma> (OSing x e) U"
   
 definition FUadmitFO :: "(ident \<Rightarrow> trm) \<Rightarrow> formula \<Rightarrow> (ident + ident) set \<Rightarrow> bool"
-where "FUadmitFO \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> {i. Inl (debase i) \<in> SIGF \<theta>}. FVT (\<sigma> i)) \<inter> U) = {}"
+where "FUadmitFO \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i \<in> {i. Inl (debase i) \<in> SIGF \<theta> \<or> Inl (Debase i) \<in> SIGF \<theta>}. FVT (\<sigma> i)) \<inter> U) = {}"
 
 definition PUadmitFO :: "(ident \<Rightarrow> trm) \<Rightarrow> hp \<Rightarrow> (ident + ident) set \<Rightarrow> bool"
-where "PUadmitFO \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i  \<in> {i. Inl (debase i) \<in> SIGP \<theta>}. FVT (\<sigma> i)) \<inter> U) = {}"
+where "PUadmitFO \<sigma> \<theta> U \<longleftrightarrow> ((\<Union> i  \<in> {i. Inl (debase i) \<in> SIGP \<theta> \<or> Inl (Debase i) \<in> SIGP \<theta>}. FVT (\<sigma> i)) \<inter> U) = {}"
 
 inductive NPadmit :: "(ident \<Rightarrow> trm) \<Rightarrow> hp \<Rightarrow> bool" 
 and NFadmit :: "(ident \<Rightarrow> trm) \<Rightarrow> formula \<Rightarrow> bool"
