@@ -2876,8 +2876,22 @@ qed (auto intro: dfree.intros)
 lemma tsubst_preserves_free:
 "dfree \<theta> \<Longrightarrow>  (\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f') \<Longrightarrow> dfree(Tsubst \<theta> \<sigma>)"
 proof (induction rule: dfree.induct) 
-  case (dfree_Fun i args) then show "?case" 
-    sorry
+  case (dfree_Fun i args) then 
+  have nb:"nonbase i"
+  and l:"ilength i < MAX_STR"
+  and frees:"\<And>j. dfree (args j)"
+  and freeSubst:"\<And>j. dfree (Tsubst (args j) \<sigma>)"
+  and sub:"\<And>i f. SFunctions \<sigma> i = Some f \<Longrightarrow> dfree f"
+    by auto then
+  show "?case" 
+  proof (cases "SFunctions \<sigma> i")
+    case None
+    then show ?thesis 
+      using l freeSubst nb by(auto intro:dfree.intros ntsubst_preserves_free)
+  next
+    case (Some f') assume some:"SFunctions \<sigma> i = Some f'"
+    then show ?thesis using l freeSubst nb frees sub by(auto intro:dfree.intros ntsubst_preserves_free)
+  qed
 (*    by (cases "SFunctions \<sigma> i") (auto intro:dfree.intros ntsubst_preserves_free)*)
 qed (auto intro: dfree.intros)
 
