@@ -279,8 +279,8 @@ inductive_simps
 inductive TadmitF :: "subst \<Rightarrow> trm \<Rightarrow> bool"
 where 
   TadmitF_Diff:"TadmitF \<sigma> \<theta> \<Longrightarrow> TUadmit \<sigma> \<theta> UNIV \<Longrightarrow> TadmitF \<sigma> (Differential \<theta>)"
-| TadmitF_Fun1:"(\<forall>i. TadmitF \<sigma> (args i)) \<Longrightarrow> SFunctions \<sigma> f = Some f' \<Longrightarrow> (\<forall>i. dfree (Tsubst (args i) \<sigma>)) \<Longrightarrow> TadmitFFO (\<lambda> i. Tsubst (args i) \<sigma>) f' \<Longrightarrow> TadmitF \<sigma> (Function f args)"
-| TadmitF_Fun2:"(\<forall>i. TadmitF \<sigma> (args i)) \<Longrightarrow> SFunctions \<sigma> f = None \<Longrightarrow> TadmitF \<sigma> (Function f args)"
+| TadmitF_Fun1:"(\<forall>i. TadmitF \<sigma> (args i)) \<Longrightarrow> SFunctions \<sigma> f = Some f' \<Longrightarrow> nonbase f \<Longrightarrow> ilength f < MAX_STR \<Longrightarrow> (\<forall>i. dfree (Tsubst (args i) \<sigma>)) \<Longrightarrow> TadmitFFO (\<lambda> i. Tsubst (args i) \<sigma>) f' \<Longrightarrow> TadmitF \<sigma> (Function f args)"
+| TadmitF_Fun2:"(\<forall>i. TadmitF \<sigma> (args i)) \<Longrightarrow> SFunctions \<sigma> f = None    \<Longrightarrow> nonbase f \<Longrightarrow> ilength f < MAX_STR \<Longrightarrow> TadmitF \<sigma> (Function f args)"
 | TadmitF_Neg:"TadmitF \<sigma> \<theta>1 \<Longrightarrow> TadmitF \<sigma> (Neg \<theta>1)"
 | TadmitF_Plus:"TadmitF \<sigma> \<theta>1 \<Longrightarrow> TadmitF \<sigma> \<theta>2 \<Longrightarrow> TadmitF \<sigma> (Plus \<theta>1 \<theta>2)"
 | TadmitF_Times:"TadmitF \<sigma> \<theta>1 \<Longrightarrow> TadmitF \<sigma> \<theta>2 \<Longrightarrow> TadmitF \<sigma> (Times \<theta>1 \<theta>2)"
@@ -473,8 +473,8 @@ inductive_simps
     
 fun extendf :: "interp \<Rightarrow>  Rvec \<Rightarrow> interp"
 where "extendf I R =
-\<lparr>Functions = (\<lambda>f. case args_to_id f of Some (Inl f') \<Rightarrow> Functions I f' | Some (Inr f') \<Rightarrow> (\<lambda>_. R $ f') | None \<Rightarrow> Functions I f),
- Funls = (\<lambda>f. case args_to_id f of Some (Inl f') \<Rightarrow> Funls I f' | Some (Inr f') \<Rightarrow> (\<lambda>_. R $ f')  | None \<Rightarrow> Funls I f),
+\<lparr>Functions = (\<lambda>f. case args_to_id f of Some (Inl f') \<Rightarrow> Functions I f | Some (Inr f') \<Rightarrow> (\<lambda>_. R $ f') | None \<Rightarrow> Functions I f),
+ Funls = (\<lambda>f. case args_to_id f of Some (Inl f') \<Rightarrow> Funls I f | Some (Inr f') \<Rightarrow> (\<lambda>_. R $ f')  | None \<Rightarrow> Funls I f),
  Predicates = Predicates I,
  Contexts = Contexts I,
  Programs = Programs I,
@@ -493,7 +493,7 @@ where "extendc I R =
  ODEBV = ODEBV I\<rparr>"
 
 definition adjoint :: "interp \<Rightarrow> subst \<Rightarrow> state \<Rightarrow> interp" 
-where "adjoint I \<sigma> \<nu> =
+where adjoint_def:"adjoint I \<sigma> \<nu> =
 \<lparr>Functions =   (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. dterm_sem (extendf I R) f' \<nu>) | None \<Rightarrow> Functions I f),
  Funls =       (\<lambda>f. case SFunls \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. dterm_sem I f' \<nu>) | None \<Rightarrow> Funls I f),
  Predicates = (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda>R. \<nu> \<in> fml_sem (extendf I R) p') | None \<Rightarrow> Predicates I p),
@@ -533,7 +533,7 @@ lemma adjoint_free:
 (*  subgoal for a b x x2
 (*   apply (simp add: dsem_to_ssem sfree)*)
   using sfree[of x ]  sledgehammer*)
-
+                                                 
 lemma adjointFO_free:"(\<And>i. dfree (\<sigma> i)) \<Longrightarrow> (adjointFO I \<sigma> \<nu> =
 \<lparr>Functions =   (\<lambda>f. case args_to_id f of Some (Inl f') \<Rightarrow> Functions I f | Some (Inr f') \<Rightarrow> (\<lambda>_. sterm_sem I (\<sigma> f') (fst \<nu>)) | None \<Rightarrow> Functions I f),
  Funls =   (\<lambda>f. case args_to_id f of Some (Inl f') \<Rightarrow> Funls I f | Some (Inr f') \<Rightarrow> (\<lambda>_. sterm_sem I (\<sigma> f') (fst \<nu>)) | None \<Rightarrow> Funls I f),

@@ -29,10 +29,10 @@ where
 | "extendf_deriv I _ (Const r) \<nu> x = (\<lambda>_. 0)"
 | "extendf_deriv I g (Function f args) \<nu> x =
   (case args_to_id f of 
-    Some (Inl ff) \<Rightarrow> (THE f'. \<forall>y. (Functions I ff has_derivative f' y) (at y))
+    Some (Inl ff) \<Rightarrow> (THE f'. \<forall>y. (Functions I f has_derivative f' y) (at y))
               (\<chi> i. dterm_sem
-                     \<lparr>Functions = (\<lambda> z. case args_to_id z of Some (Inl a) \<Rightarrow> Functions I a | Some (Inr b) \<Rightarrow>  (\<lambda>f' _. x $ f') b | None \<Rightarrow> Functions I z), 
-                      Funls =     (\<lambda> z. case args_to_id z of Some (Inl a) \<Rightarrow> Funls I a | Some (Inr b) \<Rightarrow>  (\<lambda>f' _. x $ f') b | None \<Rightarrow> Funls I z), 
+                     \<lparr>Functions = (\<lambda> z. case args_to_id z of Some (Inl a) \<Rightarrow> Functions I z | Some (Inr b) \<Rightarrow>  (\<lambda>f' _. x $ f') b | None \<Rightarrow> Functions I z), 
+                      Funls =     (\<lambda> z. case args_to_id z of Some (Inl a) \<Rightarrow> Funls I z | Some (Inr b) \<Rightarrow>  (\<lambda>f' _. x $ f') b | None \<Rightarrow> Funls I z), 
                       Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
                       ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
                      (args i) \<nu>) \<circ>
@@ -64,15 +64,15 @@ proof(induction rule: dfree.induct[OF free])
     apply(cases "inj")
       using some  apply (auto simp add: some continuous_intros simp del: args_to_id.simps)
     subgoal for a
-      apply (rule continuous_on_compose2[of UNIV "Functions I a" UNIV "(\<lambda> x. (\<chi> i. dterm_sem
-               \<lparr>Functions = (\<lambda> f. case args_to_id f of Some (Inl x) \<Rightarrow> Functions I x | Some (Inr f') \<Rightarrow>  (\<lambda> _. x $ f') | None \<Rightarrow> Functions I f), 
-                Funls = (\<lambda> f. case args_to_id f of Some (Inl x) \<Rightarrow> (Funls I) x | Some (Inr f') \<Rightarrow>  (\<lambda>_. x $ f') | None \<Rightarrow> Funls I f),
+      apply (rule continuous_on_compose2[of UNIV "Functions I f" UNIV "(\<lambda> x. (\<chi> i. dterm_sem
+               \<lparr>Functions = (\<lambda> f. case args_to_id f of Some (Inl x) \<Rightarrow> Functions I f | Some (Inr f') \<Rightarrow>  (\<lambda> _. x $ f') | None \<Rightarrow> Functions I f), 
+                Funls = (\<lambda> f. case args_to_id f of Some (Inl x) \<Rightarrow> (Funls I) f | Some (Inr f') \<Rightarrow>  (\<lambda>_. x $ f') | None \<Rightarrow> Funls I f),
                 Predicates = Predicates I, Contexts = Contexts I,
                           Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
                        (args i) \<nu>))"])
       subgoal
         using is_interpD[OF good_interp]
-        using has_derivative_continuous_on[of UNIV "(Functions I a)" "(THE f'. \<forall>x. (Functions I a has_derivative f' x) (at x))"] 
+        using has_derivative_continuous_on[of UNIV "(Functions I f)" "(THE f'. \<forall>x. (Functions I f has_derivative f' x) (at x))"] 
         by auto
        apply(rule continuous_on_vec_lambda)
       using some co by (auto simp add: some simp del: args_to_id.simps)
@@ -101,10 +101,10 @@ next
     apply(cases "inj")
      using some apply (auto simp add: some simp del: args_to_id.simps)
     subgoal for a
-      apply(rule bounded_linear_compose[of "(THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
+      apply(rule bounded_linear_compose[of "(THE f'. \<forall>y. (Functions I f has_derivative f' y) (at y))
            (\<chi> i. dterm_sem
-                 \<lparr>Functions = (\<lambda> z. case args_to_id z of Some (Inl a) \<Rightarrow> Functions I a | Some (Inr b) \<Rightarrow>  (\<lambda> _. x $ b) | None \<Rightarrow> Functions I z), 
-                  Funls = (\<lambda> z. case args_to_id z of Some (Inl x) \<Rightarrow> Funls I x | Some (Inr b) \<Rightarrow>  (\<lambda>_. x $ b) | None \<Rightarrow> Funls I z), 
+                 \<lparr>Functions = (\<lambda> z. case args_to_id z of Some (Inl a) \<Rightarrow> Functions I z | Some (Inr b) \<Rightarrow>  (\<lambda> _. x $ b) | None \<Rightarrow> Functions I z), 
+                  Funls = (\<lambda> z. case args_to_id z of Some (Inl a) \<Rightarrow> Funls I z | Some (Inr b) \<Rightarrow>  (\<lambda>_. x $ b) | None \<Rightarrow> Funls I z), 
                   Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
                      ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
                   (args i) \<nu>)"])
@@ -155,7 +155,7 @@ then have
     proof -
       assume injs:"inj = Inl a"
       then have cs:"args_to_id f = Some (Inl a)" using some by auto
-      let ?f = "\<lambda> x. ((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
+      let ?f = "\<lambda> x. ((THE f'. \<forall>y. (Functions I f has_derivative f' y) (at y))
                         (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>) )"
       let ?g = "\<lambda>x b . (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b)"
       let ?h = "\<lambda>x b . (?f x) (?g x b)"
@@ -168,7 +168,7 @@ then have
           by (simp add: bounded_linear_vec dfrees extendf_deriv_bounded good_interp)
       have boundedH:"\<And>x. bounded_linear (?h x)"
         using bounded_linear_compose  boundedG boundedF by blast
-      have freq:"(\<lambda>x. blinfun_compose(Blinfun((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
+      have freq:"(\<lambda>x. blinfun_compose(Blinfun((THE f'. \<forall>y. (Functions I f has_derivative f' y) (at y))
                         (\<chi> i. dterm_sem (extendf I x)
                                (args i) \<nu>) )) (Blinfun(\<lambda> b. (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b))))
                 = (\<lambda>x. Blinfun (extendf_deriv I i ($f f args) \<nu> x))"
@@ -177,26 +177,26 @@ then have
           subgoal for x ia
             using boundedGG[of x]  blinfun_apply_blinfun_compose bounded_linear_Blinfun_apply
           proof -
-            have f1: "bounded_linear (\<lambda>v. FunctionFrechet I a (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>) (\<chi> s. extendf_deriv I i (args s) \<nu> x v))"
-              using FunctionFrechet.simps \<open>bounded_linear (\<lambda>b. (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y)) (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>) (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b))\<close>
+            have f1: "bounded_linear (\<lambda>v. FunctionFrechet I f (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>) (\<chi> s. extendf_deriv I i (args s) \<nu> x v))"
+              using FunctionFrechet.simps \<open>bounded_linear (\<lambda>b. (THE f'. \<forall>y. (Functions I f has_derivative f' y) (at y)) (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>) (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b))\<close>
               by fastforce          
-            have bl:"bounded_linear (FunctionFrechet I a (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>))"
+            have bl:"bounded_linear (FunctionFrechet I f (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>))"
               using good_interp is_interp_def by blast
             have bl2:"bounded_linear 
-               (Blinfun ((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y)) (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>)) o\<^sub>L
+               (Blinfun ((THE f'. \<forall>y. (Functions I f has_derivative f' y) (at y)) (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>)) o\<^sub>L
                 Blinfun (\<lambda>b. \<chi> ia. extendf_deriv I i (args ia) \<nu> x b))"
               using blinfun.bounded_linear_right by blast
-            from bl have "blinfun_apply (Blinfun (FunctionFrechet I a (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>))) (\<chi> s. extendf_deriv I i (args s) \<nu> x ia) = blinfun_apply (Blinfun (\<lambda>v. FunctionFrechet I a (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>) (\<chi> s. extendf_deriv I i (args s) \<nu> x v))) ia"
+            from bl have "blinfun_apply (Blinfun (FunctionFrechet I f (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>))) (\<chi> s. extendf_deriv I i (args s) \<nu> x ia) = blinfun_apply (Blinfun (\<lambda>v. FunctionFrechet I f (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>) (\<chi> s. extendf_deriv I i (args s) \<nu> x v))) ia"
               using f1 by (simp add: bounded_linear_Blinfun_apply)
-            then have app:"blinfun_apply (Blinfun (FunctionFrechet I a (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>))) (\<chi> s. extendf_deriv I i (args s) \<nu> x ia) = blinfun_apply (Blinfun (\<lambda>v. FunctionFrechet I a (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>) (\<chi> s. extendf_deriv I i (args s) \<nu> x v))) ia \<and> bounded_linear (\<lambda>v. \<chi> s. extendf_deriv I i (args s) \<nu> x v)"
+            then have app:"blinfun_apply (Blinfun (FunctionFrechet I f (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>))) (\<chi> s. extendf_deriv I i (args s) \<nu> x ia) = blinfun_apply (Blinfun (\<lambda>v. FunctionFrechet I f (\<chi> s. dterm_sem (extendf I x) (args s) \<nu>) (\<chi> s. extendf_deriv I i (args s) \<nu> x v))) ia \<and> bounded_linear (\<lambda>v. \<chi> s. extendf_deriv I i (args s) \<nu> x v)"
               by (metis \<open>bounded_linear (\<lambda>b. \<chi> ia. extendf_deriv I i (args ia) \<nu> x b)\<close>)
             have bb:"bounded_linear (extendf_deriv I i ($f f args) \<nu> x)"
               using dfree_Fun dfrees extendf_deriv_bounded good_interp 
               using "3.hyps"(1) "3.hyps"(2) "3.hyps" by blast
-            have hm:"( (Blinfun ((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y)) (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>))) 
+            have hm:"( (Blinfun ((THE f'. \<forall>y. (Functions I f has_derivative f' y) (at y)) (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>))) 
                        o\<^sub>L(Blinfun (\<lambda>b. \<chi> ia. extendf_deriv I i (args ia) \<nu> x b)))
                   =   (Blinfun 
-                        (((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y)) (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>)) 
+                        (((THE f'. \<forall>y. (Functions I f has_derivative f' y) (at y)) (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>)) 
                        \<circ>  (\<lambda>b. \<chi> ia. extendf_deriv I i (args ia) \<nu> x b))) "
               apply(rule Bounded_Linear_Function.blinfun_compose.abs_eq)
                apply(simp only: eq_onp_def)
@@ -214,16 +214,17 @@ then have
             by(rule refl)
           have hrm:"blinfun_apply
      (Blinfun
-       ((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y)) (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>) \<circ>
+       ((THE f'. \<forall>y. (Functions I f has_derivative f' y) (at y)) (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>) \<circ>
         (\<lambda>b. \<chi> ia. extendf_deriv I i (args ia) \<nu> x b)))
-      = ((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y)) (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>) \<circ>
+      = ((THE f'. \<forall>y. (Functions I f has_derivative f' y) (at y)) (\<chi> i. dterm_sem (extendf I x) (args i) \<nu>) \<circ>
         (\<lambda>b. \<chi> ia. extendf_deriv I i (args ia) \<nu> x b)) "
             apply(rule bounded_linear_Blinfun_apply)
             using f1 bl bb bl2
             by (simp add: blinfun_compose.rep_eq boundedGG bounded_linear_Blinfun_apply)
-            show ?thesis 
+          show ?thesis 
               apply(simp only: bounded_linear_Blinfun_apply[OF bb] hm hrm)
-              apply(unfold comp_def)
+            apply(unfold comp_def)
+            using cs
               by(simp add: cs del: args_to_id.simps)
           qed
         done       
@@ -250,13 +251,13 @@ then have
         using "3.IH" by blast
       have cont_intro:"\<And> f g s. continuous_on s f \<Longrightarrow> continuous_on s g \<Longrightarrow> continuous_on s (\<lambda>x. f x  o\<^sub>L  g x)"
         by(auto intro: continuous_intros)
-      have cont:"continuous_on UNIV (\<lambda>x. blinfun_compose(Blinfun((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y))
+      have cont:"continuous_on UNIV (\<lambda>x. blinfun_compose(Blinfun((THE f'. \<forall>y. (Functions I f has_derivative f' y) (at y))
                         (\<chi> i. dterm_sem (extendf I x)
                                (args i) \<nu>) )) (Blinfun(\<lambda> b. (\<chi> ia. extendf_deriv I i (args ia) \<nu> x b))))"
         apply(rule cont_intro)
          defer
          subgoal using blinfun_vec vec_cont by presburger
-        apply(rule continuous_on_compose2[of UNIV "(\<lambda>x. Blinfun ((THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y)) x))"])
+        apply(rule continuous_on_compose2[of UNIV "(\<lambda>x. Blinfun ((THE f'. \<forall>y. (Functions I f has_derivative f' y) (at y)) x))"])
           subgoal using good_interp unfolding is_interp_def by simp
          apply(rule continuous_on_vec_lambda)
          subgoal for i using extendf_dterm_sem_continuous[OF dfrees[of i] good_interp] by auto
@@ -426,8 +427,8 @@ lemma extendf_deriv:
   proof (cases inj)
     case (Inl a) then have inj:"inj = Inl a" and a:"args_to_id f = Some (Inl a)" using some by auto
     from IHs have IH1':"(\<And>ia. \<And>x. ((\<lambda>R. dterm_sem
-                      \<lparr>Functions = \<lambda>f. case args_to_id f of Some (Inl x) \<Rightarrow> Functions I x | Some (Inr f') \<Rightarrow> \<lambda>_. R $ f' | None \<Rightarrow> Functions I f, 
-                      Funls = \<lambda>f. case args_to_id f of Some (Inl x) \<Rightarrow> Funls I x | Some (Inr f') \<Rightarrow> \<lambda>_. R $ f' | None \<Rightarrow> Funls I f, Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
+                      \<lparr>Functions = \<lambda>f. case args_to_id f of Some (Inl x) \<Rightarrow> Functions I f | Some (Inr f') \<Rightarrow> \<lambda>_. R $ f' | None \<Rightarrow> Functions I f, 
+                      Funls = \<lambda>f. case args_to_id f of Some (Inl x) \<Rightarrow> Funls I f | Some (Inr f') \<Rightarrow> \<lambda>_. R $ f' | None \<Rightarrow> Funls I f, Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
                          ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
                       (args ia) \<nu>) has_derivative
                   extendf_deriv I i_f (args ia) \<nu> x)
@@ -435,19 +436,19 @@ lemma extendf_deriv:
      have chain:"\<And>f f' x s g g'. (f has_derivative f') (at x within s) \<Longrightarrow>
       (g has_derivative g') (at (f x) within f ` s) \<Longrightarrow> (g \<circ> f has_derivative g' \<circ> f') (at x within s)"
        by (auto intro: derivative_intros)
-     let ?f = "(\<lambda>x. Functions I a x)"
+     let ?f = "(\<lambda>x. Functions I f x)"
      let ?g = "(\<lambda> R. (\<chi> i. dterm_sem
-                       \<lparr>Functions = \<lambda>f. case args_to_id f of Some (Inl x) \<Rightarrow> Functions I x | Some (Inr f') \<Rightarrow> \<lambda>_. R $ f' | None \<Rightarrow> Functions I f, 
-                        Funls = \<lambda>f. case args_to_id f of Some (Inl x) \<Rightarrow> Funls I x | Some (Inr f') \<Rightarrow> \<lambda>_. R $ f' | None \<Rightarrow> Funls I f, 
+                       \<lparr>Functions = \<lambda>f. case args_to_id f of Some (Inl x) \<Rightarrow> Functions I f | Some (Inr f') \<Rightarrow> \<lambda>_. R $ f' | None \<Rightarrow> Functions I f, 
+                        Funls = \<lambda>f. case args_to_id f of Some (Inl x) \<Rightarrow> Funls I f | Some (Inr f') \<Rightarrow> \<lambda>_. R $ f' | None \<Rightarrow> Funls I f, 
                         Predicates = Predicates I, Contexts = Contexts I,
                           Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
                        (args i) \<nu>))"
-     let ?myf' = "(\<lambda>x. (THE f'. \<forall>y. (Functions I a has_derivative f' y) (at y)) (?g x))"
+     let ?myf' = "(\<lambda>x. (THE f'. \<forall>y. (Functions I f has_derivative f' y) (at y)) (?g x))"
      let ?myg' = "(\<lambda>x. (\<lambda>\<nu>'. \<chi> ia. extendf_deriv I i_f (args ia) \<nu> x \<nu>'))"
-     have fg_eq:"(\<lambda>R. Functions I a
+     have fg_eq:"(\<lambda>R. Functions I f
            (\<chi> i. dterm_sem
-                  \<lparr>Functions = \<lambda>f. case args_to_id f of Some (Inl x) \<Rightarrow> Functions I x | Some (Inr f') \<Rightarrow> \<lambda>_. R $ f' | None \<Rightarrow> Functions I f, 
-                   Funls = \<lambda>f. case args_to_id f of Some (Inl x) \<Rightarrow> Funls I x | Some (Inr f') \<Rightarrow> \<lambda>_. R $ f' | None \<Rightarrow> Funls I f, 
+                  \<lparr>Functions = \<lambda>f. case args_to_id f of Some (Inl x) \<Rightarrow> Functions I f | Some (Inr f') \<Rightarrow> \<lambda>_. R $ f' | None \<Rightarrow> Functions I f, 
+                   Funls = \<lambda>f. case args_to_id f of Some (Inl x) \<Rightarrow> Funls I f | Some (Inr f') \<Rightarrow> \<lambda>_. R $ f' | None \<Rightarrow> Funls I f, 
                    Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I,
                      ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
                   (args i) \<nu>)) = (?f \<circ> ?g)"
@@ -462,8 +463,8 @@ lemma extendf_deriv:
          done
        subgoal for xa 
        proof -
-         have deriv:"\<And>x. (Functions I a has_derivative FunctionFrechet I a x) (at x)"
-         and cont:"continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I a x))"
+         have deriv:"\<And>x. (Functions I f has_derivative FunctionFrechet I f x) (at x)"
+         and cont:"continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I f x))"
            using good_interp[unfolded is_interp_def] by auto
          show ?thesis
            apply(rule has_derivative_at_withinI)
@@ -484,11 +485,11 @@ lemma extendf_deriv:
      have chain:"\<And>f f' x s g g'. (f has_derivative f') (at x within s) \<Longrightarrow>
       (g has_derivative g') (at (f x) within f ` s) \<Longrightarrow> (g \<circ> f has_derivative g' \<circ> f') (at x within s)"
        by (auto intro: derivative_intros)
-     let ?f = "(\<lambda>x. Functions I b x)"
+     let ?f = "(\<lambda>x. Functions I f x)"
      let ?g = "(\<lambda> R. (\<chi> i. dterm_sem (extendf I R) (args i) \<nu>))"
-     let ?myf' = "(\<lambda>x. (THE f'. \<forall>y. (Functions I b has_derivative f' y) (at y)) (?g x))"
+     let ?myf' = "(\<lambda>x. (THE f'. \<forall>y. (Functions I f has_derivative f' y) (at y)) (?g x))"
      let ?myg' = "(\<lambda>x. (\<lambda>\<nu>'. \<chi> ia. extendf_deriv I i_f (args ia) \<nu> x \<nu>'))"
-     have fg_eq:"(\<lambda>R. Functions I b (\<chi> i. dterm_sem (extendf I R)(args i) \<nu>)) = (?f \<circ> ?g)"
+     have fg_eq:"(\<lambda>R. Functions I f (\<chi> i. dterm_sem (extendf I R)(args i) \<nu>)) = (?f \<circ> ?g)"
        by auto
      have "\<And>x. ((?f o ?g) has_derivative (?myf' x \<circ> ?myg' x)) (at x)"
        apply (rule diff_chain_at)
@@ -499,8 +500,8 @@ lemma extendf_deriv:
          done
        subgoal for xa 
        proof -
-         have deriv:"\<And>x. (Functions I b has_derivative FunctionFrechet I b x) (at x)"
-         and cont:"continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I b x))"
+         have deriv:"\<And>x. (Functions I f has_derivative FunctionFrechet I f x) (at x)"
+         and cont:"continuous_on UNIV (\<lambda>x. Blinfun (FunctionFrechet I f x))"
            using good_interp[unfolded is_interp_def] by auto
          show ?thesis
            apply(rule has_derivative_at_withinI)
@@ -553,8 +554,8 @@ proof (auto simp add: is_interp_def simp del: args_to_id.simps)
     by (auto intro: derivative_eq_intros)
 (*  obtain inj where some:"args_to_id i = Some inj" 
     using nonbase_some by auto*)
-  show "((case args_to_id i of Some (Inl xa) \<Rightarrow> Functions I xa | Some (Inr f') \<Rightarrow> \<lambda>_. R $ f' | None \<Rightarrow> Functions I i) has_derivative
-            (THE f'. \<forall>x. ((case args_to_id i of Some (Inl xa) \<Rightarrow> Functions I xa | Some (Inr f') \<Rightarrow> \<lambda>_. R $ f' | None \<Rightarrow> Functions I i) has_derivative f' x) (at x))
+  show "((case args_to_id i of Some (Inl xa) \<Rightarrow> Functions I i | Some (Inr f') \<Rightarrow> \<lambda>_. R $ f' | None \<Rightarrow> Functions I i) has_derivative
+            (THE f'. \<forall>x. ((case args_to_id i of Some (Inl xa) \<Rightarrow> Functions I i | Some (Inr f') \<Rightarrow> \<lambda>_. R $ f' | None \<Rightarrow> Functions I i) has_derivative f' x) (at x))
              x)
             (at x)"
     apply(cases "ident_expose i",auto) 
@@ -583,7 +584,7 @@ proof (auto simp add: is_interp_def simp del: args_to_id.simps)
       done
   next
     fix i
-    show "continuous_on UNIV(\<lambda>x. Blinfun ((THE f'. \<forall>x. ((case args_to_id i of None \<Rightarrow> Functions I i | Some (Inl xa) \<Rightarrow> Functions I xa  | Some (Inr f') \<Rightarrow> \<lambda>_. R $ f') has_derivative f' x) (at x)) x))"
+    show "continuous_on UNIV(\<lambda>x. Blinfun ((THE f'. \<forall>x. ((case args_to_id i of None \<Rightarrow> Functions I i | Some (Inl xa) \<Rightarrow> Functions I i  | Some (Inr f') \<Rightarrow> \<lambda>_. R $ f') has_derivative f' x) (at x)) x))"
       apply(cases "ident_expose i",auto)
 (*      apply(cases "args_to_id i",auto)*)
       subgoal using good_interp unfolding is_interp_def by auto
@@ -767,7 +768,7 @@ lemma adjointFO_safe:
        then show "(Functions I i has_derivative (THE f'a. \<forall>x. (Functions I i has_derivative f'a x) (at x)) x) (at x)"
          using the_eq Pf 
        proof -
-         have "\<forall>v i. (\<lambda>ia. case args_to_id ia of Some(Inl x) \<Rightarrow> Functions i x | Some(Inr i) \<Rightarrow> \<lambda>va. v $ i | None \<Rightarrow> Functions i ia) = Functions (extendf i v)"
+         have "\<forall>v i. (\<lambda>ia. case args_to_id ia of Some(Inl x) \<Rightarrow> Functions i ia | Some(Inr i) \<Rightarrow> \<lambda>va. v $ i | None \<Rightarrow> Functions i ia) = Functions (extendf i v)"
            by simp
          then show ?thesis
            using UNIV_I extendf.simps extendf_safe good_interp is_interpD vec_lambda_inverse by simp
@@ -906,11 +907,11 @@ lemma adjoint_consequence:
           \<lparr>Functions =
              \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Map.empty x
                       | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of
-                 None \<Rightarrow> Functions I f | Some (Inl xa) \<Rightarrow> Functions I xa | Some (Inr f') \<Rightarrow> \<lambda>_. xaa $ f',
+                 None \<Rightarrow> Functions I f | Some (Inl xa) \<Rightarrow> Functions I f | Some (Inr f') \<Rightarrow> \<lambda>_. xaa $ f',
              Funls =
                \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Map.empty x
                         | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of
-                   None \<Rightarrow> Funls I f | Some (Inl xa) \<Rightarrow> Funls I xa | Some (Inr f') \<Rightarrow> \<lambda>_. xaa $ f',
+                   None \<Rightarrow> Funls I f | Some (Inl xa) \<Rightarrow> Funls I f | Some (Inr f') \<Rightarrow> \<lambda>_. xaa $ f',
              Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr> a"
       from safes some have safe:"fsafe a" by auto
       have sub:"SFV \<sigma> (Inr (Inr xa)) \<subseteq> (\<Union>x. SFV \<sigma> x)"
@@ -920,8 +921,8 @@ lemma adjoint_consequence:
         using agree_sub[OF sub agrees] by auto
       then have agree:"Vagree \<nu> \<omega> (FVF a)"
         using some by auto
-      let ?I' = "\<lparr>Functions = \<lambda>f. case args_to_id f of None \<Rightarrow> Functions I f | Some (Inl xa) \<Rightarrow> Functions I xa | Some (Inr f') \<Rightarrow> \<lambda>_. xaa $ f',
-        Funls = \<lambda>f. case args_to_id f of None \<Rightarrow> Funls I f | Some (Inl xa) \<Rightarrow> Funls I xa | Some (Inr f') \<Rightarrow> \<lambda>_. xaa $ f',
+      let ?I' = "\<lparr>Functions = \<lambda>f. case args_to_id f of None \<Rightarrow> Functions I f | Some (Inl xa) \<Rightarrow> Functions I f | Some (Inr f') \<Rightarrow> \<lambda>_. xaa $ f',
+        Funls = \<lambda>f. case args_to_id f of None \<Rightarrow> Funls I f | Some (Inl xa) \<Rightarrow> Funls I f | Some (Inr f') \<Rightarrow> \<lambda>_. xaa $ f',
         Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>"
       have good_interp':"is_interp ?I'"  using extendf_safe[OF good_interp, of xaa] by (auto simp del: args_to_id.simps)
       have IA:"\<And>S. Iagree ?I' ?I' (SIGF a)" using Iagree_refl by auto 
@@ -941,11 +942,11 @@ lemma adjoint_consequence:
       assume sem:"\<omega> \<in> fml_sem \<lparr>Functions =
              \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Map.empty x
                       | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of
-                 None \<Rightarrow> Functions I f | Some (Inl xa) \<Rightarrow> Functions I xa | Some (Inr f') \<Rightarrow> \<lambda>_. xaa $ f',
+                 None \<Rightarrow> Functions I f | Some (Inl xa) \<Rightarrow> Functions I f | Some (Inr f') \<Rightarrow> \<lambda>_. xaa $ f',
              Funls =
                \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Map.empty x
                         | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of
-                   None \<Rightarrow> Funls I f | Some (Inl xa) \<Rightarrow> Funls I xa | Some (Inr f') \<Rightarrow> \<lambda>_. xaa $ f',
+                   None \<Rightarrow> Funls I f | Some (Inl xa) \<Rightarrow> Funls I f | Some (Inr f') \<Rightarrow> \<lambda>_. xaa $ f',
              Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr> a
         "
       from safes some have safe:"fsafe a" by auto
@@ -959,11 +960,11 @@ lemma adjoint_consequence:
       let ?I' = "\<lparr>Functions =
              \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Map.empty x
                       | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of
-                 None \<Rightarrow> Functions I f | Some (Inl xa) \<Rightarrow> Functions I xa | Some (Inr f') \<Rightarrow> \<lambda>_. xaa $ f',
+                 None \<Rightarrow> Functions I f | Some (Inl xa) \<Rightarrow> Functions I f | Some (Inr f') \<Rightarrow> \<lambda>_. xaa $ f',
              Funls =
                \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Map.empty x
                         | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of
-                   None \<Rightarrow> Funls I f | Some (Inl xa) \<Rightarrow> Funls I xa | Some (Inr f') \<Rightarrow> \<lambda>_. xaa $ f',
+                   None \<Rightarrow> Funls I f | Some (Inl xa) \<Rightarrow> Funls I f | Some (Inr f') \<Rightarrow> \<lambda>_. xaa $ f',
              Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>"
       have IA:"\<And>S. Iagree ?I' ?I' (SIGF a)" using Iagree_refl by auto
       have good_interp':"is_interp ?I'" using good_interp using extendf_safe by auto
@@ -2909,6 +2910,8 @@ proof (induction rule: TadmitF.induct)
       and TFA:"\<And>i. TadmitF \<sigma> (args i)"
       and NTFA:"TadmitFFO (\<lambda>i. Tsubst (args i) \<sigma>) f'"
       and theIH:"\<And>i. sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>) = sterm_sem (adjoint I \<sigma> \<nu>) (args i) (fst \<nu>)"
+      and nb:"nonbase f"
+      and l:"ilength f < MAX_STR"
         by auto
       from frees have safes:"\<And>i. dsafe (Tsubst (args i) \<sigma>)"
         by (simp add: dfree_is_dsafe) 
@@ -2925,37 +2928,46 @@ proof (induction rule: TadmitF.induct)
     apply(rule nsubst_sterm)
      apply(rule subFree)
     by (rule safes)
-  show "?case"
-    apply (simp add: some)
-    unfolding vec_eq IH2
-    apply (auto simp add: some adjoint_free[OF subFreeer, of \<sigma> "(\<lambda> x y. x)" I \<nu>] adjointFO_free[OF frees])      
-  proof -
-    have "\<forall>f. ($) (vec_lambda (f::Finite_String.ident \<Rightarrow> real)) = f"
-      by (meson UNIV_I vec_lambda_inverse)
-    then show "sterm_sem
-     \<lparr>Functions =
-        \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Map.empty x
-                 | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of
-            None \<Rightarrow> Functions I f | Some (Inl f') \<Rightarrow> Functions I f | Some (Inr f') \<Rightarrow> \<lambda>_. sterm_sem I (Tsubst (args f') \<sigma>) (fst \<nu>),
+  from nb obtain inj where inj:"args_to_id f = Some inj" using nonbase_some by auto
+    have silly:"\<lparr>Functions =
+        \<lambda>f. case args_to_id f of None \<Rightarrow> Functions I f | Some (Inl f') \<Rightarrow> Functions I f
+            | Some (Inr f') \<Rightarrow> \<lambda>_. sterm_sem I (Tsubst (args f') \<sigma>) (fst \<nu>),
         Funls =
-          \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Map.empty x
-                   | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of
-              None \<Rightarrow> Funls I f | Some (Inl f') \<Rightarrow> Funls I f | Some (Inr f') \<Rightarrow> \<lambda>_. sterm_sem I (Tsubst (args f') \<sigma>) (fst \<nu>),
+          \<lambda>f. case args_to_id f of None \<Rightarrow> Funls I f | Some (Inl f') \<Rightarrow> Funls I f
+              | Some (Inr f') \<Rightarrow> \<lambda>_. sterm_sem I (Tsubst (args f') \<sigma>) (fst \<nu>),
         Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
-     f' (fst \<nu>) =
-    sterm_sem
+     =
      \<lparr>Functions =
-        \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Map.empty x
-                 | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of
-            None \<Rightarrow> Functions I f | Some (Inl xa) \<Rightarrow> Functions I xa
+        \<lambda>f. case args_to_id f of None \<Rightarrow> Functions I f | Some (Inl xa) \<Rightarrow> Functions I f
             | Some (Inr f') \<Rightarrow> \<lambda>_. (\<chi> i. sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>)) $ f',
         Funls =
-          \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Map.empty x
-                   | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of
-              None \<Rightarrow> Funls I f | Some (Inl xa) \<Rightarrow> Funls I xa | Some (Inr f') \<Rightarrow> \<lambda>_. (\<chi> i. sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>)) $ f',
-        Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
-     f' (fst \<nu>)"
-      sorry
+          \<lambda>f. case args_to_id f of None \<Rightarrow> Funls I f | Some (Inl xa) \<Rightarrow> Funls I f
+              | Some (Inr f') \<Rightarrow> \<lambda>_. (\<chi> i. sterm_sem I (Tsubst (args i) \<sigma>) (fst \<nu>)) $ f',
+        Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>"
+      apply(rule USubst_Lemma.interp_eq)
+            apply(auto simp del: args_to_id.simps simp add: vec_eq_iff)
+      subgoal
+        apply(rule ext) subgoal for f apply(cases "args_to_id f") apply(auto) subgoal for a apply(cases a) apply(auto) done done done
+      apply(rule ext) subgoal for f apply(cases "args_to_id f") apply(auto) subgoal for a apply(cases a) apply(auto) done done done
+  show "?case" proof (cases "inj")
+    case (Inl a) then have cs:"args_to_id f = Some (Inl a)" using inj by auto
+    have v:"\<forall>f. ($) (vec_lambda (f::Finite_String.ident \<Rightarrow> real)) = f"
+      by (meson UNIV_I vec_lambda_inverse)
+    note adjoint_free[of \<sigma> I \<nu> , OF subFreeer, of "(\<lambda> x y. x)"]
+    show "?thesis"
+      apply(auto simp add: some IH2 vec_eq)
+      using  adjointFO_free[OF frees]
+       adjoint_free[OF subFreeer, of \<sigma> "(\<lambda> x y. x)" I \<nu>] 
+      apply(auto simp del: adjoint_def args_to_id.simps simp add: some vec_eq_iff)
+      using silly by auto
+  next
+    case (Inr b) then have cs:"args_to_id f = Some (Inr b)" using inj by auto
+    then show ?thesis 
+            apply(auto simp add: some IH2 vec_eq)
+      using  adjointFO_free[OF frees]
+       adjoint_free[OF subFreeer, of \<sigma> "(\<lambda> x y. x)" I \<nu>] 
+      apply(auto simp del: adjoint_def args_to_id.simps simp add: some vec_eq_iff)
+      using silly by auto
   qed
 next
   case (TadmitF_Fun2  \<sigma> args f) 
@@ -3163,6 +3175,8 @@ next
   note safe = Tadmit_Fun1.prems(1) and sfree = Tadmit_Fun1.prems(2) and TO = Tadmit_Fun1.hyps(2)
     and some = Tadmit_Fun1.hyps(1)
   hence safes:"\<And>i. dsafe (args i)" by auto
+  from safe have nb:"nonbase f" and l:"ilength f < MAX_STR" by auto
+  obtain inj where inj:"args_to_id f = Some inj" using nb nonbase_some by auto
   have IH:"(\<And>\<nu>'. \<And>i. dsafe (args i) \<Longrightarrow>
       dterm_sem I (Tsubst (args i) \<sigma>) \<nu> = dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)" 
     using  Tadmit_Fun1.prems Tadmit_Fun1.IH by blast
@@ -3175,16 +3189,22 @@ next
   have freef:"dfree f'" using sfree some TO by auto
   have IH2:"dterm_sem I (TsubstFO f' ?sub) \<nu> = dterm_sem (adjointFO I ?sub \<nu>) f' \<nu>"
     using nsubst_dterm'[OF good_interp] some freef subSafe TO by blast
-  have vec:"(\<chi> i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) = (\<chi> i. dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)"
+  have vec:"(\<chi> i. dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>) = (\<chi> i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>)"
     apply(auto simp add: vec_eq_iff)
     subgoal for i
       using IH[of i, OF safes[of i]] 
       by auto
     done
-  show "?case" 
-    apply(auto simp add: some adjoint_def simp del: args_to_id.simps TsubstFO_def) 
-    using IH safes eqs TO sfree  IH2 good_interp adjoint_def adjointFO_def vec
-    sorry
+  show "?case" apply(simp add: some)
+    apply(auto simp add: vec IH2)
+    apply(auto simp add: some adjoint_def adjointFO_def simp del: args_to_id.simps)
+    using IH safes eqs TO sfree  IH2 good_interp adjoint_def adjointFO_def vec adjoint_def 
+  proof -
+    have "\<forall>f. ($) (vec_lambda (f::Finite_String.ident \<Rightarrow> real)) = f"
+      by (meson UNIV_I vec_lambda_inverse)
+    then show "dterm_sem \<lparr>Functions = \<lambda>i. case args_to_id i of None \<Rightarrow> Functions I i | Some (Inl ia) \<Rightarrow> Functions I i | Some (Inr i) \<Rightarrow> \<lambda>v. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>, Funls = \<lambda>i. case args_to_id i of None \<Rightarrow> Funls I i | Some (Inl ia) \<Rightarrow> Funls I i | Some (Inr i) \<Rightarrow> \<lambda>p. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>, Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr> f' \<nu> = dterm_sem \<lparr>Functions = \<lambda>i. case args_to_id i of None \<Rightarrow> Functions I i | Some (Inl ia) \<Rightarrow> Functions I i | Some (Inr i) \<Rightarrow> \<lambda>v. (\<chi> i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) $ i, Funls = \<lambda>i. case args_to_id i of None \<Rightarrow> Funls I i | Some (Inl ia) \<Rightarrow> Funls I i | Some (Inr i) \<Rightarrow> \<lambda>p. (\<chi> i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) $ i, Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr> f' \<nu>"
+      by presburger
+  qed
   next
   case (Tadmit_Fun2 \<sigma> args f \<nu>) 
   note safeTA = Tadmit_Fun2.prems(1) and sfree = Tadmit_Fun2.prems(2) 
@@ -5299,7 +5319,7 @@ Funls = \<lambda>f. case args_to_id f of Some (Inl x) \<Rightarrow> Funls I f | 
         qed
         then show " \<nu> \<in> fml_sem
           \<lparr>Functions =
-             \<lambda>f. case args_to_id f of None \<Rightarrow> Functions I f | Some (Inl xa) \<Rightarrow> Functions I xa
+             \<lambda>f. case args_to_id f of None \<Rightarrow> Functions I f | Some (Inl xa) \<Rightarrow> Functions I f
                  | Some (Inr f') \<Rightarrow>
                      \<lambda>_. (\<chi> i. dterm_sem
                                 \<lparr>Functions = \<lambda>f. case SFunctions \<sigma> f of None \<Rightarrow> Functions I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem (extendf I R) f' \<nu>,
@@ -5313,7 +5333,7 @@ Funls = \<lambda>f. case args_to_id f of Some (Inl x) \<Rightarrow> Funls I f | 
                                 (args i) \<nu>) $
                          f',
              Funls =
-               \<lambda>f. case args_to_id f of None \<Rightarrow> Funls I f | Some (Inl xa) \<Rightarrow> Funls I xa
+               \<lambda>f. case args_to_id f of None \<Rightarrow> Funls I f | Some (Inl xa) \<Rightarrow> Funls I f
                    | Some (Inr f') \<Rightarrow>
                        \<lambda>_. (\<chi> i. dterm_sem
                                   \<lparr>Functions =
@@ -5329,11 +5349,11 @@ Funls = \<lambda>f. case args_to_id f of Some (Inl x) \<Rightarrow> Funls I f | 
                            f',
              Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
           p'"
-          using f2  vec sorry
+          using f2  vec  USubst.adjoint_def by metis
       next
         assume a1: "\<nu> \<in> fml_sem
           \<lparr>Functions =
-             \<lambda>f. case args_to_id f of None \<Rightarrow> Functions I f | Some (Inl xa) \<Rightarrow> Functions I xa
+             \<lambda>f. case args_to_id f of None \<Rightarrow> Functions I f | Some (Inl xa) \<Rightarrow> Functions I f
                  | Some (Inr f') \<Rightarrow>
                      \<lambda>_. (\<chi> i. dterm_sem
                                 \<lparr>Functions = \<lambda>f. case SFunctions \<sigma> f of None \<Rightarrow> Functions I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem (extendf I R) f' \<nu>,
@@ -5347,7 +5367,7 @@ Funls = \<lambda>f. case args_to_id f of Some (Inl x) \<Rightarrow> Funls I f | 
                                 (args i) \<nu>) $
                          f',
              Funls =
-               \<lambda>f. case args_to_id f of None \<Rightarrow> Funls I f | Some (Inl xa) \<Rightarrow> Funls I xa
+               \<lambda>f. case args_to_id f of None \<Rightarrow> Funls I f | Some (Inl xa) \<Rightarrow> Funls I f
                    | Some (Inr f') \<Rightarrow>
                        \<lambda>_. (\<chi> i. dterm_sem
                                   \<lparr>Functions =
@@ -5365,9 +5385,7 @@ Funls = \<lambda>f. case args_to_id f of Some (Inl x) \<Rightarrow> Funls I f | 
           p'"
         have f2: "\<forall>f. ($) (vec_lambda (f::Finite_String.ident \<Rightarrow> real)) = f"
           by (simp add: vec_lambda_inverse)
-        then have "\<nu> \<in> fml_sem \<lparr>Functions = \<lambda>i. case args_to_id i of Some (Inl f) \<Rightarrow> Functions I i | Some (Inr i) \<Rightarrow> \<lambda>v. dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>, Funls = \<lambda>i. case args_to_id i of Some (Inl x) \<Rightarrow> Funls I i | Some (Inr i) \<Rightarrow> \<lambda>p. dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu> | None \<Rightarrow> Funls I i, Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr> p'"
-          using a1 sorry
-        then show " \<nu> \<in> fml_sem
+         show " \<nu> \<in> fml_sem
           \<lparr>Functions =
              \<lambda>f. case args_to_id f of None \<Rightarrow> Functions I f | Some (Inl f') \<Rightarrow> Functions I f
                  | Some (Inr f') \<Rightarrow> \<lambda>_. dterm_sem I (Tsubst (args f') \<sigma>) \<nu>,
@@ -5376,7 +5394,15 @@ Funls = \<lambda>f. case args_to_id f of Some (Inl x) \<Rightarrow> Funls I f | 
                    | Some (Inr f') \<Rightarrow> \<lambda>_. dterm_sem I (Tsubst (args f') \<sigma>) \<nu>,
              Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
           p'"
-          using f2  adjoint_def vec a1 sorry
+          using f2  adjoint_def vec a1 
+        proof -
+          have f1: "(\<lambda>i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) = (\<lambda>i. dterm_sem (USubst.adjoint I \<sigma> \<nu>) (args i) \<nu>)"
+            using vec by auto
+          have "\<nu> \<in> fml_sem \<lparr>Functions = \<lambda>i. case args_to_id i of None \<Rightarrow> Functions I i | Some (Inl ia) \<Rightarrow> Functions I i | Some (Inr i) \<Rightarrow> \<lambda>v. dterm_sem (USubst.adjoint I \<sigma> \<nu>) (args i) \<nu>, Funls = \<lambda>i. case args_to_id i of None \<Rightarrow> Funls I i | Some (Inl ia) \<Rightarrow> Funls I i | Some (Inr i) \<Rightarrow> \<lambda>p. dterm_sem (USubst.adjoint I \<sigma> \<nu>) (args i) \<nu>, Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr> p'"
+            by (metis USubst.adjoint_def a1 f2) 
+          then show ?thesis
+            using f1 by metis
+        qed
       qed
     qed
   then show "?case" by auto
@@ -5514,113 +5540,129 @@ next
          using IH[of i, OF safes[of i]] 
          by auto
        done
+       have silly:"\<lparr>Functions =
+             \<lambda>f. case args_to_id f of None \<Rightarrow> Functions I f | Some (Inl f') \<Rightarrow> Functions I f
+                 | Some (Inr f') \<Rightarrow> \<lambda>_. dterm_sem (adjoint I \<sigma> \<nu>) (args f') \<nu>,
+             Funls =
+               \<lambda>f. case args_to_id f of None \<Rightarrow> Funls I f | Some (Inl f') \<Rightarrow> Funls I f
+                   | Some (Inr f') \<Rightarrow> \<lambda>_. dterm_sem (adjoint I \<sigma> \<nu>) (args f') \<nu>,
+             Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr> = \<lparr>Functions =
+             \<lambda>f. case args_to_id f of None \<Rightarrow> Functions I f | Some (Inl f') \<Rightarrow> Functions I f
+                 | Some (Inr f') \<Rightarrow>
+                     \<lambda>_. (\<chi> i. dterm_sem
+                                \<lparr>Functions = \<lambda>f. case SFunctions \<sigma> f of None \<Rightarrow> Functions I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem (extendf I R) f' \<nu>,
+                                   Funls = \<lambda>f. case SFunls \<sigma> f of None \<Rightarrow> Funls I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem I f' \<nu>,
+                                   Predicates =
+                                     \<lambda>p. case SPredicates \<sigma> p of None \<Rightarrow> Predicates I p | Some p' \<Rightarrow> \<lambda>R. \<nu> \<in> fml_sem (extendf I R) p',
+                                   Contexts = \<lambda>c. case SContexts \<sigma> c of None \<Rightarrow> Contexts I c | Some c' \<Rightarrow> \<lambda>R. fml_sem (extendc I R) c',
+                                   Programs = \<lambda>a. case SPrograms \<sigma> a of None \<Rightarrow> Programs I a | Some x \<Rightarrow> prog_sem I x,
+                                   ODEs = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEs I ode sp | Some x \<Rightarrow> ODE_sem I x,
+                                   ODEBV = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEBV I ode sp | Some x \<Rightarrow> ODE_vars I x\<rparr>
+                                (args i) \<nu>) $
+                         f',
+             Funls =
+               \<lambda>f. case args_to_id f of None \<Rightarrow> Funls I f | Some (Inl f') \<Rightarrow> Funls I f
+                   | Some (Inr f') \<Rightarrow>
+                       \<lambda>_. (\<chi> i. dterm_sem
+                                  \<lparr>Functions =
+                                     \<lambda>f. case SFunctions \<sigma> f of None \<Rightarrow> Functions I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem (extendf I R) f' \<nu>,
+                                     Funls = \<lambda>f. case SFunls \<sigma> f of None \<Rightarrow> Funls I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem I f' \<nu>,
+                                     Predicates =
+                                       \<lambda>p. case SPredicates \<sigma> p of None \<Rightarrow> Predicates I p | Some p' \<Rightarrow> \<lambda>R. \<nu> \<in> fml_sem (extendf I R) p',
+                                     Contexts = \<lambda>c. case SContexts \<sigma> c of None \<Rightarrow> Contexts I c | Some c' \<Rightarrow> \<lambda>R. fml_sem (extendc I R) c',
+                                     Programs = \<lambda>a. case SPrograms \<sigma> a of None \<Rightarrow> Programs I a | Some x \<Rightarrow> prog_sem I x,
+                                     ODEs = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEs I ode sp | Some x \<Rightarrow> ODE_sem I x,
+                                     ODEBV = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEBV I ode sp | Some x \<Rightarrow> ODE_vars I x\<rparr>
+                                  (args i) \<nu>) $
+                           f',
+             Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>"
+         apply(rule interp_eq)
+               apply(auto simp del: args_to_id.simps) 
+         apply(rule ext) subgoal for f apply(cases "args_to_id f") apply(auto) subgoal for a apply(cases "a") apply(auto) apply(rule ext)+ by(auto simp add: adjoint_def) done
+         apply(rule ext) subgoal for f apply(cases "args_to_id f") apply(auto) subgoal for a apply(cases "a") apply(auto) apply(rule ext)+ by(auto simp add: adjoint_def) done
+         done
      show "?thesis \<nu>" 
        using IH safes eqs apply (auto simp add:  IH2  some good_interp)
-(*       apply(cases "args_to_id p")*)
-       using some unfolding adjoint_def adjointFO_def apply auto 
      proof -
-       assume a1: "\<nu> \<in> fml_sem
-          \<lparr>Functions = \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Map.empty x | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of  None \<Rightarrow> Functions I f | Some (Inl f') \<Rightarrow> Functions I f | Some (Inr f') \<Rightarrow> \<lambda>_. dterm_sem I (Tsubst (args f') \<sigma>) \<nu>,
-           Funls = \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Map.empty x | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of None \<Rightarrow> Funls I f | Some (Inl f') \<Rightarrow> Funls I f | Some (Inr f') \<Rightarrow> \<lambda>_. dterm_sem I (Tsubst (args f') \<sigma>) \<nu>,
-           Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr> p'"
+       assume a0:"\<nu> \<in> fml_sem (adjointFO I (\<lambda>i. Tsubst (args i) \<sigma>) \<nu>) p'"
+       then have a0: "\<nu> \<in> fml_sem \<lparr>Functions =
+             \<lambda>f. case args_to_id f of None \<Rightarrow> Functions I f | Some (Inl f') \<Rightarrow> Functions I f
+                 | Some (Inr f') \<Rightarrow> \<lambda>_. dterm_sem I (Tsubst (args f') \<sigma>) \<nu>,
+             Funls =
+               \<lambda>f. case args_to_id f of None \<Rightarrow> Funls I f | Some (Inl f') \<Rightarrow> Funls I f
+                   | Some (Inr f') \<Rightarrow> \<lambda>_. dterm_sem I (Tsubst (args f') \<sigma>) \<nu>,
+             Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
+          p'" unfolding adjointFO_def by auto
        have f2: "\<forall>f. ($) (vec_lambda (f::Finite_String.ident \<Rightarrow> real)) = f"
          by (simp add: vec_lambda_inverse)
        have "(\<lambda>i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) = (\<lambda>i. dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)"
          using vec by auto
-       then have "\<nu> \<in> fml_sem \<lparr>Functions = \<lambda>i. case case ident_expose i of Inl () \<Rightarrow> Inl ident_empty | Inr (c, i) \<Rightarrow> if [c] = FSENTINEL then Inr i else Inl (ident_cons c i) of Inl x \<Rightarrow> Functions I x | Inr i \<Rightarrow> \<lambda>v. dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>, Funls = \<lambda>i. case case ident_expose i of Inl () \<Rightarrow> Inl ident_empty | Inr (c, i) \<Rightarrow> if [c] = FSENTINEL then Inr i else Inl (ident_cons c i) of Inl x \<Rightarrow> Funls I x | Inr i \<Rightarrow> \<lambda>p. dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>, Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr> p'"
-         using a1 vec f2 sorry
-       then show " \<nu> \<in> fml_sem
-          \<lparr>Functions =
-             \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Map.empty x
-                      | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of
-                 None \<Rightarrow> Functions I f | Some (Inl xa) \<Rightarrow> Functions I xa
-                 | Some (Inr f') \<Rightarrow>
-                     \<lambda>_. (\<chi> i. dterm_sem
-                                \<lparr>Functions = \<lambda>f. case SFunctions \<sigma> f of None \<Rightarrow> Functions I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem (extendf I R) f' \<nu>,
-                                   Funls = \<lambda>f. case SFunls \<sigma> f of None \<Rightarrow> Funls I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem I f' \<nu>,
-                                   Predicates =
-                                     \<lambda>p. case SPredicates \<sigma> p of None \<Rightarrow> Predicates I p | Some p' \<Rightarrow> \<lambda>R. \<nu> \<in> fml_sem (extendf I R) p',
-                                   Contexts = \<lambda>c. case SContexts \<sigma> c of None \<Rightarrow> Contexts I c | Some c' \<Rightarrow> \<lambda>R. fml_sem (extendc I R) c',
-                                   Programs = \<lambda>a. case SPrograms \<sigma> a of None \<Rightarrow> Programs I a | Some x \<Rightarrow> prog_sem I x,
-                                   ODEs = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEs I ode sp | Some x \<Rightarrow> ODE_sem I x,
-                                   ODEBV = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEBV I ode sp | Some x \<Rightarrow> ODE_vars I x\<rparr>
-                                (args i) \<nu>) $
-                         f',
+       then have dat:"\<nu> \<in> fml_sem \<lparr>Functions =
+             \<lambda>f. case args_to_id f of None \<Rightarrow> Functions I f | Some (Inl f') \<Rightarrow> Functions I f
+                 | Some (Inr f') \<Rightarrow> \<lambda>_. dterm_sem (adjoint I \<sigma> \<nu>) (args f') \<nu>,
              Funls =
-               \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Map.empty x
-                        | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of
-                   None \<Rightarrow> Funls I f | Some (Inl xa) \<Rightarrow> Funls I xa
-                   | Some (Inr f') \<Rightarrow>
-                       \<lambda>_. (\<chi> i. dterm_sem
-                                  \<lparr>Functions =
-                                     \<lambda>f. case SFunctions \<sigma> f of None \<Rightarrow> Functions I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem (extendf I R) f' \<nu>,
-                                     Funls = \<lambda>f. case SFunls \<sigma> f of None \<Rightarrow> Funls I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem I f' \<nu>,
-                                     Predicates =
-                                       \<lambda>p. case SPredicates \<sigma> p of None \<Rightarrow> Predicates I p | Some p' \<Rightarrow> \<lambda>R. \<nu> \<in> fml_sem (extendf I R) p',
-                                     Contexts = \<lambda>c. case SContexts \<sigma> c of None \<Rightarrow> Contexts I c | Some c' \<Rightarrow> \<lambda>R. fml_sem (extendc I R) c',
-                                     Programs = \<lambda>a. case SPrograms \<sigma> a of None \<Rightarrow> Programs I a | Some x \<Rightarrow> prog_sem I x,
-                                     ODEs = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEs I ode sp | Some x \<Rightarrow> ODE_sem I x,
-                                     ODEBV = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEBV I ode sp | Some x \<Rightarrow> ODE_vars I x\<rparr>
-                                  (args i) \<nu>) $
-                           f',
+               \<lambda>f. case args_to_id f of None \<Rightarrow> Funls I f | Some (Inl f') \<Rightarrow> Funls I f
+                   | Some (Inr f') \<Rightarrow> \<lambda>_. dterm_sem (adjoint I \<sigma> \<nu>) (args f') \<nu>,
              Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
           p'"
-        using f2 adjoint_def vec sorry
+         using a0 vec f2 by metis
+        show " Predicates (USubst.adjoint I \<sigma> \<nu>) p (\<chi> i. dterm_sem (USubst.adjoint I \<sigma> \<nu>) (args i) \<nu>)"
+         using f2 adjoint_def vec apply(auto simp add: some silly simp del: args_to_id.simps )
+         using dat silly by(auto)
     next
-       assume a1: "\<nu> \<in> fml_sem
-          \<lparr>Functions =
-             \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Map.empty x
-                      | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of
-                 None \<Rightarrow> Functions I f | Some (Inl xa) \<Rightarrow> Functions I xa
-                 | Some (Inr f') \<Rightarrow>
-                     \<lambda>_. (\<chi> i. dterm_sem
-                                \<lparr>Functions = \<lambda>f. case SFunctions \<sigma> f of None \<Rightarrow> Functions I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem (extendf I R) f' \<nu>,
-                                   Funls = \<lambda>f. case SFunls \<sigma> f of None \<Rightarrow> Funls I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem I f' \<nu>,
-                                   Predicates =
-                                     \<lambda>p. case SPredicates \<sigma> p of None \<Rightarrow> Predicates I p | Some p' \<Rightarrow> \<lambda>R. \<nu> \<in> fml_sem (extendf I R) p',
-                                   Contexts = \<lambda>c. case SContexts \<sigma> c of None \<Rightarrow> Contexts I c | Some c' \<Rightarrow> \<lambda>R. fml_sem (extendc I R) c',
-                                   Programs = \<lambda>a. case SPrograms \<sigma> a of None \<Rightarrow> Programs I a | Some x \<Rightarrow> prog_sem I x,
-                                   ODEs = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEs I ode sp | Some x \<Rightarrow> ODE_sem I x,
-                                   ODEBV = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEBV I ode sp | Some x \<Rightarrow> ODE_vars I x\<rparr>
-                                (args i) \<nu>) $
-                         f',
-             Funls =
-               \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Map.empty x
-                        | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of
-                   None \<Rightarrow> Funls I f | Some (Inl xa) \<Rightarrow> Funls I xa
-                   | Some (Inr f') \<Rightarrow>
-                       \<lambda>_. (\<chi> i. dterm_sem
-                                  \<lparr>Functions =
-                                     \<lambda>f. case SFunctions \<sigma> f of None \<Rightarrow> Functions I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem (extendf I R) f' \<nu>,
-                                     Funls = \<lambda>f. case SFunls \<sigma> f of None \<Rightarrow> Funls I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem I f' \<nu>,
-                                     Predicates =
-                                       \<lambda>p. case SPredicates \<sigma> p of None \<Rightarrow> Predicates I p | Some p' \<Rightarrow> \<lambda>R. \<nu> \<in> fml_sem (extendf I R) p',
-                                     Contexts = \<lambda>c. case SContexts \<sigma> c of None \<Rightarrow> Contexts I c | Some c' \<Rightarrow> \<lambda>R. fml_sem (extendc I R) c',
-                                     Programs = \<lambda>a. case SPrograms \<sigma> a of None \<Rightarrow> Programs I a | Some x \<Rightarrow> prog_sem I x,
-                                     ODEs = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEs I ode sp | Some x \<Rightarrow> ODE_sem I x,
-                                     ODEBV = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEBV I ode sp | Some x \<Rightarrow> ODE_vars I x\<rparr>
-                                  (args i) \<nu>) $
-                           f',
-             Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
-          p' "
+      assume a0:"Predicates (USubst.adjoint I \<sigma> \<nu>) p (\<chi> i. dterm_sem (USubst.adjoint I \<sigma> \<nu>) (args i) \<nu>)"
+      then have a1:"\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) (Prop p args)" by auto
        have f2: "\<forall>f. ($) (vec_lambda (f::Finite_String.ident \<Rightarrow> real)) = f"
          using vec_lambda_inverse by blast
+       note f3 = a0[unfolded adjoint_def]
+
        have f3: "(\<lambda>i. dterm_sem I (Tsubst (args i) \<sigma>) \<nu>) = (\<lambda>i. dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>)"
          using vec by auto
-       have "\<nu> \<in> fml_sem \<lparr>Functions = \<lambda>i. case case ident_expose i of Inl () \<Rightarrow> Inl ident_empty | Inr (c, i) \<Rightarrow> if [c] = FSENTINEL then Inr i else Inl (ident_cons c i) of Inl x \<Rightarrow> Functions I x | Inr i \<Rightarrow> \<lambda>v. dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>, Funls = \<lambda>i. case case ident_expose i of Inl () \<Rightarrow> Inl ident_empty | Inr (c, i) \<Rightarrow> if [c] = FSENTINEL then Inr i else Inl (ident_cons c i) of Inl x \<Rightarrow> Funls I x | Inr i \<Rightarrow> \<lambda>p. dterm_sem (adjoint I \<sigma> \<nu>) (args i) \<nu>, Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr> p'"
-         using a1 f2 sorry
-       then show " \<nu> \<in> fml_sem
-          \<lparr>Functions =
-             \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Map.empty x
-                      | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of
-                 None \<Rightarrow> Functions I f | Some (Inl f') \<Rightarrow> Functions I f | Some (Inr f') \<Rightarrow> \<lambda>_. dterm_sem I (Tsubst (args f') \<sigma>) \<nu>,
+       have sillier:"\<lparr>Functions =
+             \<lambda>f. case args_to_id f of None \<Rightarrow> Functions I f | Some (Inl f') \<Rightarrow> Functions I f
+                 | Some (Inr f') \<Rightarrow>
+                     \<lambda>_. (\<chi> i. dterm_sem
+                                \<lparr>Functions = \<lambda>f. case SFunctions \<sigma> f of None \<Rightarrow> Functions I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem (extendf I R) f' \<nu>,
+                                   Funls = \<lambda>f. case SFunls \<sigma> f of None \<Rightarrow> Funls I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem I f' \<nu>,
+                                   Predicates =
+                                     \<lambda>p. case SPredicates \<sigma> p of None \<Rightarrow> Predicates I p | Some p' \<Rightarrow> \<lambda>R. \<nu> \<in> fml_sem (extendf I R) p',
+                                   Contexts = \<lambda>c. case SContexts \<sigma> c of None \<Rightarrow> Contexts I c | Some c' \<Rightarrow> \<lambda>R. fml_sem (extendc I R) c',
+                                   Programs = \<lambda>a. case SPrograms \<sigma> a of None \<Rightarrow> Programs I a | Some x \<Rightarrow> prog_sem I x,
+                                   ODEs = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEs I ode sp | Some x \<Rightarrow> ODE_sem I x,
+                                   ODEBV = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEBV I ode sp | Some x \<Rightarrow> ODE_vars I x\<rparr>
+                                (args i) \<nu>) $
+                         f',
              Funls =
-               \<lambda>f. case case ident_expose f of Inl x \<Rightarrow> Map.empty x
-                        | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of
-                   None \<Rightarrow> Funls I f | Some (Inl f') \<Rightarrow> Funls I f | Some (Inr f') \<Rightarrow> \<lambda>_. dterm_sem I (Tsubst (args f') \<sigma>) \<nu>,
-             Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
-          p'"
-         using f3 sorry
+               \<lambda>f. case args_to_id f of None \<Rightarrow> Funls I f | Some (Inl f') \<Rightarrow> Funls I f
+                   | Some (Inr f') \<Rightarrow>
+                       \<lambda>_. (\<chi> i. dterm_sem
+                                  \<lparr>Functions =
+                                     \<lambda>f. case SFunctions \<sigma> f of None \<Rightarrow> Functions I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem (extendf I R) f' \<nu>,
+                                     Funls = \<lambda>f. case SFunls \<sigma> f of None \<Rightarrow> Funls I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem I f' \<nu>,
+                                     Predicates =
+                                       \<lambda>p. case SPredicates \<sigma> p of None \<Rightarrow> Predicates I p | Some p' \<Rightarrow> \<lambda>R. \<nu> \<in> fml_sem (extendf I R) p',
+                                     Contexts = \<lambda>c. case SContexts \<sigma> c of None \<Rightarrow> Contexts I c | Some c' \<Rightarrow> \<lambda>R. fml_sem (extendc I R) c',
+                                     Programs = \<lambda>a. case SPrograms \<sigma> a of None \<Rightarrow> Programs I a | Some x \<Rightarrow> prog_sem I x,
+                                     ODEs = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEs I ode sp | Some x \<Rightarrow> ODE_sem I x,
+                                     ODEBV = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEBV I ode sp | Some x \<Rightarrow> ODE_vars I x\<rparr>
+                                  (args i) \<nu>) $
+                           f',
+             Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr> = \<lparr>Functions =
+             \<lambda>f. case args_to_id f of None \<Rightarrow> Functions I f | Some (Inl f') \<Rightarrow> Functions I f
+                 | Some (Inr f') \<Rightarrow> \<lambda>_. dterm_sem I (Tsubst (args f') \<sigma>) \<nu>,
+             Funls =
+               \<lambda>f. case args_to_id f of None \<Rightarrow> Funls I f | Some (Inl f') \<Rightarrow> Funls I f
+                   | Some (Inr f') \<Rightarrow> \<lambda>_. dterm_sem I (Tsubst (args f') \<sigma>) \<nu>,
+             Predicates = Predicates I, Contexts = Contexts I, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>" 
+         apply(rule interp_eq)
+               apply(auto simp del: args_to_id.simps)
+         subgoal apply(rule ext)+ subgoal for f x apply(cases "ident_expose f") using IH IH2 apply(auto simp add: SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def)
+           by (simp add: USubst.adjoint_def eqs)+ done
+         subgoal apply(rule ext)+ subgoal for f x apply(cases "ident_expose f") using IH IH2 apply(auto simp add: SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def)
+           by (simp add: USubst.adjoint_def eqs)+ done done
+       show " \<nu> \<in> fml_sem (adjointFO I (\<lambda>i. Tsubst (args i) \<sigma>) \<nu>) p'"
+         using a1 f3 
+         using sillier by(auto simp add:  adjointFO_def adjoint_def some simp del: args_to_id.simps f3)
      qed
    qed
 next 
@@ -5670,42 +5712,8 @@ next
     moreover have "... = (\<nu> \<in> fml_sem (extendc I ?R1) C')"
       using eq' by auto
     moreover have "... = (\<nu> \<in> Contexts (adjoint I \<sigma> \<nu>) C (fml_sem (adjoint I \<sigma> \<nu>) \<phi>))"
-      using some unfolding adjoint_def apply auto
-      using eq' adjoint_def 
-      subgoal 
-      proof -
-      assume "\<nu> \<in> fml_sem
-          \<lparr>Functions = Functions I, Funls = Funls I, Predicates = Predicates I,
-             Contexts =
-               \<lambda>C. case case ident_expose C of Inl x \<Rightarrow> Map.empty x
-                        | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of
-                   None \<Rightarrow> Contexts I C | Some (Inl xa) \<Rightarrow> Contexts I xa | Some (Inr xa) \<Rightarrow> \<lambda>_. fml_sem I (Fsubst \<phi> \<sigma>),
-             Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
-          C'"
-      then have "\<nu> \<in> fml_sem \<lparr>Functions = Functions I, Funls = Funls I, Predicates = Predicates I, Contexts = \<lambda>i. case case ident_expose i of Inl () \<Rightarrow> Inl ident_empty | Inr (c, i) \<Rightarrow> if [c] = FSENTINEL then Inr i else Inl (ident_cons c i) of Inl x \<Rightarrow> Contexts I x | Inr i \<Rightarrow> \<lambda>r. fml_sem (adjoint I \<sigma> \<nu>) \<phi>, Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr> C'"
-        sorry
-      then show "\<nu> \<in> fml_sem
-          \<lparr>Functions = Functions I, Funls = Funls I, Predicates = Predicates I,
-             Contexts =
-               \<lambda>C. case case ident_expose C of Inl x \<Rightarrow> Map.empty x
-                        | Inr (xa, xs) \<Rightarrow> if xa = FSENT then Some (Inr xs) else if xa = SSENT then Some (Inl xs) else None of
-                   None \<Rightarrow> Contexts I C | Some (Inl xa) \<Rightarrow> Contexts I xa
-                   | Some (Inr xa) \<Rightarrow>
-                       \<lambda>_. fml_sem
-                            \<lparr>Functions = \<lambda>f. case SFunctions \<sigma> f of None \<Rightarrow> Functions I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem (extendf I R) f' \<nu>,
-                               Funls = \<lambda>f. case SFunls \<sigma> f of None \<Rightarrow> Funls I f | Some f' \<Rightarrow> \<lambda>R. dterm_sem I f' \<nu>,
-                               Predicates =
-                                 \<lambda>p. case SPredicates \<sigma> p of None \<Rightarrow> Predicates I p | Some p' \<Rightarrow> \<lambda>R. \<nu> \<in> fml_sem (extendf I R) p',
-                               Contexts = \<lambda>c. case SContexts \<sigma> c of None \<Rightarrow> Contexts I c | Some c' \<Rightarrow> \<lambda>R. fml_sem (extendc I R) c',
-                               Programs = \<lambda>a. case SPrograms \<sigma> a of None \<Rightarrow> Programs I a | Some x \<Rightarrow> prog_sem I x,
-                               ODEs = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEs I ode sp | Some x \<Rightarrow> ODE_sem I x,
-                               ODEBV = \<lambda>ode sp. case SODEs \<sigma> ode sp of None \<Rightarrow> ODEBV I ode sp | Some x \<Rightarrow> ODE_vars I x\<rparr>
-                            \<phi>,
-             Programs = Programs I, ODEs = ODEs I, ODEBV = ODEBV I\<rparr>
-          C'"
-        sorry
-      qed
-      using eq' adjoint_def by presburger
+      using some unfolding adjoint_def apply (auto simp del: args_to_id.simps)
+      using eq' adjoint_def by metis+
     moreover have "... = (\<nu> \<in> fml_sem (adjoint I \<sigma> \<nu>) (InContext C \<phi>))"
       by auto
     ultimately
