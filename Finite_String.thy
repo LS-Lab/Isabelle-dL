@@ -90,17 +90,72 @@ fun lleq :: "char list \<Rightarrow> char list \<Rightarrow> bool"
 
 lift_definition less_eq_ident::"ident \<Rightarrow> ident \<Rightarrow> bool" is lleq done
 
-(*fun less_eq_ident :: "ident \<Rightarrow> ident \<Rightarrow> bool"
-  where [code]:"less_eq_ident X Y = lleq (Rep_ident X) (Rep_ident Y)"*)
+fun less :: "char list \<Rightarrow> char list \<Rightarrow> bool"
+  where 
+  "less Nil Nil = False"
+| "less Nil _ = True"
+| "less _ Nil = False"
+| "less (x # xs)(y # ys) = 
+   (if x = y then less xs ys else x < y)"
+
+lift_definition less_ident::"ident \<Rightarrow> ident \<Rightarrow> bool" is less done
+
+lemma lists_induct:"\<And>P. (P [] []) \<Longrightarrow> (\<And>x xs. P (x#xs) []) \<Longrightarrow> (\<And>x xs. P [] (x#xs)) \<Longrightarrow> (\<And>L1 L2 x1 x2. P L1 L2 \<Longrightarrow> P (x1 # L1) (x2 # L2)) \<Longrightarrow> P A B"
+  using  List.list_induct2' by metis
+
+lemma ax1:"\<And>x y. (less x y) = (lleq x y \<and> \<not> lleq y  x)"
+  subgoal for x y
+    apply(induction rule: lists_induct)
+    by(auto) done
+lemma ax2:"\<And>x. lleq x x"
+  subgoal for x 
+    apply(induction x)
+    by(auto) done
+lemma ax3:"\<And>x y z. lleq x  y \<Longrightarrow> lleq y z \<Longrightarrow> lleq x  z"
+  subgoal for x y z
+    apply(induction arbitrary: z rule: lists_induct )
+       apply(auto)
+    subgoal for x xs z
+      apply(induction y)
+      using lleq.elims(2) lleq.simps(2) by blast+
+    subgoal for L1 L2 x1 x2 z
+      apply(cases "x2 = x1")
+      apply(auto simp add: less_trans list.discI list.inject lleq.elims(2) lleq.elims(3) order.asym)
+      using less_trans list.discI list.inject lleq.elims(2) lleq.elims(3) order.asym
+      apply smt+
+      done
+    done
+  done
+lemma ax4:"\<And>x y. lleq x y \<Longrightarrow> lleq y x \<Longrightarrow> x = y"
+  subgoal for x y
+    apply(induction rule: lists_induct)
+       apply(auto) 
+    subgoal for L1 L2 x1 x2
+      apply(cases "x1 = x2") by auto
+    subgoal for L1 L2 x1 x2
+      apply(cases "x1 = x2") by auto
+    done done
+lemma ax5:"\<And>x y. lleq x y \<or> lleq y x"
+  subgoal for x y
+    apply(induction rule: lists_induct)
+    by(auto) done
+
+lemma ax6:"\<And>x y. lleq x y \<Longrightarrow> lleq y x \<Longrightarrow> x = y"
+  subgoal for x y
+    apply(induction rule: lists_induct)
+       apply(auto)
+    subgoal for L1 L2 x1 x2
+      apply(cases "x1 = x2") by auto
+    subgoal for L1 L2 x1 x2
+      apply(cases "x1 = x2") by auto
+    done
+  done
+
 instance
-  apply(standard, auto simp add:)
-        prefer 4
-  subgoal for x
-    apply(induction "Rep_ident x")
-(*    subgoal by auto*)
-(*    subgoal for y ys*)
-      sorry
-    sorry
+  apply(standard)
+  unfolding less_eq_ident_def less_ident_def
+      apply (auto simp add: ax1 ax2 ax3 ax4 ax5 ax6)
+  using ax6 less_eq_ident_def less_ident_def Rep_ident_inject by blast
 end
 
 fun string_expose::"string \<Rightarrow> (unit + (char * string))"
