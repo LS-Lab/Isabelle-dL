@@ -10,45 +10,20 @@ typedef ident = "{s::string. size s \<le> MAX_STR}"
   apply(auto)
   apply(rule exI[where x=Nil])
   by(auto simp add: max_str)
-(*
 
-definition cr_ident::"string \<Rightarrow> ident \<Rightarrow> bool"
-  where "cr_ident x y \<equiv> Abs_ident x = y"
-*)
-(*
-lemma Quotient_ident:
-  "Quotient (\<lambda> x y. x = y \<and> ((size x \<le> MAX_STR) = (size y \<le> MAX_STR))) Abs_ident Rep_ident cr_ident"
-  apply(auto simp add: max_str)
-  apply(rule Quotient3_to_Quotient)
-   apply(rule Quotient3I)
-  subgoal for a using Rep_ident_inverse by auto
-  subgoal by simp
-  subgoal for r s
-    apply(auto)(* falseness *)
-(*    subgoal Rep_ident_inverse Rep_ident sledgehammer
-  unfolding cr_ident_def by(auto)*)
-    sorry
-(*  apply(rule Lifting.QuotientI)
-  defer
-  using Rep_ident max_str mem_Collect_eq
-  using apply auto[1] sledgehammer
-  using Rep_ident max_str mem_Collect_eq
-  using \<open>\<And>s r. Abs_ident r = Abs_ident s \<Longrightarrow> r = s\<close> apply auto[1]
-  unfolding cr_ident_def
-  using Rep_ident max_str mem_Collect_eq by simp*)
-  sorry
-*)
-(*
-lemma reflp_ident: "reflp (\<lambda>x y. x = y \<and> ((size x \<le> MAX_STR) = (size y \<le> MAX_STR)))"
-  apply(rule Relation.reflpI)
-  by(auto)
-*)
+setup_lifting  Finite_String.ident.type_definition_ident 
 
-setup_lifting  Finite_String.ident.type_definition_ident (*Quotient_ident reflp_ident *)
+lemma cardiB:
+  fixes C:: "char set" and S::"string set"
+  assumes C:"card C \<ge> 1" and S:"card S \<ge> 0"
+  shows "card C * card S \<ge> card S"
+  using C S by auto
 
+fun cons :: "('a * 'a list) \<Rightarrow> 'a list" 
+  where "cons (x,y) = x # y"
 instantiation ident :: finite begin
 instance proof 
-  have any:"\<forall>i::nat. card {s::string. size s \<le> i} > 0"
+  have any:"\<forall>i::nat. card {s::string. length s \<le> i} > 0"
     apply(auto)
     subgoal for i
   proof (induct i)
@@ -56,16 +31,42 @@ instance proof
     then show ?case by auto
   next
     case (Suc k)
-    assume IH:"card {s::string. size s \<le> k} > 0"
-    have "card {s::string. size s \<le> Suc k} = card (UNIV:: char set) * card {s::string. size s \<le> Suc k}"
-      sorry
-    then show ?case sorry
+    assume IH:"card {s::string. length s \<le> k} > 0"
+    let ?c = "(UNIV::char set)"
+    let ?ih = "{s::string. length s \<le> k}"
+    let ?prod = "(?c \<times> ?ih)"
+    let ?b = "(cons ` ?prod)"
+    let ?A = "{s::string. length s \<le> Suc k}"
+    let ?B = "insert [] ?b"
+
+    have IHfin:"finite ?ih" using IH card_ge_0_finite by blast
+    have finChar:"finite ?c" using card_ge_0_finite finite_code by blast
+    have finiteProd:"finite ?prod"
+      using Groups_Big.card_cartesian_product IHfin finChar by auto
+    have cardCons:"card ?b = card ?prod"
+      apply(rule Finite_Set.card_image)
+      by(auto simp add: inj_on_def) 
+    have finiteCons:"finite ?b" using cardCons finiteProd card_ge_0_finite by blast
+    have finiteB:"finite ?B" using finite_insert finiteCons by auto
+    have lr:"\<And>x. x \<in> ?A \<Longrightarrow> x \<in> ?B" subgoal for x
+        apply(auto) apply(cases x) apply auto 
+        by (metis UNIV_I cons.simps image_eqI mem_Collect_eq mem_Sigma_iff) done
+    have rl:"\<And>x. x \<in> ?B \<Longrightarrow> x \<in> ?A" subgoal for x
+        by(auto) done
+    have isCons:"?A = ?B"
+      using lr rl by auto
+  show ?case
+      using finiteB isCons IH by (simp add: card_insert)
   qed
-  done        
-  then have any:"\<forall>i::nat. finite {s::string. size s \<le> i}"
-    using card_ge_0_finite by blast
-  then show "finite (UNIV:: ident set)"
-    by (metis Abs_ident_cases ex_new_if_finite finite_imageI image_eqI)
+  done 
+    note finMax = card_ge_0_finite[OF spec[OF any, of MAX_STR]]
+    have finWow:"finite {x | x y . x = Abs_ident y \<and> y \<in> {s. length s \<le> MAX_STR} }"
+      using Abs_ident_cases finMax by auto
+    have univEq:"(UNIV::ident set) = {x | x y . x = Abs_ident y \<and> y \<in> {s. length s \<le> MAX_STR} }"
+      using Abs_ident_cases  
+      by (metis (mono_tags, lifting) Collect_cong UNIV_I top_empty_eq top_set_def)
+    then have "finite (UNIV :: ident set)" using univEq finWow by auto
+  then show "finite (UNIV::ident set)" by auto
 qed
 end
 
@@ -92,7 +93,7 @@ lift_definition less_eq_ident::"ident \<Rightarrow> ident \<Rightarrow> bool" is
 (*fun less_eq_ident :: "ident \<Rightarrow> ident \<Rightarrow> bool"
   where [code]:"less_eq_ident X Y = lleq (Rep_ident X) (Rep_ident Y)"*)
 instance
-  apply(standard, auto simp add: )
+  apply(standard, auto simp add:)
         prefer 4
   subgoal for x
     apply(induction "Rep_ident x")
@@ -100,8 +101,6 @@ instance
 (*    subgoal for y ys*)
       sorry
     sorry
-(*    done
-  sorry*)
 end
 
 fun string_expose::"string \<Rightarrow> (unit + (char * string))"
