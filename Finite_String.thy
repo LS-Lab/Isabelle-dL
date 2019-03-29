@@ -241,14 +241,7 @@ definition ident_enum_all :: "(ident \<Rightarrow> bool) \<Rightarrow> bool"
   where "ident_enum_all = (\<lambda> f. list_all f vals)"
 definition ident_enum_ex :: "(ident \<Rightarrow> bool) \<Rightarrow> bool"
   where "ident_enum_ex = (\<lambda> f. list_ex f vals)"
-(*
-lift_definition ident_enum::"ident list" is string_enum
-  done
-lift_definition ident_enum_all::"(ident \<Rightarrow> bool) \<Rightarrow> bool" is string_enum_all
-  done
-lift_definition ident_enum_ex::"(ident \<Rightarrow> bool) \<Rightarrow> bool" is string_enum_ex
-  done
-*)
+
 lemma length_induct:
   fixes P
   assumes len:"length L \<le> MAX_STR"
@@ -256,15 +249,12 @@ lemma length_induct:
   assumes IS:"(\<And>k x xs.  P xs k \<Longrightarrow> P ((x # xs)) (Suc k))"
   shows  "P L (length L)"
   proof -
-(*    assume a1:"L = Abs_ident y"
-    assume a2:" length y \<le> MAX_STR "*)
     have main:"\<And>k.  length L = k \<Longrightarrow> k \<le> MAX_STR \<Longrightarrow> P L (length L)" subgoal for k
         apply(induction L arbitrary: k)
         subgoal for k using BC unfolding ident_empty_def by auto
         subgoal for a L k
         proof -
           assume IH:"(\<And>k. length L = k \<Longrightarrow> k \<le> MAX_STR \<Longrightarrow> P L (length L))"
-(*          assume L:"L = Abs_ident (a # y)"*)
           assume l:"length (a # L) = k"
           assume str:"k \<le> MAX_STR"
           have yLen:"length L < MAX_STR" using l str by auto
@@ -319,25 +309,8 @@ lemma ilength_induct:
 
 lemma enum_chars:"set (enum_class.enum::char list)= UNIV"
   using   Enum.enum_class.enum_UNIV by auto
-(*   unfolding enum_char_unfold
-  unfolding enum_char_inst.enum_char_def
-  subgoal
-    unfolding UNIV_enum apply auto
-    unfolding enum_char_def ident_enum_def 
-    apply(auto)
-    subgoal for x
-      apply(unfold vals_def)
-      apply(rule Abs_ident_cases[where x=x])
-      subgoal for y
-        using ident_nil[of MAX_STR]  List.member_def[of "ident_upto MAX_STR" x] ident_empty_def ident_length
-        using Rep_ident ilength.rep_eq mem_Collect_eq by auto
-      done
-    done done
-*)
 
 lemma member_concat:
-(*  assumes mem1:""
-  assumes mem2:"List.member LL x"*)
   shows "(\<exists> LL. List.member L LL \<and> List.member LL x) \<Longrightarrow> List.member (concat L) x"
   apply(induction L)
   by(auto simp add: member_def)
@@ -461,44 +434,11 @@ next
        apply(auto simp add: ident_cons_def) subgoal for x y
         by (smt Abs_ident_inverse Iz.rsp Pair_inject Suc_leD antisym eq_onp_same_args ident_empty.rep_eq ident_nil impossible_Cons length_Cons mem_Collect_eq member_def string_expose.simps(2) sum.inject(2))
       done
-(*      subgoal for ys zs
-        apply(auto)
-        subgoal for  c ca xa xb xc
-          apply(auto simp add: ident_cons_def)
-          using ident_upto_length[of j] jLen 
-          by (smt Rep_ident_inverse ident_cons.rep_eq ilength.rep_eq le_trans list.inject member_def not_less_eq_eq string_cons.simps)
-        done
-      subgoal for xa xb*)
     subgoal for ys
       apply(auto simp add: ident_cons_def)
-      subgoal for c
-        using IH sorry done
-    subgoal for ys zs
-      apply(auto)
-      subgoal for c d x y z
-        using IH jLen apply(auto simp add: ident_cons_def)
-        apply(cases "MAX_STR \<le> length (Rep_ident x)") apply auto
-        apply(cases "MAX_STR \<le> length (Rep_ident z)") apply auto
-         apply(cases "MAX_STR \<le> length (Rep_ident y)") apply auto
-          apply(auto simp add: Rep_ident_inverse)
-        sorry done done
-(*    subgoal fo
-    using IH  apply(auto simp add: ident_cons_def Abs_ident_inverse)
-(*        using ident_upto_length[of j] jLen*)
-        unfolding member_def using jLen
-        apply(auto simp add: Rep_ident_inverse ident_cons.rep_eq ilength.rep_eq le_trans list.inject member_def not_less_eq_eq string_cons.simps)
-        apply(cases "MAX_STR \<le> length (Rep_ident xb)") 
-         using jLen apply auto
-         using le_trans naot_less_eq_eq apply blast
-
-         sledgehammer
-      sorry
-    using distinct_map
-qed
-      apply(auto simp add: ident_cons_def)
     proof -
-      fix c
-       assume c:"c \<in> set enum_char_inst.enum_char"
+      fix c :: char
+       assume c:"c \<in> set enum_class.enum"
        assume ys:"ys = map (map_fun Rep_ident Abs_ident (string_cons c)) (ident_upto j)"
        show "distinct (map (map_fun Rep_ident Abs_ident (string_cons c)) (ident_upto j))"
          unfolding distinct_map apply(rule conjI)
@@ -512,20 +452,14 @@ qed
             by (metis (mono_tags, hide_lams) Rep_ident_inverse ident_cons.rep_eq le_trans list.inject not_less_eq_eq string_cons.simps)
           done
       qed
-*)
-(*  1. distinct (ident_upto MAX_STR)
-  List.distinct_union: distinct (List.union ?xs ?ys) = distinct ?ys
-  List.distinct_product_lists: \<forall>xs\<in>set ?xss. distinct xs \<Longrightarrow> distinct (product_lists ?xss)
-  List.distinct_map: distinct (map ?f ?xs) = (distinct ?xs \<and> inj_on ?f (set ?xs))
-  Groups_List.comm_monoid_add_class.distinct_sum_list_conv_Sum: distinct ?xs \<Longrightarrow> sum_list ?xs = \<Sum>(set ?xs)
- List.distinct_product: distinct ?xs \<Longrightarrow> distinct ?ys \<Longrightarrow> distinct (List.product ?xs ?ys)
-  List.distinct_append: distinct (?xs @ ?ys) = (distinct ?xs \<and> distinct ?ys \<and> set ?xs \<inter> set ?ys = {})
-   List.distinct_concat:
-    distinct ?xs \<Longrightarrow>
-    (\<And>ys. ys \<in> set ?xs \<Longrightarrow> distinct ys) \<Longrightarrow>
-    (\<And>ys zs. ys \<in> set ?xs \<Longrightarrow> zs \<in> set ?xs \<Longrightarrow> ys \<noteq> zs \<Longrightarrow> set ys \<inter> set zs = {}) \<Longrightarrow> distinct (concat ?xs)
-
-*)
+    subgoal for ys zs
+      apply(auto)
+         subgoal for  c ca xa xb xc
+         apply(auto simp add: ident_cons_def)
+          using ident_upto_length[of j] jLen 
+          by (smt Rep_ident_inverse ident_cons.rep_eq ilength.rep_eq le_trans list.inject member_def not_less_eq_eq string_cons.simps)
+        done
+      done
 qed
 
 instantiation ident :: enum begin
@@ -581,7 +515,6 @@ instance
   done
 end
 export_code ident_enum_ex in Scala
-(*export_code enum_ident_inst.enum_all_ident in Scala*)
 instantiation ident :: equal begin
 definition equal_ident :: "ident \<Rightarrow> ident \<Rightarrow> bool"
   where [code]:"equal_ident X Y = (X \<le> Y \<and> Y \<le> X)"
@@ -604,12 +537,6 @@ fun args_to_id::"ident \<Rightarrow> (ident + ident) option"
        Inl _ \<Rightarrow> None
      | Inr (x,xs) \<Rightarrow> (if x = FSENT then Some (Inr xs) else if x = SSENT then Some (Inl xs) else None))"
 
-(*fun arg_to_id::"ident \<Rightarrow> (ident + unit) option"
-  where "arg_to_id  z = 
-      (case (ident_expose z) of 
-       Inl _ \<Rightarrow> None
-     | Inr (x,xs) \<Rightarrow> (if x = CSENT then Some (Inr ()) else if x = SSENT then Some (Inl xs) else None))"
-*)
 fun debase :: "ident \<Rightarrow> ident"
   where "debase f = ident_cons FSENT f"
 fun Debase :: "ident \<Rightarrow> ident"
