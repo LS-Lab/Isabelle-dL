@@ -1193,54 +1193,382 @@ where "divuCon w1 w2 =
  else w1 div w2)"
 
 (* 0/u2 *)(* 0/l2 *)
-fun divU :: "word \<Rightarrow> word \<Rightarrow> word \<Rightarrow> word \<Rightarrow> (word * word)"
+fun divU :: "word \<Rightarrow> word \<Rightarrow> word \<Rightarrow> word \<Rightarrow> (word * word) option"
 where "divU l1 u1 l2 u2 =
   (if (wleq l2 0 \<and> wleq 0 u2) then
-    (NEG_INF, POS_INF)
+    None
 else if wle 0 l2  then (* top half*)
   (if wleq l1 0 \<and> wleq 0 u1 then (* top-center*)
-    (wmin (divl l1 l2) 0,  
+    Some (wmin (divl l1 l2) 0,  
      wmax (divu u1 l2) 0)
    else if wle u1  0 then (* top-left *)
-     (divl l1 l2, divu u1 u2)
+     Some (divl l1 l2, divu u1 u2)
    else (* top-right *)
-     (divl l1 u2, divu u1 l2))
+     Some (divl l1 u2, divu u1 l2))
 else (* bottom half *)
   (if wleq l1  0 \<and> wleq 0 u1 then (* bottom-center*)
-    (wmin (divl u1 u2) 0 
+    Some (wmin (divl u1 u2) 0 
     ,wmax (divu l1 u2) 0)
   else if wle u1  0 then (* bottom-left *)
-    (divl u1 l2, divu l1 u2)
+    Some(divl u1 l2, divu l1 u2)
   else (* bottom-right*)
-    (divl u1 u2, divu l1 l2)
+    Some(divl u1 u2, divu l1 l2)
 ))"
-(*
+
 lemma divU_lemma:
   assumes ul1:"(l1, u1) \<equiv>\<^sub>P r1"
   assumes ul2:"(l2, u2) \<equiv>\<^sub>P r2"
-  shows "divU l1 u1 l2 u2 \<equiv>\<^sub>P (r1 / r2)"
+  assumes some:"divU l1 u1 l2 u2 = Some res"
+  shows "res \<equiv>\<^sub>P (r1 / r2)"
 proof -
+  note divl12 = real_divide_code[unfolded Ratreal_def]
+  then have rewrite:
+    "real_of_rat (l1 / l2) = real_of_rat l1 / real_of_rat l2"
+    "real_of_rat (u1 / l2) = real_of_rat u1 / real_of_rat l2"
+    "real_of_rat (u1 / u2) = real_of_rat u1 / real_of_rat u2"
+    "real_of_rat (l1 / u2) = real_of_rat l1 / real_of_rat u2"
+    by auto
   from ul1 ul2
   have l1:"(l1 \<equiv>\<^sub>L r1)" and u1:"(u1 \<equiv>\<^sub>U r1)"
   and  l2:"(l2 \<equiv>\<^sub>L r2)" and u2:"(u2 \<equiv>\<^sub>U r2)"
     unfolding repP_def by auto
   obtain r1l r1u r2l r2u ::real where 
-      l1def:"(r1l \<le> r1)"  "(Ratreal l1 = r1l)" 
- and  u1def:"(r1u \<ge> r1)"  "(Ratreal u1 = r1u)"
- and  l2def:"(r2l \<le> r2)"  "(Ratreal l2 = r2l)"
- and  u2def:"(r2u \<ge> r2)"  "(Ratreal u2 = r2u)"
+      l1def:"(r1l \<le> r1)"  "Ratreal l1 = r1l" 
+ and  u1def:"(r1u \<ge> r1)"  "Ratreal u1 = r1u"
+ and  l2def:"(r2l \<le> r2)"  "Ratreal l2 = r2l"
+ and  u2def:"(r2u \<ge> r2)"  "Ratreal u2 = r2u"
     using l1 u1 l2 u2 unfolding repL_def repU_def by auto
-  have  rep0:" (0::word) \<equiv> 0"
-    by(auto)
-  have  rep0w:" Ratreal (0::word) = 0"
-    using rep0 by auto
+  have  rep0:" Ratreal (0::word) = 0"
+    by(auto simp add: POS_INF_def NEG_INF_def)
   then have  rep0u:"(0::word) \<equiv>\<^sub>U 0"
     using repU_def by auto
-  from rep0w have rep0l:"(0::word) \<equiv>\<^sub>L 0"
+  have rep0l:"(0::word) \<equiv>\<^sub>L 0"
     using repL_def by auto
+  have les:"\<And>x. ((real_of_rat x \<le> 0) = (x \<le> 0))"
+     and "\<And>x. ((real_of_rat x < 0) = (x < 0))" by auto
+  have "\<forall>x0. ((0::real) < x0) = (\<not> x0 \<le> 0)"
+    by auto
+  then have f3: "\<forall>r ra. (r::real) \<le> 0 \<or> ra \<le> 0 \<or> \<not> r / ra \<le> 0"
+    by (meson divide_pos_pos)
+  have f6: "(- 1 * r1l \<le> 0) = (0 \<le> r1l)"
+    by simp
+  have f7: "\<forall>r ra rb rc. \<not> (0::real) \<le> r \<or> \<not> 0 \<le> ra + - 1 * r \<or> rb \<le> 0 \<or> \<not> 0 \<le> rc + - 1 * rb \<or> r / rc + - 1 * (ra / rb) \<le> 0"
+    using frac_le by fastforce
+  have f8: "- 1 * r1l + r1 = r1 + - 1 * r1l"
+    by auto
+  have f9: "- 1 * (- 1 * r1) = r1"
+    by auto
+  have f10: "(- 1 * (- 1 * r1l / r2l) + - 1 * r1 / r2 \<le> 0) = (0 \<le> - 1 * r1l / r2l + - 1 * (- 1 * r1 / r2))"
+    by auto
+  have f11: "- 1 * r1 / r2 + - 1 * (- 1 * r1l / r2l) = - 1 * (- 1 * r1l / r2l) + - 1 * r1 / r2"
+    by simp
+  have f12: "(0 \<le> - 1 * r1) = (r1 \<le> 0)"
+    by auto
+  have f13: "0 \<le> r1 + - 1 * r1l"
+    using l1def(1) by linarith
+  have f14: "0 \<le> r2 + - 1 * r2l"
+    using l2def(1) by linarith
+  have f16: "real_of_rat l1 / real_of_rat l2 + - 1 * (r1l / r2l) \<le> 0"
+    using l1def(2) l2def(2) by auto
+  have f17:"0 \<le> Ratreal 0"
+    using rep0u repU_leq by blast
+  note facts = f6 f7 f8 f9 f10 f11 f12 f13 f14 f16 f17 l1def u1def l2def u2def u1 u2 l1 l2
+  note hmm = l1def u1def l2def u2def
+  note nmmm = u1 u2 l1 l2
+  note whats = hmm nmmm 
   show ?thesis
-    sorry
-qed*)
+    using some apply(auto simp add: repP_def)
+  subgoal for w1 w2
+    apply(cases "l2 \<le> 0 \<and> 0 \<le> u2")
+    subgoal by auto
+    apply simp
+    apply(cases "0 < l2")
+    subgoal
+      apply(auto)
+      apply(cases "l1 \<le> 0 \<and> 0 \<le> u1")
+      subgoal apply auto
+        subgoal
+          apply(cases "u1 / l2 < 0")
+          subgoal 
+            apply (auto simp add: repL_def)
+            using divide_nonneg_pos not_less by blast
+          apply(auto simp add: repL_def)
+          using real_divide_code[of l1 l2, unfolded Ratreal_def]
+          apply(auto simp add: rewrite les Ratreal_def)
+          using l1def u1def l2def u2def some les divl12
+          proof -
+  assume a1: "0 < l2"
+  assume a2: "l1 \<le> 0"
+  have "\<forall>x0. ((0::real) < x0) = (\<not> x0 \<le> 0)"
+    by auto
+  then have f3: "\<forall>r ra. (r::real) \<le> 0 \<or> ra \<le> 0 \<or> \<not> r / ra \<le> 0"
+    by (meson divide_pos_pos)
+  have f4: "\<not> Ratreal l2 + - 1 * Ratreal 0 \<le> 0"
+    using a1 by auto
+  then have f5: "\<not> r2l \<le> 0"
+    using l2def(2) by fastforce
+  have f6: "(- 1 * r1l \<le> 0) = (0 \<le> r1l)"
+    by simp
+  have f7: "\<forall>r ra rb rc. \<not> (0::real) \<le> r \<or> \<not> 0 \<le> ra + - 1 * r \<or> rb \<le> 0 \<or> \<not> 0 \<le> rc + - 1 * rb \<or> r / rc + - 1 * (ra / rb) \<le> 0"
+    using frac_le by fastforce
+  have f8: "- 1 * r1l + r1 = r1 + - 1 * r1l"
+    by auto
+  have f9: "- 1 * (- 1 * r1) = r1"
+    by auto
+  have f10: "(- 1 * (- 1 * r1l / r2l) + - 1 * r1 / r2 \<le> 0) = (0 \<le> - 1 * r1l / r2l + - 1 * (- 1 * r1 / r2))"
+    by auto
+  have f11: "- 1 * r1 / r2 + - 1 * (- 1 * r1l / r2l) = - 1 * (- 1 * r1l / r2l) + - 1 * r1 / r2"
+    by simp
+  have f12: "(0 \<le> - 1 * r1) = (r1 \<le> 0)"
+    by auto
+  have f13: "0 \<le> r1 + - 1 * r1l"
+    using l1def(1) by linarith
+  have f14: "0 \<le> r2 + - 1 * r2l"
+    using l2def(1) by linarith
+  then have f15: "\<not> r1 \<le> 0 \<or> 0 \<le> - 1 * r1l / r2l + - 1 * (- 1 * r1 / r2)"
+    using f13 f12 f11 f10 f9 f8 f7 f5 by metis
+  have f16: "real_of_rat l1 / real_of_rat l2 + - 1 * (r1l / r2l) \<le> 0"
+    using l1def(2) l2def(2) by auto
+  have "0 \<le> Ratreal 0"
+    using rep0u repU_leq by blast
+  then have f17: "\<not> r2 \<le> 0"
+    using f14 f4 l2def(2) by linarith
+  have "- 1 * r1l / r2l \<le> 0 \<longrightarrow> 0 \<le> r1l"
+    using f6 f5 f3 by metis
+  moreover
+  { assume "0 \<le> r1l"
+    then have "r1 / r2 \<le> 0 \<or> real_of_rat l1 / real_of_rat l2 + - 1 * (r1 / r2) \<le> 0"
+      using a2 l1def(2) by force
+    then have "r1 \<le> 0 \<or> real_of_rat l1 / real_of_rat l2 + - 1 * (r1 / r2) \<le> 0"
+      using f17 f3 by metis }
+  moreover
+  { assume "\<not> - 1 * r1l / r2l \<le> 0"
+    then have "r1 / r2 \<le> 0 \<or> real_of_rat l1 / real_of_rat l2 + - 1 * (r1 / r2) \<le> 0"
+      using f16 by force
+    then have "r1 \<le> 0 \<or> real_of_rat l1 / real_of_rat l2 + - 1 * (r1 / r2) \<le> 0"
+      using f17 f3 by metis }
+  ultimately show "real_of_rat l1 / real_of_rat l2 \<le> r1 / r2"
+    using f16 f15 by linarith
+qed
+  apply(cases "u1 / l2 < 0")
+  apply (auto simp add: repL_def)
+  subgoal
+    by (meson divide_nonneg_nonneg less_imp_le not_le)
+          using real_divide_code[of l1 l2, unfolded Ratreal_def]
+          apply(auto simp add: rewrite les Ratreal_def)
+          apply(cases "l1 \<le> 0 \<and> 0 \<le> u1")
+          subgoal  using \<open>\<And>thesis. (\<And>r1l r1u r2l r2u. \<lbrakk>r1l \<le> r1; Ratreal l1 = r1l; r1 \<le> r1u; Ratreal u1 = r1u; r2l \<le> r2; Ratreal l2 = r2l; r2 \<le> r2u; Ratreal u2 = r2u\<rbrakk> \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> divide_neg_pos divide_nonneg_pos real_less_code zero_real_code antisym_conv2
+            facts l1def
+            by (metis not_less repL_def repL_geq)
+            by (smt Ratreal_def of_rat_eq_0_iff rep0u repU_def)
+          apply(cases "l1 \<le> 0 \<and> 0 \<le> u1")          
+           apply(auto)
+           apply(cases "u1 < 0") apply(auto simp add: repL_def rewrite)
+          subgoal
+            using facts apply auto
+            by (smt less_imp_le of_rat_le_0_iff)            
+          apply (smt Ratreal_def \<open>\<And>thesis. (\<And>r1l r1u r2l r2u. \<lbrakk>r1l \<le> r1; Ratreal l1 = r1l; r1 \<le> r1u; Ratreal u1 = r1u; r2l \<le> r2; Ratreal l2 = r2l; r2 \<le> r2u; Ratreal u2 = r2u\<rbrakk> \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> f7 not_less of_rat_le_0_iff)
+(*          using Ratreal_def \<open>\<And>thesis. (\<And>r1l r1u r2l r2u. \<lbrakk>r1l \<le> r1; Ratreal l1 = r1l; r1 \<le> r1u; Ratreal u1 = r1u; r2l \<le> r2; Ratreal l2 = r2l; r2 \<le> r2u; Ratreal u2 = r2u\<rbrakk> \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> divide_minus_left f7 not_less real_less_code real_less_eq_code rep0
+             facts  less_imp_le of_rat_le_0_iff zero_less_of_rat_iff
+        proof -
+          assume a1:"0 < l2"
+          assume a2:"\<not> 0 \<le> u1"
+          have False
+                      using Ratreal_def \<open>\<And>thesis. (\<And>r1l r1u r2l r2u. \<lbrakk>r1l \<le> r1; Ratreal l1 = r1l; r1 \<le> r1u; Ratreal u1 = r1u; r2l \<le> r2; Ratreal l2 = r2l; r2 \<le> r2u; Ratreal u2 = r2u\<rbrakk> \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> divide_minus_left f7 not_less real_less_code real_less_eq_code rep0
+               facts  less_imp_le of_rat_le_0_iff zero_less_of_rat_iff a1 a2
+        qed*)
+          using facts repL_def repU_def
+          by (smt Ratreal_def divide_minus_left real_less_eq_code rep0 zero_less_of_rat_iff)
+        apply(auto)
+        apply(cases "l1 \<le> 0 \<and> 0 \<le> u1") apply(auto)
+           apply(cases "l1 / u2 < 0") apply(auto simp add: repL_def rewrite)
+            apply (meson divide_nonpos_nonpos le_cases not_le)
+        subgoal
+        proof -
+          assume stoff:"\<not> 0 \<le> u2" "\<not> 0 < l2" "w1 = u1 / u2" "w2 = l1 / u2"
+            "l1 \<le> 0" "0 \<le> u1" "u1 / u2 < 0" "\<not> l1 / u2 < 0"
+          have "r1u / r2u \<le> r1 / r2"
+          proof -
+            have f1: "\<forall>x0. ((0::real) < x0) = (\<not> x0 \<le> 0)"
+              by force
+            have f2: "\<forall>x1. ((x1::real) < 0) = (\<not> 0 \<le> x1)"
+              by auto
+            have f3: "(- 1 * r2 \<le> 0) = (0 \<le> r2)"
+              by auto
+            have f4: "- 1 * r2 + r2u = r2u + - 1 * r2"
+    by auto
+  have f5: "- 1 * (- 1 * r2u) = r2u"
+    by auto
+  have f6: "(- 1 * (r1u / (- 1 * r2u)) + r1 / (- 1 * r2) \<le> 0) = (0 \<le> r1u / (- 1 * r2u) + - 1 * (r1 / (- 1 * r2)))"
+    by auto
+have f7: "r1 / (- 1 * r2) + - 1 * (r1u / (- 1 * r2u)) = - 1 * (r1u / (- 1 * r2u)) + r1 / (- 1 * r2)"
+  by auto
+  have f8: "(- 1 * r2u \<le> 0) = (0 \<le> r2u)"
+    by auto
+  have f9: "0 \<le> r2u + - 1 * r2"
+    using u2def(1) by linarith
+  have "0 \<le> r1u + - 1 * r1"
+    using u1def(1) by linarith
+  then have f10: "\<not> 0 \<le> r1 \<or> 0 \<le> r2u \<or> 0 \<le> r1u / (- 1 * r2u) + - 1 * (r1 / (- 1 * r2))"
+    using f9 f8 f7 f6 f5 f4
+    by (metis facts(2)) 
+  have f11: "\<forall>r ra. (Ratreal r + - 1 * Ratreal ra \<le> 0) = (r \<le> ra)"
+    using real_less_eq_code by auto
+  then have f12: "\<forall>r. (real_of_rat r \<le> 0) = (Ratreal r + - 1 * Ratreal 0 \<le> 0)"
+    using of_rat_le_0_iff by blast
+  have f13: "real_of_rat 0 \<le> 0"
+    by auto
+  have f14: "Ratreal 0 + - 1 * real_of_rat 0 \<le> 0"
+    by auto
+  have f15: "\<not> 0 \<le> Ratreal u2 + - 1 * Ratreal 0"
+    using stoff(1) by auto
+  then have f16: "\<not> 0 \<le> r2u"
+    using f14 f13 u2def(2) by linarith
+  have "real_of_rat 0 \<le> 0"
+    by auto
+  then have f17: "\<not> 0 \<le> r2"
+    using f15 f14 f9 u2def(2) by linarith
+  have f18: "r1u = real_of_rat u1"
+    using Ratreal_def u1def(2) by presburger
+  have f19: "r2u = real_of_rat u2"
+    by (metis Ratreal_def u2def(2))
+  have f20: "real_of_rat (u1 / u2) \<le> 0"
+    using f12 f11 by (meson less_imp_le stoff(7))
+  have "0 \<le> r1 / (- 1 * r2) \<longrightarrow> 0 \<le> r1"
+    using f17 f3 f2 f1 by (meson divide_neg_pos)
+  then show ?thesis
+    using f20 f19 f18 f16 f10 rewrite(3) by auto
+qed 
+  then      show "real_of_rat u1 / real_of_rat u2 \<le> r1 / r2" 
+    using facts by auto
+        qed
+        apply(cases "l1 / u2 < 0") apply(auto)
+        using divide_nonpos_neg not_less apply blast
+        apply (smt \<open>\<And>thesis. (\<And>r1l r1u r2l r2u. \<lbrakk>r1l \<le> r1; Ratreal l1 = r1l; r1 \<le> r1u; Ratreal u1 = r1u; r2l \<le> r2; Ratreal l2 = r2l; r2 \<le> r2u; Ratreal u2 = r2u\<rbrakk> \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> divide_nonpos_neg divide_pos_neg less_eq_rat_def real_less_eq_code rep0) 
+         apply(cases "u1 < 0") apply(auto)
+        subgoal apply(auto simp add: rewrite) (* l1 real_less_code real_less_eq_code repL_def repU_def u1)*) 
+          using Ratreal_def \<open>\<And>thesis. (\<And>r1l r1u r2l r2u. \<lbrakk>r1l \<le> r1; Ratreal l1 = r1l; r1 \<le> r1u; Ratreal u1 = r1u; r2l \<le> r2; Ratreal l2 = r2l; r2 \<le> r2u; Ratreal u2 = r2u\<rbrakk> \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> divide_minus_left f7 not_less real_less_code real_less_eq_code rep0
+           facts less_imp_le of_rat_le_0_iff zero_less_of_rat_iff
+        proof -
+          assume "u1 < 0"
+          assume "\<not> l1 \<le> 0"
+          have False
+            using Ratreal_def \<open>\<And>thesis. (\<And>r1l r1u r2l r2u. \<lbrakk>r1l \<le> r1; Ratreal l1 = r1l; r1 \<le> r1u; Ratreal u1 = r1u; r2l \<le> r2; Ratreal l2 = r2l; r2 \<le> r2u; Ratreal u2 = r2u\<rbrakk> \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> divide_minus_left f7 not_less real_less_code real_less_eq_code rep0
+              facts less_imp_le of_rat_le_0_iff zero_less_of_rat_iff \<open>\<not> l1 \<le> 0\<close> \<open>u1 < 0\<close>  repL_def repU_def
+            by (metis order_trans)
+          then show "real_of_rat u1 / real_of_rat l2 \<le> r1 / r2"
+            by metis
+        qed
+         apply(auto simp add: rewrite)
+            using Ratreal_def \<open>\<And>thesis. (\<And>r1l r1u r2l r2u. \<lbrakk>r1l \<le> r1; Ratreal l1 = r1l; r1 \<le> r1u; Ratreal u1 = r1u; r2l \<le> r2; Ratreal l2 = r2l; r2 \<le> r2u; Ratreal u2 = r2u\<rbrakk> \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> divide_minus_left f7 not_less real_less_code real_less_eq_code rep0
+              facts less_imp_le of_rat_le_0_iff zero_less_of_rat_iff repL_def repU_def order_trans
+            apply (smt minus_divide_right)
+            using Ratreal_def \<open>\<And>thesis. (\<And>r1l r1u r2l r2u. \<lbrakk>r1l \<le> r1; Ratreal l1 = r1l; r1 \<le> r1u; Ratreal u1 = r1u; r2l \<le> r2; Ratreal l2 = r2l; r2 \<le> r2u; Ratreal u2 = r2u\<rbrakk> \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> divide_minus_left f7 not_less real_less_code real_less_eq_code rep0
+              facts less_imp_le of_rat_le_0_iff zero_less_of_rat_iff repL_def repU_def order_trans
+            apply (smt minus_divide_right)
+            done
+      subgoal for w1 w2
+        apply(cases "l2 \<le> 0 \<and> 0 \<le> u2") apply(auto)
+         apply(cases "l1 \<le> 0 \<and> 0 \<le> u1") apply(auto)
+            apply(cases "l1 /l2 < 0") apply(auto simp add: rewrite repU_def)
+        apply (meson divide_nonneg_nonneg le_cases not_less)
+        apply (meson divide_nonneg_nonneg le_cases not_less)
+        apply (smt Ratreal_def divide_nonpos_pos f14 f7 l2def(2) of_rat_le_0_iff of_rat_less_0_iff rewrite(2) u1def(1) u1def(2))
+        apply (smt Ratreal_def \<open>\<And>thesis. (\<And>r1l r1u r2l r2u. \<lbrakk>r1l \<le> r1; Ratreal l1 = r1l; r1 \<le> r1u; Ratreal u1 = r1u; r2l \<le> r2; Ratreal l2 = r2l; r2 \<le> r2u; Ratreal u2 = r2u\<rbrakk> \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> divceil.simps divu.simps f7 less_imp_le of_rat_le_0_iff option.inject prod.inject rewrite(2))
+        apply (smt Ratreal_def \<open>\<And>thesis. (\<And>r1l r1u r2l r2u. \<lbrakk>r1l \<le> r1; Ratreal l1 = r1l; r1 \<le> r1u; Ratreal u1 = r1u; r2l \<le> r2; Ratreal l2 = r2l; r2 \<le> r2u; Ratreal u2 = r2u\<rbrakk> \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> divide_minus_left f7 le_cases of_rat_le_0_iff)
+        apply(cases "0 < l2") apply(auto)
+         apply(cases "l1 \<le> 0 \<and> 0 \<le> u1") apply(auto)
+            apply(cases "l1/l2< 0") apply(auto)
+        using divide_nonneg_pos not_less apply blast
+        using divide_nonneg_pos not_less apply blast
+        apply(cases "l1 / l2 < 0")apply(auto simp add: rewrite)
+        subgoal proof -
+        assume a1: "\<not> 0 \<le> u2"
+assume a2: "0 < l2"
+  have "r2u \<le> 0"
+using a1 u2def(2) by force
+  then show "r1 / r2 \<le> real_of_rat u1 / real_of_rat l2"
+using a2 by (metis (no_types) Ratreal_def l2 not_le order_trans repL_def u2def(1) zero_less_of_rat_iff)
+qed
+  subgoal
+proof -
+  assume a1: "l1 \<le> 0"
+  assume a2: "0 < l2"
+  assume "\<not> l1 / l2 < 0"
+  then have "l1 = 0"
+    using a2 a1 by (metis antisym_conv2 divide_neg_pos)
+  then show "r1 / r2 \<le> real_of_rat u1 / real_of_rat l2"
+    using a2 by (metis (no_types) Ratreal_def frac_le l1def(1) l1def(2) l2def(1) l2def(2) u1def(1) u1def(2) zero_less_of_rat_iff zero_real_code)
+qed
+  subgoal
+proof -
+assume a1: "\<not> 0 \<le> u2"
+assume "0 < l2"
+  then have False
+    using a1 by (metis (no_types) Ratreal_def l2 less_imp_le not_le repL_def repL_geq u2def(1) u2def(2) zero_less_of_rat_iff)
+  then show "r1 / r2 \<le> real_of_rat w2"
+    by metis
+qed
+  apply (metis Ratreal_def l2def(1) l2def(2) le_cases not_le order_trans u2def(1) u2def(2) zero_less_of_rat_iff)
+  apply(cases "l1 \<le> 0 \<and> 0 \<le> u1") apply(auto)
+   apply(cases "u1 / u2 < 0") apply(auto)
+  apply (meson divide_nonpos_nonpos le_cases not_le)
+  apply (meson divide_nonpos_nonpos le_cases not_le)
+  apply(cases "u1 / u2 < 0") apply(auto simp add: rewrite)
+  subgoal 
+  proof -
+    assume  assm:"\<not> 0 \<le> u2"
+    "\<not> 0 < l2"
+    "l1 \<le> 0" "0 \<le> u1" "\<not> l1 / u2 < 0" "u1 / u2 < 0"
+    have "r1 / r2 \<le>  r1l / r2u"
+      using hmm assm facts repL_def repU_def
+        
+     using Ratreal_def \<open>\<And>thesis. (\<And>r1l r1u r2l r2u. \<lbrakk>r1l \<le> r1; Ratreal l1 = r1l; r1 \<le> r1u; Ratreal u1 = r1u; r2l \<le> r2; Ratreal l2 = r2l; r2 \<le> r2u; Ratreal u2 = r2u\<rbrakk> \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> divide_minus_left f7 not_less real_less_code real_less_eq_code rep0
+       facts less_imp_le of_rat_le_0_iff zero_less_of_rat_iff repL_def repU_def order_trans minus_divide_right
+       divide_pos_neg 
+     sorry
+   then show ?thesis using facts by auto
+ qed
+  subgoal 
+  proof -
+    assume assms:"\<not> 0 \<le> u2"
+    "\<not> 0 < l2"
+    "l1 \<le> 0"  "0 \<le> u1" "\<not> l1 / u2 < 0" "\<not> u1 / u2 < 0"
+(*Ratreal_def \<open>\<And>thesis. (\<And>r1l r1u r2l r2u. \<lbrakk>r1l \<le> r1; Ratreal l1 = r1l; r1 \<le> r1u; Ratreal u1 = r1u; r2l \<le> r2; Ratreal l2 = r2l; r2 \<le> r2u; Ratreal u2 = r2u\<rbrakk> \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> divide_minus_left f7 not_less real_less_code real_less_eq_code rep0 less_imp_le of_rat_le_0_iff zero_less_of_rat_iff repL_def repU_def order_trans minus_divide_right
+       divide_pos_neg*)
+    have "r1 / r2 \<le>  r1l / r2u"
+      using facts  assms
+      by (smt Ratreal_def \<open>\<And>thesis. (\<And>r1l r1u r2l r2u. \<lbrakk>r1l \<le> r1; Ratreal l1 = r1l; r1 \<le> r1u; Ratreal u1 = r1u; r2l \<le> r2; Ratreal l2 = r2l; r2 \<le> r2u; Ratreal u2 = r2u\<rbrakk> \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> divide_minus_left divide_pos_neg minus_divide_right real_divide_code real_less_code real_less_eq_code rep0)
+    then show ?thesis using facts by auto
+  qed
+  apply(cases "u1 < 0") apply(auto simp add: rewrite)
+    apply (metis Ratreal_def l1 less_imp_le of_rat_le_0_iff repL_def repL_geq u1def(1) u1def(2))
+  subgoal 
+  proof -
+    assume assms:"\<not> 0 \<le> u2"
+    "\<not> 0 < l2"
+    "\<not> l1 \<le> 0" "\<not> u1 < 0"
+    have "r1 / r2 \<le>  r1l /  r2l"
+      using assms facts minus_divide_right real_less_eq_code rep0l repL_def
+      by smt
+    then show ?thesis
+      using facts by auto
+  qed
+  subgoal 
+  proof -
+    assume assm:"\<not> 0 \<le> u2"
+    "\<not> 0 < l2" "\<not> 0 \<le> u1"
+    then have " r1 / r2 \<le> r1l / r2u"
+    using Ratreal_def \<open>\<And>thesis. (\<And>r1l r1u r2l r2u. \<lbrakk>r1l \<le> r1; Ratreal l1 = r1l; r1 \<le> r1u; Ratreal u1 = r1u; r2l \<le> r2; Ratreal l2 = r2l; r2 \<le> r2u; Ratreal u2 = r2u\<rbrakk> \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> divide_minus_left f7 not_less real_less_code real_less_eq_code rep0
+      facts less_imp_le of_rat_le_0_iff zero_less_of_rat_iff repL_def repU_def order_trans minus_divide_right
+      divide_pos_neg
+    by smt
+    then show ?thesis using facts by auto
+  qed
+  done
+  done
+qed
+  
 (*lemma dl_lemma:
   assumes u1:"u\<^sub>1 \<equiv>\<^sub>U (r\<^sub>1::real)"
   assumes u2:"u\<^sub>2 \<equiv>\<^sub>U (r\<^sub>2::real)"
@@ -1258,47 +1586,83 @@ lemma du_lemma:
 
 *)
 
-fun wtsemU :: "trm \<Rightarrow> nstate \<Rightarrow>  word * word " ("([_]<>_)" 20)
-where "([Const r]<>\<nu>) = (r, r)"
-| wVarU:"([Var x]<>\<nu>) = (\<nu> (Inl x), \<nu> (Inr x))"
-| wPlusU:"([Plus \<theta>\<^sub>1 \<theta>\<^sub>2]<> \<nu>) = 
-  (let (l1, u1) = [\<theta>\<^sub>1]<> \<nu> in 
-   let (l2, u2) = [\<theta>\<^sub>2]<> \<nu> in
-   (pl l1 l2, pu u1 u2))"
+
+fun wtsemU :: "trm \<Rightarrow> nstate \<Rightarrow>  (word * word) option " ("([_]<>_)" 20)
+where "([Const r]<>\<nu>) = Some(r, r)"
+| wVarU:"([Var x]<>\<nu>) = Some (\<nu> (Inl x), \<nu> (Inr x))"
+| wPlusU:"([Plus \<theta>\<^sub>1 \<theta>\<^sub>2]<> \<nu>) =
+  (case [\<theta>\<^sub>1]<> \<nu> of None \<Rightarrow> None 
+  | Some (l1, u1) \<Rightarrow> 
+  (case [\<theta>\<^sub>2]<> \<nu> of None \<Rightarrow> None
+  | Some (l2,u2) \<Rightarrow>
+   Some (pl l1 l2, pu u1 u2)))"
 | wTimesU:"([(Times \<theta>\<^sub>1 \<theta>\<^sub>2)]<> \<nu>) = 
-  (let (l1, u1) = [\<theta>\<^sub>1]<> \<nu> in 
-   let (l2, u2) = [\<theta>\<^sub>2]<> \<nu> in
-   (tl l1 u1 l2 u2, tu l1 u1 l2 u2))"
+  (case [\<theta>\<^sub>1]<> \<nu> of None \<Rightarrow> None
+  | Some (l1,u1) \<Rightarrow> 
+  (case [\<theta>\<^sub>2]<> \<nu> of None \<Rightarrow> None
+  | Some (l2,u2) \<Rightarrow>
+    Some (tl l1 u1 l2 u2, tu l1 u1 l2 u2)))"
 | wMaxU:"([(Max \<theta>\<^sub>1 \<theta>\<^sub>2)]<> \<nu>) = 
-  (let (l1, u1) = [\<theta>\<^sub>1]<> \<nu> in 
-   let (l2, u2) = [\<theta>\<^sub>2]<> \<nu> in
-  (wmax l1 l2, wmax u1 u2))"
+  (case [\<theta>\<^sub>1]<> \<nu> of None \<Rightarrow> None
+  | Some (l1, u1) \<Rightarrow>
+  (case [\<theta>\<^sub>2]<> \<nu> of None \<Rightarrow> None 
+  | Some (l2, u2) \<Rightarrow>
+  Some (wmax l1 l2, wmax u1 u2)))"
 | wMinU:"([(Min \<theta>\<^sub>1 \<theta>\<^sub>2)]<> \<nu>) = 
-  (let (l1, u1) = [\<theta>\<^sub>1]<> \<nu> in 
-   let (l2, u2) = [\<theta>\<^sub>2]<> \<nu> in
-  (wmin l1 l2, wmin u1 u2))"
+  (case [\<theta>\<^sub>1]<> \<nu> of None \<Rightarrow> None
+  | Some (l1, u1) \<Rightarrow> 
+  (case [\<theta>\<^sub>2]<> \<nu>  of None \<Rightarrow> None
+  | Some (l2, u2) \<Rightarrow>
+  Some(wmin l1 l2, wmin u1 u2)))" 
 | wDivU:"([(Div \<theta>\<^sub>1 \<theta>\<^sub>2)]<> \<nu>) = 
-  (let (l1, u1) = [\<theta>\<^sub>1]<> \<nu> in 
-   let (l2, u2) = [\<theta>\<^sub>2]<> \<nu> in
-  (divU l1 u1 l2 u2))"
+  (case [\<theta>\<^sub>1]<> \<nu> of None \<Rightarrow> None
+  | Some (l1, u1) \<Rightarrow>
+  (case [\<theta>\<^sub>2]<> \<nu> of None \<Rightarrow> None 
+  | Some (l2, u2) \<Rightarrow>
+   divU l1 u1 l2 u2))"
 | wNegU:"([(Neg \<theta>)]<> \<nu>) =
-  (let (l, u) = [\<theta>]<> \<nu> in
-   (wneg u, wneg l))"
+  (case [\<theta>]<> \<nu> of None \<Rightarrow> None
+  | Some (l, u) \<Rightarrow>
+   Some (wneg u, wneg l))"
 | wAbsU:"([(Abs \<theta>\<^sub>1)]<> \<nu>) = 
-  (let (l1, u1) = [\<theta>\<^sub>1]<> \<nu> in 
-  (wmax l1 (wneg u1), wmax u1 (wneg l1))
+  (case [\<theta>\<^sub>1]<> \<nu> of None \<Rightarrow> None
+  | Some (l1, u1) \<Rightarrow> 
+  Some (wmax l1 (wneg u1), wmax u1 (wneg l1))
  )"
+
+lemma trm_plus_invert:"wtsemU (Plus A B) st = Some P \<Longrightarrow> \<exists>PAl PBl PAr PBr. wtsemU A st = Some (PAl,PAr) \<and> wtsemU B st = Some (PBl,PBr)"
+  apply(cases "[A]<>st") apply(auto)   apply(cases "[A]<>st") apply(auto) subgoal for a b
+  apply(cases "[B]<>st") by(auto) done
+
+lemma trm_times_invert:"wtsemU (Times A B) st = Some P \<Longrightarrow> \<exists>PAl PBl PAr PBr. wtsemU A st = Some (PAl,PAr) \<and> wtsemU B st = Some (PBl,PBr)"
+  apply(cases "[A]<>st") apply(auto)   apply(cases "[A]<>st") apply(auto) subgoal for a b
+  apply(cases "[B]<>st") by(auto) done
+lemma trm_div_invert:"wtsemU (Div A B) st = Some P \<Longrightarrow> \<exists>PAl PBl PAr PBr. wtsemU A st = Some (PAl,PAr) \<and> wtsemU B st = Some (PBl,PBr)"
+  apply(cases "[A]<>st") apply(auto)   apply(cases "[A]<>st") apply(auto) subgoal for a b
+  apply(cases "[B]<>st") by(auto) done
+lemma trm_min_invert:"wtsemU (Min A B) st = Some P \<Longrightarrow> \<exists>PAl PBl PAr PBr. wtsemU A st = Some (PAl,PAr) \<and> wtsemU B st = Some (PBl,PBr)"
+  apply(cases "[A]<>st") apply(auto)   apply(cases "[A]<>st") apply(auto) subgoal for a b
+  apply(cases "[B]<>st") by(auto) done
+lemma trm_max_invert:"wtsemU (Max A B) st = Some P \<Longrightarrow> \<exists>PAl PBl PAr PBr. wtsemU A st = Some (PAl,PAr) \<and> wtsemU B st = Some (PBl,PBr)"
+  apply(cases "[A]<>st") apply(auto)   apply(cases "[A]<>st") apply(auto) subgoal for a b
+  apply(cases "[B]<>st") by(auto) done
+lemma trm_neg_invert:"wtsemU (Neg A) st = Some P \<Longrightarrow> \<exists>PAl PAr. wtsemU A st = Some (PAl,PAr)"
+  apply(cases "[A]<>st") by(auto)
+lemma trm_abs_invert:"wtsemU (Abs A) st = Some P \<Longrightarrow> \<exists>PAl PAr. wtsemU A st = Some (PAl,PAr)"
+  apply(cases "[A]<>st") by(auto)
+
+
 (*  (wmin (wabs l1) (wabs u1), wmax (wabs l1) (wabs u1))*)
 
 inductive wfsem :: "formula \<Rightarrow> nstate \<Rightarrow> bool \<Rightarrow> bool" ("([[_]]_ \<down> _)" 20)
 where 
-  wLeT:"wle (snd ([\<theta>\<^sub>1]<>\<nu>)) (fst ([\<theta>\<^sub>2]<>\<nu>)) \<Longrightarrow>  ([[(Le \<theta>\<^sub>1 \<theta>\<^sub>2)]]\<nu> \<down> True)"
-| wLeF:"wleq (snd ([\<theta>\<^sub>2]<>\<nu>)) (fst ([\<theta>\<^sub>1]<>\<nu>)) \<Longrightarrow>  ([[(Le \<theta>\<^sub>1 \<theta>\<^sub>2)]]\<nu> \<down> False)"
-| wLeqT:"wleq (snd ([\<theta>\<^sub>1]<> \<nu>)) (fst ([\<theta>\<^sub>2]<>\<nu>)) \<Longrightarrow>  ([[(Leq \<theta>\<^sub>1 \<theta>\<^sub>2)]]\<nu> \<down> True)"
-| wLeqF:"wle (snd ([\<theta>\<^sub>2]<>\<nu>)) (fst ([\<theta>\<^sub>1]<>\<nu>)) \<Longrightarrow>  ([[(Leq \<theta>\<^sub>1 \<theta>\<^sub>2)]]\<nu> \<down> False)"
-| wEqualsT:"\<lbrakk>(fst ([\<theta>\<^sub>2]<>\<nu>) = snd ([\<theta>\<^sub>2]<>\<nu>)); (snd ([\<theta>\<^sub>2]<>\<nu>) = snd ([\<theta>\<^sub>1]<>\<nu>)); (snd ([\<theta>\<^sub>1]<>\<nu>) = fst ([\<theta>\<^sub>1]<>\<nu>)); (fst ([\<theta>\<^sub>2]<>\<nu>) \<noteq> NEG_INF); (fst ([\<theta>\<^sub>2]<>\<nu>) \<noteq> POS_INF)\<rbrakk> \<Longrightarrow> ([[Equals \<theta>\<^sub>1 \<theta>\<^sub>2]] \<nu> \<down> True)"
-| wEqualsF1:"wle (snd ([\<theta>\<^sub>1]<> \<nu>)) (fst ([\<theta>\<^sub>2]<>\<nu>)) \<Longrightarrow>  ([[Equals \<theta>\<^sub>1 \<theta>\<^sub>2]] \<nu> \<down> False)"
-| wEqualsF2:"wle (snd ([\<theta>\<^sub>2]<> \<nu>)) (fst ([\<theta>\<^sub>1]<>\<nu>)) \<Longrightarrow>  ([[Equals \<theta>\<^sub>1 \<theta>\<^sub>2]] \<nu> \<down> False)"
+  wLeT:"([\<theta>\<^sub>1]<>\<nu>) = Some (L1,R1) \<Longrightarrow> ([\<theta>\<^sub>2]<>\<nu>) = Some (L2,R2) \<Longrightarrow> wle R1 L2 \<Longrightarrow>  ([[(Le \<theta>\<^sub>1 \<theta>\<^sub>2)]]\<nu> \<down> True)"
+| wLeF:"([\<theta>\<^sub>1]<>\<nu>) = Some (L1,R1) \<Longrightarrow> ([\<theta>\<^sub>2]<>\<nu>) = Some (L2,R2) \<Longrightarrow> wleq R2 L1 \<Longrightarrow>  ([[(Le \<theta>\<^sub>1 \<theta>\<^sub>2)]]\<nu> \<down> False)"
+| wLeqT:"([\<theta>\<^sub>1]<>\<nu>) = Some (L1,R1) \<Longrightarrow> ([\<theta>\<^sub>2]<>\<nu>) = Some (L2,R2) \<Longrightarrow> wleq R1 L2 \<Longrightarrow>  ([[(Leq \<theta>\<^sub>1 \<theta>\<^sub>2)]]\<nu> \<down> True)"
+| wLeqF:"([\<theta>\<^sub>1]<>\<nu>) = Some (L1,R1) \<Longrightarrow> ([\<theta>\<^sub>2]<>\<nu>) = Some (L2,R2) \<Longrightarrow> wle R2 L1 \<Longrightarrow>  ([[(Leq \<theta>\<^sub>1 \<theta>\<^sub>2)]]\<nu> \<down> False)"
+| wEqualsT:"([\<theta>\<^sub>1]<>\<nu>) = Some (L1,R1) \<Longrightarrow> ([\<theta>\<^sub>2]<>\<nu>) = Some (L2,R2) \<Longrightarrow> \<lbrakk>(L2 = R2); (R2 = R1); (R1 = L1)\<rbrakk> \<Longrightarrow> ([[Equals \<theta>\<^sub>1 \<theta>\<^sub>2]] \<nu> \<down> True)"
+| wEqualsF1:"([\<theta>\<^sub>1]<>\<nu>) = Some (L1,R1) \<Longrightarrow> ([\<theta>\<^sub>2]<>\<nu>) = Some (L2,R2) \<Longrightarrow> wle R1 L2 \<Longrightarrow>  ([[Equals \<theta>\<^sub>1 \<theta>\<^sub>2]] \<nu> \<down> False)"
+| wEqualsF2:"([\<theta>\<^sub>1]<>\<nu>) = Some (L1,R1) \<Longrightarrow> ([\<theta>\<^sub>2]<>\<nu>) = Some (L2,R2) \<Longrightarrow> wle R2 L1 \<Longrightarrow>  ([[Equals \<theta>\<^sub>1 \<theta>\<^sub>2]] \<nu> \<down> False)"
 | wAndT:"\<lbrakk>[[\<phi>]]\<nu> \<down> True; [[\<psi>]]\<nu> \<down> True\<rbrakk> \<Longrightarrow> ([[And \<phi> \<psi>]]\<nu> \<down> True)"
 | wAndF1:"[[\<phi>]]\<nu> \<down> False \<Longrightarrow> ([[And \<phi> \<psi>]]\<nu> \<down> False)"
 | wAndF2:"[[\<psi>]]\<nu> \<down> False \<Longrightarrow> ([[And \<phi> \<psi>]]\<nu> \<down> False)"
@@ -1319,7 +1683,7 @@ inductive wpsem :: "hp \<Rightarrow>  nstate \<Rightarrow> nstate \<Rightarrow> 
 where
   wTest:"([[\<phi>]]\<nu> \<down> True) \<Longrightarrow> \<nu> = \<omega> \<Longrightarrow> ([[? \<phi>]] \<nu> \<down> \<omega>)"
 | wSeq:"([[\<alpha>]]\<nu> \<down> \<mu>) \<Longrightarrow> ([[\<beta>]] \<mu> \<down> \<omega>) \<Longrightarrow> ([[\<alpha>;; \<beta>]] \<nu> \<down> \<omega>)"
-| wAssign:"\<omega> = ((\<nu> ((Inr x) := snd([\<theta>]<>\<nu>))) ((Inl x) := fst([\<theta>]<>\<nu>))) \<Longrightarrow> ([[Assign x \<theta>]] \<nu> \<down> \<omega>)"
+| wAssign:"([\<theta>]<>\<nu>) = Some (L,R) \<Longrightarrow> \<omega> = ((\<nu> ((Inr x) := R)) ((Inl x) := L)) \<Longrightarrow> ([[Assign x \<theta>]] \<nu> \<down> \<omega>)"
 | wChoice1[simp]:"([[\<alpha>]]\<nu> \<down> \<omega>) \<Longrightarrow> ([[Choice \<alpha> \<beta>]]\<nu> \<down> \<omega>)"
 | wChoice2[simp]:"([[\<beta>]]\<nu> \<down> \<omega>) \<Longrightarrow> ([[Choice \<alpha> \<beta>]]\<nu> \<down> \<omega>)"
 
@@ -1339,42 +1703,45 @@ inductive_simps repstate_simps:"\<nu> REP \<nu>'"
 
 lemma trm_sound:
   fixes \<theta>::"trm"
-  shows "([\<theta>]\<nu>' \<down> r) \<Longrightarrow> (\<nu> REP \<nu>') \<Longrightarrow>   ([\<theta>]<>\<nu>) \<equiv>\<^sub>P r"
-proof (induction rule: rtsem.induct)
+  shows "([\<theta>]\<nu>' \<down> r) \<Longrightarrow> (\<nu> REP \<nu>') \<Longrightarrow>  ([\<theta>]<>\<nu>) = Some P \<Longrightarrow> P  \<equiv>\<^sub>P r"
+proof (induction arbitrary: P rule: rtsem.induct )
  case rtsem_Const 
-   fix q \<nu>'
-   show " \<nu> REP \<nu>' \<Longrightarrow> [Const q]<>\<nu> \<equiv>\<^sub>P Ratreal q"
-   using pu_lemma tu_lemma wmax_lemma wmin_lemma  wneg_lemma repU_def repL_def repP_def rep_simps repstate_simps order_refl wtsemU.simps(1)
- represents_state.cases by auto
+  fix q \<nu>'
+  assume some:"([Const q]<>\<nu>) = Some P"
+  show " \<nu> REP \<nu>' \<Longrightarrow> P \<equiv>\<^sub>P Ratreal q"
+    using pu_lemma tu_lemma wmax_lemma wmin_lemma  wneg_lemma repU_def repL_def repP_def rep_simps repstate_simps order_refl wtsemU.simps(1)
+ some represents_state.cases by auto
 next
  case rtsem_Var
    fix x \<nu>'
-   show "\<nu> REP \<nu>' \<Longrightarrow> [Var x]<>\<nu> \<equiv>\<^sub>P \<nu>' x"
-     by(auto simp add: case_prod_conv pu_lemma tu_lemma wmax_lemma wmin_lemma  wneg_lemma repU_def repL_def repP_def rep_simps repstate_simps order_refl wtsemU.simps(1)
-     represents_state.cases)
+   assume some:"([Var x]<>\<nu>) = Some P"
+   show "\<nu> REP \<nu>' \<Longrightarrow> P \<equiv>\<^sub>P \<nu>' x"
+     using case_prod_conv pu_lemma tu_lemma wmax_lemma wmin_lemma  wneg_lemma repU_def repL_def repP_def rep_simps repstate_simps order_refl wtsemU.simps(1)
+     represents_state.cases some
+     by auto
+    
 next
  case rtsem_Plus
-   fix \<theta>\<^sub>1 :: "trm" and \<nu>':: "rstate" and r\<^sub>1 and \<theta>\<^sub>2 :: "trm" and  r\<^sub>2
+  fix \<theta>\<^sub>1 :: "trm" and \<nu>':: "rstate" and r\<^sub>1 and \<theta>\<^sub>2 :: "trm" and  r\<^sub>2 P
+  assume some:"([Plus \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu>) = Some P"
    assume rep:"\<nu> REP \<nu>'"
    assume eval1:"[\<theta>\<^sub>1]\<nu>' \<down> r\<^sub>1"
-   assume "(\<nu> REP \<nu>' \<Longrightarrow> [\<theta>\<^sub>1]<>\<nu> \<equiv>\<^sub>P r\<^sub>1)"
-   then have IH1:"[\<theta>\<^sub>1]<>\<nu> \<equiv>\<^sub>P r\<^sub>1" using rep by auto
+   assume ih1:"(\<And>P. \<nu> REP \<nu>' \<Longrightarrow> ([\<theta>\<^sub>1]<>\<nu>) = Some P \<Longrightarrow> P \<equiv>\<^sub>P r\<^sub>1)"
    assume eval2:"[\<theta>\<^sub>2]\<nu>' \<down> r\<^sub>2"
-   assume "(\<nu> REP \<nu>' \<Longrightarrow> [\<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>2)"
-   then have IH2:"[\<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>2" using rep by auto
+   assume ih2:"(\<And>P. \<nu> REP \<nu>' \<Longrightarrow> ([\<theta>\<^sub>2]<>\<nu>) = Some P \<Longrightarrow> P \<equiv>\<^sub>P r\<^sub>2)"
    obtain l1 u1 l2 u2 where 
-        lu1:"(l1, u1) = ([\<theta>\<^sub>1]<> \<nu>)" 
-    and lu2:"(l2, u2) = ([\<theta>\<^sub>2]<> \<nu>)"
-    using IH1 IH2 repP_def by auto
+        lu1:"Some (l1, u1) = ([\<theta>\<^sub>1]<> \<nu>)" 
+    and lu2:"Some (l2, u2) = ([\<theta>\<^sub>2]<> \<nu>)"
+     using ih1 ih2 repP_def some trm_plus_invert by metis
    from lu1 and lu2 have
-        lu1':"([\<theta>\<^sub>1]<> \<nu>) = (l1, u1)" 
-    and lu2':"([\<theta>\<^sub>2]<> \<nu>) = (l2, u2)"
+        lu1':"([\<theta>\<^sub>1]<> \<nu>) = Some (l1, u1)" 
+    and lu2':"([\<theta>\<^sub>2]<> \<nu>) = Some (l2, u2)"
     by auto
-  have l1:"l1 \<equiv>\<^sub>L r\<^sub>1" using IH1 lu1 unfolding repP_def by auto
-  have u1:"u1 \<equiv>\<^sub>U r\<^sub>1" using IH1 lu1 unfolding repP_def by auto
-  have l2:"l2 \<equiv>\<^sub>L r\<^sub>2" using IH2 lu2 unfolding repP_def by auto
-  have u2:"u2 \<equiv>\<^sub>U r\<^sub>2" using IH2 lu2 unfolding repP_def by auto
-  then have "([(Plus \<theta>\<^sub>1 \<theta>\<^sub>2)]<>\<nu>) = (pl l1 l2, pu u1 u2)"  
+  have l1:"l1 \<equiv>\<^sub>L r\<^sub>1" using ih1 lu1 unfolding repP_def by (metis case_prodD rep) 
+  have u1:"u1 \<equiv>\<^sub>U r\<^sub>1" using ih1 lu1 unfolding repP_def by (metis case_prodD rep)
+  have l2:"l2 \<equiv>\<^sub>L r\<^sub>2" using ih2 lu2 unfolding repP_def by (metis case_prodD rep)
+  have u2:"u2 \<equiv>\<^sub>U r\<^sub>2" using ih2 lu2 unfolding repP_def by (metis case_prodD rep)
+  then have "([(Plus \<theta>\<^sub>1 \<theta>\<^sub>2)]<>\<nu>) = Some (pl l1 l2, pu u1 u2)"  
    using lu1' lu2' by auto
   have lBound:"(pl l1 l2 \<equiv>\<^sub>L r\<^sub>1 + r\<^sub>2)"
     using l1 l2 pl_lemma by auto
@@ -1382,95 +1749,102 @@ next
     using pu_lemma[OF u1 u2] by auto
   have "(pl l1 l2, pu u1 u2) \<equiv>\<^sub>P (r\<^sub>1 + r\<^sub>2)"
     unfolding repP_def Let_def using lBound uBound by auto
-  then show"[Plus \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>1 + r\<^sub>2"
-    using lu1' lu2' by auto
+  then show"P \<equiv>\<^sub>P r\<^sub>1 + r\<^sub>2"
+    using lu1' lu2' some by auto
 next
  case rtsem_Times
    fix \<theta>\<^sub>1 :: "trm" and \<nu>' r\<^sub>1 and \<theta>\<^sub>2 :: "trm" and r\<^sub>2
+   assume some:"([Times \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu>) = Some P"
    assume eval1:"[\<theta>\<^sub>1]\<nu>' \<down> r\<^sub>1"
    assume eval2:"[\<theta>\<^sub>2]\<nu>' \<down> r\<^sub>2"
    assume rep:"\<nu> REP \<nu>'"
-   assume "(\<nu> REP \<nu>' \<Longrightarrow> ([\<theta>\<^sub>1]<>\<nu> \<equiv>\<^sub>P r\<^sub>1))"
-   then have IH1:"[\<theta>\<^sub>1]<>\<nu> \<equiv>\<^sub>P r\<^sub>1" using rep by auto 
-   assume "(\<nu> REP \<nu>' \<Longrightarrow> ([\<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>2))"
-   then have IH2:"[\<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>2" using rep by auto
+   assume ih1:"(\<And>P. \<nu> REP \<nu>' \<Longrightarrow> ([\<theta>\<^sub>1]<>\<nu>) = Some P \<Longrightarrow> P \<equiv>\<^sub>P r\<^sub>1)"
+   assume ih2:"(\<And>P. \<nu> REP \<nu>' \<Longrightarrow> ([\<theta>\<^sub>2]<>\<nu>) = Some P \<Longrightarrow> P \<equiv>\<^sub>P r\<^sub>2)"
     obtain l1 u1 l2 u2 where 
-        lu1:"([\<theta>\<^sub>1]<> \<nu>) = (l1, u1) " 
-    and lu2:"([\<theta>\<^sub>2]<> \<nu>) = (l2, u2)"
-    using IH1 IH2 repP_def by auto
-  have l1:"l1 \<equiv>\<^sub>L r\<^sub>1" using IH1 lu1 unfolding repP_def by auto
-  have u1:"u1 \<equiv>\<^sub>U r\<^sub>1" using IH1 lu1 unfolding repP_def by auto
-  have l2:"l2 \<equiv>\<^sub>L r\<^sub>2" using IH2 lu2 unfolding repP_def by auto
-  have u2:"u2 \<equiv>\<^sub>U r\<^sub>2" using IH2 lu2 unfolding repP_def by auto
-  then have "([(Times \<theta>\<^sub>1  \<theta>\<^sub>2)]<>\<nu>) = (tl l1 u1 l2 u2, tu l1 u1 l2 u2)"  
-   using lu1 lu2 unfolding wTimesU Let_def by auto 
+        lu1:"Some (l1, u1) = ([\<theta>\<^sub>1]<> \<nu>)" 
+    and lu2:"Some (l2, u2) = ([\<theta>\<^sub>2]<> \<nu>)"
+     using ih1 ih2 repP_def some trm_times_invert by metis
+   from lu1 and lu2 have
+        lu1':"([\<theta>\<^sub>1]<> \<nu>) = Some (l1, u1)" 
+    and lu2':"([\<theta>\<^sub>2]<> \<nu>) = Some (l2, u2)"
+    using ih1 ih2 repP_def by auto
+  have l1:"l1 \<equiv>\<^sub>L r\<^sub>1" using ih1 lu1 unfolding repP_def by (metis case_prodD rep)
+  have u1:"u1 \<equiv>\<^sub>U r\<^sub>1" using ih1 lu1 unfolding repP_def by (metis case_prodD rep)
+  have l2:"l2 \<equiv>\<^sub>L r\<^sub>2" using ih2 lu2 unfolding repP_def by (metis case_prodD rep)
+  have u2:"u2 \<equiv>\<^sub>U r\<^sub>2" using ih2 lu2 unfolding repP_def by (metis case_prodD rep)
+  then have "([(Times \<theta>\<^sub>1  \<theta>\<^sub>2)]<>\<nu>) = Some (tl l1 u1 l2 u2, tu l1 u1 l2 u2)"  
+   using lu1' lu2' trm_times_invert unfolding wTimesU Let_def  by(auto)
   have lBound:"(tl l1 u1 l2 u2 \<equiv>\<^sub>L r\<^sub>1 * r\<^sub>2)"
     using l1 u1 l2 u2 tl_lemma by auto
   have uBound:"(tu l1 u1 l2 u2 \<equiv>\<^sub>U r\<^sub>1 * r\<^sub>2)"
     using l1 u1 l2 u2 tu_lemma by auto
   have "(tl l1 u1 l2 u2, tu l1 u1 l2 u2) \<equiv>\<^sub>P (r\<^sub>1 * r\<^sub>2)"
     unfolding repP_def Let_def using lBound uBound by auto
-  then show "[Times \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>1 * r\<^sub>2"
-    using lu1 lu2 by auto
+  then show "P \<equiv>\<^sub>P r\<^sub>1 * r\<^sub>2"
+    using lu1 lu2 some
+    using \<open>([Times \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu>) = Some (Interval_Rat.tl l1 u1 l2 u2, tu l1 u1 l2 u2)\<close> by auto 
 next
  case rtsem_Max
    fix \<theta>\<^sub>1 :: "trm" and \<nu>' r\<^sub>1 and \<theta>\<^sub>2 :: "trm" and  r\<^sub>2
    assume eval1:"([\<theta>\<^sub>1]\<nu>' \<down> r\<^sub>1)"
    assume eval2:"([\<theta>\<^sub>2]\<nu>' \<down> r\<^sub>2)"
    assume rep:"\<nu> REP \<nu>'"
-   assume "(\<nu> REP \<nu>' \<Longrightarrow> [\<theta>\<^sub>1]<>\<nu> \<equiv>\<^sub>P r\<^sub>1)"
-   then have IH1:"[\<theta>\<^sub>1]<>\<nu> \<equiv>\<^sub>P r\<^sub>1" using rep by auto
-   assume "(\<nu> REP \<nu>' \<Longrightarrow> [\<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>2)"
-   then have IH2:"[\<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>2" using rep by auto
+   assume some:"([Max \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu>) = Some P"
+   assume ih1:"(\<And>P. \<nu> REP \<nu>' \<Longrightarrow> ([\<theta>\<^sub>1]<>\<nu>) = Some P \<Longrightarrow> P \<equiv>\<^sub>P r\<^sub>1)"
+   assume ih2:"(\<And>P. \<nu> REP \<nu>' \<Longrightarrow> ([\<theta>\<^sub>2]<>\<nu>) = Some P \<Longrightarrow> P \<equiv>\<^sub>P r\<^sub>2)"
    obtain l1 u1 l2 u2 where 
-        lu1:"([\<theta>\<^sub>1]<> \<nu>) = (l1, u1)" 
-    and lu2:"([\<theta>\<^sub>2]<> \<nu>) = (l2, u2)"
-    using IH1 IH2 repP_def by auto
-   from IH1 IH2 
+        lu1:"([\<theta>\<^sub>1]<> \<nu>) = Some(l1, u1)" 
+    and lu2:"([\<theta>\<^sub>2]<> \<nu>) = Some(l2, u2)"
+    using ih1 ih2 repP_def some trm_max_invert
+    by meson 
+   from ih1 ih2 
    obtain ub1 ub2 lb1 lb2:: real 
-   where urep1:"(ub1 \<ge> r\<^sub>1) \<and> Ratreal (snd ([\<theta>\<^sub>1]<>\<nu>)) = ub1" 
-   and   urep2:"(ub2 \<ge> r\<^sub>2) \<and> Ratreal (snd ([\<theta>\<^sub>2]<>\<nu>)) = ub2"
-   and   lrep1:"(lb1 \<le> r\<^sub>1) \<and> Ratreal (fst ([\<theta>\<^sub>1]<>\<nu>)) = lb1" 
-   and   lrep2:"(lb2 \<le> r\<^sub>2) \<and> Ratreal (fst ([\<theta>\<^sub>2]<>\<nu>)) = lb2"
-     using prod.case_eq_if repP_def  repU_def repL_def by auto
+   where urep1:"(ub1 \<ge> r\<^sub>1) \<and> Ratreal (u1) = ub1" 
+   and   urep2:"(ub2 \<ge> r\<^sub>2) \<and> Ratreal (u2) = ub2"
+   and   lrep1:"(lb1 \<le> r\<^sub>1) \<and> Ratreal (l1) = lb1" 
+   and   lrep2:"(lb2 \<le> r\<^sub>2) \<and> Ratreal (l2) = lb2"
+     using prod.case_eq_if repP_def  repU_def repL_def some trm_max_invert
+     using lu1 lu2 rep by fastforce 
    have lbound:"wmax l1 l2 \<equiv>\<^sub>L max r\<^sub>1 r\<^sub>2"
      by (metis dual_order.trans fst_conv le_cases lrep1 lrep2 lu1 lu2 max_def repL_def wmax.elims)
    have ubound:"wmax u1 u2 \<equiv>\<^sub>U max r\<^sub>1 r\<^sub>2"     
      by (metis real_max_mono lu1 lu2 repU_def snd_conv urep1 urep2 wmax_lemma)
-   have "([trm.Max \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu>) = (wmax l1 l2, wmax u1 u2)"
+   have "([trm.Max \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu>) = Some (wmax l1 l2, wmax u1 u2)"
      using lu1 lu2 unfolding wMaxU Let_def 
      by (simp)
-   then show "[trm.Max \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P max r\<^sub>1 r\<^sub>2"
+   then show "P \<equiv>\<^sub>P max r\<^sub>1 r\<^sub>2"
     unfolding repP_def
-    using lbound ubound lu1 lu2 by auto
+    using lbound ubound lu1 lu2 some by auto
 next
   case rtsem_Min
     fix \<theta>\<^sub>1 :: "trm" and \<nu>' r\<^sub>1 and \<theta>\<^sub>2 :: "trm" and  r\<^sub>2
    assume eval1:"([\<theta>\<^sub>1]\<nu>' \<down> r\<^sub>1)"
    assume eval2:"([\<theta>\<^sub>2]\<nu>' \<down> r\<^sub>2)"
    assume rep:"\<nu> REP \<nu>'"
-   assume "(\<nu> REP \<nu>' \<Longrightarrow> [\<theta>\<^sub>1]<>\<nu> \<equiv>\<^sub>P r\<^sub>1)"
-   then have IH1:"[\<theta>\<^sub>1]<>\<nu> \<equiv>\<^sub>P r\<^sub>1" using rep by auto
-   assume "(\<nu> REP \<nu>' \<Longrightarrow> [\<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>2)"
-   then have IH2:"[\<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>2" using rep by auto
+   assume some:"([Min \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu>) = Some P"
+   assume ih1:"(\<And>P. \<nu> REP \<nu>' \<Longrightarrow> ([\<theta>\<^sub>1]<>\<nu>) = Some P \<Longrightarrow> P \<equiv>\<^sub>P r\<^sub>1)"
+   assume ih2:"(\<And>P. \<nu> REP \<nu>' \<Longrightarrow> ([\<theta>\<^sub>2]<>\<nu>) = Some P \<Longrightarrow> P \<equiv>\<^sub>P r\<^sub>2)"
    obtain l1 u1 l2 u2 where 
-        lu1:"([\<theta>\<^sub>1]<> \<nu>) = (l1, u1)" 
-    and lu2:"([\<theta>\<^sub>2]<> \<nu>) = (l2, u2)"
-    using IH1 IH2 repP_def by auto
-   from IH1 IH2 
+        lu1:"([\<theta>\<^sub>1]<> \<nu>) = Some(l1, u1)" 
+    and lu2:"([\<theta>\<^sub>2]<> \<nu>) = Some(l2, u2)"
+    using ih1 ih2 repP_def trm_min_invert some
+    by meson 
+   from ih1 ih2 
    obtain ub1 ub2 lb1 lb2:: real 
-   where urep1:"(ub1 \<ge> r\<^sub>1) \<and> Ratreal (snd ([\<theta>\<^sub>1]<>\<nu>)) = ub1" 
-   and   urep2:"(ub2 \<ge> r\<^sub>2) \<and> Ratreal (snd ([\<theta>\<^sub>2]<>\<nu>)) = ub2"
-   and   lrep1:"(lb1 \<le> r\<^sub>1) \<and> Ratreal (fst ([\<theta>\<^sub>1]<>\<nu>)) = lb1" 
-   and   lrep2:"(lb2 \<le> r\<^sub>2) \<and> Ratreal (fst ([\<theta>\<^sub>2]<>\<nu>)) = lb2"
-     using prod.case_eq_if repP_def  repU_def repL_def by auto
+   where urep1:"(ub1 \<ge> r\<^sub>1) \<and> Ratreal  (u1) = ub1" 
+   and   urep2:"(ub2 \<ge> r\<^sub>2) \<and> Ratreal  (u2) = ub2"
+   and   lrep1:"(lb1 \<le> r\<^sub>1) \<and> Ratreal ( (l1)) = lb1" 
+   and   lrep2:"(lb2 \<le> r\<^sub>2) \<and> Ratreal ( (l2)) = lb2"
+     using prod.case_eq_if repP_def  repU_def repL_def some trm_min_invert
+     using lu1 lu2 rep by fastforce 
    have lbound:"wmin l1 l2 \<equiv>\<^sub>L min r\<^sub>1 r\<^sub>2"
      by (metis fst_conv lrep1 lrep2 lu1 lu2 min.mono repL_def wmin_lemma)
    have ubound:"wmin u1 u2 \<equiv>\<^sub>U min r\<^sub>1 r\<^sub>2"     
      using lu1 lu2 min_le_iff_disj repU_def urep1 urep2 by auto
-   have "([Min \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu>) = (wmin l1 l2, wmin u1 u2)"
-     using lu1 lu2 unfolding wMinU Let_def by auto
-  then show "[Min \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P min r\<^sub>1 r\<^sub>2"
+   have "P = (wmin l1 l2, wmin u1 u2)"
+     using lu1 lu2 unfolding wMinU Let_def 
+     using lu1 lu2 some by auto 
+  then show "P \<equiv>\<^sub>P min r\<^sub>1 r\<^sub>2"
     unfolding repP_def
     using lbound ubound lu1 lu2 by auto
 next
@@ -1478,90 +1852,88 @@ next
    fix \<theta>\<^sub>1 :: "trm" and \<nu>':: "rstate" and r\<^sub>1 and \<theta>\<^sub>2 :: "trm" and  r\<^sub>2
    assume rep:"\<nu> REP \<nu>'"
    assume eval1:"[\<theta>\<^sub>1]\<nu>' \<down> r\<^sub>1"
-   assume "(\<nu> REP \<nu>' \<Longrightarrow> [\<theta>\<^sub>1]<>\<nu> \<equiv>\<^sub>P r\<^sub>1)"
-   then have IH1:"[\<theta>\<^sub>1]<>\<nu> \<equiv>\<^sub>P r\<^sub>1" using rep by auto
+   assume ih1:"(\<And>P. \<nu> REP \<nu>' \<Longrightarrow> ([\<theta>\<^sub>1]<>\<nu>) = Some P \<Longrightarrow> P \<equiv>\<^sub>P r\<^sub>1)"
+   assume ih2:"(\<And>P. \<nu> REP \<nu>' \<Longrightarrow> ([\<theta>\<^sub>2]<>\<nu>) = Some P \<Longrightarrow> P \<equiv>\<^sub>P r\<^sub>2)"
    assume eval2:"[\<theta>\<^sub>2]\<nu>' \<down> r\<^sub>2"
-   assume "(\<nu> REP \<nu>' \<Longrightarrow> [\<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>2)"
-   then have IH2:"[\<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>2" using rep by auto
+   assume some:"([Div \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu>) = Some P"
    obtain l1 u1 l2 u2 where 
-        lu1:"(l1, u1) = ([\<theta>\<^sub>1]<> \<nu>)" 
-    and lu2:"(l2, u2) = ([\<theta>\<^sub>2]<> \<nu>)"
-    using IH1 IH2 repP_def by auto
+        lu1:"Some(l1, u1) = ([\<theta>\<^sub>1]<> \<nu>)" 
+    and lu2:"Some(l2, u2) = ([\<theta>\<^sub>2]<> \<nu>)"
+    using ih1 ih2 repP_def trm_div_invert some by metis
    from lu1 and lu2 have
-        lu1':"([\<theta>\<^sub>1]<> \<nu>) = (l1, u1)" 
-    and lu2':"([\<theta>\<^sub>2]<> \<nu>) = (l2, u2)"
+        lu1':"([\<theta>\<^sub>1]<> \<nu>) = Some(l1, u1)" 
+    and lu2':"([\<theta>\<^sub>2]<> \<nu>) = Some(l2, u2)"
     by auto
-  have l1:"l1 \<equiv>\<^sub>L r\<^sub>1" using IH1 lu1 unfolding repP_def by auto
-  have u1:"u1 \<equiv>\<^sub>U r\<^sub>1" using IH1 lu1 unfolding repP_def by auto
-  have l2:"l2 \<equiv>\<^sub>L r\<^sub>2" using IH2 lu2 unfolding repP_def by auto
-  have u2:"u2 \<equiv>\<^sub>U r\<^sub>2" using IH2 lu2 unfolding repP_def by auto
-  then have "([(Plus \<theta>\<^sub>1 \<theta>\<^sub>2)]<>\<nu>) = (pl l1 l2, pu u1 u2)"  
+  have l1:"l1 \<equiv>\<^sub>L r\<^sub>1" using ih1 lu1 unfolding repP_def by (metis case_prodD rep)
+  have u1:"u1 \<equiv>\<^sub>U r\<^sub>1" using ih1 lu1 unfolding repP_def by (metis case_prodD rep)
+  have l2:"l2 \<equiv>\<^sub>L r\<^sub>2" using ih2 lu2 unfolding repP_def by (metis case_prodD rep)
+  have u2:"u2 \<equiv>\<^sub>U r\<^sub>2" using ih2 lu2 unfolding repP_def by (metis case_prodD rep)
+  then have "([(Div \<theta>\<^sub>1 \<theta>\<^sub>2)]<>\<nu>) = divU l1 u1 l2 u2"  
    using lu1' lu2' by auto
-  have lBound:"(pl l1 l2 \<equiv>\<^sub>L r\<^sub>1 + r\<^sub>2)"
+(*  have lBound:"(pl l1 l2 \<equiv>\<^sub>L r\<^sub>1 + r\<^sub>2)"
     using l1 l2 pl_lemma by auto
   have uBound:"(pu u1 u2 \<equiv>\<^sub>U r\<^sub>1 + r\<^sub>2)"
-    using pu_lemma[OF u1 u2] by auto
-  have "divU l1 u1 l2 u2 \<equiv>\<^sub>P (r\<^sub>1 / r\<^sub>2)"
-    unfolding repP_def Let_def using lBound uBound 
-    using IH1 IH2  lu1' lu2' repP_def 
-    sorry
-  then show"[Div \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>1 / r\<^sub>2"
+    using pu_lemma[OF u1 u2] by auto*)
+  have "P \<equiv>\<^sub>P (r\<^sub>1 / r\<^sub>2)"
+    unfolding repP_def Let_def  
+    using ih1 ih2  some lu1' lu2' repP_def divU_lemma
+    using rep by force
+  then show"P\<equiv>\<^sub>P r\<^sub>1 / r\<^sub>2"
     using lu1' lu2' by auto
 next
   case rtsem_Neg
   fix \<theta> :: "trm" and \<nu>' r
   assume eval:"[\<theta>]\<nu>' \<down> r"
   assume rep:"\<nu> REP \<nu>'"
-  assume "(\<nu> REP \<nu>' \<Longrightarrow> [\<theta>]<>\<nu> \<equiv>\<^sub>P r)"
-  then have IH:"[\<theta>]<>\<nu> \<equiv>\<^sub>P r" using rep by auto
+  assume ih:"(\<And>P. \<nu> REP \<nu>' \<Longrightarrow> ([\<theta>]<>\<nu>) = Some P \<Longrightarrow> P \<equiv>\<^sub>P r)"
+   assume some:"([Neg \<theta>]<>\<nu>) = Some P"
   obtain l1 u1  where 
-        lu:"([\<theta>]<> \<nu>) = (l1, u1)" 
-    using IH repP_def by auto
+        lu:"([\<theta>]<> \<nu>) = Some (l1, u1)" 
+    using ih repP_def some trm_neg_invert by metis
 (*  from IH *)
-  have rF:"real_of_rat (fst ([\<theta>]<>\<nu>)) \<le> r"
-   and rS:"r \<le> real_of_rat (snd ([\<theta>]<>\<nu>))"
-    using IH unfolding repP_def repL_def repU_def Let_def prod.case_eq_if Ratreal_def
-    by auto
-  obtain ub lb:: real    
-   where urep:"(ub \<ge> r) \<and> real_of_rat (snd ([\<theta>]<>\<nu>)) = ub" 
-   and   lrep:"(lb \<le> r) \<and> real_of_rat (fst ([\<theta>]<>\<nu>)) = lb" 
-    using rF rS by auto
+  have rF:"real_of_rat (l1) \<le> r"
+   and rS:"r \<le> real_of_rat (u1)"
+    using ih unfolding repP_def repL_def repU_def Let_def prod.case_eq_if Ratreal_def
+    using some trm_neg_invert
+    using lu rep by auto
   have ubound:"((wneg u1) \<equiv>\<^sub>L (uminus r))"
-    using real_minus_le_minus lu repL_def snd_conv urep wneg_lemma
-    using IH repP_def repU_leq by auto
+    using real_minus_le_minus lu repL_def snd_conv wneg_lemma
+    using ih repP_def repU_leq
+    by (simp add: rS) 
   have lbound:"((wneg l1) \<equiv>\<^sub>U (uminus r))"
-    using real_minus_le_minus lu repU_def snd_conv lrep wneg_lemma
-    using IH repP_def repU_leq
-    by (simp add: repL_def) 
-  show "[Neg \<theta>]<>\<nu> \<equiv>\<^sub>P - r"
+    using real_minus_le_minus lu repU_def snd_conv  wneg_lemma
+    using ih repP_def repU_leq
+    by (simp add: rS rF) 
+  show "P \<equiv>\<^sub>P - r"
     unfolding repP_def Let_def using ubound lbound lu 
-    by (auto simp add:  lu wNegU)
+    using  lu wNegU some by auto
 next
   case rtsem_Abs
   fix \<theta> :: "trm" and \<nu>' r
   assume eval:"[\<theta>]\<nu>' \<down> r"
   assume rep:"\<nu> REP \<nu>'"
-  assume "(\<nu> REP \<nu>' \<Longrightarrow> [\<theta>]<>\<nu> \<equiv>\<^sub>P r)"
-  then have IH:"[\<theta>]<>\<nu> \<equiv>\<^sub>P r" using rep by auto
+  assume ih:"(\<And>P. \<nu> REP \<nu>' \<Longrightarrow> ([\<theta>]<>\<nu>) = Some P \<Longrightarrow> P \<equiv>\<^sub>P r)"
+  assume some:"([Abs \<theta>]<>\<nu>) = Some P"
   obtain l1 u1  where 
-        lu:"([\<theta>]<> \<nu>) = (l1, u1)" 
-    using IH repP_def by auto
-  from IH 
+        lu:"([\<theta>]<> \<nu>) = Some (l1, u1)" 
+    using ih some repP_def trm_abs_invert by metis
+  from ih
   obtain ub lb:: real 
-   where urep:"(ub \<ge> r) \<and> real_of_rat (snd ([\<theta>]<>\<nu>)) = ub" 
-   and   lrep:"(lb \<le> r) \<and> real_of_rat (fst ([\<theta>]<>\<nu>)) = lb" 
+   where urep:"(ub \<ge> r) \<and> real_of_rat (u1) = ub" 
+   and   lrep:"(lb \<le> r) \<and> real_of_rat (l1) = lb" 
     using prod.case_eq_if repP_def  repU_def repL_def
-    by auto
+    using some trm_abs_invert
+    using lu rep by auto
   have lbound:"wmax l1 (wneg u1) \<equiv>\<^sub>L (abs r)"
     apply(simp only: repL_def)
     using lrep lu repL_def snd_conv   wmax_lemma real_minus_le_minus lu repL_def snd_conv urep wneg_lemma
-    using IH repP_def repU_leq by fastforce
+    using  repP_def repU_leq by fastforce
   have ubound:"(wmax u1 (wneg l1) \<equiv>\<^sub>U (abs r))"
     apply(simp only: repU_def)
     using lrep lu repL_def snd_conv wmax_lemma real_minus_le_minus lu repL_def snd_conv urep wneg_lemma
-    using IH fst_conv repP_def repU_leq by fastforce
-  show "[Abs \<theta>]<>\<nu> \<equiv>\<^sub>P abs r"
-    using repP_def Let_def ubound lbound lu lu wAbsU 
+    using  fst_conv repP_def repU_leq by fastforce
+  show "P \<equiv>\<^sub>P abs r"
+    using repP_def Let_def ubound lbound lu lu wAbsU some
       by auto
 qed
 
@@ -1581,35 +1953,43 @@ lemma fml_sound:
   fixes \<phi>::"formula" and \<nu>::"nstate"
   shows "(wfsem \<phi> \<nu> b) \<Longrightarrow> fexec \<phi> \<Longrightarrow> (\<nu> REP \<nu>') \<Longrightarrow> (rfsem \<phi> \<nu>'  b)"
   apply (induction arbitrary: \<nu>' rule: wfsem.induct)
-subgoal for t1 v t2 w
-  proof -
-  assume wle:"wle (snd ([t1]<>v)) (fst ([t2]<>v))"
+subgoal for t1 v L1 R1 t2 L2 R2 w
+proof -
+  assume ih1:"([t1]<>v) = Some (L1, R1)"
+  assume ih2:"([t2]<>v) = Some (L2, R2)"
+  assume wle:"wle (R1) (L2)"
   assume rep:"v REP w" 
   assume fex:"fexec (Le t1 t2)"
   obtain r\<^sub>1 and r\<^sub>2 where eval1:"[t1]w \<down> r\<^sub>1" and  eval2:"[t2]w \<down> r\<^sub>2"
     using eval_tot[of t1 w] eval_tot[of t2 w] fex apply (auto simp add: Le_def)
     by (metis Less_def fexec_And_simps fexec_Geq_simps)
-  have rep1:"[t1]<>v \<equiv>\<^sub>P r\<^sub>1" by (rule trm_sound[of t1 w r\<^sub>1, where \<nu>=v, OF eval1 rep])
-  have rep2:"[t2]<>v \<equiv>\<^sub>P r\<^sub>2" by (rule trm_sound[of t2 w r\<^sub>2, where \<nu>=v, OF eval2 rep])
+  have rep1:"(L1,R1) \<equiv>\<^sub>P r\<^sub>1"  using trm_sound  eval1 rep ih1 ih2 by auto 
+  have rep2:"(L2,R2) \<equiv>\<^sub>P r\<^sub>2"  using trm_sound  eval2 rep ih1 ih2 by auto
   show "[Le t1 t2]w \<downharpoonright> True"
     apply(rule rLeT[where r\<^sub>1 = r\<^sub>1, where r\<^sub>2 = r\<^sub>2]) 
     prefer 3
-    apply(rule wle_lemma[where w\<^sub>1="snd([t1]<> v)", where w\<^sub>2="fst([t2]<> v)"])
-    using rep1 rep2 wle repP_def repL_def repU_def  eval1 eval2 
-    by ((simp add: prod.case_eq_if| blast)+)
+      apply(rule wle_lemma[where w\<^sub>1="R1", where w\<^sub>2="L2"])
+    subgoal using rep1 repP_def by auto
+    subgoal using rep2 repP_def by auto
+    subgoal using wle by auto
+    apply(rule eval1)
+    apply(rule eval2)
+    done
   qed
-subgoal for t2 v t1 v'
+subgoal for t1 v L1 R1  t2 L2 R2 v'
   proof -
-  assume wl:"wleq (snd ([t2]<>v)) (fst ([t1]<>v))"
+  assume wl:"wleq (R2) (L1)"
   assume rep:"v REP v'"
   assume fex:"fexec (Le t1 t2)"
+  assume ih1:"([t1]<>v) = Some (L1, R1)"
+  assume ih2:"([t2]<>v) = Some (L2, R2)"
   obtain r\<^sub>1 r\<^sub>2:: real
   where eval1:"(rtsem t1 v' r\<^sub>1)" and  
     eval2:"rtsem t2 v'  r\<^sub>2"
     using eval_tot[of t1 v'] eval_tot[of t2 v'] fex apply (auto simp add: Le_def)
     by (metis Less_def fexec_And_simps fexec_Geq_simps)
-  have rep1:"[t1]<>v \<equiv>\<^sub>P r\<^sub>1" by (rule trm_sound[of t1 v' r\<^sub>1, where \<nu>=v, OF eval1 rep])
-  have rep2:"[t2]<>v \<equiv>\<^sub>P r\<^sub>2" by (rule trm_sound[of t2 v' r\<^sub>2, where \<nu>=v, OF eval2 rep])
+  have rep1:"(L1,R1) \<equiv>\<^sub>P r\<^sub>1" using  trm_sound[OF eval1 rep ih1]  by auto
+  have rep2:"(L2,R2) \<equiv>\<^sub>P r\<^sub>2" using  trm_sound[OF eval2 rep ih2]  by auto
   show "[Le t1 t2]v' \<downharpoonright> False"
     apply(rule rLeF [of t1 v' r\<^sub>1 t2 r\<^sub>2])
     apply(rule eval1)
@@ -1617,115 +1997,119 @@ subgoal for t2 v t1 v'
     using wle_lemma wl rep  unfolding repP_def Let_def 
     using rep1 rep2 repP_def wleq_lemma by auto
   qed
-subgoal for t1 v t2 v'
+subgoal for t1 v L1 R1 t2 L2 R2 v'
 proof -
-  assume "wleq (snd ([t1]<>v)) (fst ([t2]<>v))"
+  assume "wleq (R1) (L2)"
   assume rep:"v REP v'"
   assume fex:"fexec (Leq t1 t2)"
+  assume ih1:"([t1]<>v) = Some (L1, R1)"
+  assume ih2:"([t2]<>v) = Some (L2, R2)"
   obtain r\<^sub>1 r\<^sub>2:: real
   where eval1:"(rtsem t1 v' r\<^sub>1)" and  
     eval2:"rtsem t2 v'  r\<^sub>2"
     using eval_tot[of t1 v'] eval_tot[of t2 v'] fex by (auto simp add: Leq_def Le_def)
-  have rep1:"[t1]<>v \<equiv>\<^sub>P r\<^sub>1" by (rule trm_sound[of t1 v' r\<^sub>1, where \<nu>=v, OF eval1 rep])
-  have rep2:"[t2]<>v \<equiv>\<^sub>P r\<^sub>2" by (rule trm_sound[of t2 v' r\<^sub>2, where \<nu>=v, OF eval2 rep])
+  have rep1:"(L1,R1) \<equiv>\<^sub>P r\<^sub>1" using trm_sound eval1 rep ih1 by auto
+  have rep2:"(L2,R2) \<equiv>\<^sub>P r\<^sub>2" using trm_sound eval2 rep ih2 by auto
   show "[Leq t1 t2]v' \<downharpoonright> True"
     apply(rule rLeqT)
       apply(rule eval1)
     apply(rule eval2)
   using wleq_lemma eval1 eval2 rep1 rep2 unfolding repP_def Let_def
-  using  wle_lemma prod.case_eq_if  \<open>wleq (snd ([t1]<>v)) (fst ([t2]<>v))\<close>
+  using  wle_lemma prod.case_eq_if  \<open>wleq (R1) (L2)\<close>
   by auto
   qed
-subgoal  for t2 v t1 v'
+subgoal  for t1 v L1 R1 t2 L2 R2 v'
 proof -
-  assume "wle (snd ([t2]<>v)) (fst ([t1]<>v))"
+  assume "wle (R2) (L1)"
   assume rep:"v REP v'"
   assume fex:"fexec (Leq t1 t2)"
+  assume ih1:"([t1]<>v) = Some (L1, R1)"
+  assume ih2:"([t2]<>v) = Some (L2, R2)"
   obtain r\<^sub>1 r\<^sub>2:: real
   where eval1:"(rtsem t1 v' r\<^sub>1)" and  
     eval2:"rtsem t2 v'  r\<^sub>2"
     using eval_tot[of t1 v'] eval_tot[of t2 v'] fex by (auto simp add: Leq_def Le_def)
-  have rep1:"[t1]<>v \<equiv>\<^sub>P r\<^sub>1" by (rule trm_sound[of t1 v' r\<^sub>1, where \<nu>=v, OF eval1 rep])
-  have rep2:"[t2]<>v \<equiv>\<^sub>P r\<^sub>2" by (rule trm_sound[of t2 v' r\<^sub>2, where \<nu>=v, OF eval2 rep])
+  have rep1:"(L1,R1) \<equiv>\<^sub>P r\<^sub>1" using  trm_sound eval1 rep ih1 by auto
+  have rep2:"(L2,R2) \<equiv>\<^sub>P r\<^sub>2" using  trm_sound eval2 rep ih2 by auto
   show "[Leq t1 t2]v' \<downharpoonright> False"
     apply(rule rLeqF, rule eval1, rule eval2)
   using wleq_lemma eval1 eval2 rep1 rep2 unfolding repP_def Let_def
-  using  wle_lemma rLeF  prod.case_eq_if \<open>wle (snd ([t2]<>v)) (fst ([t1]<>v))\<close> rLeqF by auto
+  using  wle_lemma rLeF  prod.case_eq_if \<open>wle (R2) (L1)\<close> rLeqF by auto
   qed
-subgoal for t2 v t1 v'
+subgoal for t1 v L1 R1 t2 L2 R2 v'
 proof -
-let ?x = "fst ([t2]<>v)"
+let ?x = "L2"
  assume fex:"fexec (Equals t1 t2)"
-assume eq1:"fst ([t2]<>v) = snd ([t2]<>v)"
-assume eq2:"snd ([t2]<>v) = snd ([t1]<>v)"
-assume eq3:"snd ([t1]<>v) = fst ([t1]<>v)"
+assume eq1:"L2 = R2"
+assume eq2:"R2 = R1"
+assume eq3:"R1 = L1"
 assume rep:"v REP v'"  
-assume neq1:"?x \<noteq> NEG_INF"
-assume neq2:"?x \<noteq> POS_INF"
+  assume ih1:"([t1]<>v) = Some (L1, R1)"
+  assume ih2:"([t2]<>v) = Some (L2, R2)"
 obtain r\<^sub>1 r\<^sub>2:: real
   where eval1:"(rtsem t1 v' r\<^sub>1)" and  
     eval2:"rtsem t2 v'  r\<^sub>2"
     using eval_tot[of t1 v'] eval_tot[of t2 v']  fex by (auto simp add: Equals_def Leq_def Le_def)
-  have rep1:"[t1]<>v \<equiv>\<^sub>P r\<^sub>1" by (rule trm_sound[of t1 v' r\<^sub>1, where \<nu>=v, OF eval1 rep])
-  have rep2:"[t2]<>v \<equiv>\<^sub>P r\<^sub>2" by (rule trm_sound[of t2 v' r\<^sub>2, where \<nu>=v, OF eval2 rep])
+  have rep1:"(L1,R1) \<equiv>\<^sub>P r\<^sub>1" using trm_sound eval1 rep ih1 by auto
+  have rep2:"(L2,R2) \<equiv>\<^sub>P r\<^sub>2" using trm_sound eval2 rep ih2 by auto
   show "[Equals t1 t2]v' \<downharpoonright> True"
     apply(rule rEqualsT, rule eval1, rule eval2)
   using eq1 eq2 eq3 eval1 eval2 rep1 rep2 unfolding repP_def Let_def repL_def repU_def 
-  using neq1 neq2 by (auto)
+  by (auto)
 qed
-subgoal for t1 v t2 v'
+subgoal for t1 v L1 R1 t2 L2  R2 v'
 proof -
-assume wle:"wle (snd ([t1]<>v)) (fst ([t2]<>v))"
+assume wle:"wle R1 L2"
 assume rep:"v REP v'"
- assume fex:"fexec (Equals t1 t2)"
+assume fex:"fexec (Equals t1 t2)"
+assume ih1:"([t1]<>v) = Some (L1, R1)"
+assume ih2:"([t2]<>v) = Some (L2, R2)"
 obtain r\<^sub>1 r\<^sub>2:: real
   where eval1:"(rtsem t1 v' r\<^sub>1)" and  
     eval2:"rtsem t2 v'  r\<^sub>2"
     using eval_tot[of t1 v'] eval_tot[of t2 v']  fex by (auto simp add: Equals_def Leq_def Le_def)
-  have rep1:"[t1]<>v \<equiv>\<^sub>P r\<^sub>1" by (rule  trm_sound[of t1 v' r\<^sub>1, where \<nu>=v, OF eval1 rep])
-  have rep2:"[t2]<>v \<equiv>\<^sub>P r\<^sub>2" by (rule  trm_sound[of t2 v' r\<^sub>2, where \<nu>=v, OF eval2 rep])
+  have rep1:"(L1,R1) \<equiv>\<^sub>P r\<^sub>1" using  trm_sound eval1 rep ih1 by auto
+  have rep2:"(L2,R2) \<equiv>\<^sub>P r\<^sub>2" using  trm_sound eval2 rep ih2 by auto
 show "[Equals t1 t2]v' \<downharpoonright> False"
     apply(rule rEqualsF, rule eval1, rule eval2)
   using wleq_lemma eval1 eval2 rep1 rep2 unfolding repP_def Let_def
   using  wle_lemma rLeF  prod.case_eq_if wle 
-  by (metis (no_types, lifting) less_irrefl rEqualsF) 
+   less_irrefl rEqualsF
+  by blast 
 qed
-subgoal for t2 v t1 v'
+subgoal for t1 v L1 R1 t2 L2 R2 v'
 proof -
-  assume wle:"wle (snd ([t2]<>v)) (fst ([t1]<>v))"
+  assume wle:"wle (R2) (L1)"
   assume rep:"v REP v'"
  assume fex:"fexec (Equals t1 t2)"
   obtain r\<^sub>1 r\<^sub>2:: real
   where eval1:"(rtsem t1 v' r\<^sub>1)" and  
     eval2:"rtsem t2 v'  r\<^sub>2"
     using eval_tot[of t1 v'] eval_tot[of t2 v']  fex by (auto simp add: Equals_def Leq_def Le_def)
-  have rep1:"[t1]<>v \<equiv>\<^sub>P r\<^sub>1" by (rule  trm_sound[of t1 v' r\<^sub>1, where \<nu>=v, OF eval1 rep])
-  have rep2:"[t2]<>v \<equiv>\<^sub>P r\<^sub>2" by (rule  trm_sound[of t2 v' r\<^sub>2, where \<nu>=v, OF eval2 rep])
+assume ih1:"([t1]<>v) = Some (L1, R1)"
+assume ih2:"([t2]<>v) = Some (L2, R2)"
+  have rep1:"(L1,R1) \<equiv>\<^sub>P r\<^sub>1" using trm_sound eval1 rep ih1 by auto
+  have rep2:"(L2,R2) \<equiv>\<^sub>P r\<^sub>2" using trm_sound eval2 rep ih2 by auto
   show "[Equals t1 t2]v' \<downharpoonright> False"
     apply(rule rEqualsF, rule eval1, rule eval2)
     using wleq_lemma eval1 eval2 rep1 rep2  wle_lemma rLeF  prod.case_eq_if wle
     unfolding repP_def Let_def
-    by (metis (no_types, lifting) less_irrefl rEqualsF)
+    using less_irrefl rEqualsF by blast
   qed
          apply auto
   by (metis Or_def fexec_And_simps fexec_Not_simps)+
 
-lemma rep_upd:"\<omega> = (\<nu>(Inr x := snd([\<theta>]<>\<nu>)))(Inl x := fst([\<theta>]<>\<nu>)) \<Longrightarrow> \<nu> REP \<nu>' \<Longrightarrow> ([\<theta>::trm]\<nu>' \<down> r) \<Longrightarrow> \<omega> REP \<nu>'(x := r)"
+lemma rep_upd:"([\<theta>]<>\<nu>) = Some (L,R) \<Longrightarrow>
+\<omega> = (\<nu>(Inr x := R))(Inl x := L) \<Longrightarrow> \<nu> REP \<nu>' \<Longrightarrow> ([\<theta>::trm]\<nu>' \<down> r) \<Longrightarrow> \<omega> REP \<nu>'(x := r)"
   apply(rule REPI)
   apply(rule conjI)
   apply(unfold repL_def)
   using trm_sound  prod.case_eq_if repP_def repstate_simps repL_def 
   (*apply (metis (no_types, lifting) Inl_Inr_False fun_upd_apply sum.inject(1))*)
-  apply auto
-  apply(unfold repU_def)
-  using trm_sound  prod.case_eq_if repP_def repstate_simps repU_def
-  using  Inl_Inr_False fun_upd_apply sum.inject(1) sum.inject(2) 
-  apply auto
-  using surjective_pairing trm_sound
-  by metis+
-    
+  by auto
+
 (* TODO: Could also prove extra lemma and show that \<nu> REP \<nu>' always holds for some \<nu>' *)
-theorem fixed_point_sound:
+theorem rat_sound:
   fixes \<alpha>::"hp"
   shows "([[\<alpha>]] \<nu> \<down> \<omega>) \<Longrightarrow> hpexec \<alpha> \<Longrightarrow> \<nu> REP \<nu>' \<Longrightarrow> (\<exists>\<omega>'. (\<omega> REP \<omega>') \<and> ([\<alpha>] \<nu>' \<downharpoonleft> \<omega>'))"
 proof (induction arbitrary: \<nu>' rule: wpsem.induct)
@@ -1740,15 +2124,16 @@ proof (induction arbitrary: \<nu>' rule: wpsem.induct)
 next
   case (wSeq \<alpha> \<nu> \<mu> \<beta> \<omega> \<nu>') then show ?case by (simp, blast)
 next
-  case (wAssign \<omega> \<nu> x \<theta> \<nu>') 
-    assume eq:"\<omega> = \<nu>(Inr x := snd ([\<theta>]<>\<nu>), Inl x := fst ([\<theta>]<>\<nu>))"
+  case (wAssign \<theta> \<nu> L R \<omega> x \<nu>') 
+  assume some:"([\<theta>]<>\<nu>) = Some (L, R)"
+    assume eq:"\<omega> = \<nu>(Inr x := R, Inl x := L)"
     and rep:"\<nu> REP \<nu>'"
     and hpexec:"hpexec (x := \<theta>)"
     obtain r::real where eval:"([\<theta>::trm]\<nu>' \<down> r)" using eval_tot hpexec by auto
     show ?case 
       apply(rule exI[where x="\<nu>'(x := r)"])
       apply(rule conjI)
-      apply(rule rep_upd[OF eq rep eval])
+      apply(rule rep_upd[OF some eq rep eval])
       apply auto
       apply(rule exI[where x= r])
       by (auto simp add: eval)
