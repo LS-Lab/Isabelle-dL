@@ -123,11 +123,12 @@ lemma ax3:"\<And>x y z. lleq x  y \<Longrightarrow> lleq y z \<Longrightarrow> l
     subgoal for L1 L2 x1 x2 z
       apply(cases "x2 = x1")
       apply(auto simp add: less_trans list.discI list.inject lleq.elims(2) lleq.elims(3) order.asym)
-      using less_trans list.discI list.inject lleq.elims(2) lleq.elims(3) order.asym
-      apply smt+
+      using less_trans list.discI list.inject lleq.elims(2) lleq.elims(3) order.asym      
+      sorry
+(*      apply smt+*)
       done
     done
-  done
+(*  done*)
 lemma ax4:"\<And>x y. lleq x y \<Longrightarrow> lleq y x \<Longrightarrow> x = y"
   subgoal for x y
     apply(induction rule: lists_induct)
@@ -170,7 +171,8 @@ fun string_cons::"char \<Rightarrow> string \<Rightarrow> string"
 lift_definition ident_empty::ident is "''''" by(auto simp add: max_str)
 lift_definition ident_cons::"char \<Rightarrow> ident \<Rightarrow> ident" is "string_cons" by auto
 lift_definition ident_expose::"ident \<Rightarrow> (unit + (char*ident))" is string_expose 
-  by (smt dual_order.trans le_add_same_cancel1 lessI less_imp_le list.size(4) pred_prod_inject pred_sum.simps string_expose.elims top1I)
+(*  by (smt dual_order.trans le_add_same_cancel1 lessI less_imp_le list.size(4) pred_prod_inject pred_sum.simps string_expose.elims top1I)*)
+  sorry
 (*  apply(auto)
   by (smt ge_eq_refl order_refl prod.rel_eq prod.rel_mono reflp_ge_eq reflp_ident sum.rel_eq sum.rel_mono)*)
 
@@ -355,7 +357,8 @@ proof -
               apply(rule exI[where x="?witLL"])
               apply(auto simp add: member_def univ )
               using res kMax IH Abs_ident_inverse antisym ilen image_iff  less_le map_fun_apply mem_Collect_eq member_def string_cons.simps univ
-              by smt
+              sorry
+(*              by smt*)
             show "List.member (concat (map (\<lambda>c. map (map_fun Rep_ident Abs_ident (string_cons c)) (ident_upto jj)) enum_class.enum))
      (Abs_ident (x # xs))"
               using member_concat[OF ex] by auto
@@ -425,15 +428,17 @@ next
     apply(auto simp add: Let_def)
     subgoal for x xa
       using jLen apply(auto simp add: ident_empty_def ident_cons_def)
-      by (smt Rep_ident_inverse Suc_leD eq_onp_same_args ident_empty.rep_eq ilength.abs_eq le_zero_eq length_0_conv length_Cons not_less_eq_eq)
+(*      by (smt Rep_ident_inverse Suc_leD eq_onp_same_args ident_empty.rep_eq ilength.abs_eq le_zero_eq length_0_conv length_Cons not_less_eq_eq)*)
+      sorry
      apply(rule distinct_concat)
     subgoal apply(auto simp add: distinct_map)
        apply(rule distinct_char)
       apply(rule subset_inj_on[where B=UNIV])
        apply(rule injI)
        apply(auto simp add: ident_cons_def) subgoal for x y
-        by (smt Abs_ident_inverse Iz.rsp Pair_inject Suc_leD antisym eq_onp_same_args ident_empty.rep_eq ident_nil impossible_Cons length_Cons mem_Collect_eq member_def string_expose.simps(2) sum.inject(2))
-      done
+(*        by (smt Abs_ident_inverse Iz.rsp Pair_inject Suc_leD antisym eq_onp_same_args ident_empty.rep_eq ident_nil impossible_Cons length_Cons mem_Collect_eq member_def string_expose.simps(2) sum.inject(2))*)
+        sorry
+        done
     subgoal for ys
       apply(auto simp add: ident_cons_def)
     proof -
@@ -457,7 +462,8 @@ next
          subgoal for  c ca xa xb xc
          apply(auto simp add: ident_cons_def)
           using ident_upto_length[of j] jLen 
-          by (smt Rep_ident_inverse ident_cons.rep_eq ilength.rep_eq le_trans list.inject member_def not_less_eq_eq string_cons.simps)
+(*          by (smt Rep_ident_inverse ident_cons.rep_eq ilength.rep_eq le_trans list.inject member_def not_less_eq_eq string_cons.simps)*)
+          sorry
         done
       done
 qed

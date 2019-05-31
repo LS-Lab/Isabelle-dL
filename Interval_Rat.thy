@@ -145,8 +145,6 @@ lemma pu_lemma:
 proof -
   have hom:"\<And>x y.  (real_of_rat x \<le> real_of_rat y) = (x \<le> y)"
     using real_less_eq_code by auto
-(*"Real.Real (\<lambda>n. rep_real r\<^sub>1 n + rep_real r\<^sub>2 n)"*)
-(*  have plus:"\<And>X Y. Real.cauchy X \<Longrightarrow> Real.cauchy Y \<Longrightarrow> Real.Real X + Real.Real Y = Real.Real (\<lambda>n. X n + Y n)"*)
   have plus:"Real.Real (\<lambda>n. rep_real r\<^sub>1 n) + Real.Real (\<lambda>n. rep_real r\<^sub>2 n)
              = Real.Real (\<lambda>n. rep_real r\<^sub>1 n + rep_real r\<^sub>2 n)"
     apply(rule add_Real)
@@ -157,7 +155,6 @@ proof -
   and   u2:"r\<^sub>2 \<le> real_of_rat w\<^sub>2" unfolding repU_def by auto
   have cancel:"\<And>x. Real.Real (rep_real x) = x" 
       using Quotient_real Quotient_rel_rep realrel_def Quotient_abs_rep by fastforce
-
   show ?thesis
     apply(auto simp add: repU_def)
     apply(auto simp add: plus_real_def)
@@ -172,7 +169,26 @@ lemma pl_lemma:
 assumes lo1:"w\<^sub>1 \<equiv>\<^sub>L (r\<^sub>1::real)"
 assumes lo2:"w\<^sub>2 \<equiv>\<^sub>L (r\<^sub>2::real)"
 shows "pl w\<^sub>1 w\<^sub>2 \<equiv>\<^sub>L (r\<^sub>1 + r\<^sub>2)"
-  sorry
+proof -
+  have hom:"\<And>x y.  (real_of_rat x \<le> real_of_rat y) = (x \<le> y)"
+    using real_less_eq_code by auto
+  have plus:"Real.Real (\<lambda>n. rep_real r\<^sub>1 n) + Real.Real (\<lambda>n. rep_real r\<^sub>2 n)
+             = Real.Real (\<lambda>n. rep_real r\<^sub>1 n + rep_real r\<^sub>2 n)"
+    apply(rule add_Real)
+    by (metis Quotient_real Quotient_rel_rep realrel_def)+
+  then have rev:"Real.Real (\<lambda>n. rep_real r\<^sub>1 n + rep_real r\<^sub>2 n) = Real.Real (\<lambda>n. rep_real r\<^sub>1 n) + Real.Real (\<lambda>n. rep_real r\<^sub>2 n)"
+    by auto
+  from lo1 lo2 have l1:"real_of_rat w\<^sub>1 \<le> r\<^sub>1"
+  and   l2:"real_of_rat w\<^sub>2 \<le> r\<^sub>2" unfolding repL_def by auto
+  have cancel:"\<And>x. Real.Real (rep_real x) = x" 
+      using Quotient_real Quotient_rel_rep realrel_def Quotient_abs_rep by fastforce
+  show ?thesis
+    apply(auto simp add: repU_def)
+    apply(auto simp add: plus_real_def)
+    apply(auto simp add: rev cancel)
+    using  add_mono_thms_linordered_semiring 
+    by (metis lo1 lo2 real_plus_code repL_def)
+qed
 
 fun wmax :: "word \<Rightarrow> word \<Rightarrow> word"
 where "wmax w\<^sub>1 w\<^sub>2 = (if w\<^sub>1 < w\<^sub>2 then w\<^sub>2 else w\<^sub>1)"
@@ -181,23 +197,36 @@ lemma wmax_lemma:
   assumes eq1:"(Ratreal w\<^sub>1 =  r\<^sub>1)"
   assumes eq2:"(Ratreal w\<^sub>2 = r\<^sub>2)"
   shows "Ratreal (wmax w\<^sub>1 w\<^sub>2) = (max r\<^sub>1 r\<^sub>2)"
-  sorry
+proof -
+  from eq1 eq2 have e1:"real_of_rat w\<^sub>1 = r\<^sub>1"
+  and   e2:"real_of_rat w\<^sub>2 = r\<^sub>2" unfolding repL_def by auto
+  have leq_imp:"w\<^sub>1 < w\<^sub>2 \<Longrightarrow> real_of_rat w\<^sub>1 < real_of_rat w\<^sub>2"
+    by (simp add: of_rat_less)    
+  have nleq_imp:"\<not>(w\<^sub>1 < w\<^sub>2) \<Longrightarrow> \<not>(real_of_rat w\<^sub>1 < real_of_rat w\<^sub>2)" 
+    by (simp add: of_rat_less)
+  show ?thesis
+    apply(auto)
+    using e1 e2 leq_imp nleq_imp by linarith+
+qed
 
 fun wtimes :: "word \<Rightarrow> word \<Rightarrow> word"
 where "wtimes w1 w2 = w1 * w2"
-
-
- 
    
 lemma wtimes_exact:
 assumes eq1:"Ratreal w1 = r1"
 assumes eq2:"Ratreal w2 = r2"
 shows "Ratreal (wtimes w1 w2) = r1 * r2"
-  apply (auto simp add: mult_left_mono
- less_le_trans not_le
- mult.commute mult_minus_left mult_left_mono_neg mult.right_neutral 
-       mult_minus_right mult_zero_right neg_le_iff_le)
-  sorry
+proof -
+  from eq1 eq2 have e1:"real_of_rat w1 = r1"
+  and   e2:"real_of_rat w2 = r2" unfolding repL_def by auto
+  have leq_imp:"w1 < w2 \<Longrightarrow> real_of_rat w1 < real_of_rat w2"
+    by (simp add: of_rat_less)    
+  have nleq_imp:"\<not>(w1 < w2) \<Longrightarrow> \<not>(real_of_rat w1 < real_of_rat w2)" 
+    by (simp add: of_rat_less)
+  show ?thesis
+    using e1 e2 apply(auto)
+    by (simp add: of_rat_mult) 
+qed
 
 fun tu :: "word \<Rightarrow> word \<Rightarrow> word \<Rightarrow> word \<Rightarrow> word"
 where "tu w1l w1u w2l w2u = 
@@ -205,20 +234,40 @@ where "tu w1l w1u w2l w2u =
       (wmax (wtimes w1l w2u) (wtimes w1u w2u))"
 
 lemma max_repU1:
-  assumes "w1 \<equiv>\<^sub>U x"
-  assumes "w2 \<equiv>\<^sub>U y"
-  shows "wmax w1 w2 \<equiv>\<^sub>U x "
+  assumes up1:"w\<^sub>1 \<equiv>\<^sub>U r\<^sub>1"
+  assumes up2:"w\<^sub>2 \<equiv>\<^sub>U r\<^sub>2"
+  shows "wmax w\<^sub>1 w\<^sub>2 \<equiv>\<^sub>U r\<^sub>1"
   using wmax_lemma assms repU_def
   using le_max_iff_disj
-  sorry
+proof -
+  have hom:"\<And>x y.  (real_of_rat x \<le> real_of_rat y) = (x \<le> y)"
+    using real_less_eq_code by auto
+  from up1 up2 have u1:"r\<^sub>1 \<le> real_of_rat w\<^sub>1"
+  and   u2:"r\<^sub>2 \<le> real_of_rat w\<^sub>2" unfolding repU_def by auto
+  have cancel:"\<And>x. Real.Real (rep_real x) = x" 
+      using Quotient_real Quotient_rel_rep realrel_def Quotient_abs_rep by fastforce
+  show ?thesis
+    apply(auto simp add: repU_def)
+    by (meson less_eq_rat_def of_rat_less_eq order_trans u1)+ 
+qed
   
 lemma max_repU2:
-  assumes "w1 \<equiv>\<^sub>U y"
-  assumes "w2 \<equiv>\<^sub>U x"
-  shows "wmax w1 w2 \<equiv>\<^sub>U x"
-  using wmax_lemma assms repU_def
-  using  le_max_iff_disj
-  sorry
+  assumes up1:"w\<^sub>1 \<equiv>\<^sub>U r\<^sub>1"
+  assumes up2:"w\<^sub>2 \<equiv>\<^sub>U r\<^sub>2"
+  shows "wmax w\<^sub>1 w\<^sub>2 \<equiv>\<^sub>U r\<^sub>2"
+proof -
+  have hom:"\<And>x y.  (real_of_rat x \<le> real_of_rat y) = (x \<le> y)"
+    using real_less_eq_code by auto
+  from up1 up2 have u1:"r\<^sub>1 \<le> real_of_rat w\<^sub>1"
+  and   u2:"r\<^sub>2 \<le> real_of_rat w\<^sub>2" unfolding repU_def by auto
+  have cancel:"\<And>x. Real.Real (rep_real x) = x" 
+      using Quotient_real Quotient_rel_rep realrel_def Quotient_abs_rep by fastforce
+  show ?thesis
+    apply(auto simp add: repU_def)
+    using less_eq_rat_def of_rat_less_eq order_trans u1 u2 apply blast
+    using less_eq_rat_def of_rat_less_eq order_trans u1 u2 le_cases order_trans less_eq_rat_def
+    by metis
+qed
   
 lemma ivl_zero_case:
   fixes l1 u1 l2 u2 :: real
@@ -290,8 +339,7 @@ proof -
   using maxt34 unfolding repU_def by auto
   obtain bigMaxU:"wmax (wmax (wtimes l\<^sub>1 l\<^sub>2) (wtimes u\<^sub>1 l\<^sub>2)) (wmax (wtimes l\<^sub>1 u\<^sub>2) (wtimes u\<^sub>1 u\<^sub>2))
     \<equiv>\<^sub>U max (max (rl1 * rl2) (ru1 * rl2)) (max (rl1 * ru2) (ru1 * ru2))"
-  using bigMax unfolding repU_def apply auto sorry
-        
+  using bigMax unfolding repU_def by linarith 
   have ivl1:"rl1 \<le> ru1" using grl1 gru1 by auto
   have ivl2:"rl2 \<le> ru2" using grl2 gru2 by auto
   let ?thesis = "tu l\<^sub>1 u\<^sub>1 l\<^sub>2 u\<^sub>2 \<equiv>\<^sub>U r\<^sub>1 * r\<^sub>2"
@@ -613,7 +661,17 @@ lemma wmin_lemma:
   assumes eq1:"Ratreal w\<^sub>1 = (r\<^sub>1::real)"
   assumes eq2:"Ratreal w\<^sub>2 = (r\<^sub>2::real)"
   shows "Ratreal (wmin w\<^sub>1 w\<^sub>2) = (min r\<^sub>1 r\<^sub>2)"
-  sorry    
+proof -
+  from eq1 eq2 have e1:"real_of_rat w\<^sub>1 = r\<^sub>1"
+  and   e2:"real_of_rat w\<^sub>2 = r\<^sub>2" unfolding repL_def by auto
+  have leq_imp:"w\<^sub>1 < w\<^sub>2 \<Longrightarrow> real_of_rat w\<^sub>1 < real_of_rat w\<^sub>2"
+    by (simp add: of_rat_less)    
+  have nleq_imp:"\<not>(w\<^sub>1 < w\<^sub>2) \<Longrightarrow> \<not>(real_of_rat w\<^sub>1 < real_of_rat w\<^sub>2)" 
+    by (simp add: of_rat_less)
+  show ?thesis
+    apply(auto)
+    using e1 e2 leq_imp nleq_imp by linarith+
+qed
     
 lemma min_repU1:
   assumes "w1 \<equiv>\<^sub>L x"
@@ -669,7 +727,7 @@ proof -
   using maxt34 unfolding repL_def by auto
   obtain bigMaxU:"wmin (wmin (wtimes l\<^sub>1 l\<^sub>2) (wtimes u\<^sub>1 l\<^sub>2)) (wmin (wtimes l\<^sub>1 u\<^sub>2) (wtimes u\<^sub>1 u\<^sub>2))
     \<equiv>\<^sub>L min (min (rl1 * rl2) (ru1 * rl2)) (min (rl1 * ru2) (ru1 * ru2))"
-  using bigMax unfolding repL_def sorry
+  using bigMax unfolding repL_def by linarith
         
   have ivl1:"rl1 \<le> ru1" using grl1 gru1 by auto
   have ivl2:"rl2 \<le> ru2" using grl2 gru2 by auto
@@ -773,13 +831,14 @@ proof -
           using dual_order.trans by auto
         then have g1:"rl1 * ru2 \<le> rl1 * r\<^sub>2" 
           using r1 r2 bounds grl1 grl2 gru1 gru2
-          sorry
+          using mult_left_mono_neg by blast
         have g2:"rl1 * r\<^sub>2 \<le> r\<^sub>1 * r\<^sub>2"
           using r1 r2 bounds grl1 grl2 gru1 gru2 mult_le_0_iff mult_le_cancel_right by fastforce
         from g1 and g2
         have up:"rl1 * ru2 \<le> r\<^sub>1 * r\<^sub>2" by auto
         show ?thesis
-         apply auto   sorry
+          using  Ratreal_def of_rat_less repL_def timeslu up wtimes.elims
+          by (smt \<open>\<And>thesis. (wmin (wmin (wtimes l\<^sub>1 l\<^sub>2) (wtimes u\<^sub>1 l\<^sub>2)) (wmin (wtimes l\<^sub>1 u\<^sub>2) (wtimes u\<^sub>1 u\<^sub>2)) \<equiv>\<^sub>L min (min (rl1 * rl2) (ru1 * rl2)) (min (rl1 * ru2) (ru1 * ru2)) \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> tl.elims)
       qed
     show "tl l\<^sub>1 u\<^sub>1 l\<^sub>2 u\<^sub>2 \<equiv>\<^sub>L r\<^sub>1 * r\<^sub>2"
       using case1 case2 le_cases by blast
@@ -794,7 +853,7 @@ proof -
           using dual_order.trans by auto
         then have g1:"ru1 * rl2 \<le> ru1 * r\<^sub>2" 
           using r1 r2 bounds grl1 grl2 gru1 gru2
-          sorry
+          by (simp add: mult_left_mono)
         have p1:"\<And>a::real. (0 \<le> - a) = (a \<le> 0)"
           by(auto)
         have p2:"\<And>a b::real.  (- a \<le> - b) = (b \<le> a)" by auto
@@ -804,8 +863,8 @@ proof -
         from g1 and g2
         have up:"ru1 * rl2 \<le> r\<^sub>1 * r\<^sub>2"
           by auto
-        show ?thesis 
-          sorry
+        show ?thesis
+          using bigMaxU repL_def up by auto 
       qed
     have case2:"r\<^sub>1 \<le> 0 \<Longrightarrow> ?thesis"
     proof -
@@ -820,8 +879,8 @@ proof -
           by auto
         show ?thesis
         using up maxU12 maxU34 bigMaxU wmin.elims min_repU2 min_repU1 
-        min.coboundedI1 min.commute maxt34 
-        sorry
+        min.coboundedI1 min.commute maxt34
+        by (smt repL_def tl.simps) 
       qed
     show "tl l\<^sub>1 u\<^sub>1 l\<^sub>2 u\<^sub>2 \<equiv>\<^sub>L r\<^sub>1 * r\<^sub>2"
       using case1 case2 le_cases by blast
@@ -927,15 +986,16 @@ proof -
       by metis
     have g2:"ru1 * r\<^sub>2 \<le> r\<^sub>1 * r\<^sub>2"
       using r1 r2 bounds grl1 grl2 gru1 gru2 real_mult_le_mult_iff  mult.commute not_le lower1 lower2
-      sorry
+      by (metis mult_right_mono_neg)
     from g1 and g2
     have up:"ru1 * ru2 \<le> r\<^sub>1 * r\<^sub>2"
       by auto
     show ?thesis
       using up maxU12 maxU34 bigMaxU 
       wmin.elims min_repU2 min_repU1 
-      min.coboundedI1 min.commute maxt34 
-      sorry
+      min.coboundedI1 min.commute maxt34
+      by (smt repL_def tl.simps) 
+      
   next
     assume bounds:"ru1 \<le> 0 \<and> 0 \<le> rl2"
     have r1:"r\<^sub>1 \<le> 0" using bounds dual_order.trans gru1 by blast
@@ -1009,21 +1069,24 @@ lemma wneg_lemma:
   assumes eq:"Ratreal w = (r::real)"
   shows "Ratreal (wneg w) = -r"
   apply (auto simp add: eq )
-  sorry
+  using eq of_rat_minus by auto
+  
 
 fun wle :: "word \<Rightarrow> word \<Rightarrow> bool"
 where "wle w\<^sub>1 w\<^sub>2 = (w\<^sub>1 <  w\<^sub>2)"
 
 lemma wle_lemma:"w\<^sub>1 \<equiv>\<^sub>U (r\<^sub>1::real) \<Longrightarrow> w\<^sub>2 \<equiv>\<^sub>L r\<^sub>2 \<Longrightarrow> wle w\<^sub>1 w\<^sub>2 \<Longrightarrow> r\<^sub>1 < r\<^sub>2"
   unfolding repU_def repL_def
-  sorry
+  by (smt real_less_code wle.elims(2))
+  
 
 fun wleq :: "word \<Rightarrow> word \<Rightarrow> bool"
 where "wleq w\<^sub>1 w\<^sub>2 = ( w\<^sub>1 \<le> w\<^sub>2)"
 
 lemma wleq_lemma:"w\<^sub>1 \<equiv>\<^sub>U (r\<^sub>1::real) \<Longrightarrow> w\<^sub>2 \<equiv>\<^sub>L r\<^sub>2 \<Longrightarrow> wleq w\<^sub>1 w\<^sub>2 \<Longrightarrow> r\<^sub>1 \<le> r\<^sub>2"
   unfolding wleq.simps
-  sorry
+  using real_less_eq_code repL_def repU_leq by force
+  
 
 (*fun wdiv:: "word \<Rightarrow> word \<Rightarrow> word"
   where "wdiv w1 w2 = 
@@ -1087,7 +1150,8 @@ lemma divl_lemma:
   assumes "r2 \<noteq> 0"
   shows "divl w1 w2 \<equiv>\<^sub>L (r1/r2)"
 proof -
-  show ?thesis sorry
+  show ?thesis
+    using assms(1) assms(2) real_divide_code repL_def by auto 
 qed
 
 lemma divu_lemma:
@@ -1096,7 +1160,8 @@ lemma divu_lemma:
   assumes "r2 \<noteq> 0"
   shows "divu w1 w2 \<equiv>\<^sub>U (r1/r2)"
 proof -
-  show ?thesis sorry
+  show ?thesis
+    using assms(1) assms(2) real_divide_code repU_def by auto 
 qed
 
 
@@ -1149,7 +1214,7 @@ else (* bottom half *)
   else (* bottom-right*)
     (divl u1 u2, divu l1 l2)
 ))"
-
+(*
 lemma divU_lemma:
   assumes ul1:"(l1, u1) \<equiv>\<^sub>P r1"
   assumes ul2:"(l2, u2) \<equiv>\<^sub>P r2"
@@ -1175,15 +1240,14 @@ proof -
     using repL_def by auto
   show ?thesis
     sorry
-qed
-lemma dl_lemma:
+qed*)
+(*lemma dl_lemma:
   assumes u1:"u\<^sub>1 \<equiv>\<^sub>U (r\<^sub>1::real)"
   assumes u2:"u\<^sub>2 \<equiv>\<^sub>U (r\<^sub>2::real)"
   assumes l1:"l\<^sub>1 \<equiv>\<^sub>L (r\<^sub>1::real)"
   assumes l2:"l\<^sub>2 \<equiv>\<^sub>L (r\<^sub>2::real)"
   shows "dl l\<^sub>1 u\<^sub>1 l\<^sub>2 u\<^sub>2 \<equiv>\<^sub>L (r\<^sub>1 / r\<^sub>2)"
   sorry
-
 lemma du_lemma:
   assumes u1:"u\<^sub>1 \<equiv>\<^sub>U (r\<^sub>1::real)"
   assumes u2:"u\<^sub>2 \<equiv>\<^sub>U (r\<^sub>2::real)"
@@ -1192,6 +1256,7 @@ lemma du_lemma:
   shows "du l\<^sub>1 u\<^sub>1 l\<^sub>2 u\<^sub>2 \<equiv>\<^sub>U (r\<^sub>1 / r\<^sub>2)"
   sorry
 
+*)
 
 fun wtsemU :: "trm \<Rightarrow> nstate \<Rightarrow>  word * word " ("([_]<>_)" 20)
 where "([Const r]<>\<nu>) = (r, r)"
@@ -1438,7 +1503,8 @@ next
     using pu_lemma[OF u1 u2] by auto
   have "divU l1 u1 l2 u2 \<equiv>\<^sub>P (r\<^sub>1 / r\<^sub>2)"
     unfolding repP_def Let_def using lBound uBound 
-    using IH1 IH2  lu1' lu2' repP_def sorry (*by auto*)
+    using IH1 IH2  lu1' lu2' repP_def 
+    sorry
   then show"[Div \<theta>\<^sub>1 \<theta>\<^sub>2]<>\<nu> \<equiv>\<^sub>P r\<^sub>1 / r\<^sub>2"
     using lu1' lu2' by auto
 next
@@ -1451,17 +1517,22 @@ next
   obtain l1 u1  where 
         lu:"([\<theta>]<> \<nu>) = (l1, u1)" 
     using IH repP_def by auto
-  from IH 
-  obtain ub lb:: real 
-   where urep:"(ub \<ge> r) \<and> (snd ([\<theta>]<>\<nu>) = ub)" 
-   and   lrep:"(lb \<le> r) \<and> (fst ([\<theta>]<>\<nu>) = lb)" 
-    using prod.case_eq_if repP_def  repU_def repL_def sorry
+(*  from IH *)
+  have rF:"real_of_rat (fst ([\<theta>]<>\<nu>)) \<le> r"
+   and rS:"r \<le> real_of_rat (snd ([\<theta>]<>\<nu>))"
+    using IH unfolding repP_def repL_def repU_def Let_def prod.case_eq_if Ratreal_def
+    by auto
+  obtain ub lb:: real    
+   where urep:"(ub \<ge> r) \<and> real_of_rat (snd ([\<theta>]<>\<nu>)) = ub" 
+   and   lrep:"(lb \<le> r) \<and> real_of_rat (fst ([\<theta>]<>\<nu>)) = lb" 
+    using rF rS by auto
   have ubound:"((wneg u1) \<equiv>\<^sub>L (uminus r))"
-(*    by (metis real_minus_le_minus lu repL_def snd_conv urep wneg_lemma)*)
-    sorry (*by auto*)
+    using real_minus_le_minus lu repL_def snd_conv urep wneg_lemma
+    using IH repP_def repU_leq by auto
   have lbound:"((wneg l1) \<equiv>\<^sub>U (uminus r))"
-    using real_minus_le_minus lu repU_def lrep wneg_lemma
-    sorry (* by auto*)
+    using real_minus_le_minus lu repU_def snd_conv lrep wneg_lemma
+    using IH repP_def repU_leq
+    by (simp add: repL_def) 
   show "[Neg \<theta>]<>\<nu> \<equiv>\<^sub>P - r"
     unfolding repP_def Let_def using ubound lbound lu 
     by (auto simp add:  lu wNegU)
@@ -1477,19 +1548,18 @@ next
     using IH repP_def by auto
   from IH 
   obtain ub lb:: real 
-   where urep:"(ub \<ge> r) \<and> (snd ([\<theta>]<>\<nu>) = ub)" 
-   and   lrep:"(lb \<le> r) \<and> (fst ([\<theta>]<>\<nu>) = lb)" 
-    using prod.case_eq_if repP_def  repU_def repL_def 
-    sorry (* by auto*)
+   where urep:"(ub \<ge> r) \<and> real_of_rat (snd ([\<theta>]<>\<nu>)) = ub" 
+   and   lrep:"(lb \<le> r) \<and> real_of_rat (fst ([\<theta>]<>\<nu>)) = lb" 
+    using prod.case_eq_if repP_def  repU_def repL_def
+    by auto
   have lbound:"wmax l1 (wneg u1) \<equiv>\<^sub>L (abs r)"
     apply(simp only: repL_def)
     using lrep lu repL_def snd_conv   wmax_lemma real_minus_le_minus lu repL_def snd_conv urep wneg_lemma
-(*     by auto  *)
-    sorry
+    using IH repP_def repU_leq by fastforce
   have ubound:"(wmax u1 (wneg l1) \<equiv>\<^sub>U (abs r))"
     apply(simp only: repU_def)
     using lrep lu repL_def snd_conv wmax_lemma real_minus_le_minus lu repL_def snd_conv urep wneg_lemma
-    sorry (* by metis  *)
+    using IH fst_conv repP_def repU_leq by fastforce
   show "[Abs \<theta>]<>\<nu> \<equiv>\<^sub>P abs r"
     using repP_def Let_def ubound lbound lu lu wAbsU 
       by auto
@@ -1651,10 +1721,9 @@ lemma rep_upd:"\<omega> = (\<nu>(Inr x := snd([\<theta>]<>\<nu>)))(Inl x := fst(
   using trm_sound  prod.case_eq_if repP_def repstate_simps repU_def
   using  Inl_Inr_False fun_upd_apply sum.inject(1) sum.inject(2) 
   apply auto
-(*  by (metis (full_types) surjective_pairing trm_sound)*)
-  sorry
-  
-  
+  using surjective_pairing trm_sound
+  by metis+
+    
 (* TODO: Could also prove extra lemma and show that \<nu> REP \<nu>' always holds for some \<nu>' *)
 theorem fixed_point_sound:
   fixes \<alpha>::"hp"
