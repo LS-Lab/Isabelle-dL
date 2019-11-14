@@ -306,6 +306,45 @@ lemma case_ivl_zero
   using ivl_zero_case[of l1 u1 l2 u2]
   by auto
 
+lemma case_inf2[case_names PosPos PosNeg PosNum NegPos NegNeg NegNum NumPos NumNeg NumNum]:
+  shows 
+  "\<And>w1 w2 P.
+      (w1 = POS_INF \<Longrightarrow> w2 = POS_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> (w1 = POS_INF \<Longrightarrow> w2 = NEG_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> (w1 = POS_INF \<Longrightarrow> w2 \<noteq> POS_INF \<Longrightarrow> w2 \<noteq> NEG_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> (w1 = NEG_INF \<Longrightarrow> w2 = POS_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> (w1 = NEG_INF \<Longrightarrow> w2 = NEG_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> (w1 = NEG_INF \<Longrightarrow> w2 \<noteq> POS_INF \<Longrightarrow> w2 \<noteq> NEG_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> (w1 \<noteq> POS_INF \<Longrightarrow> w1 \<noteq> NEG_INF \<Longrightarrow> w2 = POS_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> (w1 \<noteq> POS_INF \<Longrightarrow> w1 \<noteq> NEG_INF \<Longrightarrow> w2 = NEG_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> (w1 \<noteq> POS_INF \<Longrightarrow> w1 \<noteq> NEG_INF \<Longrightarrow> w2 \<noteq> POS_INF \<Longrightarrow> w2 \<noteq> NEG_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> P w1 w2"
+  by(auto simp add: POS_INF_def NEG_INF_def)
+
+lemma case_pu_inf[case_names PosAny AnyPos NegNeg NegNum NumNeg NumNum]:
+  shows 
+  "\<And>w1 w2 P.
+      (w1 = POS_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> (w2 = POS_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> (w1 = NEG_INF \<Longrightarrow> w2 = NEG_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> (w1 = NEG_INF \<Longrightarrow> w2 \<noteq> POS_INF \<Longrightarrow> w2 \<noteq> NEG_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> (w1 \<noteq> POS_INF \<Longrightarrow> w1 \<noteq> NEG_INF \<Longrightarrow> w2 = NEG_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> (w1 \<noteq> POS_INF \<Longrightarrow> w1 \<noteq> NEG_INF \<Longrightarrow> w2 \<noteq> POS_INF \<Longrightarrow> w2 \<noteq> NEG_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> P w1 w2"
+  by(auto simp add: POS_INF_def NEG_INF_def)
+
+lemma case_pl_inf[case_names NegAny AnyNeg PosPos PosNum NumPos NumNum]:
+  shows 
+  "\<And>w1 w2 P.
+      (w1 = NEG_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> (w2 = NEG_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> (w1 = POS_INF \<Longrightarrow> w2 = POS_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> (w1 = POS_INF \<Longrightarrow> w2 \<noteq> POS_INF \<Longrightarrow> w2 \<noteq> NEG_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> (w1 \<noteq> POS_INF \<Longrightarrow> w1 \<noteq> NEG_INF \<Longrightarrow> w2 = POS_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> (w1 \<noteq> POS_INF \<Longrightarrow> w1 \<noteq> NEG_INF \<Longrightarrow> w2 \<noteq> POS_INF \<Longrightarrow> w2 \<noteq> NEG_INF \<Longrightarrow> P w1 w2)
+  \<Longrightarrow> P w1 w2"
+  by(auto simp add: POS_INF_def NEG_INF_def)
+
 
 section \<open>Arithmetic operations\<close>
 text\<open>Upper bound of w1 + w2\<close>
@@ -339,34 +378,6 @@ by (simp add: assms word_sint.Abs_inverse)
 
 text\<open>Correctness of upper bound of w1 + w2\<close>
 
-lemma case_pu_inf[case_names PosAny AnyPos NegNeg NegNum NumNeg NumNum]:
-  shows 
-  "\<And>w1 w2 P.
-      (w1 = POS_INF \<Longrightarrow> P w1 w2)
-  \<Longrightarrow> (w2 = POS_INF \<Longrightarrow> P w1 w2)
-  \<Longrightarrow> (w1 = NEG_INF \<Longrightarrow> w2 = NEG_INF \<Longrightarrow> P w1 w2)
-  \<Longrightarrow> (w1 = NEG_INF \<Longrightarrow> w2 \<noteq> POS_INF \<Longrightarrow> w2 \<noteq> NEG_INF \<Longrightarrow> P w1 w2)
-  \<Longrightarrow> (w1 \<noteq> POS_INF \<Longrightarrow> w1 \<noteq> NEG_INF \<Longrightarrow> w2 = NEG_INF \<Longrightarrow> P w1 w2)
-  \<Longrightarrow> (w1 \<noteq> POS_INF \<Longrightarrow> w1 \<noteq> NEG_INF \<Longrightarrow> w2 \<noteq> POS_INF \<Longrightarrow> w2 \<noteq> NEG_INF \<Longrightarrow> P w1 w2)
-  \<Longrightarrow> P w1 w2"
-  by(auto simp add: POS_INF_def NEG_INF_def)
-
-lemma case_pl_inf[case_names NegAny AnyNeg PosPos PosNum NumPos NumNum]:
-  shows 
-  "\<And>w1 w2 P.
-      (w1 = NEG_INF \<Longrightarrow> P w1 w2)
-  \<Longrightarrow> (w2 = NEG_INF \<Longrightarrow> P w1 w2)
-  \<Longrightarrow> (w1 = POS_INF \<Longrightarrow> w2 = POS_INF \<Longrightarrow> P w1 w2)
-  \<Longrightarrow> (w1 = POS_INF \<Longrightarrow> w2 \<noteq> POS_INF \<Longrightarrow> w2 \<noteq> NEG_INF \<Longrightarrow> P w1 w2)
-  \<Longrightarrow> (w1 \<noteq> POS_INF \<Longrightarrow> w1 \<noteq> NEG_INF \<Longrightarrow> w2 = POS_INF \<Longrightarrow> P w1 w2)
-  \<Longrightarrow> (w1 \<noteq> POS_INF \<Longrightarrow> w1 \<noteq> NEG_INF \<Longrightarrow> w2 \<noteq> POS_INF \<Longrightarrow> w2 \<noteq> NEG_INF \<Longrightarrow> P w1 w2)
-  \<Longrightarrow> P w1 w2"
-  by(auto simp add: POS_INF_def NEG_INF_def)
-
-(* let ?sum = "(scast w1 + scast NEG_INF)::64 Word.word"    
-   let ?sum = "(scast w2 + scast NEG_INF)::64 Word.word" 
-   let ?sum = "((scast w1)::64 Word.word) + ((scast w2):: 64 Word.word)"
-   let ?sum = "(scast w2 + scast POS_INF)::64 Word.word" *)
 
 lemma pu_lemma:
   fixes w1 w2
@@ -3452,192 +3463,179 @@ text\<open>Minimum of 2s-complement words\<close>
 fun wmin :: "word \<Rightarrow> word \<Rightarrow> word"
 where "wmin w1 w2 = 
   (if w1 <s w2 then w1 else w2)"
-
+                                            
 text\<open>Correctness of wmin\<close>
 lemma wmin_lemma:
   assumes eq1:"w1 \<equiv>\<^sub>E (r1::real)"
   assumes eq2:"w2 \<equiv>\<^sub>E (r2::real)"
   shows "wmin w1 w2 \<equiv>\<^sub>E (min r1 r2)"
-  apply(rule repe.cases[OF eq1])
-  subgoal for r
-    apply(rule repe.cases[OF eq2])
-    subgoal for ra 
-      proof -
-        assume p1:"w1 = POS_INF"
-        assume p2:"w2 = POS_INF"
-        assume eq1:"r1 = r"
-        assume eq2:"r2 = ra"
-        assume bound1:"(real_of_int (sint POS_INF)) \<le> r"
-        assume bound2:"(real_of_int (sint POS_INF)) \<le> ra"
-        have eqInf:"wmin w1 w2 = POS_INF"
-          using p1 p2 unfolding POS_INF_def wmin.simps by auto
-        have pos_eq:"POS_INF \<equiv>\<^sub>E min r1 r2"
-          apply(rule repPOS_INF)
-          using bound1 bound2 unfolding POS_INF_def eq1 eq2 by auto
-        show ?thesis
-          using pos_eq eqInf by auto
-      qed
-    subgoal for ra
-      proof -
-        assume p1:"w1 = POS_INF"
-        assume n2:"w2 = NEG_INF"
-        assume bound1:" (real_of_int (sint POS_INF)) \<le> r"
-        assume bound2:"ra \<le>  (real_of_int (sint NEG_INF))"
-        assume eq1:"r1 = r"
-        assume eq2:"r2 = ra"
-        have eqNeg:"wmin w1 w2 = NEG_INF"
-          unfolding NEG_INF_def POS_INF_def eq1 eq2 wmin.simps p1 n2 word_sless_def word_sle_def
-          by(auto) 
-        have neg_eq:"NEG_INF \<equiv>\<^sub>E min r1 r2"
-          apply(rule repNEG_INF)
-          using bound1 bound2 unfolding POS_INF_def NEG_INF_def using eq1 eq2 by auto
-        show "?thesis"
-          using eqNeg neg_eq by auto
-        qed
-    subgoal for ra 
-      proof -
-        assume p1:"w1 = POS_INF"
-        assume i2:"w2 = ra"
-        assume eq1:"r1 = r"
-        assume eq2:"r2 =  (real_of_int (sint ra))"
-        assume bound1:" (real_of_int (sint POS_INF)) \<le> r"
-        assume bound2a:" (real_of_int (sint NEG_INF)) <  (real_of_int (sint ra))"
-        assume bound2b:" (real_of_int (sint ra)) <  (real_of_int (sint POS_INF))"
-        have eqNeg:"min r1 r2 = sint ra"
-          using p1 i2 unfolding NEG_INF_def POS_INF_def wmin.simps
-          by (metis  bound1 bound2b dual_order.trans eq1 eq2 min_def not_less) 
-        have neg_eq:"wmin w1 w2 \<equiv>\<^sub>E  (real_of_int (sint (wmin w1 w2)))"
-          apply (rule repINT)
-          using bound1 bound2a bound2b unfolding POS_INF_def NEG_INF_def eq1 eq2 apply auto
-          using bound2b p1 by (simp add: i2 word_sless_alt)+
-        show "?thesis"
-          using eqNeg neg_eq i2
-          by (metis bound2b less_eq_real_def not_less of_int_less_iff p1 wmin.simps word_sless_alt)
-        qed
-        done
-  subgoal for r 
-    apply(rule repe.cases[OF eq2])
-    subgoal for ra
-      proof -
-        assume eq1:"r1 = r"
-        assume eq2:"r2 = ra" 
-        assume n1:"w1 = NEG_INF"
-        assume p2:"w2 = POS_INF"
-        assume bound1:"r \<le>  (real_of_int (sint NEG_INF))"
-        assume bound2:" (real_of_int (sint POS_INF)) \<le> ra"
-        have eqNeg:"wmin w1 w2 = NEG_INF"
-          unfolding NEG_INF_def POS_INF_def eq1 eq2 wmin.simps n1 p2 word_sless_def word_sle_def
-          by(auto)
-        have neg_eq:"NEG_INF \<equiv>\<^sub>E min r1 r2"
-          apply(rule repNEG_INF)
-          using bound1 bound2 unfolding POS_INF_def NEG_INF_def eq1 eq2 by auto
-        show "wmin w1 w2 \<equiv>\<^sub>E min r1 r2"
-          using eqNeg neg_eq by auto
-        qed
-    subgoal for ra
-    proof -
-      assume n1:"w1 = NEG_INF"
-      assume n2:"w2 = NEG_INF"
-      assume eq1:"r1 = r"
-      assume eq2:"r2 = ra"
-      assume bound1:"r \<le>  (real_of_int (sint NEG_INF))"
-      assume bound2:"ra \<le>  (real_of_int (sint NEG_INF))"
-      have eqNeg:"NEG_INF \<equiv>\<^sub>E min r1 r2"
-        apply(rule repNEG_INF)
-        using eq1 eq2 bound1 bound2 unfolding NEG_INF_def
-        by (auto)
-      have neg_eq:"wmin w1 w2 = NEG_INF"
-        using n1 n2 unfolding NEG_INF_def wmin.simps by auto 
-      show "wmin w1 w2 \<equiv>\<^sub>E min r1 r2"
-        using eqNeg neg_eq by auto
-    qed
-    subgoal for w
-      proof -
-        assume n1:"w1 = NEG_INF"
-        assume i2:"w2 = w"
-        assume eq1:"r1 = r"
-        assume eq2:"r2 =  (real_of_int (sint w))"
-        assume bound2a:"(real_of_int (sint w)) <  (real_of_int (sint POS_INF))"
-        assume bound2b:"(real_of_int (sint NEG_INF)) <  (real_of_int (sint w))"
-        assume bound1:"r \<le>  (real_of_int (sint NEG_INF))"
-        have eqNeg:"wmin w1 w2 = NEG_INF"
-          using n1 i2 unfolding NEG_INF_def wmin.simps
-          using assms(2) bound2a eq2 n1 repeInt_simps word_sless_alt 
-          by auto
-        have neg_eq:"NEG_INF \<equiv>\<^sub>E min r1 r2"
-          apply(rule repNEG_INF)
-          using NEG_INF_def bound1 bound2a bound2b
-          using eq1 min_le_iff_disj by blast
-        show "wmin w1 w2 \<equiv>\<^sub>E min r1 r2"
-          using eqNeg neg_eq by auto
-        qed
-      done
-  subgoal for r 
-    apply(rule repe.cases[OF eq2])
-    subgoal for ra
-      proof -
-        assume i1:"w1 = r"
-        assume p2:"w2 = POS_INF"
-        assume eq1:"r1 =  (real_of_int (sint r))"
-        assume eq2:"r2 = ra"
-        assume bound1a:" (real_of_int (sint r)) <  (real_of_int (sint POS_INF))"
-        assume bound1b:" (real_of_int (sint NEG_INF)) <  (real_of_int (sint r))"
-        assume bound2:" (real_of_int (sint POS_INF)) \<le> ra"
-        have res1:"wmin w1 w2 = r"
-          using i1 p2 eq1 eq2 unfolding POS_INF_def apply auto
-          using assms(1) bound1b p2 repeInt_simps word_sless_alt by auto
-        have res2:"min r1 r2 =  (real_of_int (sint r))"
-          using eq1 eq2 bound1a bound1b bound2 
-          by (auto simp add: less_imp_le less_le_trans min_def)
-        have res3:"wmin w1 w2 \<equiv>\<^sub>E  (real_of_int (sint (wmin w1 w2)))"
-          apply(rule repINT)
-          using POS_INF_def NEG_INF_def i1 p2 POS_INF_def bound1a res1 bound1a bound1b bound2 
-          by auto
-        show "wmin w1 w2 \<equiv>\<^sub>E min r1 r2" 
-          using res1 res2 res3 by auto
-        qed
-    subgoal for ra
-      proof -
-        assume i1:"w1 = r"
-        assume n2:"w2 = NEG_INF"
-        assume eq1:"r1 =  (real_of_int (sint r))"
-        assume eq2:"r2 = ra" 
-        assume bound1a:" (real_of_int (sint r)) <  (real_of_int (sint POS_INF))"
-        assume bound1b:" (real_of_int (sint NEG_INF)) <  (real_of_int (sint r))"
-        assume bound2:"ra \<le>  (real_of_int (sint NEG_INF))"
-        have res1:"wmin w1 w2 = NEG_INF"
-          using i1 n2 bound1b unfolding NEG_INF_def
-          by (metis min.absorb_iff2 min_def n2 not_less of_int_less_iff wmin.simps word_sless_alt)
-        have res2:"NEG_INF \<equiv>\<^sub>E min r1 r2"
-          apply(rule repNEG_INF)
-          using eq1 eq2 bound1a bound1b bound2
-          using min_le_iff_disj by blast
-        show "wmin w1 w2 \<equiv>\<^sub>E min r1 r2"
-          using res1 res2 by auto
-        qed
-    subgoal for ra
-      proof -
-        assume i1:"w1 = r"
-        assume i2:"w2 = ra"
-        assume eq1:"r1 =  (real_of_int (sint r))"
-        assume eq2:"r2 =  (real_of_int (sint ra))"
-        assume bound1a:" (real_of_int (sint r)) <  (real_of_int (sint POS_INF))"
-        assume bound1b:" (real_of_int (sint NEG_INF)) <  (real_of_int (sint r))"
-        assume bound2a:" (real_of_int (sint ra)) <  (real_of_int (sint POS_INF))"
-        assume bound2b:" (real_of_int (sint NEG_INF)) <  (real_of_int (sint ra))"
-        have res1:"min r1 r2 =  (real_of_int (sint (wmin w1 w2)))"
-          using eq1 eq2 bound1a bound1b bound2a bound2b i1 i2
-          by (simp add: min_def word_sless_alt)
-        have res2:"wmin w1 w2 \<equiv>\<^sub>E (real_of_int (sint (wmin w1 w2)))"
-          apply (rule repINT)
-          using i1 i2 bound1a bound1b bound2a bound2b
-          by (simp add: \<open>min r1 r2 =  (real_of_int (sint (wmin w1 w2)))\<close> eq2 min_less_iff_disj)+
-        show "wmin w1 w2 \<equiv>\<^sub>E min r1 r2"
-          using res1 res2 by auto
-        qed
-      done
-    done
-    
+proof(cases rule: case_inf2[where ?w1.0=w1, where ?w2.0=w2])
+  case PosPos
+  assume p1:"w1 = POS_INF"   
+     and p2:"w2 = POS_INF"
+  then have bound1:"(real_of_int (sint POS_INF)) \<le> r1"
+        and bound2:"(real_of_int (sint POS_INF)) \<le> r2"
+    using eq1 eq2 by (auto simp add: rep_simps POS_INF_def NEG_INF_def repe.simps)
+  have eqInf:"wmin w1 w2 = POS_INF"
+    using p1 p2 unfolding POS_INF_def wmin.simps by auto
+  have pos_eq:"POS_INF \<equiv>\<^sub>E min r1 r2"
+    apply(rule repPOS_INF)
+    using bound1 bound2 unfolding POS_INF_def eq1 eq2 by auto
+  show ?thesis
+    using pos_eq eqInf by auto
+next
+  case PosNeg
+  assume p1:"w1 = POS_INF"
+  assume n2:"w2 = NEG_INF"
+  obtain r ra :: real 
+  where bound1:" (real_of_int (sint POS_INF)) \<le> r"
+    and bound2:"ra \<le>  (real_of_int (sint NEG_INF))"
+    and eq1:"r1 = r"
+    and eq2:"r2 = ra"
+    using p1 n2 eq1 eq2 by(auto simp add: rep_simps POS_INF_def NEG_INF_def repe.simps)
+  have eqNeg:"wmin w1 w2 = NEG_INF"
+    unfolding NEG_INF_def POS_INF_def eq1 eq2 wmin.simps p1 n2 word_sless_def word_sle_def
+    by(auto) 
+  have neg_eq:"NEG_INF \<equiv>\<^sub>E min r1 r2"
+    apply(rule repNEG_INF)
+    using bound1 bound2 unfolding POS_INF_def NEG_INF_def using eq1 eq2 by auto
+  show "?thesis"
+    using eqNeg neg_eq by auto
+next
+  case PosNum
+  assume p1:"w1 = POS_INF"
+  assume np2:"w2 \<noteq> POS_INF"
+  assume nn2:"w2 \<noteq> NEG_INF"
+  have eq2:"r2 =  (real_of_int (sint w2))"
+    and bound1:" (real_of_int (sint POS_INF)) \<le> r1"
+    and bound2a:" (real_of_int (sint NEG_INF)) <  (real_of_int (sint w2))"
+    and bound2b:" (real_of_int (sint w2)) <  (real_of_int (sint POS_INF))"
+    using p1 np2 nn2 eq1 eq2 by(auto simp add: rep_simps POS_INF_def NEG_INF_def repe.simps)
+  have eqNeg:"min r1 r2 = sint w2"
+    using p1  unfolding NEG_INF_def POS_INF_def wmin.simps
+    by (metis bound1 bound2b dual_order.trans eq2 min_def not_less) 
+  have neg_eq:"wmin w1 w2 \<equiv>\<^sub>E  (real_of_int (sint (wmin w1 w2)))"
+    apply (rule repINT)
+    using bound1 bound2a bound2b unfolding POS_INF_def NEG_INF_def eq1 eq2 apply auto
+    using bound2b p1 by (simp add: word_sless_alt)+
+  show "?thesis"
+    using eqNeg neg_eq
+    by (metis bound2b less_eq_real_def not_less of_int_less_iff p1 wmin.simps word_sless_alt)
+next
+  case NegPos
+  assume n1:"w1 = NEG_INF"   
+  assume p2:"w2 = POS_INF"
+  have  bound1:"r1 \<le>  (real_of_int (sint NEG_INF))"
+    and bound2:" (real_of_int (sint POS_INF)) \<le> r2"
+    using n1 p2 eq1 eq2 by(auto simp add: rep_simps POS_INF_def NEG_INF_def repe.simps)    
+  have eqNeg:"wmin w1 w2 = NEG_INF"
+    unfolding NEG_INF_def POS_INF_def eq1 eq2 wmin.simps n1 p2 word_sless_def word_sle_def
+    by(auto)
+  have neg_eq:"NEG_INF \<equiv>\<^sub>E min r1 r2"
+    apply(rule repNEG_INF)
+    using bound1 bound2 unfolding POS_INF_def NEG_INF_def eq1 eq2 by auto
+  show "wmin w1 w2 \<equiv>\<^sub>E min r1 r2"
+    using eqNeg neg_eq by auto                      
+next
+  case NegNeg
+  assume n1:"w1 = NEG_INF"                 
+  assume n2:"w2 = NEG_INF" 
+  have bound1:"r1 \<le>  (real_of_int (sint NEG_INF))"
+   and bound2:"r2 \<le>  (real_of_int (sint NEG_INF))"
+    using n1 n2 eq1 eq2 by(auto simp add: rep_simps POS_INF_def NEG_INF_def repe.simps)    
+  have eqNeg:"NEG_INF \<equiv>\<^sub>E min r1 r2"
+    apply(rule repNEG_INF)
+    using eq1 eq2 bound1 bound2 unfolding NEG_INF_def
+    by (auto)
+  have neg_eq:"wmin w1 w2 = NEG_INF"
+    using n1 n2 unfolding NEG_INF_def wmin.simps by auto 
+  show "wmin w1 w2 \<equiv>\<^sub>E min r1 r2"
+    using eqNeg neg_eq by auto
+next
+  case NegNum
+  assume n1:"w1 = NEG_INF" 
+    and  nn2:"w2 \<noteq> NEG_INF"
+    and  np2:"w2 \<noteq> POS_INF"
+  have eq2:"r2 =  (real_of_int (sint w2))"
+    and bound2a:"(real_of_int (sint w2)) <  (real_of_int (sint POS_INF))"
+    and bound2b:"(real_of_int (sint NEG_INF)) <  (real_of_int (sint w2))"
+    and bound1:"r1 \<le>  (real_of_int (sint NEG_INF))"
+    using n1 nn2 np2 eq2 eq1 eq2 by (auto simp add: rep_simps POS_INF_def NEG_INF_def repe.simps)  
+  have eqNeg:"wmin w1 w2 = NEG_INF"
+    using n1 unfolding NEG_INF_def wmin.simps
+    using assms(2) bound2a eq2 n1 repeInt_simps word_sless_alt 
+    by auto
+  have neg_eq:"NEG_INF \<equiv>\<^sub>E min r1 r2"
+    apply(rule repNEG_INF)
+    using NEG_INF_def bound1 bound2a bound2b
+    using eq1 min_le_iff_disj by blast
+  show "wmin w1 w2 \<equiv>\<^sub>E min r1 r2"
+    using eqNeg neg_eq by auto
+next
+  case NumPos
+  assume p2:"w2 = POS_INF"
+   and  nn1:"w1 \<noteq> NEG_INF"
+   and  np1:"w1 \<noteq> POS_INF"
+  have eq1:"r1 =  (real_of_int (sint w1))"
+    and bound1a:" (real_of_int (sint w1)) <  (real_of_int (sint POS_INF))"
+    and bound1b:" (real_of_int (sint NEG_INF)) <  (real_of_int (sint w1))"
+    and bound2:" (real_of_int (sint POS_INF)) \<le> r2"
+    using nn1 np1 p2 eq2 eq1 eq2 by (auto simp add: rep_simps POS_INF_def NEG_INF_def repe.simps)  
+  have res1:"wmin w1 w2 = w1"
+    using  p2 eq1 eq2 unfolding POS_INF_def apply auto
+    using assms(1) bound1b p2 repeInt_simps word_sless_alt by auto
+  have res2:"min r1 r2 =  (real_of_int (sint w1))"
+    using eq1 eq2 bound1a bound1b bound2 
+    by (auto simp add: less_imp_le less_le_trans min_def)
+  have res3:"wmin w1 w2 \<equiv>\<^sub>E  (real_of_int (sint (wmin w1 w2)))"
+    apply(rule repINT)
+    using POS_INF_def NEG_INF_def p2 POS_INF_def bound1a res1 bound1a bound1b bound2 
+    by auto
+  show "wmin w1 w2 \<equiv>\<^sub>E min r1 r2" 
+    using res1 res2 res3 by auto
+next
+  case NumNeg
+  assume nn1:"w1 \<noteq> NEG_INF"
+  assume np1:"w1 \<noteq> POS_INF"
+  assume n2:"w2 = NEG_INF"
+  have eq1:"r1 =  (real_of_int (sint w1))"
+    and bound1a:" (real_of_int (sint w1)) <  (real_of_int (sint POS_INF))"
+    and bound1b:" (real_of_int (sint NEG_INF)) <  (real_of_int (sint w1))"
+    and bound2:"r2 \<le>  (real_of_int (sint NEG_INF))"
+    using nn1 np1 n2 eq2 eq1 eq2 by (auto simp add: rep_simps POS_INF_def NEG_INF_def repe.simps)
+  have res1:"wmin w1 w2 = NEG_INF"
+    using n2 bound1b unfolding NEG_INF_def
+    by (metis min.absorb_iff2 min_def n2 not_less of_int_less_iff wmin.simps word_sless_alt)
+  have res2:"NEG_INF \<equiv>\<^sub>E min r1 r2"
+    apply(rule repNEG_INF)
+    using eq1 eq2 bound1a bound1b bound2
+    using min_le_iff_disj by blast
+  show "wmin w1 w2 \<equiv>\<^sub>E min r1 r2"
+    using res1 res2 by auto
+next
+  case NumNum
+  assume np1:"w1 \<noteq> POS_INF"
+  assume nn1:"w1 \<noteq> NEG_INF"
+  assume np2:"w2 \<noteq> POS_INF"
+  assume nn2:"w2 \<noteq> NEG_INF"
+  have eq1:"r1 =  (real_of_int (sint w1))"
+  and  eq2:"r2 =  (real_of_int (sint w2))"
+  and  bound1a:" (real_of_int (sint w1)) <  (real_of_int (sint POS_INF))"
+  and  bound1b:" (real_of_int (sint NEG_INF)) <  (real_of_int (sint w1))"
+  and  bound2a:" (real_of_int (sint w2)) <  (real_of_int (sint POS_INF))"
+  and  bound2b:" (real_of_int (sint NEG_INF)) <  (real_of_int (sint w2))"
+    using nn1 np1 nn2 np2 eq2 eq1 eq2 
+    by (auto simp add: rep_simps POS_INF_def NEG_INF_def repe.simps)
+  have res1:"min r1 r2 =  (real_of_int (sint (wmin w1 w2)))"
+    using eq1 eq2 bound1a bound1b bound2a bound2b 
+    by (simp add: min_def word_sless_alt)
+  have res2:"wmin w1 w2 \<equiv>\<^sub>E (real_of_int (sint (wmin w1 w2)))"
+    apply (rule repINT)
+    using bound1a bound1b bound2a bound2b
+    by (simp add: \<open>min r1 r2 = (real_of_int (sint (wmin w1 w2)))\<close> eq2 min_less_iff_disj)+
+  show "wmin w1 w2 \<equiv>\<^sub>E min r1 r2"
+    using res1 res2 by auto
+qed    
     
 lemma min_repU1:
   assumes "w1 \<equiv>\<^sub>L x"
