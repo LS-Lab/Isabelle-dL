@@ -1,0 +1,10 @@
+chapter AFP
+
+session "Interval_Arithmetic" (AFP) = HOL +
+  options [timeout = 1200]
+  theories
+    Finite_String
+    Interval_Arithmetic
+  document_files
+    "root.tex"
+    "root.bib"

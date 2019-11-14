@@ -1,0 +1,10 @@
+chapter AFP
+session "Interval_Arithmetic" (AFP) = "HOL-Library" +
+  options [document = pdf, document_output = "output",timeout = 1000]
+  sessions
+    "Word_Lib"
+  theories
+    Finite_String
+    Interval_Arithmetic
+  document_files
+    "root.tex"
