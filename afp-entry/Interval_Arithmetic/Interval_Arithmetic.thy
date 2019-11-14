@@ -2771,191 +2771,204 @@ next
 next
   case AllFinite
   let ?prod = "(((scast w1)::64 Word.word) * ((scast w2)::64 Word.word))"
-  have case1:"?prod <=s ((scast NEG_INF)::64 Word.word) \<Longrightarrow> NEG_INF \<equiv>\<^sub>E (r1 * r2)"
-    proof -
-      have h1:"sint ((scast NEG_INF)::64 Word.word) = sint NEG_INF"
-        apply(rule Word.sint_up_scast)
-        unfolding Word.is_up by auto
-      have h2:"sint NEG_INF = -(2^31)+1" unfolding NEG_INF_def by auto
-      have h3:"sint ((scast w1)::64 Word.word) = sint w1"
-        apply(rule Word.sint_up_scast)
-        unfolding Word.is_up by auto
-      have h4:"sint ((scast w2)::64 Word.word) = sint w2"
-        apply(rule Word.sint_up_scast)
-        unfolding Word.is_up by auto
-      have sints32:"sints 32 = {i. - (2 ^ 31) \<le> i \<and> i < 2 ^ 31}"
-        using sints_def[of 32] range_sbintrunc[of 31] by auto 
-      have rangew1:"sint ((scast w1)::64 Word.word) \<in> {- (2 ^ 31).. (2^31)} " 
-        using Word.word_sint.Rep[of "(w1)::32 Word.word"] sints32   len32 mem_Collect_eq h1 h3 h4 
-        by auto
-      have rangew2:"sint ((scast w2)::64 Word.word) \<in> {- (2 ^ 31).. (2^31)} " 
-        using Word.word_sint.Rep[of "(w2)::32 Word.word"] sints32 len32 mem_Collect_eq h1 h3 h4 
-        by auto
-      have bigLeq:"(4611686018427387904::real) \<le> 9223372036854775807" by auto
-      have set_cast:"\<And>x::int. (x \<in> {-(2^31)..2^31}) = ( (real_of_int x) \<in> {-(2^31)..2^31})"
-        by auto
-      have eq3:"sint(((scast w1)::64 Word.word) * ((scast w2)::64 Word.word)) = 
-       sint ((scast w1)::64 Word.word) * sint ((scast w2)::64 Word.word)"
-       apply(rule Word_Lemmas.signed_arith_sint(4))
-       using rangew1 rangew2 h1 h2 h3 h4 
-       using Word.word_size[of "((scast w1)::64 Word.word)"] 
-       using Word.word_size[of "((scast w2)::64 Word.word)"]
-       using times_upcast_upper[of "sint w1" "sint w2"]
-       using times_upcast_lower[of "sint w1" "sint w2"] 
-       unfolding NEG_INF_def by auto
-      assume "?prod <=s ((scast NEG_INF)::64 Word.word)"
-      then have sint_leq:"sint ?prod \<le> sint ((scast NEG_INF)::64 Word.word)"
-        using word_sle_def by blast
-      have neqs:"w1 \<noteq> POS_INF" " w1 \<noteq> NEG_INF" "w2 \<noteq> POS_INF" "w2 \<noteq> NEG_INF"
-        using AllFinite word_sless_def signed.not_less_iff_gr_or_eq by force+
-      from eq1 have rw1:"r1 =  (real_of_int (sint w1))" by(auto simp add: repe.simps neqs)
-      from eq2 have rw2:"r2 =  (real_of_int (sint w2))" by(auto simp add: repe.simps neqs)
-      show "NEG_INF \<equiv>\<^sub>E (r1 * r2)"
-        apply (simp add: repe.simps)
-        apply(rule disjI2)
-        using h1 h2 h3 h4 rw1 rw2 sint_leq unfolding NEG_INF_def apply auto
-        by (metis (no_types, hide_lams) eq3 of_int_le_iff of_int_minus of_int_mult of_int_numeral)
-    qed
-  have case2:"\<not>(?prod <=s ((scast NEG_INF)::64 Word.word)) 
-      \<Longrightarrow> ((scast POS_INF)::64 Word.word) <=s ?prod 
-      \<Longrightarrow> POS_INF \<equiv>\<^sub>E (r1 * r2)"
-    proof -
-      let ?thesis = "POS_INF \<equiv>\<^sub>E (r1 * r2)"
-      have h1:"sint ((scast POS_INF)::64 Word.word) = sint POS_INF"
-        apply(rule Word.sint_up_scast)
-        unfolding Word.is_up by auto
-      have h2:"sint POS_INF = (2^31)-1" unfolding POS_INF_def by auto
-      have h3:"sint ((scast w1)::64 Word.word) = sint w1"
-        apply(rule Word.sint_up_scast)
-        unfolding Word.is_up by auto
-      have h4:"sint ((scast w2)::64 Word.word) = sint w2"
-        apply(rule Word.sint_up_scast)
-        unfolding Word.is_up by auto
-      have sints32:"sints 32 = {i. - (2 ^ 31) \<le> i \<and> i < 2 ^ 31}"
-        using sints_def[of 32] range_sbintrunc[of 31] by auto 
-      have rangew1:"sint ((scast w1)::64 Word.word) \<in> {- (2 ^ 31).. (2^31)} " 
-        using Word.word_sint.Rep[of "(w1)::32 Word.word"] sints32   len32 mem_Collect_eq h1 h3 h4 
-        by auto
-      have rangew2:"sint ((scast w2)::64 Word.word) \<in> {- (2 ^ 31).. (2^31)} " 
-        using Word.word_sint.Rep[of "(w2)::32 Word.word"] sints32 len32 mem_Collect_eq h1 h3 h4 
-        by auto
-      have bigLeq:"(4611686018427387904::real) \<le> 9223372036854775807" by auto
-      have set_cast:"\<And>x::int. (x \<in> {-(2^31)..2^31}) = ( (real_of_int x) \<in> {-(2^31)..2^31})"
-        by auto
-      have eq3:"sint(((scast w1)::64 Word.word) * ((scast w2)::64 Word.word)) = 
-        sint ((scast w1)::64 Word.word) * sint ((scast w2)::64 Word.word)"
-        apply(rule Word_Lemmas.signed_arith_sint(4))
-        using rangew1 rangew2 h1 h2 h3 h4 
-        using Word.word_size[of "((scast w1)::64 Word.word)"] 
-        using Word.word_size[of "((scast w2)::64 Word.word)"]
-        using times_upcast_upper[of "sint w1" "sint w2"]
-        using times_upcast_lower[of "sint w1" "sint w2"] 
-        unfolding NEG_INF_def by auto
-      assume "((scast POS_INF)::64 Word.word) <=s ?prod"
-      then have sint_leq:"sint ((scast POS_INF)::64 Word.word) \<le> sint ?prod"
-        using word_sle_def by blast
-      have neqs:"w1 \<noteq> POS_INF" " w1 \<noteq> NEG_INF" "w2 \<noteq> POS_INF" "w2 \<noteq> NEG_INF"
-        using AllFinite word_sless_def signed.not_less_iff_gr_or_eq by force+
-      from eq1 have rw1:"r1 =  (real_of_int (sint w1))" 
-        using repe.simps AllFinite neqs by auto
-      from eq2 have rw2:"r2 = (real_of_int (sint w2))" by (auto simp add: repe.simps neqs)
-      show "POS_INF \<equiv>\<^sub>E r1 * r2"
-        apply (simp add: repe.simps)
-        apply(rule disjI1)
-        using h1 h2 h3 h4 rw1 rw2 sint_leq unfolding POS_INF_def apply auto
-        by (metis (no_types, hide_lams) eq3 of_int_le_iff of_int_mult of_int_numeral)
-    qed
-  have case3:"\<not>(?prod <=s ((scast NEG_INF)::64 Word.word)) 
-  \<Longrightarrow> \<not>((scast POS_INF)::64 Word.word) <=s ?prod \<Longrightarrow> ((scast ?prod)::word) \<equiv>\<^sub>E (r1 * r2)"
-    proof -
-      have h1:"sint ((scast POS_INF)::64 Word.word) = sint POS_INF"
-        apply(rule Word.sint_up_scast)
-        unfolding Word.is_up by auto
-      have h2:"sint POS_INF = (2^31)-1" unfolding POS_INF_def by auto
-      have h3:"sint ((scast w1)::64 Word.word) = sint w1"
-        apply(rule Word.sint_up_scast)
-        unfolding Word.is_up by auto
-      have h4:"sint ((scast w2)::64 Word.word) = sint w2"
-        apply(rule Word.sint_up_scast)
-        unfolding Word.is_up by auto
-      have h5:"sint ((scast NEG_INF)::64 Word.word) = sint NEG_INF"
-        apply(rule Word.sint_up_scast)
-        unfolding Word.is_up by auto
-      have h6:"sint NEG_INF = -(2^31)+1" unfolding NEG_INF_def by auto
-      have sints32:"sints 32 = {i. - (2 ^ 31) \<le> i \<and> i < 2 ^ 31}"
-        using sints_def[of 32] range_sbintrunc[of 31] by auto 
-      have rangew1:"sint ((scast w1)::64 Word.word) \<in> {- (2 ^ 31).. (2^31)} " 
-        using Word.word_sint.Rep[of "(w1)::32 Word.word"] sints32   len32 mem_Collect_eq h1 h3 h4 
-        by auto
-      have rangew2:"sint ((scast w2)::64 Word.word) \<in> {- (2 ^ 31).. (2^31)} " 
-        using Word.word_sint.Rep[of "(w2)::32 Word.word"] sints32 len32 mem_Collect_eq h1 h3 h4 
-        by auto
-      have bigLeq:"(4611686018427387904::real) \<le> 9223372036854775807" by auto
-      have set_cast:"\<And>x::int. (x \<in> {-(2^31)..2^31}) = ( (real_of_int x) \<in> {-(2^31)..2^31})"
-        by auto
-      have eq3:"sint(((scast w1)::64 Word.word) * ((scast w2)::64 Word.word)) = 
-       sint ((scast w1)::64 Word.word) * sint ((scast w2)::64 Word.word)"
-       apply(rule Word_Lemmas.signed_arith_sint(4))
-       using rangew1 rangew2 h1 h2 h3 h4 
-       using Word.word_size[of "((scast w1)::64 Word.word)"] 
-       using Word.word_size[of "((scast w2)::64 Word.word)"]
-       using times_upcast_upper[of "sint w1" "sint w2"]
-       using times_upcast_lower[of "sint w1" "sint w2"] 
-       unfolding NEG_INF_def by auto
-      assume a1:"\<not>(?prod <=s ((scast NEG_INF)::64 Word.word))"
-      then have sintGe:"sint (?prod) > sint (((scast NEG_INF)::64 Word.word))"
-        using word_sle_def dual_order.order_iff_strict signed.linear 
-        by fastforce
-      assume a2:"\<not>((scast POS_INF)::64 Word.word) <=s ?prod"
-      then have sintLe:"sint (((scast POS_INF)::64 Word.word)) > sint (?prod)"
-        using word_sle_def dual_order.order_iff_strict signed.linear 
-        by fastforce
-      have neqs:"w1 \<noteq> POS_INF" " w1 \<noteq> NEG_INF" "w2 \<noteq> POS_INF" "w2 \<noteq> NEG_INF"
-        using AllFinite word_sless_def signed.not_less_iff_gr_or_eq by force+
-      from eq1 have rw1:"r1 =  (real_of_int (sint w1))" by(auto simp add: repe.simps neqs)
-      from eq2 have rw2:"r2 =  (real_of_int (sint w2))" by(auto simp add: repe.simps neqs)
-      from rw1 rw2 have "r1 * r2 =  (real_of_int ((sint w1) * (sint w2)))"
-        by simp
-      have rightSize:"sint (((scast w1)::64 Word.word) * ((scast w2)::64 Word.word))
-        \<in> sints (len_of TYPE(32))"
-        using sintLe sintGe sints32 by (simp add: NEG_INF_def POS_INF_def) 
-      have downcast:"sint ((scast (((scast w1)::64 Word.word) * ((scast w2)::64 Word.word)))::word)
-                   = sint (((scast w1)::64 Word.word) * ((scast w2)::64 Word.word))"
-        using scast_down_range[OF rightSize]
-        by auto
-      then have res_eq:"r1 * r2 
-        = real_of_int(sint((scast (((scast w1)::64 Word.word)*((scast w2)::64 Word.word)))::word))"
-        using rw1 rw2 eq3 h1 h2 h3 h4 h5 downcast POS_INF_def NEG_INF_def
-        using \<open>r1 * r2 =  (real_of_int (sint w1 * sint w2))\<close> 
-        by (auto simp add: POS_INF_def NEG_INF_def)
-      have res_up:"sint (scast (((scast w1)::64 Word.word) * ((scast w2)::64 Word.word))::word) 
-                 < sint POS_INF"
-        using rw1 rw2 eq3 h1 h2 h3 h4 h5 downcast
-        using POS_INF_def NEG_INF_def 
-        using \<open>r1 * r2 = (real_of_int (sint w1 * sint w2))\<close> 
-            \<open>sint (scast w1 * scast w2) < sint (scast POS_INF)\<close> 
-            of_int_eq_iff res_eq 
-        by presburger
-      have res_lo:"sint NEG_INF 
-                 < sint (scast (((scast w1)::64 Word.word) * ((scast w2)::64 Word.word))::word)"
-              using rw1 rw2 eq3 h1 h2 h3 h4 h5 downcast
-        using POS_INF_def NEG_INF_def 
-        using \<open>r1 * r2 =  (real_of_int (sint w1 * sint w2))\<close> 
-            \<open>sint (scast NEG_INF) < sint (scast w1 * scast w2)\<close> 
-             of_int_eq_iff res_eq 
-        by presburger
-      show "scast ?prod \<equiv>\<^sub>E (r1 * r2)"
+  consider 
+      (ProdNeg) "?prod <=s ((scast NEG_INF)::64 Word.word)" 
+    | (ProdPos) "(((scast POS_INF)::64 Word.word) <=s ?prod)"
+    | (ProdFin) "\<not>(?prod <=s ((scast NEG_INF)::64 Word.word)) \<and>  \<not>((scast POS_INF)::64 Word.word) <=s ?prod"
+    by (auto)
+  then show ?thesis
+  proof (cases)
+    case ProdNeg
+    have h1:"sint ((scast NEG_INF)::64 Word.word) = sint NEG_INF"
+      apply(rule Word.sint_up_scast)
+      unfolding Word.is_up by auto
+    have h2:"sint NEG_INF = -(2^31)+1" unfolding NEG_INF_def by auto
+    have h3:"sint ((scast w1)::64 Word.word) = sint w1"
+      apply(rule Word.sint_up_scast)
+      unfolding Word.is_up by auto
+    have h4:"sint ((scast w2)::64 Word.word) = sint w2"
+      apply(rule Word.sint_up_scast)
+      unfolding Word.is_up by auto
+    have sints32:"sints 32 = {i. - (2 ^ 31) \<le> i \<and> i < 2 ^ 31}"
+      using sints_def[of 32] range_sbintrunc[of 31] by auto 
+    have rangew1:"sint ((scast w1)::64 Word.word) \<in> {- (2 ^ 31).. (2^31)} " 
+      using Word.word_sint.Rep[of "(w1)::32 Word.word"] sints32   len32 mem_Collect_eq h1 h3 h4 
+      by auto
+    have rangew2:"sint ((scast w2)::64 Word.word) \<in> {- (2 ^ 31).. (2^31)} " 
+      using Word.word_sint.Rep[of "(w2)::32 Word.word"] sints32 len32 mem_Collect_eq h1 h3 h4 
+      by auto
+    have bigLeq:"(4611686018427387904::real) \<le> 9223372036854775807" by auto
+    have set_cast:"\<And>x::int. (x \<in> {-(2^31)..2^31}) = ( (real_of_int x) \<in> {-(2^31)..2^31})"
+      by auto
+    have eq3:"sint(((scast w1)::64 Word.word) * ((scast w2)::64 Word.word)) = 
+     sint ((scast w1)::64 Word.word) * sint ((scast w2)::64 Word.word)"
+     apply(rule Word_Lemmas.signed_arith_sint(4))
+     using rangew1 rangew2 h1 h2 h3 h4 
+     using Word.word_size[of "((scast w1)::64 Word.word)"] 
+     using Word.word_size[of "((scast w2)::64 Word.word)"]
+     using times_upcast_upper[of "sint w1" "sint w2"]
+     using times_upcast_lower[of "sint w1" "sint w2"] 
+     unfolding NEG_INF_def by auto
+    assume "?prod <=s ((scast NEG_INF)::64 Word.word)"
+    then have sint_leq:"sint ?prod \<le> sint ((scast NEG_INF)::64 Word.word)"
+      using word_sle_def by blast
+    have neqs:"w1 \<noteq> POS_INF" " w1 \<noteq> NEG_INF" "w2 \<noteq> POS_INF" "w2 \<noteq> NEG_INF"
+      using AllFinite word_sless_def signed.not_less_iff_gr_or_eq by force+
+    from eq1 have rw1:"r1 =  (real_of_int (sint w1))" by(auto simp add: repe.simps neqs)
+    from eq2 have rw2:"r2 =  (real_of_int (sint w2))" by(auto simp add: repe.simps neqs)
+    show ?thesis
+      using AllFinite ProdNeg h1 h2 h3 h4 rw1 rw2 sint_leq  
+      apply (auto simp add: repe.simps POS_INF_def NEG_INF_def)
+      by (metis (no_types, hide_lams) eq3 of_int_le_iff of_int_minus of_int_mult of_int_numeral) 
+  next
+    case ProdPos
+    have h1:"sint ((scast POS_INF)::64 Word.word) = sint POS_INF"
+      apply(rule Word.sint_up_scast)
+      unfolding Word.is_up by auto
+    have h2:"sint POS_INF = (2^31)-1" unfolding POS_INF_def by auto
+    have h3:"sint ((scast w1)::64 Word.word) = sint w1"
+      apply(rule Word.sint_up_scast)
+      unfolding Word.is_up by auto
+    have h4:"sint ((scast w2)::64 Word.word) = sint w2"
+      apply(rule Word.sint_up_scast)
+      unfolding Word.is_up by auto
+    have sints32:"sints 32 = {i. - (2 ^ 31) \<le> i \<and> i < 2 ^ 31}"
+      using sints_def[of 32] range_sbintrunc[of 31] by auto 
+    have rangew1:"sint ((scast w1)::64 Word.word) \<in> {- (2 ^ 31).. (2^31)} " 
+      using Word.word_sint.Rep[of "(w1)::32 Word.word"] sints32   len32 mem_Collect_eq h1 h3 h4 
+      by auto
+    have rangew2:"sint ((scast w2)::64 Word.word) \<in> {- (2 ^ 31).. (2^31)} " 
+      using Word.word_sint.Rep[of "(w2)::32 Word.word"] sints32 len32 mem_Collect_eq h1 h3 h4 
+      by auto
+    have bigLeq:"(4611686018427387904::real) \<le> 9223372036854775807" by auto
+    have set_cast:"\<And>x::int. (x \<in> {-(2^31)..2^31}) = ( (real_of_int x) \<in> {-(2^31)..2^31})"
+      by auto
+    have eq3:"sint(((scast w1)::64 Word.word) * ((scast w2)::64 Word.word)) = 
+      sint ((scast w1)::64 Word.word) * sint ((scast w2)::64 Word.word)"
+      apply(rule Word_Lemmas.signed_arith_sint(4))
+      using rangew1 rangew2 h1 h2 h3 h4 
+      using Word.word_size[of "((scast w1)::64 Word.word)"] 
+      using Word.word_size[of "((scast w2)::64 Word.word)"]
+      using times_upcast_upper[of "sint w1" "sint w2"]
+      using times_upcast_lower[of "sint w1" "sint w2"] 
+      unfolding NEG_INF_def by auto
+    assume cast:"((scast POS_INF)::64 Word.word) <=s ?prod"
+    then have sint_leq:"sint ((scast POS_INF)::64 Word.word) \<le> sint ?prod"
+      using word_sle_def by blast
+    have neqs:"w1 \<noteq> POS_INF" " w1 \<noteq> NEG_INF" "w2 \<noteq> POS_INF" "w2 \<noteq> NEG_INF"
+      using AllFinite word_sless_def signed.not_less_iff_gr_or_eq by force+
+    from eq1 have rw1:"r1 =  (real_of_int (sint w1))" 
+      using repe.simps AllFinite neqs by auto
+    from eq2 have rw2:"r2 = (real_of_int (sint w2))" by (auto simp add: repe.simps neqs)
+    have prodHi:"r1 * r2 \<ge> PosInf"
+      using h3 h4 rw1 rw2 sint_leq apply(auto simp add: POS_INF_def)
+      by (metis (no_types, hide_lams) eq3 of_int_le_iff of_int_mult of_int_numeral)
+    have infs:"SCAST(32 \<rightarrow> 64) NEG_INF <s SCAST(32 \<rightarrow> 64) POS_INF"
+      by (auto simp add: POS_INF_def NEG_INF_def)
+    have casted:"SCAST(32 \<rightarrow> 64) POS_INF <=s SCAST(32 \<rightarrow> 64) w1 * SCAST(32 \<rightarrow> 64) w2"
+      using cast by auto
+    have almostContra:"SCAST(32 \<rightarrow> 64) NEG_INF <s SCAST(32 \<rightarrow> 64) w1 * SCAST(32 \<rightarrow> 64) w2"
+      using infs cast signed.dual_order.trans
+      by auto
+    have contra:"\<not>(SCAST(32 \<rightarrow> 64) w1 * SCAST(32 \<rightarrow> 64) w2 <=s SCAST(32 \<rightarrow> 64) NEG_INF)"
+      using eq3 almostContra by auto
+    have wtimesCase:"wtimes w1 w2 = POS_INF"
+      using neqs ProdPos almostContra wtimes.simps AllFinite ProdPos
+      by (auto simp add: repe.simps POS_INF_def NEG_INF_def Let_def)
+    show ?thesis
+      using prodHi
+      apply(simp only: repe.simps)      
+      apply(rule disjI1)
+      apply(rule exI[where x= "r1*r2"])
+      apply(rule conjI)
+       apply(rule wtimesCase)
+      using prodHi by auto
+  next
+    case ProdFin
+    have h1:"sint ((scast POS_INF)::64 Word.word) = sint POS_INF"
+      apply(rule Word.sint_up_scast)
+      unfolding Word.is_up by auto
+    have h2:"sint POS_INF = (2^31)-1" unfolding POS_INF_def by auto
+    have h3:"sint ((scast w1)::64 Word.word) = sint w1"
+      apply(rule Word.sint_up_scast)
+      unfolding Word.is_up by auto
+    have h4:"sint ((scast w2)::64 Word.word) = sint w2"
+      apply(rule Word.sint_up_scast)
+      unfolding Word.is_up by auto
+    have h5:"sint ((scast NEG_INF)::64 Word.word) = sint NEG_INF"
+      apply(rule Word.sint_up_scast)
+      unfolding Word.is_up by auto
+    have h6:"sint NEG_INF = -(2^31)+1" unfolding NEG_INF_def by auto
+    have sints32:"sints 32 = {i. - (2 ^ 31) \<le> i \<and> i < 2 ^ 31}"
+      using sints_def[of 32] range_sbintrunc[of 31] by auto 
+    have rangew1:"sint ((scast w1)::64 Word.word) \<in> {- (2 ^ 31).. (2^31)} " 
+      using Word.word_sint.Rep[of "(w1)::32 Word.word"] sints32   len32 mem_Collect_eq h1 h3 h4 
+      by auto
+    have rangew2:"sint ((scast w2)::64 Word.word) \<in> {- (2 ^ 31).. (2^31)} " 
+      using Word.word_sint.Rep[of "(w2)::32 Word.word"] sints32 len32 mem_Collect_eq h1 h3 h4 
+      by auto
+    have bigLeq:"(4611686018427387904::real) \<le> 9223372036854775807" by auto
+    have set_cast:"\<And>x::int. (x \<in> {-(2^31)..2^31}) = ( (real_of_int x) \<in> {-(2^31)..2^31})"
+      by auto
+    have eq3:"sint(((scast w1)::64 Word.word) * ((scast w2)::64 Word.word)) = 
+      sint ((scast w1)::64 Word.word) * sint ((scast w2)::64 Word.word)"
+      apply(rule Word_Lemmas.signed_arith_sint(4))
+      using rangew1 rangew2 h1 h2 h3 h4 
+      using Word.word_size[of "((scast w1)::64 Word.word)"] 
+      using Word.word_size[of "((scast w2)::64 Word.word)"]
+      using times_upcast_upper[of "sint w1" "sint w2"]
+      using times_upcast_lower[of "sint w1" "sint w2"] 
+      unfolding NEG_INF_def by auto
+    from ProdFin have a1:"\<not>(?prod <=s ((scast NEG_INF)::64 Word.word))"
+      by auto
+    then have sintGe:"sint (?prod) > sint (((scast NEG_INF)::64 Word.word))"
+      using word_sle_def dual_order.order_iff_strict signed.linear 
+      by fastforce
+    from ProdFin have a2:"\<not>((scast POS_INF)::64 Word.word) <=s ?prod"
+      by auto
+    then have sintLe:"sint (((scast POS_INF)::64 Word.word)) > sint (?prod)"
+      using word_sle_def dual_order.order_iff_strict signed.linear 
+      by fastforce
+    have neqs:"w1 \<noteq> POS_INF" " w1 \<noteq> NEG_INF" "w2 \<noteq> POS_INF" "w2 \<noteq> NEG_INF"
+      using AllFinite word_sless_def signed.not_less_iff_gr_or_eq by force+
+    from eq1 have rw1:"r1 =  (real_of_int (sint w1))" by(auto simp add: repe.simps neqs)
+    from eq2 have rw2:"r2 =  (real_of_int (sint w2))" by(auto simp add: repe.simps neqs)
+    from rw1 rw2 have "r1 * r2 =  (real_of_int ((sint w1) * (sint w2)))"
+      by simp
+    have rightSize:"sint (((scast w1)::64 Word.word) * ((scast w2)::64 Word.word))
+      \<in> sints (len_of TYPE(32))"
+      using sintLe sintGe sints32 by (simp add: NEG_INF_def POS_INF_def) 
+    have downcast:"sint ((scast (((scast w1)::64 Word.word) * ((scast w2)::64 Word.word)))::word)
+                 = sint (((scast w1)::64 Word.word) * ((scast w2)::64 Word.word))"
+      using scast_down_range[OF rightSize]
+      by auto
+    then have res_eq:"r1 * r2 
+      = real_of_int(sint((scast (((scast w1)::64 Word.word)*((scast w2)::64 Word.word)))::word))"
+      using rw1 rw2 eq3 h1 h2 h3 h4 h5 downcast POS_INF_def NEG_INF_def
+      using \<open>r1 * r2 =  (real_of_int (sint w1 * sint w2))\<close> 
+      by (auto simp add: POS_INF_def NEG_INF_def)
+    have res_up:"sint (scast (((scast w1)::64 Word.word) * ((scast w2)::64 Word.word))::word) 
+               < sint POS_INF"
+      using rw1 rw2 eq3 h1 h2 h3 h4 h5 downcast
+      using POS_INF_def NEG_INF_def 
+      using \<open>r1 * r2 = (real_of_int (sint w1 * sint w2))\<close> 
+          \<open>sint (scast w1 * scast w2) < sint (scast POS_INF)\<close> 
+          of_int_eq_iff res_eq 
+      by presburger
+    have res_lo:"sint NEG_INF 
+               < sint (scast (((scast w1)::64 Word.word) * ((scast w2)::64 Word.word))::word)"
+            using rw1 rw2 eq3 h1 h2 h3 h4 h5 downcast
+      using POS_INF_def NEG_INF_def 
+      using \<open>r1 * r2 =  (real_of_int (sint w1 * sint w2))\<close> 
+          \<open>sint (scast NEG_INF) < sint (scast w1 * scast w2)\<close> 
+           of_int_eq_iff res_eq 
+      by presburger
+    have "scast ?prod \<equiv>\<^sub>E (r1 * r2)"
         using res_eq res_up res_lo 
         by (auto simp add: repe.simps)
-    qed
-  show ?thesis
-  apply(cases "?prod <=s ((scast NEG_INF)::64 Word.word)")
-  subgoal 
-    using AllFinite case1 by(auto simp add: repe.simps NEG_INF_def POS_INF_def)
-  apply(cases "(((scast POS_INF)::64 Word.word) <=s ?prod)")
-  subgoal 
-    using AllFinite case2 by(auto simp add: repe.simps NEG_INF_def POS_INF_def)
-  using AllFinite case3 by(auto simp add: repe.simps NEG_INF_def POS_INF_def)
+    then show ?thesis 
+      using AllFinite ProdFin by(auto)
+  qed
 qed
 
 
