@@ -470,12 +470,82 @@ by (simp add: assms word_sint.Abs_inverse)
 
 text\<open>Correctness of upper bound of w1 + w2\<close>
 
+(* 
+d2 \<rightarrow> w1Leq'
+c \<rightarrow> w1case1a'
+e \<rightarrow> scast_eq1 *)
 lemma pu_lemma:
   fixes w1 w2
   fixes r1 r2 :: real
   assumes up1:"w1 \<equiv>\<^sub>U (r1::real)"
   assumes up2:"w2 \<equiv>\<^sub>U (r2::real)"
   shows   "pu w1 w2 \<equiv>\<^sub>U (r1 + r2)"
+proof -
+  have scast_eq1:"sint((scast w1)::64 Word.word) = sint w1" 
+    apply(rule Word.sint_up_scast)
+    unfolding Word.is_up by auto
+  have scast_eq2:"sint((scast (0x80000001::word))::64 Word.word) 
+  = sint ((0x80000001::32 Word.word))"
+     by auto
+  have scast_eq3:"sint((scast w2)::64 Word.word) = sint w2"
+    apply(rule Word.sint_up_scast)
+    unfolding Word.is_up by auto
+  have w2Geq:"sint ((scast w2)::64 Word.word) \<ge> - (2 ^ 31) " 
+    using Word.word_sint.Rep[of "(w2)::32 Word.word"] sints32 Word.word_size scast_eq1 upcast_max
+      scast_eq3 len32 mem_Collect_eq 
+    by auto
+  have "sint ((scast w2)::64 Word.word) \<le> 2 ^ 31"
+    apply (auto simp add: Word.word_sint.Rep[of "(w2)::32 Word.word"] sints32 
+        scast_eq3 len32)
+    using Word.word_sint.Rep[of "(w2)::32 Word.word"] len32[of "TYPE(32)"] sints32 by auto
+  then have w2Less:"sint ((scast w2)::64 Word.word) < 9223372039002259455" by auto
+  have w2Range:
+    "-(2 ^ (size ((scast w2)::64 Word.word) - 1)) 
+     \<le> sint ((scast w2)::64 Word.word) + sint ((-0x7FFFFFFF)::64 Word.word) 
+   \<and> sint ((scast w2)::64 Word.word) + sint ((-0x7FFFFFFF)::64 Word.word) 
+     \<le> 2 ^ (size ((scast w2)::64 Word.word) - 1) - 1"
+    apply(auto simp add: Word.word_size scast_eq1 upcast_max sints64 max_less)
+    using max_diff_pos max_less w2Less w2Geq by auto
+  have w2case1a:"sint (((scast w2)::64 Word.word) + (-0x7FFFFFFF::64 Word.word)) 
+            =  sint ((scast w2)::64 Word.word) + sint (-0x7FFFFFFF::64 Word.word)"
+    by(rule signed_arith_sint(1)[OF w2Range])
+  have thing2:"sint ((scast w1)::64 Word.word) \<ge> - (2 ^ 31) " 
+    using Word.word_sint.Rep[of "(w1)::32 Word.word"] sints32 Word.word_size scast_eq1 scast_eq2 
+      scast_eq3 len32 mem_Collect_eq 
+    by auto
+  have w1Leq:"sint ((scast w1)::64 Word.word) \<le> 2 ^ 31"
+    apply (auto simp add: Word.word_sint.Rep[of "(w1)::32 Word.word"] sints32 scast_eq1 len32)
+    using Word.word_sint.Rep[of "(w1)::32 Word.word"] len32[of "TYPE(32)"] sints32 by auto
+  then have w1Less:"sint ((scast w1)::64 Word.word) < 9223372039002259455"
+    using max_less by auto
+  have w1MinusBound:" - (2 ^ (size ((scast w1)::64 Word.word) - 1)) 
+    \<le> sint ((scast w1)::64 Word.word) + sint ((-0x7FFFFFFF)::64 Word.word) 
+  \<and> sint ((scast w1)::64 Word.word) + sint ((-0x7FFFFFFF)::64 Word.word) 
+    \<le> 2 ^ (size ((scast w1)::64 Word.word) - 1) - 1"
+    apply(auto simp add:
+    Word.word_size[of "(scast w1)::64 Word.word"] 
+    Word.word_size[of "(scast (-0x7FFFFFFF))::64 Word.word"]
+    scast_eq3 scast_eq2 
+    Word.word_sint.Rep[of "(w1)::32 Word.word"]
+    Word.word_sint.Rep[of "0x80000001::32 Word.word"]
+    Word.word_sint.Rep[of "(scast w1)::64 Word.word"]
+    Word.word_sint.Rep[of "-0x7FFFFFFF::64 Word.word"]
+    sints64 sints32 thing2)
+    using thing2 w1Less by auto
+  have w1case1a:"sint (((scast w1)::64 Word.word) + (-0x7FFFFFFF::64 Word.word)) 
+             = sint ((scast w1)::64 Word.word) + sint (-0x7FFFFFFF::64 Word.word)"
+    by (rule signed_arith_sint(1)[of "(scast w1)::64 Word.word" "(- 0x7FFFFFFF)", OF w1MinusBound])
+  have w1case1a':"sint (((scast w1)::64 Word.word) + 0xFFFFFFFF80000001) 
+        = sint ((scast w1)::64 Word.word) + sint ((-0x7FFFFFFF)::64 Word.word)"
+    using min_extend_val w1case1a by auto
+  have w1Leq':"sint w1 \<le> 2^31 - 1"
+    using Word.word_sint.Rep[of "(w1)::32 Word.word"] 
+    by (auto simp add:  sints32 len32[of "TYPE(32)"])
+  obtain r'\<^sub>1 and r'\<^sub>2 where   
+            geq1:"r'\<^sub>1\<ge>r1" and equiv1:"w1 \<equiv>\<^sub>E r'\<^sub>1"
+        and geq2:"r'\<^sub>2\<ge>r2" and equiv2:"w2 \<equiv>\<^sub>E r'\<^sub>2"
+          using up1 up2 unfolding repU_def by auto
+  show ?thesis
 proof (cases rule: case_pu_inf[where ?w1.0=w1, where ?w2.0=w2])
   case PosAny then show ?thesis
     apply (auto simp add: repU_def repe.simps)
@@ -496,44 +566,15 @@ next
   assume eq2:"w1 = NEG_INF"
   assume neq3:"w2 \<noteq> NEG_INF"
   let ?sum = "(scast w2 + scast NEG_INF)::64 Word.word"
-  have scast_eq1:"sint((scast w1)::64 Word.word) = sint w1" 
-    apply(rule Word.sint_up_scast)
-    unfolding Word.is_up by auto
-  have scast_eq3:"sint((scast w2)::64 Word.word) = sint w2"
-    apply(rule Word.sint_up_scast)
-    unfolding Word.is_up by auto
-  have w2Geq:"sint ((scast w2)::64 Word.word) \<ge> - (2 ^ 31) " 
-    using Word.word_sint.Rep[of "(w2)::32 Word.word"] sints32 Word.word_size scast_eq1 upcast_max
-      scast_eq3 len32 mem_Collect_eq 
-    by auto
-  have "sint ((scast w2)::64 Word.word) \<le> 2 ^ 31"
-    apply (auto simp add: Word.word_sint.Rep[of "(w2)::32 Word.word"] sints32 
-        scast_eq3 len32)
-    using Word.word_sint.Rep[of "(w2)::32 Word.word"] len32[of "TYPE(32)"] sints32 by auto
-  then have w2Less:"sint ((scast w2)::64 Word.word) < 9223372039002259455" by auto
-  have w2Range:
-    "-(2 ^ (size ((scast w2)::64 Word.word) - 1)) 
-     \<le> sint ((scast w2)::64 Word.word) + sint ((-0x7FFFFFFF)::64 Word.word) 
-   \<and> sint ((scast w2)::64 Word.word) + sint ((-0x7FFFFFFF)::64 Word.word) 
-     \<le> 2 ^ (size ((scast w2)::64 Word.word) - 1) - 1"
-    apply(auto simp add: Word.word_size scast_eq1 upcast_max sints64 max_less)
-    using max_diff_pos max_less w2Less w2Geq by auto
-  have case1a:"sint (((scast w2)::64 Word.word) + (-0x7FFFFFFF::64 Word.word)) 
-            =  sint ((scast w2)::64 Word.word) + sint (-0x7FFFFFFF::64 Word.word)"
-    by(rule signed_arith_sint(1)[OF w2Range])
   have case1:"?sum <=s ((scast NEG_INF)::64 Word.word) \<Longrightarrow> NEG_INF \<equiv>\<^sub>U r1 + r2"
     using up1 up2 apply (simp add: repU_def repe.simps word_sle_def)
     apply(rule exI[where x= "r1 + r2"])
     apply(auto)
-        using case1a min_extend_neg
+        using w2case1a min_extend_neg
         apply (auto simp add: neq1 eq2 neq3 repINT repU_def repe.simps repeInt_simps
         up2 word_sless_alt) 
     using repINT repU_def repe.simps repeInt_simps up2 word_sless_alt 
       add.right_neutral add_mono dual_order.trans of_int_le_0_iff scast_eq3 by fastforce+
-  obtain r'\<^sub>1 and r'\<^sub>2 where   
-            geq1:"r'\<^sub>1\<ge>r1" and equiv1:"w1 \<equiv>\<^sub>E r'\<^sub>1"
-        and geq2:"r'\<^sub>2\<ge>r2" and equiv2:"w2 \<equiv>\<^sub>E r'\<^sub>2"
-          using up1 up2 unfolding repU_def by auto
   have leq1:"r'\<^sub>1 \<le>  (real_of_int (sint NEG_INF))" 
     using equiv1 neq1 eq2 neq3 by (auto simp add: repe.simps)
   have leq2:"r'\<^sub>2 =  (real_of_int (sint w2))"
@@ -698,62 +739,18 @@ next
   assume neq1:"w1 \<noteq> POS_INF"
   assume eq2:"w2 = NEG_INF"
   let ?sum = "(scast w1 + scast NEG_INF)::64 Word.word"
-  have scast_eq1:"sint((scast w2)::64 Word.word) = sint w2" 
-     apply(rule Word.sint_up_scast)
-     unfolding Word.is_up by auto
-  have scast_eq3:"sint((scast w1)::64 Word.word) = sint w1"
-    apply(rule Word.sint_up_scast)
-     unfolding Word.is_up by auto
-  have scast_eq2:"sint((scast (0x80000001::word))::64 Word.word) 
-  = sint ((0x80000001::32 Word.word))"
-     by auto
-  have thing2:"sint ((scast w1)::64 Word.word) \<ge> - (2 ^ 31) " 
-    using Word.word_sint.Rep[of "(w1)::32 Word.word"] sints32 Word.word_size scast_eq1 scast_eq2 
-      scast_eq3 len32 mem_Collect_eq 
-    by auto
-  have bLeq:"sint ((scast w1)::64 Word.word) \<le> 2 ^ 31"
-    apply (auto simp add: Word.word_sint.Rep[of "(w1)::32 Word.word"] sints32 
-        scast_eq3 len32)
-    using Word.word_sint.Rep[of "(w1)::32 Word.word"] len32[of "TYPE(32)"] sints32 by auto
-  have thing3:"sint ((scast w1)::64 Word.word) < 9223372039002259455"
-    using max_less bLeq by auto
-  have truth:" - (2 ^ (size ((scast w1)::64 Word.word) - 1)) 
-    \<le> sint ((scast w1)::64 Word.word) + sint ((-0x7FFFFFFF)::64 Word.word) 
-  \<and> sint ((scast w1)::64 Word.word) + sint ((-0x7FFFFFFF)::64 Word.word) 
-    \<le> 2 ^ (size ((scast w1)::64 Word.word) - 1) - 1"
-    apply(auto simp add:
-    Word.word_size[of "(scast w1)::64 Word.word"] 
-    Word.word_size[of "(scast (-0x7FFFFFFF))::64 Word.word"]
-    scast_eq1 scast_eq2 
-    Word.word_sint.Rep[of "(w1)::32 Word.word"]
-    Word.word_sint.Rep[of "0x80000001::32 Word.word"]
-    Word.word_sint.Rep[of "(scast w1)::64 Word.word"]
-    Word.word_sint.Rep[of "-0x7FFFFFFF::64 Word.word"]
-    sints64 sints32 thing2)
-    using thing2 thing3 by auto
-  have case1a:"sint (((scast w1)::64 Word.word) + (-0x7FFFFFFF::64 Word.word)) 
-             = sint ((scast w1)::64 Word.word) + sint (-0x7FFFFFFF::64 Word.word)"
-    by (rule signed_arith_sint(1)[of "(scast w1)::64 Word.word" "(- 0x7FFFFFFF)", OF truth])
-  have c:"sint (((scast w1)::64 Word.word) + 0xFFFFFFFF80000001) 
-        = sint ((scast w1)::64 Word.word) + sint ((-0x7FFFFFFF)::64 Word.word)"
-    using min_extend_val case1a by auto
-  have e:"sint ((scast w1)::64 Word.word) = sint w1" 
-    using scast_eq3 by blast
-  have d2:"sint w1 \<le> 2^31 - 1"
-    using Word.word_sint.Rep[of "(w1)::32 Word.word"] 
-    by (auto simp add:  sints32 len32[of "TYPE(32)"])
   have case1:"?sum <=s ((scast NEG_INF)::64 Word.word) \<Longrightarrow> NEG_INF \<equiv>\<^sub>U r1 + r2"
     using up1 up2 apply (simp add: repU_def repe.simps word_sle_def)
     apply(rule exI[where x= "r1 + r2"])
     apply(auto)
-        using case1a min_extend_neg 
+        using w1case1a min_extend_neg 
         apply (auto simp add: neq1 eq2 neq3 repINT repU_def repe.simps repeInt_simps 
         up2 word_sless_alt) 
     using repINT repU_def repe.simps repeInt_simps up2 word_sless_alt
     proof -
       fix r'
       assume a1:"sint ((scast w1)::64 Word.word) \<le> 0"
-      then have h3:"sint w1 \<le> 0" using scast_eq3 by auto 
+      then have h3:"sint w1 \<le> 0" using scast_eq1 by auto 
       assume a2:"r2 \<le> r'"
       assume a3:"r1 \<le>  (real_of_int (sint w1))"
       assume a4:"r' \<le>  (- 2147483647)"
@@ -771,7 +768,7 @@ next
     using equiv1 equiv2 neq1 eq2 neq3 unfolding repe.simps by auto
   have case1a:"sint (((scast w1)::64 Word.word) + (-0x7FFFFFFF::64 Word.word)) 
              = sint ((scast w1)::64 Word.word) + sint (-0x7FFFFFFF::64 Word.word)"
-    by(rule signed_arith_sint(1)[OF truth])
+    by(rule signed_arith_sint(1)[OF w1MinusBound])
   have neg64:"(((scast w1)::64 Word.word) + 0xFFFFFFFF80000001) 
             = ((scast w1)::64 Word.word) + (-0x7FFFFFFF)" 
       by auto
@@ -791,13 +788,13 @@ next
        then have sintw2_bound:"sint (((scast w1)::64 Word.word) + (-0x7FFFFFFF)) > - 2147483647"
          unfolding min_extend_val by auto 
        have "- 0x7FFFFFFF < sint w1 + (- 0x7FFFFFFF)"
-         using sintw2_bound case1a min_extend_val' scast_eq3 by linarith
+         using sintw2_bound case1a min_extend_val' scast_eq1 by linarith
        then have w2bound:"0 < sint w1" 
          using less_add_same_cancel2 by blast
        have rightSize:"sint (((scast w1)::64 Word.word) + - 0x7FFFFFFF) \<in> sints (len_of TYPE(32))"
-         unfolding case1a e 
+         unfolding w1case1a 
          using w2bound Word.word_sint.Rep[of "(w1)::32 Word.word"]
-         by ( auto simp add:   sints32 len32[of "TYPE(32)"] )
+         by (auto simp add: sints32 len32[of "TYPE(32)"] scast_eq1)
       have arith:"\<And>x::int. x \<le> 2 ^ 31 - 1 \<Longrightarrow> x + (- 2147483647) < 2147483647"
         by auto
       have downcast:"sint ((scast (((scast w1)::64 Word.word) + ((- 0x7FFFFFFF))))::word)
@@ -809,10 +806,10 @@ next
         using min_extend_val by auto
       have "(real_of_int (sint ((scast w1)::64 Word.word ) - 2147483647)) 
           = r'\<^sub>1 -  (real_of_int 2147483647)"
-          by (simp add: e leq2)
+          by (simp add: scast_eq1 leq2)
       then show "r'\<^sub>1 -  2147483647 
         = (real_of_int (sint ((scast (((scast w1)::64 Word.word) + 0xFFFFFFFF80000001))::word)))"
-        by (metis b c min_extend_val' diff_minus_eq_add minus_minus of_int_numeral)
+        by (metis b w1case1a' min_extend_val' diff_minus_eq_add minus_minus of_int_numeral)
       qed
     subgoal  
     proof -
@@ -820,11 +817,11 @@ next
       then have sintw2_bound:"sint (((scast w1)::64 Word.word) + (-0x7FFFFFFF)) > - 2147483647"
         unfolding neg64 by auto 
       have "- 0x7FFFFFFF < sint w1 + (- 0x7FFFFFFF)"
-        using sintw2_bound case1a min_extend_val' scast_eq3 by linarith
+        using sintw2_bound case1a min_extend_val' scast_eq1 by linarith
       then have w2bound:"0 < sint w1" 
         using less_add_same_cancel2 by blast
       have rightSize:"sint (((scast w1)::64 Word.word) + - 0x7FFFFFFF) \<in> sints (len_of TYPE(32))"
-        unfolding case1a e c 
+        unfolding case1a scast_eq1 w1case1a'
         using Word.word_sint.Rep[of "(w1)::32 Word.word"] w2bound
         by(auto simp add: sints32 len32[of "TYPE(32)"])
       have arith:"\<And>x::int. x \<le> 2 ^ 31 - 1 \<Longrightarrow> x + (- 2147483647) < 2147483647"
@@ -834,7 +831,7 @@ next
         using scast_down_range[OF rightSize]
         by auto
       show "sint (scast (((scast w1)::64 Word.word) + 0xFFFFFFFF80000001)::word) < 2147483647"
-        using downcast min_extend_val' e c arith[of "sint w1", OF d2]
+        using downcast min_extend_val' w1case1a' scast_eq1 arith[of "sint w1", OF w1Leq']
         by auto
     qed
     subgoal proof -
@@ -844,11 +841,11 @@ next
       then have sintw2_bound:"sint (((scast w1)::64 Word.word) + (-0x7FFFFFFF)) > - 2147483647"
         unfolding neg64 using notLeq by auto 
       have "- 0x7FFFFFFF < sint w1 + (- 0x7FFFFFFF)"
-        using sintw2_bound case1a min_extend_val' scast_eq3 by linarith
+        using sintw2_bound case1a min_extend_val' scast_eq1 by linarith
       then have w2bound:"0 < sint w1" 
         using less_add_same_cancel2 by blast
       have rightSize:"sint (((scast w1)::64 Word.word) + - 0x7FFFFFFF) \<in> sints (len_of TYPE(32))"
-        unfolding case1a e c 
+        unfolding case1a scast_eq1 w1case1a'
         using Word.word_sint.Rep[of "(w1)::32 Word.word"] w2bound
         by (auto simp add: sints32 len32[of "TYPE(32)"])
       show "- 2147483647 
@@ -1062,6 +1059,7 @@ next
    done
   then show ?thesis 
     using notinf1 notinf2 notneginf1 notneginf2 by auto
+qed
 qed
 
 text\<open>Lower bound of w1 + w2\<close>
