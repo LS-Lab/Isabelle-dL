@@ -45,13 +45,13 @@ type_synonym lit = bword
 setup_lifting type_definition_bword
 
 lift_definition bword_zero::"bword" is "0::32 Word.word"
-  by(auto simp add: POS_INF_def NEG_INF_def)
+  by auto
 
 lift_definition bword_one::"bword" is "1::32 Word.word"
-  by(auto simp add: POS_INF_def NEG_INF_def sint_uint)
+  by(auto simp add: sint_uint)
 
 lift_definition bword_neg_one::"bword" is "-1::32 Word.word"
-    by(auto simp add: POS_INF_def NEG_INF_def)
+  by(auto)
 
 text\<open>Our term language supports variables, polynomial arithmetic, and extrema. This choice was made
    based on the needs of the original paper and could be extended if necessary.\<close>
@@ -2349,13 +2349,13 @@ next
   then have lower2:"sint w2 \<le> -1" by auto
   from eq2 have rw2:"r2 =  (real_of_int (sint w2))" 
     using repe.simps "PosLo"  
-    by (auto simp add: repe.simps POS_INF_def NEG_INF_def)
+    by (auto simp add: repe.simps)
   have f4: "r1 *  (- 1) \<le>  (- 2147483647)"
-    using upper by (auto simp add: NEG_INF_def POS_INF_def)
+    using upper by (auto)
   have f5: "r2 \<le>  (- 1)"
     using lower2 rw2 by simp
   have "0 < r1"
-    using upper by (auto simp add: NEG_INF_def POS_INF_def) 
+    using upper by (auto) 
   have "\<forall>r. r < - 2147483647 \<or> \<not> r < r1 * - 1"
     using f4 less_le_trans by blast
   then have "r1 *  (real_of_int (sint w2)) \<le>  (- 2147483647)"
@@ -2363,42 +2363,42 @@ next
     by (metis \<open>0 < r1\<close> dual_order.order_iff_strict f5 mult_left_mono rw2)
   then have "r1 * r2 \<le> real_of_int (sint NEG_INF)" 
     using upper lower2  rw2 
-    by (auto simp add: NEG_INF_def POS_INF_def)
+    by (auto)
   then show ?thesis
-    using "PosLo" by (auto simp add: NEG_INF_def POS_INF_def repe.simps)
+    using "PosLo" by (auto simp add: repe.simps)
 next
   case PosHi
   from "PosHi"
   have w2NotPinf:"w2 \<noteq> POS_INF" and w2NotNinf:"w2 \<noteq> NEG_INF" 
-    by (auto simp add: NEG_INF_def POS_INF_def)
+    by (auto)
   from eq1 "PosHi" 
   have upper:"(real_of_int (sint POS_INF)) \<le> r1 " 
-    by (auto simp add: repe.simps POS_INF_def NEG_INF_def)
+    by (auto simp add: repe.simps)
   have lower1:"sint w2 > 0" using "PosHi" 
     apply (auto simp add: word_sless_def word_sle_def)   
     by (simp add: dual_order.order_iff_strict)
   then have lower2:"sint w2 \<ge> 1" by auto
   from eq2 have rw2:"r2 =  (real_of_int (sint w2))" 
     using repe.simps "PosHi" NEG_INF_def POS_INF_def
-    by (auto simp add: NEG_INF_def POS_INF_def) 
-  have "0 \<le> r1" using upper by (auto simp add: NEG_INF_def POS_INF_def)
+    by (auto ) 
+  have "0 \<le> r1" using upper by (auto)
   then have "r1 \<le> r1 * r2"
     using rw2 lower2 by (metis (no_types)  mult_left_mono mult.right_neutral of_int_1_le_iff)
   have "PosInf \<le> r1 * r2"
       using upper lower2 rw2 
-      apply (auto simp add: NEG_INF_def POS_INF_def)
+      apply (auto)
       using \<open>0 \<le> r1\<close> mult_mono mult_numeral_1_right numeral_One of_int_1_le_iff zero_le_one
       by metis
   then show ?thesis
-  using "PosHi" by (auto simp add: repe.simps POS_INF_def NEG_INF_def)
+  using "PosHi" by (auto simp add: repe.simps)
 next
   case PosZero
   from "PosZero"
   have w2NotPinf:"w2 \<noteq> POS_INF" and w2NotNinf:"w2 \<noteq> NEG_INF"
-    by (auto simp add: NEG_INF_def POS_INF_def)
+    by (auto)
   from eq1 "PosZero"
   have upper:" (real_of_int (sint POS_INF)) \<le> r1 " 
-    by (auto simp add: repe.simps POS_INF_def NEG_INF_def)
+    by (auto simp add: repe.simps)
   have lower1:"sint w2 = 0" using "PosZero" 
     by (auto simp add: word_sless_def word_sle_def)   
   from eq2 have rw2:"r2 =  (real_of_int (sint w2))" 
@@ -2407,14 +2407,14 @@ next
   have "0 = r1 * r2"
     using "PosZero" rw2 by auto
   then show ?thesis
-    using "PosZero" by (auto simp add: NEG_INF_def POS_INF_def repe.simps)
+    using "PosZero" by (auto simp add: repe.simps)
 next
   case NegHi
   have w2NotPinf:"w2 \<noteq> POS_INF" and w2NotNinf:"w2 \<noteq> NEG_INF" 
-    using "NegHi" by (auto simp add: NEG_INF_def POS_INF_def)
+    using "NegHi" by (auto)
   from eq1 "NegHi" 
   have upper:"(real_of_int (sint NEG_INF)) \<ge> r1 " 
-    by (auto simp add: repe.simps POS_INF_def NEG_INF_def)
+    by (auto simp add: repe.simps)
   have low:"sint w2 > 0" using "NegHi"
     apply (auto simp add: word_sless_def word_sle_def)
     by (simp add: dual_order.order_iff_strict)
@@ -2427,7 +2427,7 @@ next
     by (simp add: upper)
   from eq2 have rw2:"r2 =  (real_of_int (sint w2))" 
     using repe.simps "NegHi"
-    by (auto simp add: NEG_INF_def POS_INF_def)
+    by (auto)
   have mylem:"\<And>x y z::real. x \<le> -1 \<Longrightarrow> y \<ge> 1 \<Longrightarrow> z \<le> -1 \<Longrightarrow> x \<le> z \<Longrightarrow>  x * y \<le> z"
     proof -
     fix x y z::real
@@ -2447,27 +2447,27 @@ next
     qed
   have prereqs:"r1 \<le> - 1" "1 
       \<le> (real_of_int (sint w2))" " (- 2147483647::real) \<le> - 1 " "r1 \<le> (-2147483647)"
-    subgoal using rw1 "NegHi" by (auto simp add: NEG_INF_def word_sless_def word_sle_def) 
-    subgoal using rw2 "NegHi" apply (auto simp add: NEG_INF_def word_sless_def word_sle_def)
+    subgoal using rw1 "NegHi" by (auto simp add: word_sless_def word_sle_def) 
+    subgoal using rw2 "NegHi" apply (auto simp add: word_sless_def word_sle_def)
       using  lower2 of_int_1_le_iff by blast
     subgoal by auto
-    subgoal using rw1 "NegHi" by (auto simp add: NEG_INF_def word_sless_def word_sle_def)
+    subgoal using rw1 "NegHi" by (auto simp add: word_sless_def word_sle_def)
     done
   have "r1 * r2 \<le> real_of_int (sint NEG_INF)"
     using upper lower1 lower2 POS_INF_def NEG_INF_def rw1 rw2 
-    apply (auto simp add: NEG_INF_def POS_INF_def word_sless_def word_sle_def)
+    apply (auto simp add: word_sless_def word_sle_def)
     using mylem[of  "r1" " (real_of_int (sint w2))" " (- 2147483647)"] prereqs
     by auto
   then show ?thesis
-    using "NegHi" by (auto simp add: repe.simps NEG_INF_def POS_INF_def)
+    using "NegHi" by (auto simp add: repe.simps)
 next
   case NegLo
   from "NegLo"
   have w2NotPinf:"w2 \<noteq> POS_INF" and w2NotNinf:"w2 \<noteq> NEG_INF" 
-    by (auto simp add: NEG_INF_def POS_INF_def)
+    by (auto)
   from eq1 "NegLo" 
   have upper:" (real_of_int (sint NEG_INF)) \<ge> r1 " 
-  by (auto simp add: repe.simps POS_INF_def NEG_INF_def)
+  by (auto simp add: repe.simps)
   have low:"sint w2 < 0" using "NegLo"
     apply (auto simp add: word_sless_def word_sle_def)
     by (simp add: dual_order.order_iff_strict)
@@ -2479,7 +2479,7 @@ next
     by (simp add: upper)
   from eq2 have rw2:"r2 =  (real_of_int (sint w2))" 
     using repe.simps "NegLo"
-    by (auto simp add: NEG_INF_def POS_INF_def)
+    by (auto)
   have hom:"  (- 2147483647) = -(2147483647::real)" by auto
   have mylem:"\<And>x y z::real. y < 0 \<Longrightarrow>   x \<le> y \<Longrightarrow> z \<le> -1 \<Longrightarrow> -y \<le> x * z"
     proof -
@@ -2502,45 +2502,45 @@ next
     qed
     have prereqs:"- 2147483647 < (0::real)" " r1 \<le> - 2147483647" " (real_of_int (sint w2)) \<le> - 1"
       apply auto
-      subgoal using rw1 "NegLo" by (auto simp add: NEG_INF_def)
-      using rw2 "NegLo" lower2 by (auto simp add: word_sless_def word_sle_def NEG_INF_def lower2)
+      subgoal using rw1 "NegLo" by (auto)
+      using rw2 "NegLo" lower2 by (auto simp add: word_sless_def word_sle_def lower2)
     have "2147483647 \<le> r1 * r2" 
       using upper lower1 lower2 POS_INF_def NEG_INF_def rw1 rw2
-      apply (auto simp add: NEG_INF_def POS_INF_def word_sless_def word_sle_def)
+      apply (auto simp add: word_sless_def word_sle_def)
       using mylem[of "-2147483647" "r1" "(real_of_int (sint w2))"] prereqs 
       by auto
   then show ?thesis
-    using "NegLo" by (auto simp add: NEG_INF_def POS_INF_def repe.simps)
+    using "NegLo" by (auto simp add: repe.simps)
 next
   case NegZero
   from "NegZero"
-  have w2NotPinf:"w2 \<noteq> POS_INF" and w2NotNinf:"w2 \<noteq> NEG_INF" by (auto simp add: NEG_INF_def POS_INF_def)
+  have w2NotPinf:"w2 \<noteq> POS_INF" and w2NotNinf:"w2 \<noteq> NEG_INF" by (auto)
   from eq2 "NegZero" 
   have "r2 = 0" 
     using repe.simps "NegZero"
-    by (auto simp add: NEG_INF_def POS_INF_def)
+    by (auto)
   then show ?thesis
-    using "NegZero" by (auto simp add: repe.simps NEG_INF_def POS_INF_def)
+    using "NegZero" by (auto simp add: repe.simps)
 next
   case LoPos
   from "LoPos"
   have w2NotPinf:"w1 \<noteq> POS_INF" and w2NotNinf:"w1 \<noteq> NEG_INF" 
-    by (auto simp add: NEG_INF_def POS_INF_def)
+    by (auto)
   from eq2 "LoPos" 
   have upper:"(real_of_int (sint POS_INF)) \<le> r2 " 
-    by (auto simp add: repe.simps POS_INF_def NEG_INF_def)
+    by (auto simp add: repe.simps)
   have lower1:"sint w1 < 0" using "LoPos"
     apply (auto simp add: word_sless_def word_sle_def)   
     by (simp add: dual_order.order_iff_strict)
   then have lower2:"sint w1 \<le> -1" by auto
   from eq1 have rw1:"r1 = (real_of_int (sint w1))" 
-    using repe.simps "LoPos" by (auto simp add: repe.simps POS_INF_def)
+    using repe.simps "LoPos" by (auto simp add: repe.simps)
   have f4: "r2 *  (- 1) \<le>  (- 2147483647)"
-    using upper by(auto simp add: POS_INF_def)
+    using upper by(auto)
   have f5: "r1 \<le>  (- 1)"
     using lower2 rw1 by simp
   have "0 < r2"
-    using upper by(auto simp add: POS_INF_def)
+    using upper by(auto)
   then have "r2 * r1 \<le> r2 *  (- 1)"
     by (metis dual_order.order_iff_strict mult_right_mono f5  mult.commute)
   then have "r2 * r1 \<le>  (- 2147483647)"
@@ -2550,73 +2550,73 @@ next
         by (auto simp add: mult.commute)
   then have "r1 * r2 \<le> NegInf"
     using rw1
-    by (auto simp add: NEG_INF_def)
+    by (auto)
   then show ?thesis
-    using "LoPos" by (auto simp: repe.simps POS_INF_def NEG_INF_def)
+    using "LoPos" by (auto simp: repe.simps)
 next
   case HiPos
   from "HiPos"
   have w2NotPinf:"w1 \<noteq> POS_INF" and w2NotNinf:"w1 \<noteq> NEG_INF" 
-    by (auto simp add: NEG_INF_def POS_INF_def)
+    by (auto)
   from eq2 "HiPos"
   have upper:"(real_of_int (sint POS_INF)) \<le> r2 " 
-    by (auto simp add: repe.simps POS_INF_def NEG_INF_def)
+    by (auto simp add: repe.simps)
   have lower1:"sint w1 > 0" using "HiPos"
     apply (auto simp add: word_sless_def word_sle_def)   
     by (simp add: dual_order.order_iff_strict)
   then have lower2:"sint w1 \<ge> 1" by auto
   from eq1 have rw2:"r1 =  (real_of_int (sint w1))" 
     using "HiPos" 
-    by (auto simp add: repe.simps POS_INF_def NEG_INF_def)
+    by (auto simp add: repe.simps)
   have "0 \<le> r2"
-    using upper by(auto simp add: NEG_INF_def POS_INF_def)
+    using upper by(auto)
   then have "r2 \<le> r2 * r1"
     using lower2 rw2 by (metis (no_types) mult_left_mono mult.right_neutral   of_int_1_le_iff)
   have "2147483647 \<le> r1 * r2"
     using upper lower2  rw2 
-    by (auto simp add: NEG_INF_def POS_INF_def word_sless_def word_sle_def order_trans)
+    by (auto simp add: word_sless_def word_sle_def order_trans)
   then show ?thesis
-    using "HiPos" by (auto simp add: repe.simps POS_INF_def NEG_INF_def)
+    using "HiPos" by (auto simp add: repe.simps)
 next
   case ZeroPos
   from "ZeroPos"
   have w2NotPinf:"w1 \<noteq> POS_INF" and w2NotNinf:"w1 \<noteq> NEG_INF"
-    by (auto simp add: NEG_INF_def POS_INF_def)
+    by (auto)
   from eq2 "ZeroPos" 
   have upper:" (real_of_int (sint POS_INF)) \<le> r2 " 
-    by (auto simp add: repe.simps POS_INF_def NEG_INF_def)
+    by (auto simp add: repe.simps)
   have lower1:"sint w1 = 0" using "ZeroPos" 
     by (auto simp add: word_sless_def word_sle_def)   
   from eq1 have rw2:"r1 =  (real_of_int (sint w1))" 
     using repe.simps "ZeroPos" 
-    by (auto simp add: POS_INF_def NEG_INF_def)
+    by (auto)
   have "r1 = 0" using lower1 rw2 by auto
   then show ?thesis
-    using "ZeroPos" by (auto simp add: repe.simps POS_INF_def NEG_INF_def)
+    using "ZeroPos" by (auto simp add: repe.simps)
 next 
   case ZeroNeg
   from "ZeroNeg" 
   have w2NotPinf:"w1 \<noteq> POS_INF" and w2NotNinf:"w1 \<noteq> NEG_INF" 
-    by (auto simp add: NEG_INF_def POS_INF_def)
+    by (auto)
   from eq2 "ZeroNeg" 
   have upper:"(real_of_int (sint NEG_INF)) \<ge> r2 " 
-  by (auto simp add: repe.simps POS_INF_def NEG_INF_def)
+    by (auto simp add: repe.simps)
   have lower1:"sint w1 = 0" using "ZeroNeg" 
     by (auto simp add: word_sless_def word_sle_def)   
   from eq1 have rw2:"r1 =  (real_of_int (sint w1))" 
     using repe.simps "ZeroNeg" 
-    by (auto simp add: POS_INF_def NEG_INF_def)
+    by (auto)
   have "r1 = 0" using lower1 rw2 by auto
   then show ?thesis
-    using "ZeroNeg" by (auto simp add: repe.simps POS_INF_def NEG_INF_def)
+    using "ZeroNeg" by (auto simp add: repe.simps)
 next
   case LoNeg
   from "LoNeg"
   have w2NotPinf:"w1 \<noteq> POS_INF" and w2NotNinf:"w1 \<noteq> NEG_INF"
-    by (auto simp add: NEG_INF_def POS_INF_def)
+    by (auto)
   from eq2 "LoNeg" 
   have upper:" (real_of_int (sint NEG_INF)) \<ge> r2 " 
-    by (auto simp add: repe.simps POS_INF_def NEG_INF_def)
+    by (auto simp add: repe.simps)
   have low:"sint w1 < 0" using "LoNeg" 
     apply (auto simp add: word_sless_def word_sle_def)
     by (simp add: dual_order.order_iff_strict)
@@ -2626,7 +2626,7 @@ next
   from eq1 have rw1:"r2 \<le>  (real_of_int (sint w2))" 
     using "LoNeg" upper by auto
   from eq1 have rw2:"r1 =  (real_of_int (sint w1))" 
-    using "LoNeg" by (auto simp add: upper repe.simps POS_INF_def)
+    using "LoNeg" by (auto simp add: upper repe.simps)
   have hom:"(- 2147483647::real) = -(2147483647)" by auto
   have mylem:"\<And>x y z::real. y < 0 \<Longrightarrow>   x \<le> y \<Longrightarrow> z \<le> -1 \<Longrightarrow> -y \<le> x * z"
     proof -
@@ -2651,23 +2651,23 @@ next
     qed
   have prereqs:"- 2147483647 < (0::real)" " r2 \<le> - 2147483647" " (real_of_int (sint w1)) \<le> - 1"
     apply auto
-    subgoal using rw1 "LoNeg" by (auto simp add: NEG_INF_def)
-    using rw2 "LoNeg" lower2 by (auto simp add: word_sless_def word_sle_def NEG_INF_def lower2)
+    subgoal using rw1 "LoNeg" by (auto)
+    using rw2 "LoNeg" lower2 by (auto simp add: word_sless_def word_sle_def lower2)
   have "2147483647 \<le> r1 * r2"
     using upper lower1 lower2 POS_INF_def NEG_INF_def rw1 rw2
-    apply (auto simp add: NEG_INF_def POS_INF_def word_sless_def word_sle_def)
+    apply (auto simp add:word_sless_def word_sle_def)
     using mylem[of "-2147483647" "r2" " (real_of_int (sint w1))"] prereqs
     by (simp add: mult.commute)
   then show ?thesis
-    using "LoNeg" by (auto simp add: repe.simps POS_INF_def NEG_INF_def)
+    using "LoNeg" by (auto simp add: repe.simps)
 next
   case HiNeg
   from HiNeg
   have w1NotPinf:"w1 \<noteq> POS_INF" and w1NotNinf:"w1 \<noteq> NEG_INF"
-    by (auto simp add: NEG_INF_def POS_INF_def)
+    by (auto)
   have upper:" (real_of_int (sint NEG_INF)) \<ge> r2 " 
     using HiNeg eq2
-    by (auto simp add: repe.simps POS_INF_def NEG_INF_def)
+    by (auto simp add: repe.simps )
   have low:"sint w1 > 0" using HiNeg 
     apply (auto simp add: word_sless_def word_sle_def)
     by (simp add: dual_order.order_iff_strict)
@@ -2678,7 +2678,7 @@ next
     using repe.simps HiNeg by (simp add: upper)
   from eq1 have rw2:"r1 =  (real_of_int (sint w1))" 
     using repe.simps HiNeg  
-    by (auto simp add: NEG_INF_def POS_INF_def)
+    by (auto)
   have mylem:"\<And>x y z::real. x \<le> -1 \<Longrightarrow> y \<ge> 1 \<Longrightarrow> z \<le> -1 \<Longrightarrow> x \<le> z \<Longrightarrow>  x * y \<le> z"
     proof -
     fix x y z::real
@@ -2700,20 +2700,20 @@ next
     qed
     have prereqs:"r2 \<le> - 1" "1 \<le> (real_of_int (sint w1))" 
                  " (- 2147483647) \<le> - (1::real )" "r2 \<le>  (- 2147483647)"
-    subgoal using rw1 HiNeg by (auto simp add: NEG_INF_def word_sless_def word_sle_def) 
-    subgoal using rw2 HiNeg apply (auto simp add: NEG_INF_def word_sless_def word_sle_def)
+    subgoal using rw1 HiNeg by (auto simp add: word_sless_def word_sle_def) 
+    subgoal using rw2 HiNeg apply (auto simp add: word_sless_def word_sle_def)
       using lower2 of_int_1_le_iff by blast
     subgoal  by (simp)
-    subgoal using rw1 HiNeg by (auto simp add: NEG_INF_def word_sless_def word_sle_def)
+    subgoal using rw1 HiNeg by (auto simp add: word_sless_def word_sle_def)
     done
   have "r1 * r2 \<le> - 2147483647"
-    using upper lower1 lower2 POS_INF_def NEG_INF_def rw1 rw2 
-    apply (auto simp add: NEG_INF_def POS_INF_def word_sless_def word_sle_def)
+    using upper lower1 lower2 rw1 rw2 
+    apply (auto simp add: word_sless_def word_sle_def)
     using mylem[of "r2" "(real_of_int (sint w1))" " (- 2147483647)"]
     using prereqs
     by (auto simp add: mult.commute)
   then show ?thesis
-    using HiNeg by(auto simp add: repe.simps POS_INF_def NEG_INF_def)
+    using HiNeg by(auto simp add: repe.simps)
 next
   case AllFinite
   let ?prod = "(((scast w1)::64 Word.word) * ((scast w2)::64 Word.word))"
@@ -2764,7 +2764,7 @@ next
     from eq2 have rw2:"r2 =  (real_of_int (sint w2))" using neqs by (auto simp add: repe.simps)
     show ?thesis
       using AllFinite ProdNeg h1 h2 h3 h4 rw1 rw2 sint_leq  
-      apply (auto simp add: repe.simps POS_INF_def NEG_INF_def)
+      apply (auto simp add: repe.simps)
       by (metis (no_types, hide_lams) eq3 of_int_le_iff of_int_minus of_int_mult of_int_numeral) 
   next
     case ProdPos
@@ -2883,16 +2883,15 @@ next
       by simp
     have rightSize:"sint (((scast w1)::64 Word.word) * ((scast w2)::64 Word.word))
       \<in> sints (len_of TYPE(32))"
-      using sintLe sintGe sints32 by (simp add: NEG_INF_def POS_INF_def) 
+      using sintLe sintGe sints32 by (simp) 
     have downcast:"sint ((scast (((scast w1)::64 Word.word) * ((scast w2)::64 Word.word)))::word)
                  = sint (((scast w1)::64 Word.word) * ((scast w2)::64 Word.word))"
       using scast_down_range[OF rightSize]
       by auto
     then have res_eq:"r1 * r2 
       = real_of_int(sint((scast (((scast w1)::64 Word.word)*((scast w2)::64 Word.word)))::word))"
-      using rw1 rw2 eq3 h1 h2 h3 h4 h5 downcast POS_INF_def NEG_INF_def
-      using \<open>r1 * r2 =  (real_of_int (sint w1 * sint w2))\<close> 
-      by (auto simp add: POS_INF_def NEG_INF_def)
+      using rw1 rw2 eq3 h1 h2 h3 h4 h5 downcast \<open>r1 * r2 =  (real_of_int (sint w1 * sint w2))\<close> 
+      by (auto)
     have res_up:"sint (scast (((scast w1)::64 Word.word) * ((scast w2)::64 Word.word))::word) 
                < sint POS_INF"
       using rw1 rw2 eq3 h1 h2 h3 h4 h5 downcast
@@ -3302,7 +3301,7 @@ proof(cases rule: case_inf2[where ?w1.0=w1, where ?w2.0=w2])
      and p2:"w2 = POS_INF"
   then have bound1:"(real_of_int (sint POS_INF)) \<le> r1"
         and bound2:"(real_of_int (sint POS_INF)) \<le> r2"
-    using eq1 eq2 by (auto simp add: rep_simps POS_INF_def NEG_INF_def repe.simps)
+    using eq1 eq2 by (auto simp add: rep_simps repe.simps)
   have eqInf:"wmin w1 w2 = POS_INF"
     using p1 p2 unfolding POS_INF_def wmin.simps by auto
   have pos_eq:"POS_INF \<equiv>\<^sub>E min r1 r2"
@@ -3319,7 +3318,7 @@ next
     and bound2:"ra \<le>  (real_of_int (sint NEG_INF))"
     and eq1:"r1 = r"
     and eq2:"r2 = ra"
-    using p1 n2 eq1 eq2 by(auto simp add: rep_simps POS_INF_def NEG_INF_def repe.simps)
+    using p1 n2 eq1 eq2 by(auto simp add: rep_simps repe.simps)
   have eqNeg:"wmin w1 w2 = NEG_INF"
     unfolding NEG_INF_def POS_INF_def eq1 eq2 wmin.simps p1 n2 word_sless_def word_sle_def
     by(auto) 
@@ -3337,7 +3336,7 @@ next
     and bound1:" (real_of_int (sint POS_INF)) \<le> r1"
     and bound2a:" (real_of_int (sint NEG_INF)) <  (real_of_int (sint w2))"
     and bound2b:" (real_of_int (sint w2)) <  (real_of_int (sint POS_INF))"
-    using p1 np2 nn2 eq1 eq2 by(auto simp add: rep_simps POS_INF_def NEG_INF_def repe.simps)
+    using p1 np2 nn2 eq1 eq2 by(auto simp add: rep_simps repe.simps)
   have eqNeg:"min r1 r2 = sint w2"
     using p1  unfolding NEG_INF_def POS_INF_def wmin.simps
     by (metis bound1 bound2b dual_order.trans eq2 min_def not_less) 
@@ -3354,7 +3353,7 @@ next
   assume p2:"w2 = POS_INF"
   have  bound1:"r1 \<le>  (real_of_int (sint NEG_INF))"
     and bound2:" (real_of_int (sint POS_INF)) \<le> r2"
-    using n1 p2 eq1 eq2 by(auto simp add: rep_simps POS_INF_def NEG_INF_def repe.simps)    
+    using n1 p2 eq1 eq2 by(auto simp add: rep_simps repe.simps)    
   have eqNeg:"wmin w1 w2 = NEG_INF"
     unfolding NEG_INF_def POS_INF_def eq1 eq2 wmin.simps n1 p2 word_sless_def word_sle_def
     by(auto)
@@ -3369,7 +3368,7 @@ next
   assume n2:"w2 = NEG_INF" 
   have bound1:"r1 \<le>  (real_of_int (sint NEG_INF))"
    and bound2:"r2 \<le>  (real_of_int (sint NEG_INF))"
-    using n1 n2 eq1 eq2 by(auto simp add: rep_simps POS_INF_def NEG_INF_def repe.simps)    
+    using n1 n2 eq1 eq2 by(auto simp add: rep_simps repe.simps)    
   have eqNeg:"NEG_INF \<equiv>\<^sub>E min r1 r2"
     apply(rule repNEG_INF)
     using eq1 eq2 bound1 bound2 unfolding NEG_INF_def
@@ -3428,7 +3427,7 @@ next
     and bound1a:" (real_of_int (sint w1)) <  (real_of_int (sint POS_INF))"
     and bound1b:" (real_of_int (sint NEG_INF)) <  (real_of_int (sint w1))"
     and bound2:"r2 \<le>  (real_of_int (sint NEG_INF))"
-    using nn1 np1 n2 eq2 eq1 eq2 by (auto simp add: rep_simps POS_INF_def NEG_INF_def repe.simps)
+    using nn1 np1 n2 eq2 eq1 eq2 by (auto simp add: rep_simps repe.simps)
   have res1:"wmin w1 w2 = NEG_INF"
     using n2 bound1b unfolding NEG_INF_def
     by (metis min.absorb_iff2 min_def n2 not_less of_int_less_iff wmin.simps word_sless_alt)
@@ -3451,7 +3450,7 @@ next
   and  bound2a:" (real_of_int (sint w2)) <  (real_of_int (sint POS_INF))"
   and  bound2b:" (real_of_int (sint NEG_INF)) <  (real_of_int (sint w2))"
     using nn1 np1 nn2 np2 eq2 eq1 eq2 
-    by (auto simp add: rep_simps POS_INF_def NEG_INF_def repe.simps)
+    by (auto simp add: rep_simps repe.simps)
   have res1:"min r1 r2 =  (real_of_int (sint (wmin w1 w2)))"
     using eq1 eq2 bound1a bound1b bound2a bound2b 
     by (simp add: min_def word_sless_alt)
@@ -4067,7 +4066,7 @@ lemma sint_neg_hom:
           using Divides.zmod_zminus1_eq_if[of x  "2^n"]
           apply(cases "x mod 2^n = 0")
           subgoal apply simp done
-          subgoal by (simp add: int_mod_eq')
+          subgoal by (simp)
           done
         done
       have lem_rule:"uint w \<in> {1..2 ^ 32 - 1} 
@@ -4160,10 +4159,10 @@ lemma wneg_lemma:
     assume boundb:" (real_of_int (sint NEG_INF)) <  (real_of_int (sint ra))"
     have raNeq:"ra \<noteq> 2147483647"
       using sint_range[OF bounda boundb]
-      by (auto simp add: POS_INF_def NEG_INF_def)
+      by (auto)
     have raNeqUndef:"ra \<noteq> 2147483648"
       using int_not_undef[OF bounda boundb]
-      by (auto simp add: NEG_INF_def)
+      by (auto)
     have "uint ra \<noteq> uint ((2 ^ len_of TYPE(31))::word)"
       apply (rule uint_distinct)
       using raNeqUndef by auto
@@ -4171,14 +4170,12 @@ lemma wneg_lemma:
       by auto
     have res1:"wneg w \<equiv>\<^sub>E  (real_of_int (sint (wneg w)))"
       apply (rule repINT)
-      using sint_range[OF bounda boundb]
-      apply (auto simp add: POS_INF_def NEG_INF_def)
-      using sint_neg_hom[of ra, OF raNeqUndefUint]
+      using sint_range[OF bounda boundb] sint_neg_hom[of ra, OF raNeqUndefUint]
       raNeq raNeqUndefUint raNeqUndef eq 
       by(auto)
     have res2:"- r =  (real_of_int (sint (wneg w)))"
       using eq bounda boundb i sint_neg_hom[of ra, OF raNeqUndefUint] raNeq raNeqUndef eq
-      by (auto simp add: NEG_INF_def POS_INF_def)
+      by (auto)
     show ?thesis
       using res1 res2 by auto
     qed
@@ -4194,7 +4191,7 @@ lemma neg_less_contra:"\<And>x. Suc x < - (Suc x) \<Longrightarrow> False"
 text\<open>Comparison < is correct\<close>
 lemma wgreater_lemma:"w1 \<equiv>\<^sub>L (r1::real) \<Longrightarrow> w2 \<equiv>\<^sub>U r2 \<Longrightarrow> wgreater w1 w2 \<Longrightarrow> r1 > r2"
   unfolding repU_def repL_def
-  apply(auto simp add: POS_INF_def NEG_INF_def )
+  apply(auto)
   subgoal for r'\<^sub>1 r'\<^sub>2 
     proof -
       assume sint_le:"sint w1 > sint w2"
@@ -4204,7 +4201,7 @@ lemma wgreater_lemma:"w1 \<equiv>\<^sub>L (r1::real) \<Longrightarrow> w2 \<equi
       assume wr1:"w1 \<equiv>\<^sub>E r'\<^sub>1"
       assume wr2:"w2 \<equiv>\<^sub>E r'\<^sub>2"
       have greater:"r'\<^sub>1 > r'\<^sub>2" 
-        using wr1 wr2 apply(auto simp add: repe.simps POS_INF_def NEG_INF_def)
+        using wr1 wr2 apply(auto simp add: repe.simps)
         prefer 4 using sless sint_le  by (auto simp add: less_le_trans  not_le)
       show "r1 > r2"
         using r1_leq r2_leq greater by auto
@@ -4225,7 +4222,7 @@ lemma wgeq_lemma:"w1 \<equiv>\<^sub>L r1 \<Longrightarrow> w2 \<equiv>\<^sub>U (
     proof -
       assume assms:"\<not> (w2 = NEG_INF \<and> w1 = NEG_INF \<or> w2 = POS_INF \<and> w1 = POS_INF) \<and> sint w2 \<le> sint w1"
       assume a1:"w1 \<equiv>\<^sub>L r1" and a2:"w2 \<equiv>\<^sub>U (r2::real)"
-      from assms have sint_le:"sint w2 \<le> sint w1" by(auto simp add: POS_INF_def NEG_INF_def )
+      from assms have sint_le:"sint w2 \<le> sint w1" by auto
       then have sless:"(w2 <=s w1)" using word_sless_alt word_sle_def by auto
       obtain r'\<^sub>1 r'\<^sub>2 where  r1_leq:"r'\<^sub>1 \<le> r1" and r2_leq:"r2 \<le> r'\<^sub>2"
       and wr1:"w1 \<equiv>\<^sub>E r'\<^sub>1" and wr2:"w2 \<equiv>\<^sub>E r'\<^sub>2"
@@ -4235,7 +4232,7 @@ lemma wgeq_lemma:"w1 \<equiv>\<^sub>L r1 \<Longrightarrow> w2 \<equiv>\<^sub>U (
       have less:"r'\<^sub>2 \<le> r'\<^sub>1" 
         using sless sint_le  less_le_trans neg_numeral_less_numeral not_le of_int_less_iff 
           of_int_numeral less_irrefl less_le_trans not_le check1 check2 repe.simps wr2 wr1
-        by(auto simp add: repe.simps POS_INF_def NEG_INF_def)
+        by(auto simp add: repe.simps)
       show "r1 \<ge> r2"
         using r1_leq r2_leq less by auto
     qed
@@ -4642,7 +4639,7 @@ next
   show "[Equals t1 t2]v' \<downharpoonright> True"
     apply(rule rEqualsT, rule eval1, rule eval2)
     using eq1 eq2 eq3 eval1 eval2 rep1 rep2 unfolding repP_def Let_def repL_def repU_def repe.simps
-    using neq1 neq2 by (auto simp add: POS_INF_def NEG_INF_def)
+    using neq1 neq2 by auto
 next
   case (wEqualsF1 t1 v t2 v')
   assume wle:"wgreater (fst ([t1]<>v)) (snd ([t2]<>v))"
