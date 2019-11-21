@@ -528,24 +528,8 @@ next
         using case1a min_extend_neg
         apply (auto simp add: neq1 eq2 neq3 repINT repU_def repe.simps repeInt_simps
         up2 word_sless_alt) 
-    using repINT repU_def repe.simps repeInt_simps up2 word_sless_alt POS_INF_def NEG_INF_def 
-    apply (auto)
-    proof -
-      fix r'
-      assume a1:"sint ((scast w2)::64 Word.word) \<le> 0"
-      then have h3:"sint w2 \<le> 0" using scast_eq3 by auto 
-      assume a2:"r1 \<le> r'"
-      assume a3:"r2 \<le>  (real_of_int (sint w2))"
-      assume a4:"r' \<le>  (- 2147483647)"
-      assume a5:"sint w2 < 2147483647"
-      assume a6:"- 2147483647 < real_of_int (sint w2)"
-      assume a7:"sint (scast w2 + 0xFFFFFFFF80000001) = sint (scast w2) - 2147483647"
-      from a2 a4 have h1:"r1 \<le> - 2147483647" by auto
-      from a1 a3 h3 have h2:"r2 \<le> 0" 
-      using dual_order.trans of_int_le_0_iff by blast
-      show "r1 + r2 \<le>  (- 2147483647)"
-        using h1 h2 add.right_neutral add_mono by fastforce
-    qed
+    using repINT repU_def repe.simps repeInt_simps up2 word_sless_alt 
+      add.right_neutral add_mono dual_order.trans of_int_le_0_iff scast_eq3 by fastforce+
   obtain r'\<^sub>1 and r'\<^sub>2 where   
             geq1:"r'\<^sub>1\<ge>r1" and equiv1:"w1 \<equiv>\<^sub>E r'\<^sub>1"
         and geq2:"r'\<^sub>2\<ge>r2" and equiv2:"w2 \<equiv>\<^sub>E r'\<^sub>2"
@@ -609,14 +593,8 @@ next
           by (simp add: leq2)
         show "r'\<^sub>2 - 2147483647 
         = (real_of_int (sint ((scast (((scast w2)::64 Word.word) + 0xFFFFFFFF80000001))::word)))"
-        using a b c min_extend_val' e f 
-        proof -
-          have "(real_of_int (sint ((scast w2)::64 Word.word) - 2147483647)) 
-              = r'\<^sub>2 - (real_of_int 2147483647)"
-            by (simp add: e leq2)
-          then show ?thesis
-            using  b c min_extend_val' by(auto)
-        qed
+          using a b c min_extend_val' e f  leq2
+          by auto
       qed
     subgoal  
     proof -
@@ -642,20 +620,15 @@ next
         unfolding Word.is_up by auto
       have d:"sint w2 \<le> 2^31 - 1"
         using Word.word_sint.Rep[of "(w2)::32 Word.word"] 
-        by ( auto simp add:  sints32 len32[of "TYPE(32)"])
+        by (auto simp add:  sints32 len32[of "TYPE(32)"])
       have "- 0x7FFFFFFF < sint w2 + (- 0x7FFFFFFF)"
-        using sintw2_bound case2a 
-        using min_extend_val' scast_eq3 by linarith
+        using sintw2_bound case2a min_extend_val' scast_eq3 by linarith
       then have w2bound:"0 < sint w2" 
         using less_add_same_cancel2 by blast
       have rightSize:"sint (((scast w2)::64 Word.word) + - 0x7FFFFFFF) \<in> sints (len_of TYPE(32))"
         unfolding case2a b min_extend_val'
-        apply (auto simp add: sints32 len32[of "TYPE(32)"])
-        defer
-        subgoal 
-          using Word.word_sint.Rep[of "(w2)::32 Word.word"] 
-          by (auto simp add: sints32 len32)
-        using w2bound by auto
+        using Word.word_sint.Rep[of "(w2)::32 Word.word"] w2bound
+        by (auto simp add: sints32 len32[of "TYPE(32)"])
       have downcast:"sint ((scast (((scast w2)::64 Word.word) + ((- 0x7FFFFFFF))))::word) 
                   = sint (((scast w2)::64 Word.word) + ((- 0x7FFFFFFF)::64 Word.word))"
         using scast_down_range[OF rightSize]
@@ -690,18 +663,13 @@ next
         using Word.word_sint.Rep[of "(w2)::32 Word.word"] 
         by (auto simp add:  sints32 len32[of "TYPE(32)"])
       have "- 0x7FFFFFFF < sint w2 + (- 0x7FFFFFFF)"
-        using sintw2_bound case2a 
-        using c scast_eq3 by linarith
+        using sintw2_bound case2a c scast_eq3 by linarith
       then have w2bound:"0 < sint w2" 
         using less_add_same_cancel2 by blast
       have rightSize:"sint (((scast w2)::64 Word.word) + - 0x7FFFFFFF) \<in> sints (len_of TYPE(32))"
         unfolding case2a b c 
-        apply (auto simp add: sints32 len32[of "TYPE(32)"])
-        defer
-        subgoal 
-          using Word.word_sint.Rep[of "(w2)::32 Word.word"] 
-          by (auto simp add: sints32 len32[of "TYPE(32)"])
-        using w2bound by auto
+        using Word.word_sint.Rep[of "(w2)::32 Word.word"] w2bound
+        by (auto simp add: sints32 len32[of "TYPE(32)"])
       have downcast:"sint ((scast (((scast w2)::64 Word.word) + ((- 0x7FFFFFFF))))::word) 
                    = sint (((scast w2)::64 Word.word) + ((- 0x7FFFFFFF)::64 Word.word))"
         using scast_down_range[OF rightSize]
@@ -773,7 +741,7 @@ next
     using scast_eq3 by blast
   have d2:"sint w1 \<le> 2^31 - 1"
     using Word.word_sint.Rep[of "(w1)::32 Word.word"] 
-    by ( auto simp add:  sints32 len32[of "TYPE(32)"])
+    by (auto simp add:  sints32 len32[of "TYPE(32)"])
   have case1:"?sum <=s ((scast NEG_INF)::64 Word.word) \<Longrightarrow> NEG_INF \<equiv>\<^sub>U r1 + r2"
     using up1 up2 apply (simp add: repU_def repe.simps word_sle_def)
     apply(rule exI[where x= "r1 + r2"])
@@ -789,9 +757,6 @@ next
       assume a2:"r2 \<le> r'"
       assume a3:"r1 \<le>  (real_of_int (sint w1))"
       assume a4:"r' \<le>  (- 2147483647)"
-      assume a5:"sint w1 < 2147483647"
-      assume a6:"- 2147483647 < real_of_int (sint w1)"
-      assume a7:"sint (scast w1 + 0xFFFFFFFF80000001) = sint (scast w1) - 2147483647"
       from a2 a4 have h1:"r2 \<le> - 2147483647" by auto
       from a1 a3 h3 have h2:"r1 \<le> 0" 
       using dual_order.trans of_int_le_0_iff by blast
@@ -803,8 +768,7 @@ next
     and geq2:"r'\<^sub>2\<ge>r2" and equiv2:"w2 \<equiv>\<^sub>E r'\<^sub>2"
       using up1 up2 unfolding repU_def by auto
   have leq1:"r'\<^sub>2 \<le>  (real_of_int (sint NEG_INF))" and leq2:"r'\<^sub>1 =  (real_of_int (sint w1))" 
-    using equiv1 equiv2 unfolding repe.simps
-    using neq1 eq2 neq3 by auto
+    using equiv1 equiv2 neq1 eq2 neq3 unfolding repe.simps by auto
   have case1a:"sint (((scast w1)::64 Word.word) + (-0x7FFFFFFF::64 Word.word)) 
              = sint ((scast w1)::64 Word.word) + sint (-0x7FFFFFFF::64 Word.word)"
     by(rule signed_arith_sint(1)[OF truth])
@@ -815,7 +779,7 @@ next
     apply (simp add: repU_def repe.simps word_sle_def up1 up2)
     apply(rule exI[where x= "r'\<^sub>1 - 0x7FFFFFFF"]) (*r1 + r2*)
     apply(rule conjI)
-    subgoal using leq1 leq2 geq1 geq2 unfolding NEG_INF_def by auto
+    subgoal using leq1 leq2 geq1 geq2 by auto
     apply(rule disjI2)
     apply(rule disjI2)
     apply(auto)
@@ -827,8 +791,7 @@ next
        then have sintw2_bound:"sint (((scast w1)::64 Word.word) + (-0x7FFFFFFF)) > - 2147483647"
          unfolding min_extend_val by auto 
        have "- 0x7FFFFFFF < sint w1 + (- 0x7FFFFFFF)"
-         using sintw2_bound case1a 
-         using min_extend_val' scast_eq3 by linarith
+         using sintw2_bound case1a min_extend_val' scast_eq3 by linarith
        then have w2bound:"0 < sint w1" 
          using less_add_same_cancel2 by blast
        have rightSize:"sint (((scast w1)::64 Word.word) + - 0x7FFFFFFF) \<in> sints (len_of TYPE(32))"
@@ -849,7 +812,7 @@ next
           by (simp add: e leq2)
       then show "r'\<^sub>1 -  2147483647 
         = (real_of_int (sint ((scast (((scast w1)::64 Word.word) + 0xFFFFFFFF80000001))::word)))"
-            by (metis b c min_extend_val' diff_minus_eq_add minus_minus of_int_numeral)
+        by (metis b c min_extend_val' diff_minus_eq_add minus_minus of_int_numeral)
       qed
     subgoal  
     proof -
@@ -857,17 +820,13 @@ next
       then have sintw2_bound:"sint (((scast w1)::64 Word.word) + (-0x7FFFFFFF)) > - 2147483647"
         unfolding neg64 by auto 
       have "- 0x7FFFFFFF < sint w1 + (- 0x7FFFFFFF)"
-        using sintw2_bound case1a 
-        using min_extend_val' scast_eq3 by linarith
+        using sintw2_bound case1a min_extend_val' scast_eq3 by linarith
       then have w2bound:"0 < sint w1" 
         using less_add_same_cancel2 by blast
       have rightSize:"sint (((scast w1)::64 Word.word) + - 0x7FFFFFFF) \<in> sints (len_of TYPE(32))"
         unfolding case1a e c 
-        apply(auto simp add: sints32 len32[of "TYPE(32)"])
-        defer
-        subgoal using Word.word_sint.Rep[of "(w1)::32 Word.word"] 
-          by (auto simp add: sints32 len32[of "TYPE(32)"])
-        using w2bound by auto
+        using Word.word_sint.Rep[of "(w1)::32 Word.word"] w2bound
+        by(auto simp add: sints32 len32[of "TYPE(32)"])
       have arith:"\<And>x::int. x \<le> 2 ^ 31 - 1 \<Longrightarrow> x + (- 2147483647) < 2147483647"
         by auto
       have downcast:"sint ((scast (((scast w1)::64 Word.word) + ((- 0x7FFFFFFF))))::word) 
@@ -885,17 +844,13 @@ next
       then have sintw2_bound:"sint (((scast w1)::64 Word.word) + (-0x7FFFFFFF)) > - 2147483647"
         unfolding neg64 using notLeq by auto 
       have "- 0x7FFFFFFF < sint w1 + (- 0x7FFFFFFF)"
-        using sintw2_bound case1a 
-        using min_extend_val' scast_eq3 by linarith
+        using sintw2_bound case1a min_extend_val' scast_eq3 by linarith
       then have w2bound:"0 < sint w1" 
         using less_add_same_cancel2 by blast
       have rightSize:"sint (((scast w1)::64 Word.word) + - 0x7FFFFFFF) \<in> sints (len_of TYPE(32))"
         unfolding case1a e c 
-        apply (auto simp add: sints32 len32[of "TYPE(32)"])
-        defer
-        subgoal using Word.word_sint.Rep[of "(w1)::32 Word.word"] 
-          by (auto simp add: sints32 len32[of "TYPE(32)"])
-        using w2bound by auto
+        using Word.word_sint.Rep[of "(w1)::32 Word.word"] w2bound
+        by (auto simp add: sints32 len32[of "TYPE(32)"])
       show "- 2147483647 
         < real_of_int (sint ((scast (((scast w1)::64 Word.word) + 0xFFFFFFFF80000001))::word))"
         using scast_down_range[OF rightSize] gr of_int_less_iff of_int_minus of_int_numeral
@@ -917,7 +872,7 @@ next
   assume notneginf2:"w2 \<noteq> NEG_INF"
   let ?sum = "((scast w1)::64 Word.word) + ((scast w2):: 64 Word.word)"
   have inf_case:"scast POS_INF <=s ?sum \<Longrightarrow> POS_INF \<equiv>\<^sub>U r1 + r2"
-    using  repU_def repePos_simps 
+    using repU_def repePos_simps 
     by (meson dual_order.strict_trans not_less order_refl)
   have scast_eq1:"sint((scast w1)::64 Word.word) = sint w1" 
     apply(rule Word.sint_up_scast)
@@ -934,7 +889,7 @@ next
    \<and> sint ((scast w1)::64 Word.word) + sint ((scast w2)::64 Word.word) 
      \<le> 2 ^ (size ((scast w1)::64 Word.word) - 1) - 1"
     using Word.word_size[of "(scast w2)::64 Word.word"] Word.word_size[of "(scast w1)::64 Word.word"]
-    using scast_eq1 scast_eq2 
+    scast_eq1 scast_eq2 
     Word.word_sint.Rep[of "(w1)::32 Word.word"]
     Word.word_sint.Rep[of "(w2)::32 Word.word"]
     Word.word_sint.Rep[of "(scast w1)::64 Word.word"]
@@ -942,7 +897,7 @@ next
     sints64 sints32 by auto 
   have sint_eq:"sint((scast w1 + scast w2)::64 Word.word) = sint w1 + sint w2"
     using signed_arith_sint(1)[of "(scast w1)::64 Word.word" "(scast w2)::64 Word.word", OF truth]
-    using scast_eq1 scast_eq2
+      scast_eq1 scast_eq2
     by auto
   have bigOne:"scast w1 + scast w2 <=s ((- 0x7FFFFFFF)::64 Word.word) 
     \<Longrightarrow> \<exists>r'\<ge>r1 + r2. r' \<le>  (- 0x7FFFFFFF)"
@@ -956,10 +911,8 @@ next
        bound2:"r'\<^sub>2 \<ge> r2 \<and> (w2 \<equiv>\<^sub>E r'\<^sub>2)"
        using up1 up2 unfolding repU_def by auto
      have somethingA:"r'\<^sub>1  \<le>  sint w1" and somethingB:"r'\<^sub>2  \<le>  sint w2" 
-       using bound1 bound2 unfolding repe.simps POS_INF_def NEG_INF_def apply auto
        using \<open>scast w1 + scast w2 <=s - 0x7FFFFFFF\<close>  word_sle_def notinf1 notinf2 
-       unfolding POS_INF_def
-       by auto
+         bound1 bound2 unfolding repe.simps by auto
      have something:"r'\<^sub>1 + r'\<^sub>2 \<le>  sint w1 + sint w2"
        using somethingA somethingB add_mono by fastforce  
      show "\<exists>r'\<ge>r1 + r2. r' \<le> (- 0x7FFFFFFF)"
@@ -995,9 +948,7 @@ next
        bound2:"r'\<^sub>2 \<ge> r2 \<and> (w2 \<equiv>\<^sub>E r'\<^sub>2)"
        using up1 up2 unfolding repU_def by auto
      have somethingA:"r'\<^sub>1  \<le>  sint w1" and somethingB:"r'\<^sub>2  \<le>  sint w2" 
-       using bound1 bound2 unfolding repe.simps POS_INF_def NEG_INF_def apply auto
-       using  word_sle_def notinf1 notinf2  unfolding POS_INF_def
-       by auto
+       using word_sle_def notinf1 notinf2 bound1 bound2 unfolding repe.simps by auto
      have something:"r'\<^sub>1 + r'\<^sub>2 \<le>  sint w1 + sint w2"
        using somethingA somethingB add_mono by fastforce  
      have "(w1 \<equiv>\<^sub>E r'\<^sub>1)" using bound1 by auto
@@ -1021,9 +972,7 @@ next
      then have cast_eq:"(sint ((scast (((scast w1)::64 Word.word) 
                       + ((scast w2)::64 Word.word)))::word)) 
                     = sint w1 + sint w2"
-       using scast_down_range
-       unfolding sint_eq using sints32 sum_geq sum_leq 
-       using sint_eq by auto
+       using scast_down_range sints32 sum_geq sum_leq sint_eq by auto
      from something and cast_eq 
      have r12_sint_scast:"r'\<^sub>1 + r'\<^sub>2 
        = (sint ((scast (((scast w1)::64 Word.word) 
@@ -1210,24 +1159,17 @@ next
   have case1:" (((scast POS_INF)::64 Word.word) <=s ?sum) \<Longrightarrow> POS_INF \<equiv>\<^sub>L r1 + r2"
     using lo1 lo2 apply (simp add: repL_def repe.simps word_sle_def)
     apply(rule exI[where x= "r1 + r2"])
-    apply(auto)
-        using case1a case1b 
-        apply (auto simp add: neq1 eq2 neq3 repINT repL_def repe.simps 
-          repeInt_simps lo2 word_sless_alt)
-    using repINT repL_def repe.simps repeInt_simps lo2 word_sless_alt NEG_INF_def POS_INF_def 
-      neq1 eq2 neq3 repINT repL_def repe.simps repeInt_simps lo2 word_sless_alt 
-    apply (auto)
+    using case1a case1b 
+    apply (auto simp add: neq1 eq2 neq3 repINT repL_def repe.simps 
+      repeInt_simps lo2 word_sless_alt)
    proof -
       fix r'
       assume a1:"0 \<le> sint (((scast w2)::64 Word.word))"
-      from a1 have h3:"2147483647 \<le> sint w2  + 0x7FFFFFFF " using scast_eq3
+      from a1 have h3:"2147483647 \<le> sint w2 + 0x7FFFFFFF " using scast_eq3
         by auto
       assume a2:"r' \<le> r1"
-      assume a3:" (real_of_int (sint w2)) \<le> r2 "
+      assume a3:" (real_of_int (sint w2)) \<le> r2"
       assume a4:" ( 2147483647) \<le> r'"
-      assume a5:"sint w2 < 2147483647"
-      assume a6:"- 2147483647 < real_of_int (sint w2)"
-      assume a7:"sint (scast w2 + 0x7FFFFFFF) = sint (scast w2) + 2147483647"
       from a2 a4 have h1:"2147483647 \<le> r1" by auto
       from a1 a3 h3 have h2:"0 \<le> r2" 
         using dual_order.trans of_int_le_0_iff le_add_same_cancel2 by fastforce
@@ -1280,15 +1222,13 @@ next
        have c1:"sint((0x7FFFFFFF)::64 Word.word) = 0x7FFFFFFF" 
          by auto
        have "sint w2 + ( 0x7FFFFFFF) <  0x7FFFFFFF"
-         using sintw2_bound case1a 
-         using c1 scast_eq3 by linarith
+         using sintw2_bound case1a c1 scast_eq3 by linarith
        then have w2bound:"sint w2 < 0" 
          using add_less_same_cancel2 by blast
        have rightSize:"sint (((scast w2)::64 Word.word) +  0x7FFFFFFF) \<in> sints (len_of TYPE(32))"
          unfolding case1a b1 c1 
-         apply (auto simp add: sints32 len32[of "TYPE(32)"])
-         using Word.word_sint.Rep[of "(w2)::32 Word.word"] sints32 len32[of "TYPE(32)"]
-         using w2bound by auto
+         using Word.word_sint.Rep[of "(w2)::32 Word.word"] w2bound 
+         by (auto simp add: sints32 len32[of "TYPE(32)"])
       have arith:"\<And>x::int. x \<le> 2 ^ 31 - 1 \<Longrightarrow> x + (- 2147483647) < 2147483647"
         by auto
       have downcast:"sint ((scast (((scast w2)::64 Word.word) + (( 0x7FFFFFFF))))::word) 
@@ -1324,9 +1264,9 @@ next
         \<and> sint ((scast w2)::64 Word.word) + sint ((0x7FFFFFFF)::64 Word.word) 
           \<le> 2 ^ (size ((scast w2)::64 Word.word) - 1) - 1"
         apply(auto simp add:
-        Word.word_size[of "(scast w2)::64 Word.word"]
-        Word.word_size[of "(scast (0x7FFFFFFF))::64 Word.word"]
-        scast_eq1 scast_eq2 sints64 sints32 thing2)
+            Word.word_size[of "(scast w2)::64 Word.word"]
+            Word.word_size[of "(scast (0x7FFFFFFF))::64 Word.word"]
+            scast_eq1 scast_eq2 sints64 sints32 thing2)
         using thing1 thing2 thing3 by auto
       have case2a:" sint (((scast w2)::64 Word.word) + (0x7FFFFFFF::64 Word.word)) 
                   = sint ((scast w2)::64 Word.word) + sint (0x7FFFFFFF::64 Word.word)"
@@ -1348,12 +1288,11 @@ next
       have c:"sint((0x7FFFFFFF)::64 Word.word) = 0x7FFFFFFF" 
         by auto
       have " 0x7FFFFFFF > sint w2 + ( 0x7FFFFFFF)"
-        using sintw2_bound case2a 
-        using c scast_eq3 by linarith
+        using sintw2_bound case2a c scast_eq3 by linarith
       then have w2bound:" sint w2 < 0" 
         by simp
       have rightSize:"sint (((scast w2)::64 Word.word) +  0x7FFFFFFF) \<in> sints (len_of TYPE(32))"
-        unfolding case2a b c 
+        unfolding case2a b c
         apply (auto simp add: sints32 len32[of "TYPE(32)"])
         using Word.word_sint.Rep[of "(w2)::32 Word.word"] sints32 len32[of "TYPE(32)"] w2bound 
         by auto
@@ -1398,31 +1337,21 @@ next
       then have n1:"- 2147483647 \<noteq> sint w2"
         by auto
       have "- 2147483648 \<noteq> w2"
-        apply(rule repe.cases[OF equiv2] )
-        subgoal unfolding POS_INF_def by auto
-        subgoal unfolding NEG_INF_def by auto
-        using int_not_undef[of w2] unfolding NEG_INF_def 
-        by simp
+        apply(rule repe.cases[OF equiv2])
+        by auto
       then have "sint(- 2147483648::word) \<noteq> sint w2"
       using word_sint.Rep_inject by blast
       then have n2:"- 2147483648 \<noteq> sint w2" 
         by auto
       then have d:"sint w2 > - 2147483647"
-        using Word.word_sint.Rep[of "(w2)::32 Word.word"] 
-        using  sints32 len32[of "TYPE(32)"]
-        using neq3 unfolding NEG_INF_def apply (clarsimp)
-        using n1 n2 
-        by linarith
+        using Word.word_sint.Rep[of "(w2)::32 Word.word"] sints32 len32[of "TYPE(32)"] neq3 n1 n2
+        by auto
       have w2bound:"- 2147483647 < sint w2 + 0x7FFFFFFF"
-        using sintw2_bound case2a 
-        using c scast_eq3  
-        using d by linarith
+        using sintw2_bound case2a c scast_eq3 d by linarith
       have rightSize:"sint (((scast w2)::64 Word.word) +  0x7FFFFFFF) \<in> sints (len_of TYPE(32))"
-        unfolding case2a b c 
-        apply (auto simp add:  sints32 len32[of "TYPE(32)"])
         using sints32 len32[of "TYPE(32)"] w2bound Word.word_sint.Rep[of "(w2)::32 Word.word"] 
-        apply linarith
-        using c case2a scast_eq3 sintw2_bound by linarith
+          c case2a scast_eq3 sintw2_bound
+        by (auto simp add: sints32 len32[of "TYPE(32)"])
       have downcast:"sint ((scast (((scast w2)::64 Word.word) + (( 0x7FFFFFFF))))::word)
                    = sint (((scast w2)::64 Word.word) + (( 0x7FFFFFFF)::64 Word.word))"
         using scast_down_range[OF rightSize]
@@ -1454,7 +1383,7 @@ next
        unfolding Word.is_up by auto
     have scast_eq3:"sint((scast w1)::64 Word.word) = sint w1"
       apply(rule Word.sint_up_scast)
-       unfolding Word.is_up by auto
+      unfolding Word.is_up by auto
      have scast_eq2:"sint((scast (0x80000001::word))::64 Word.word)
       = sint ((0x80000001::32 Word.word))"
        by auto
@@ -1468,16 +1397,14 @@ next
         sints32 scast_eq1 scast_eq2 scast_eq3 len32 mem_Collect_eq
       by auto
     then have thing4:"sint ((scast w1)::64 Word.word) \<ge> (-(2 ^ 31))" 
-      using  scast_down_range sint_ge sints_num
-      using scast_eq3 
-      using scast_eq1 by linarith
+      using scast_down_range sint_ge sints_num scast_eq3 scast_eq1 by linarith
     have aLeq2:"(-(2 ^ 31)::int) \<ge> -9223372039002259455" by auto 
     then have thing2:" (0::int) \<le> 9223372039002259455 + sint ((scast w1)::64 Word.word)"
       using thing4 aLeq2 
       by (metis ab_group_add_class.ab_left_minus add.commute add_mono neg_le_iff_le)
     have aLeq:"2 ^ 31 \<le> (9223372039002259455::int)" by auto
     have bLeq:"sint ((scast w1)::64 Word.word) \<le> 2 ^ 31"
-      apply ( auto simp add: Word.word_sint.Rep[of "(w1)::32 Word.word"] sints32 
+      apply (auto simp add: Word.word_sint.Rep[of "(w1)::32 Word.word"] sints32 
           scast_eq3 len32)
       using Word.word_sint.Rep[of "(w1)::32 Word.word"] len32[of "TYPE(32)"] sints32
       by clarsimp
@@ -1506,15 +1433,14 @@ next
       using scast_eq3 by blast
     have d2:"sint w1 \<le> 2^31 - 1"
       using Word.word_sint.Rep[of "(w1)::32 Word.word"] 
-      by ( auto simp add:  sints32 len32[of "TYPE(32)"])
+      by (auto simp add: sints32 len32[of "TYPE(32)"])
     have case1:"scast POS_INF <=s ?sum \<Longrightarrow> POS_INF \<equiv>\<^sub>L r1 + r2"
       using lo1 lo2 apply (simp add: repL_def repe.simps word_sle_def)
       apply(rule exI[where x= "r1 + r2"])
       apply(auto)
           using case1a case1b 
           apply (auto simp add: neq1 eq2 neq3 repINT repL_def 
-            repe.simps repeInt_simps lo2 word_sless_alt) 
-      using repINT repU_def repe.simps repeInt_simps lo2 word_sless_alt
+            repe.simps repeInt_simps lo2 word_sless_alt) (* close 4 goals *)
      proof -
         fix r'
         have h3:"sint (((scast w1)::64 Word.word) + 0x7FFFFFFF) 
@@ -1522,12 +1448,10 @@ next
           using case1a by auto 
         have h4:"sint(0x7FFFFFFF::64 Word.word) = 2147483647" by auto
         assume a1:"0 \<le> sint ((scast w1)::64 Word.word)"
-        then have h3:"sint w1 \<ge> 0" using scast_eq3 h3 h4 using scast_eq3 h3 h4 by auto 
-        assume a3:" (real_of_int (sint w1)) \<le> r1"
+        then have h3:"sint w1 \<ge> 0" using scast_eq3 h3 h4 by auto 
         assume a2:"r' \<le> r2"
-        assume a4:" ( 2147483647) \<le> r'"
-        assume a5:"sint w1 < 2147483647"
-        assume a6:"- 2147483647 < real_of_int (sint w1)"
+        assume a3:"(real_of_int (sint w1)) \<le> r1"
+        assume a4:"(2147483647) \<le> r'"
         from a2 a4 have h1:"r2 \<ge>  2147483647" by auto
         from a1 a3 h3 have h2:"r1 \<ge> 0" 
           using dual_order.trans of_int_0_le_iff by fastforce
@@ -1539,8 +1463,7 @@ next
       and geq2:"r'\<^sub>2\<le>r2" and equiv2:"w2 \<equiv>\<^sub>E r'\<^sub>2"
         using lo1 lo2 unfolding repL_def by auto
     have leq1:"r'\<^sub>2 \<ge>  (real_of_int (sint POS_INF))" and leq2:"r'\<^sub>1 =  (real_of_int (sint w1))" 
-      using equiv1 equiv2 unfolding repe.simps
-      using neq1 eq2 neq3 by auto
+      using equiv1 equiv2 neq1 eq2 neq3 unfolding repe.simps by auto
     have neg64:"(((scast w1)::64 Word.word) + 0xFFFFFFFF80000001) 
               = ((scast w1)::64 Word.word) + (-0x7FFFFFFF)" 
       by auto
@@ -1570,14 +1493,13 @@ next
          then have sintw2_bound:"2147483647 > sint (((scast w1)::64 Word.word) + (0x7FFFFFFF))"
            by auto 
          have "0x7FFFFFFF > sint w1 + ( 0x7FFFFFFF)"
-           using sintw2_bound case1a 
-           using d scast_eq3 by linarith
+           using sintw2_bound case1a d scast_eq3 by linarith
          then have w2bound:"0 > sint w1" 
            using add_less_same_cancel2 by blast
          have rightSize:"sint (((scast w1)::64 Word.word) +  0x7FFFFFFF) \<in> sints (len_of TYPE(32))"
            unfolding case1a e 
            using w2bound Word.word_sint.Rep[of "(w1)::32 Word.word"]
-           by ( auto simp add:   sints32 len32[of "TYPE(32)"] )
+           by (auto simp add: sints32 len32[of "TYPE(32)"] )
         have arith:"\<And>x::int. x \<le> 2 ^ 31 - 1 \<Longrightarrow> x + (- 2147483647) < 2147483647"
           by auto
         have downcast:"sint ((scast (((scast w1)::64 Word.word) + (( 0x7FFFFFFF))))::word) 
@@ -1595,7 +1517,7 @@ next
                 = r'\<^sub>1 +  (real_of_int 2147483647)"
               using e leq2 by auto
             then show ?thesis
-              using  b c d of_int_numeral by metis
+              using b c d of_int_numeral by metis
           qed
         qed
       subgoal  
@@ -1604,16 +1526,13 @@ next
         then have sintw2_bound:"sint (((scast w1)::64 Word.word) + (0x7FFFFFFF)) < 2147483647"
           unfolding neg64 by auto 
         have "0x7FFFFFFF > sint w1 + (0x7FFFFFFF)"
-          using sintw2_bound case1a 
-          using d scast_eq3 by linarith
+          using sintw2_bound case1a d scast_eq3 by linarith
         then have w2bound:"0 > sint w1" 
           using add_less_same_cancel2 by blast
         have rightSize:"sint (((scast w1)::64 Word.word) + 0x7FFFFFFF) \<in> sints (len_of TYPE(32))"
           unfolding case1a e c 
-          apply (auto simp add: sints32 len32[of "TYPE(32)"])
-          defer
-          using Word.word_sint.Rep[of "(w1)::32 Word.word"] sints32 len32[of "TYPE(32)"]
-          using w2bound by auto
+          using Word.word_sint.Rep[of "(w1)::32 Word.word"] w2bound
+          by (auto simp add: sints32 len32[of "TYPE(32)"])
         have arith:"\<And>x::int. x \<le> 2 ^ 31 - 1 \<Longrightarrow> x + (- 2147483647) < 2147483647"
           by auto
         have downcast:"sint ((scast (((scast w1)::64 Word.word) + 0x7FFFFFFF))::word) 
@@ -1621,8 +1540,7 @@ next
           using scast_down_range[OF rightSize]
           by auto
         show "sint (scast (((scast w1)::64 Word.word) + 0x7FFFFFFF)::word) < 2147483647"
-          using downcast d e c arith[of "sint w1", OF d2]
-          using sintw2_bound by linarith
+          using downcast d e c arith[of "sint w1", OF d2] sintw2_bound by linarith
       qed
       subgoal proof -
         assume notLeq:"\<not> 2147483647 \<le> sint (((scast w1)::64 Word.word) + 0x7FFFFFFF)"
@@ -1631,37 +1549,27 @@ next
         then have sintw2_bound:"sint (((scast w1)::64 Word.word) + (0x7FFFFFFF)) < 2147483647"
           unfolding neg64 using notLeq by auto 
         have " 0x7FFFFFFF > sint w1 + ( 0x7FFFFFFF)"
-          using sintw2_bound case1a 
-          using d scast_eq3 by linarith
+          using sintw2_bound case1a d scast_eq3 by linarith
         then have useful:"0 > sint w1"
           using add_less_same_cancel2 by blast
         have rightSize:"sint (((scast w1)::64 Word.word) +  0x7FFFFFFF) \<in> sints (len_of TYPE(32))"
-          unfolding case1a e c 
-          apply (auto simp add: sints32 len32[of "TYPE(32)"])
-          using Word.word_sint.Rep[of "(w1)::32 Word.word"]  sints32 len32[of "TYPE(32)"]
-          apply clarsimp
-          using useful by linarith
+          unfolding case1a e
+          using Word.word_sint.Rep[of "(w1)::32 Word.word"] sints32 len32[of "TYPE(32)"] useful
+          by auto
         have "- 2147483647 \<noteq> w1" using neq3 unfolding NEG_INF_def by auto
         then have "sint((- 2147483647)::word) \<noteq> sint w1"
           using word_sint.Rep_inject by blast
         then have n1:"- 2147483647 \<noteq> sint w1"
           by auto
         have "- 2147483648 \<noteq> w1"
-          apply(rule repe.cases[OF equiv1] )
-          subgoal unfolding POS_INF_def by auto
-          subgoal unfolding NEG_INF_def by auto
-          using int_not_undef[of w1] unfolding NEG_INF_def 
-          by simp
+          apply(rule repe.cases[OF equiv1]) using int_not_undef[of w1] by auto
         then have "sint(- 2147483648::word) \<noteq> sint w1"
         using word_sint.Rep_inject by blast
         then have n2:"- 2147483648 \<noteq> sint w1" 
           by auto
         then have d:"sint w1 > - 2147483647"
-          using Word.word_sint.Rep[of "(w1)::32 Word.word"] 
-          using  sints32 len32[of "TYPE(32)"]
-          using neq3 unfolding NEG_INF_def apply (clarsimp)
-          using n1 n2 
-          by linarith
+          using Word.word_sint.Rep[of "(w1)::32 Word.word"] sints32 len32[of "TYPE(32)"] n1 n2 neq3 
+          by (simp)
         have d2:"sint (0x7FFFFFFF::64 Word.word) > 0"
           by auto
         from d d2 have d3:"- 2147483647 < sint w1 + sint (0x7FFFFFFF::64 Word.word)"
@@ -1699,14 +1607,15 @@ next
       \<le> sint ((scast w1)::64 Word.word) + sint ((scast w2)::64 Word.word) 
     \<and> sint ((scast w1)::64 Word.word) + sint ((scast w2)::64 Word.word) 
       \<le> 2 ^ (size ((scast w1)::64 Word.word) - 1) - 1"
-    using Word.word_size[of "(scast w2)::64 Word.word"] Word.word_size[of "(scast w1)::64 Word.word"]
-    using scast_eq1 scast_eq2 sints64 sints32
+    using Word.word_size[of "(scast w2)::64 Word.word"] 
+      Word.word_size[of "(scast w1)::64 Word.word"]
+      scast_eq1 scast_eq2 sints64 sints32
       Word.word_sint.Rep[of "(w1)::32 Word.word"]
       Word.word_sint.Rep[of "(w2)::32 Word.word"]
     by auto 
   have sint_eq:"sint((scast w1 + scast w2)::64 Word.word) = sint w1 + sint w2"
     using signed_arith_sint(1)[of "(scast w1)::64 Word.word" "(scast w2)::64 Word.word", OF truth]
-    using scast_eq1 scast_eq2
+      scast_eq1 scast_eq2
     by auto
   have bigOne:"scast w1 + scast w2 <=s ((- 0x7FFFFFFF)::64 Word.word) 
     \<Longrightarrow> \<exists>r'\<le>r1 + r2. r' \<le>  -0x7FFFFFFF"
@@ -1720,10 +1629,8 @@ next
       bound2:"r'\<^sub>2 \<le> r2 \<and> (w2 \<equiv>\<^sub>E r'\<^sub>2)"
       using lo1 lo2 unfolding repL_def by auto
     have somethingA:"r'\<^sub>1  \<le>  sint w1" and somethingB:"r'\<^sub>2  \<le>  sint w2" 
-      using bound1 bound2 unfolding repe.simps POS_INF_def NEG_INF_def apply auto
-      using \<open>scast w1 + scast w2 <=s - 0x7FFFFFFF\<close>  word_sle_def notinf1 notinf2 
-      unfolding POS_INF_def
-      by auto
+      using bound1 bound2 \<open>scast w1 + scast w2 <=s - 0x7FFFFFFF\<close> word_sle_def notinf1 notinf2 
+      unfolding repe.simps by auto
     have something:"r'\<^sub>1 + r'\<^sub>2 \<le>  sint w1 + sint w2"
       using somethingA somethingB add_mono 
       by fastforce  
@@ -1746,12 +1653,12 @@ next
   proof -
     assume "\<not>(((scast POS_INF)::64 Word.word) <=s ?sum)"
     then have sum_leq:"sint w1 + sint w2 < 0x7FFFFFFF"
-      unfolding Word.word_sle_def POS_INF_def using sint_eq by auto
+      unfolding Word.word_sle_def using sint_eq by auto
     then have sum_leq':" (sint w1 + sint w2) <  (2147483647)"
       by auto
     assume "\<not>(?sum <=s ((scast NEG_INF)::64 Word.word))"
     then have sum_geq:"(- 0x7FFFFFFF) < sint w1 + sint w2"
-      unfolding Word.word_sle_def NEG_INF_def using sint_eq by auto 
+      unfolding Word.word_sle_def using sint_eq by auto 
     then have sum_geq':" (- 2147483647) <  (sint w1 + sint w2)"
       by auto
     obtain r'\<^sub>1 r'\<^sub>2 ::real where 
@@ -1784,9 +1691,7 @@ next
     then have cast_eq:"(sint ((scast (((scast w1)::64 Word.word) 
         + ((scast w2)::64 Word.word)))::word)) 
       = sint w1 + sint w2"
-      using  scast_down_range
-      unfolding sint_eq using sints32 sum_geq sum_leq 
-      using sint_eq by auto
+      using scast_down_range sints32 sum_geq sum_leq sint_eq by auto
     from something and cast_eq 
     have r12_sint_scast:"r'\<^sub>1 + r'\<^sub>2 
       = (sint ((scast (((scast w1)::64 Word.word) + ((scast w2)::64 Word.word)))::word))"
@@ -1832,9 +1737,8 @@ next
       bound2:"r'\<^sub>2 \<le> r2 \<and> (w2 \<equiv>\<^sub>E r'\<^sub>2)"
       using lo1 lo2 unfolding repL_def by auto
     have somethingA:"r'\<^sub>1  \<le>  sint w1" and somethingB:"r'\<^sub>2  \<le>  sint w2" 
-      using bound1 bound2 unfolding repe.simps POS_INF_def NEG_INF_def apply auto
-      using \<open> 0x7FFFFFFF <=s scast w1 + scast w2 \<close> word_sle_def notinf1 notinf2 
-      unfolding POS_INF_def
+      using \<open> 0x7FFFFFFF <=s scast w1 + scast w2 \<close> word_sle_def notinf1 notinf2
+        bound1 bound2 repe.simps
       by auto
     have something:"r'\<^sub>1 + r'\<^sub>2 \<le>  sint w1 + sint w2"
       using somethingA somethingB add_mono of_int_add  
@@ -1861,17 +1765,14 @@ next
           <=s ((scast w1)::64 Word.word) + ((scast w2)::64 Word.word)"
       then have "((scast ((2 ^ 31 - 1)::word))::64 Word.word) 
              <=s ((scast w1)::64 Word.word) + ((scast w2)::64 Word.word)"
-        unfolding  repL_def POS_INF_def repe.simps by auto
+        unfolding  repL_def repe.simps by auto
       then have "(0x7FFFFFFF::64 Word.word) 
              <=s ((scast w1)::64 Word.word) + ((scast w2)::64 Word.word)"
         by auto
       then obtain r' where geq:"(r' \<le> r1 + r2)" and leq:"(0x7FFFFFFF \<le> r')"
-        using bigThree
-        by auto
+        using bigThree by auto
       show "?thesis"
-        unfolding repL_def POS_INF_def repe.simps
-        using leq geq
-        by auto
+        unfolding repL_def repe.simps using leq geq by auto
     qed
   have int_case:"\<not>(((scast POS_INF)::64 Word.word) <=s ?sum) 
     \<Longrightarrow> \<not> (?sum <=s ((scast NEG_INF)::64 Word.word)) 
@@ -1892,7 +1793,7 @@ next
     then have wr:"r' =  (real_of_int (sint w))"
       using r12 bound1 bound2 rDef by blast
     show ?thesis
-      unfolding repL_def NEG_INF_def repe.simps POS_INF_def 
+      unfolding repL_def repe.simps 
       using r12 wdef rDef boundU boundL wr  
       by auto 
   qed
@@ -1900,12 +1801,9 @@ next
     if scast POS_INF <=s sum then POS_INF 
     else if sum <=s scast NEG_INF then NEG_INF 
     else scast sum) \<equiv>\<^sub>L r1 + r2"
-  apply(cases "((scast POS_INF)::64 Word.word) <=s ?sum")
-  subgoal using inf_case by (auto simp add: Let_def) 
-  apply(cases "?sum <=s scast NEG_INF")
-  subgoal using neg_inf_case by auto
-  subgoal using int_case by auto 
-  done
+    apply(cases "((scast POS_INF)::64 Word.word) <=s ?sum")
+     apply(cases "?sum <=s scast NEG_INF")
+      using inf_case neg_inf_case int_case by (auto simp add: Let_def)
   then show ?thesis 
     using notinf1 notinf2 notneginf1 notneginf2
     by(auto)
@@ -1923,14 +1821,14 @@ lemma wmax_lemma:
 proof(cases rule: case_inf2[where ?w1.0=w1, where ?w2.0=w2])
   case PosPos
   from PosPos eq1 eq2
-  have bound1:" (real_of_int (sint POS_INF)) \<le> r1"
-  and bound2:" (real_of_int (sint POS_INF)) \<le> r2"
+  have bound1:"(real_of_int (sint POS_INF)) \<le> r1"
+  and bound2:"(real_of_int (sint POS_INF)) \<le> r2"
     by (auto simp add: repe.simps)
   have eqInf:"wmax w1 w2 = POS_INF"
     using PosPos unfolding POS_INF_def wmax.simps by auto
   have pos_eq:"POS_INF \<equiv>\<^sub>E max r1 r2"
     apply(rule repPOS_INF)
-    using bound1 bound2 unfolding POS_INF_def eq1 eq2
+    using bound1 bound2
     by linarith
   show ?thesis
     using pos_eq eqInf by auto
@@ -1941,11 +1839,11 @@ next
    and bound2:"r2 \<le>  (real_of_int (sint NEG_INF))"
     using eq1 eq2 by (auto simp add: repe.simps)
   have eqNeg:"wmax w1 w2 = POS_INF"
-    unfolding NEG_INF_def POS_INF_def eq1 eq2 wmax.simps PosNeg word_sless_def word_sle_def
+    unfolding eq1 eq2 wmax.simps PosNeg word_sless_def word_sle_def
     by(auto) 
   have neg_eq:"POS_INF \<equiv>\<^sub>E max r1 r2"
     apply(rule repPOS_INF)
-    using bound1 bound2 unfolding POS_INF_def NEG_INF_def using eq1 eq2 by auto
+    using bound1 bound2 eq1 eq2 by auto
   show "?thesis"
     using eqNeg neg_eq by auto
 next
@@ -1957,13 +1855,12 @@ next
     by (auto simp add: repe.simps)
   have eqNeg:"wmax w1 w2 = POS_INF"
     using PosNum bound2b 
-    unfolding NEG_INF_def POS_INF_def wmax.simps word_sless_def word_sle_def
+    unfolding wmax.simps word_sless_def word_sle_def
     by auto 
   have neg_eq:"POS_INF \<equiv>\<^sub>E max r1 r2"
     apply (rule repPOS_INF)
-    using bound1 bound2a bound2b unfolding POS_INF_def NEG_INF_def eq1 eq2 
-    using bound2b word_sless_alt
-    using le_max_iff_disj by blast
+    using bound1 bound2a bound2b word_sless_alt le_max_iff_disj 
+    unfolding eq1 eq2 by blast
   show "?thesis"
     using eqNeg neg_eq by auto
 next
@@ -1973,11 +1870,11 @@ next
    and bound2:" (real_of_int (sint POS_INF)) \<le> r2"
     by (auto simp add: repe.simps)
   have eqNeg:"wmax w1 w2 = POS_INF"
-    unfolding NEG_INF_def POS_INF_def eq1 eq2 wmax.simps NegPos word_sless_def word_sle_def
+    unfolding NegPos word_sless_def word_sle_def
     by(auto)
   have neg_eq:"POS_INF \<equiv>\<^sub>E max r1 r2"
     apply(rule repPOS_INF)
-    using bound1 bound2 unfolding POS_INF_def NEG_INF_def eq1 eq2 by auto
+    using bound1 bound2 by auto
   show "wmax w1 w2 \<equiv>\<^sub>E max r1 r2"
     using eqNeg neg_eq by auto
 next
@@ -1988,10 +1885,10 @@ next
     by (auto simp add: repe.simps)
   have eqNeg:"NEG_INF \<equiv>\<^sub>E max r1 r2"
     apply(rule repNEG_INF)
-    using eq1 eq2 bound1 bound2 unfolding NEG_INF_def
+    using eq1 eq2 bound1 bound2
     by(auto)
   have neg_eq:"wmax w1 w2 = NEG_INF"
-    using NegNeg unfolding NEG_INF_def wmax.simps by auto 
+    using NegNeg by auto 
   show "wmax w1 w2 \<equiv>\<^sub>E max r1 r2"
     using eqNeg neg_eq by auto
 next
@@ -2045,9 +1942,7 @@ next
     by metis
   have res2:"wmax w1 w2 \<equiv>\<^sub>E  (real_of_int (sint (wmax w1 w2)))"
     apply(rule repINT)
-    using bound1a bound1b bound2
-    using NumNeg leD leI less_trans n2 wmax.simps apply auto[1]
-    using bound1a bound1b bound2 NumNeg leD leI 
+    using bound1a bound1b bound2 NumNeg leD leI less_trans n2 wmax.simps 
     by (auto simp add: word_sless_alt)
   show "wmax w1 w2 \<equiv>\<^sub>E max r1 r2"
     using res1 res2 by auto
@@ -2192,8 +2087,7 @@ proof -
       have h1:"-2147483648 * -2147483648 \<ge> x * -2147483648"
         using a1 a2 a3 a4 a5 a6 by linarith
       have h2:"x * -2147483648 \<ge> x * y" 
-        using a1 a2 a3 a4 a5 a6 
-         mult_left_mono_neg by blast
+        using a1 a2 a3 a4 a5 a6 mult_left_mono_neg by blast
       show ?thesis using h1 h2 by auto
     qed
 show "x * y \<le> 4611686018427387904"
@@ -2215,7 +2109,7 @@ proof (cases rule: case_times_inf[of w1 w2])
   have f3: "\<And>n e::real.  1 \<le> max ( (numeral n)) e"
     by (simp add: le_max_iff_disj)
   have "\<And>n e::real. 0 \<le> max ( (numeral n)) e"
-      by (simp add: le_max_iff_disj)
+    by (simp add: le_max_iff_disj)
   then have "r1 \<le> r1 * r2"
     using f3 "PosPos" eq1 eq2 repe.simps
     using eq1 eq2 by (auto simp add: repe.simps)
@@ -2239,7 +2133,7 @@ next
   have f5: "r1 \<le>  - 1"
     using f3 by auto
   have fact:"r1 * r2 \<le> - r2"
-    using f5 f4  mult_right_mono by fastforce
+    using f5 f4 mult_right_mono by fastforce
   show ?thesis
     using a1 a2 fact by (auto simp add: repe.simps "NegPos")
 next
@@ -2270,11 +2164,9 @@ next
   then have fact:"r2 \<le>  (- 1)"
     using f3 a2 by fastforce
   have rule:"\<And>c. c > 0 \<Longrightarrow> r1 \<ge> c \<and> r2 \<le> -1 \<Longrightarrow> r1 * r2 \<le> -c"
-    subgoal for c 
-      apply auto
-      by (metis (no_types, hide_lams) f5 mult_less_cancel_left_pos 
-          mult_minus1_right neg_le_iff_le not_less)
-    done
+    apply auto
+    by (metis (no_types, hide_lams) f5 mult_less_cancel_left_pos 
+        mult_minus1_right neg_le_iff_le not_less)
   have "r1 * r2 \<le> NegInf"
     using "PosNeg" f6 fact rule[of PosInf] a1
     by(auto)
@@ -2285,12 +2177,12 @@ next
   have a1: "(-2147483647) \<ge> r1"
     using eq1 "NegNeg" by (auto simp add: repe.simps)
   then have h1:"r1 \<le> -1"
-    using  max.bounded_iff max_def one_le_numeral
+    using max.bounded_iff max_def one_le_numeral
     by auto
   have a2: " (-2147483647) \<ge> r2"
     using eq2 "NegNeg" by (auto simp add: repe.simps)
-    have f1: "\<forall>e ea eb. \<not> (e::real) \<le> ea \<or> \<not> 0 \<le> eb \<or> eb * e \<le> eb * ea"
-  using mult_left_mono by metis
+  have f1: "\<forall>e ea eb. \<not> (e::real) \<le> ea \<or> \<not> 0 \<le> eb \<or> eb * e \<le> eb * ea"
+    using mult_left_mono by metis
   have f2: "-  1 =  (- 1::real)"
     by force
   have f3: " 0 \<le>  (1::real)"
@@ -2377,8 +2269,8 @@ next
     by (simp add: dual_order.order_iff_strict)
   then have lower2:"sint w2 \<ge> 1" by auto
   from eq2 have rw2:"r2 =  (real_of_int (sint w2))" 
-    using repe.simps "PosHi" NEG_INF_def POS_INF_def
-    by (auto ) 
+    using repe.simps "PosHi"
+    by (auto) 
   have "0 \<le> r1" using upper by (auto)
   then have "r1 \<le> r1 * r2"
     using rw2 lower2 by (metis (no_types)  mult_left_mono mult.right_neutral of_int_1_le_iff)
@@ -2400,7 +2292,7 @@ next
   have lower1:"sint w2 = 0" using "PosZero" 
     by (auto simp add: word_sless_def word_sle_def)   
   from eq2 have rw2:"r2 =  (real_of_int (sint w2))" 
-    using repe.simps "PosZero" NEG_INF_def POS_INF_def 
+    using repe.simps "PosZero" 
     by auto 
   have "0 = r1 * r2"
     using "PosZero" rw2 by auto
@@ -2423,7 +2315,7 @@ next
   from eq1 have rw1:"r1 \<le> (real_of_int (sint w1))" 
     using repe.simps "NegHi" 
     by (simp add: upper)
-  from eq2 have rw2:"r2 =  (real_of_int (sint w2))" 
+  from eq2 have rw2:"r2 = (real_of_int (sint w2))" 
     using repe.simps "NegHi"
     by (auto)
   have mylem:"\<And>x y z::real. x \<le> -1 \<Longrightarrow> y \<ge> 1 \<Longrightarrow> z \<le> -1 \<Longrightarrow> x \<le> z \<Longrightarrow>  x * y \<le> z"
@@ -2440,17 +2332,12 @@ next
     then have h6:"-x \<ge> -z" by auto
     have h3:"-x * -z = x * z" by auto
     show "x * y \<le> z"
-      using a1 a2 a3 a5 a4 h1 h2 h3 h6 h5 a5 dual_order.trans   leD  mult.right_neutral
+      using a1 a2 a3 a5 a4 h1 h2 h3 h6 h5 a5 dual_order.trans leD mult.right_neutral
       by (metis dual_order.order_iff_strict mult_less_cancel_left2)
     qed
   have prereqs:"r1 \<le> - 1" "1 
       \<le> (real_of_int (sint w2))" " (- 2147483647::real) \<le> - 1 " "r1 \<le> (-2147483647)"
-    subgoal using rw1 "NegHi" by (auto simp add: word_sless_def word_sle_def) 
-    subgoal using rw2 "NegHi" apply (auto simp add: word_sless_def word_sle_def)
-      using  lower2 of_int_1_le_iff by blast
-    subgoal by auto
-    subgoal using rw1 "NegHi" by (auto simp add: word_sless_def word_sle_def)
-    done
+    using rw1 rw2 "NegHi" lower2 by (auto simp add: word_sless_def word_sle_def)
   have "r1 * r2 \<le> real_of_int (sint NEG_INF)"
     using upper lower1 lower2 POS_INF_def NEG_INF_def rw1 rw2 
     apply (auto simp add: word_sless_def word_sle_def)
@@ -2467,8 +2354,7 @@ next
   have upper:" (real_of_int (sint NEG_INF)) \<ge> r1 " 
   by (auto simp add: repe.simps)
   have low:"sint w2 < 0" using "NegLo"
-    apply (auto simp add: word_sless_def word_sle_def)
-    by (simp add: dual_order.order_iff_strict)
+    by (auto simp add: word_sless_def word_sle_def dual_order.order_iff_strict)
   then have lower1:"(real_of_int (sint w2)) < 0" by auto
   then have lower2:"(real_of_int (sint w2)) \<le> -1"  using low
   by (simp add: int_le_real_less) 
@@ -2498,15 +2384,12 @@ next
       using a1 a2 a3 a4 h1 h2 h3 h4 h5 
       by simp
     qed
-    have prereqs:"- 2147483647 < (0::real)" " r1 \<le> - 2147483647" " (real_of_int (sint w2)) \<le> - 1"
-      apply auto
-      subgoal using rw1 "NegLo" by (auto)
-      using rw2 "NegLo" lower2 by (auto simp add: word_sless_def word_sle_def lower2)
-    have "2147483647 \<le> r1 * r2" 
-      using upper lower1 lower2 POS_INF_def NEG_INF_def rw1 rw2
-      apply (auto simp add: word_sless_def word_sle_def)
-      using mylem[of "-2147483647" "r1" "(real_of_int (sint w2))"] prereqs 
-      by auto
+  have prereqs:"- 2147483647 < (0::real)" " r1 \<le> - 2147483647" " (real_of_int (sint w2)) \<le> - 1"
+    using rw1 rw2 "NegLo" by (auto simp add: word_sless_def word_sle_def lower2)
+  have "2147483647 \<le> r1 * r2" 
+    using upper lower1 lower2 rw1 rw2 mylem[of "-2147483647" "r1" "(real_of_int (sint w2))"] 
+      prereqs 
+    by (auto simp add: word_sless_def word_sle_def)
   then show ?thesis
     using "NegLo" by (auto simp add: repe.simps)
 next
@@ -2545,7 +2428,7 @@ next
     by (meson f4 less_le_trans not_le)
   then have "(real_of_int (sint w1)) * r2 \<le>  (- 2147483647)"
     using f5 f4 rw1 less_le_trans not_le mult.commute rw1 
-        by (auto simp add: mult.commute)
+    by (auto simp add: mult.commute)
   then have "r1 * r2 \<le> NegInf"
     using rw1
     by (auto)
@@ -2569,7 +2452,7 @@ next
   have "0 \<le> r2"
     using upper by(auto)
   then have "r2 \<le> r2 * r1"
-    using lower2 rw2 by (metis (no_types) mult_left_mono mult.right_neutral   of_int_1_le_iff)
+    using lower2 rw2 by (metis (no_types) mult_left_mono mult.right_neutral of_int_1_le_iff)
   have "2147483647 \<le> r1 * r2"
     using upper lower2  rw2 
     by (auto simp add: word_sless_def word_sle_def order_trans)
@@ -2639,8 +2522,7 @@ next
     from a3 have h5:"-z \<ge> 1" 
       by (simp add:  leD leI)
     have h4:"-x * -z \<ge> -y"
-      using  a1 a2 a3 a4 h1 h2 h5  
-      using dual_order.trans mult_left_mono  mult.right_neutral mult.commute
+      using  a1 a2 a3 a4 h1 h2 h5 dual_order.trans mult_left_mono mult.right_neutral mult.commute
       by (metis dual_order.order_iff_strict mult_minus_right mult_zero_right neg_le_iff_le)
     have h3:"-x * -z = x * z" by auto
     show "- y \<le> x * z "
@@ -2648,14 +2530,11 @@ next
       by simp
     qed
   have prereqs:"- 2147483647 < (0::real)" " r2 \<le> - 2147483647" " (real_of_int (sint w1)) \<le> - 1"
-    apply auto
-    subgoal using rw1 "LoNeg" by (auto)
-    using rw2 "LoNeg" lower2 by (auto simp add: word_sless_def word_sle_def lower2)
+    using rw1 rw2 "LoNeg" lower2 by (auto simp add: word_sless_def word_sle_def lower2)
   have "2147483647 \<le> r1 * r2"
-    using upper lower1 lower2 POS_INF_def NEG_INF_def rw1 rw2
-    apply (auto simp add:word_sless_def word_sle_def)
-    using mylem[of "-2147483647" "r2" " (real_of_int (sint w1))"] prereqs
-    by (simp add: mult.commute)
+    using upper lower1 lower2 rw1 rw2 mylem[of "-2147483647" "r2" 
+        "(real_of_int (sint w1))"] prereqs
+    by (auto simp add:word_sless_def word_sle_def mult.commute)
   then show ?thesis
     using "LoNeg" by (auto simp add: repe.simps)
 next
@@ -2679,36 +2558,30 @@ next
     by (auto)
   have mylem:"\<And>x y z::real. x \<le> -1 \<Longrightarrow> y \<ge> 1 \<Longrightarrow> z \<le> -1 \<Longrightarrow> x \<le> z \<Longrightarrow>  x * y \<le> z"
     proof -
-    fix x y z::real
-    assume a1:"x \<le> -1"
-    assume a2:"y \<ge> 1"
-    then have h1:"-1 \<ge> -y" by auto
-    assume a3:"z \<le> -1"
-    then have a4:"z < 0" by auto
-    from a4 have h2:"-z > 0" 
-      using  leD leI by auto
-    from a3 have h5:"-z \<ge> 1" 
-      by (simp add:  leD leI)
-    assume a5:"x \<le> z"
-    then have h6:"-x \<ge> -z" by auto
-    have h3:"-x * -z = x * z" by auto
-    show "x * y \<le> z"
-      using a1 a2 a3 a4 h1 h2 h3 h6 h5 a5 dual_order.trans less_eq_real_def
-      by (metis mult_less_cancel_left1 not_le)
+      fix x y z::real
+      assume a1:"x \<le> -1"
+      assume a2:"y \<ge> 1"
+      then have h1:"-1 \<ge> -y" by auto
+      assume a3:"z \<le> -1"
+      then have a4:"z < 0" by auto
+      from a4 have h2:"-z > 0" 
+        using  leD leI by auto
+      from a3 have h5:"-z \<ge> 1" 
+        by (simp add:  leD leI)
+      assume a5:"x \<le> z"
+      then have h6:"-x \<ge> -z" by auto
+      have h3:"-x * -z = x * z" by auto
+      show "x * y \<le> z"
+        using a1 a2 a3 a4 h1 h2 h3 h6 h5 a5 dual_order.trans less_eq_real_def
+        by (metis mult_less_cancel_left1 not_le)
     qed
-    have prereqs:"r2 \<le> - 1" "1 \<le> (real_of_int (sint w1))" 
-                 " (- 2147483647) \<le> - (1::real )" "r2 \<le>  (- 2147483647)"
-    subgoal using rw1 HiNeg by (auto simp add: word_sless_def word_sle_def) 
-    subgoal using rw2 HiNeg apply (auto simp add: word_sless_def word_sle_def)
-      using lower2 of_int_1_le_iff by blast
-    subgoal  by (simp)
-    subgoal using rw1 HiNeg by (auto simp add: word_sless_def word_sle_def)
-    done
+  have prereqs:"r2 \<le> - 1" "1 \<le> (real_of_int (sint w1))" 
+               " (- 2147483647) \<le> - (1::real )" "r2 \<le>  (- 2147483647)"
+    using rw1 rw2 HiNeg lower2 by (auto simp add: word_sless_def word_sle_def)
   have "r1 * r2 \<le> - 2147483647"
     using upper lower1 lower2 rw1 rw2 
     apply (auto simp add: word_sless_def word_sle_def)
-    using mylem[of "r2" "(real_of_int (sint w1))" " (- 2147483647)"]
-    using prereqs
+    using mylem[of "r2" "(real_of_int (sint w1))" " (- 2147483647)"] prereqs
     by (auto simp add: mult.commute)
   then show ?thesis
     using HiNeg by(auto simp add: repe.simps)
@@ -2726,7 +2599,7 @@ next
     have h1:"sint ((scast NEG_INF)::64 Word.word) = sint NEG_INF"
       apply(rule Word.sint_up_scast)
       unfolding Word.is_up by auto
-    have h2:"sint NEG_INF = -(2^31)+1" unfolding NEG_INF_def by auto
+    have h2:"sint NEG_INF = -(2^31)+1" by auto
     have h3:"sint ((scast w1)::64 Word.word) = sint w1"
       apply(rule Word.sint_up_scast)
       unfolding Word.is_up by auto
@@ -2862,7 +2735,7 @@ next
       using Word.word_size[of "((scast w2)::64 Word.word)"]
       using times_upcast_upper[of "sint w1" "sint w2"]
       using times_upcast_lower[of "sint w1" "sint w2"] 
-      unfolding NEG_INF_def by auto
+      by auto
     from ProdFin have a1:"\<not>(?prod <=s ((scast NEG_INF)::64 Word.word))"
       by auto
     then have sintGe:"sint (?prod) > sint (((scast NEG_INF)::64 Word.word))"
@@ -2893,27 +2766,24 @@ next
     have res_up:"sint (scast (((scast w1)::64 Word.word) * ((scast w2)::64 Word.word))::word) 
                < sint POS_INF"
       using rw1 rw2 eq3 h1 h2 h3 h4 h5 downcast
-      using POS_INF_def NEG_INF_def 
-      using \<open>r1 * r2 = (real_of_int (sint w1 * sint w2))\<close> 
-          \<open>sint (scast w1 * scast w2) < sint (scast POS_INF)\<close> 
+        \<open>r1 * r2 = (real_of_int (sint w1 * sint w2))\<close> 
+        \<open>sint (scast w1 * scast w2) < sint (scast POS_INF)\<close> 
           of_int_eq_iff res_eq 
       by presburger
     have res_lo:"sint NEG_INF 
                < sint (scast (((scast w1)::64 Word.word) * ((scast w2)::64 Word.word))::word)"
-            using rw1 rw2 eq3 h1 h2 h3 h4 h5 downcast
-      using POS_INF_def NEG_INF_def 
-      using \<open>r1 * r2 =  (real_of_int (sint w1 * sint w2))\<close> 
-          \<open>sint (scast NEG_INF) < sint (scast w1 * scast w2)\<close> 
-           of_int_eq_iff res_eq 
+      using rw1 rw2 eq3 h1 h2 h3 h4 h5 downcast
+        \<open>r1 * r2 =  (real_of_int (sint w1 * sint w2))\<close> 
+        \<open>sint (scast NEG_INF) < sint (scast w1 * scast w2)\<close> 
+        of_int_eq_iff res_eq 
       by presburger
     have "scast ?prod \<equiv>\<^sub>E (r1 * r2)"
-        using res_eq res_up res_lo 
-        by (auto simp add: rep_simps)
+      using res_eq res_up res_lo 
+      by (auto simp add: rep_simps)
     then show ?thesis 
       using AllFinite ProdFin by(auto)
   qed
 qed
-
 
 text\<open>Upper bound of multiplication from upper and lower bounds\<close>
 fun tu :: "word \<Rightarrow> word \<Rightarrow> word \<Rightarrow> word \<Rightarrow> word"
@@ -3100,7 +2970,7 @@ proof -
       show ?thesis 
         using up maxU12 maxU34 bigMaxU wmax.elims max_repU2 max_repU2[OF maxU12] 
           max_repU2[OF maxU34] max_repU2[OF bigMaxU] max.commute maxt34
-        by (metis  max_repU2 max_repU1 repU_def timesll tu.simps)
+        by (metis max_repU2 max_repU1 repU_def timesll tu.simps)
     qed
     have case2:"r1 \<le> 0 \<Longrightarrow> ?thesis"
     proof -
@@ -3301,10 +3171,10 @@ proof(cases rule: case_inf2[where ?w1.0=w1, where ?w2.0=w2])
         and bound2:"(real_of_int (sint POS_INF)) \<le> r2"
     using eq1 eq2 by (auto simp add: rep_simps repe.simps)
   have eqInf:"wmin w1 w2 = POS_INF"
-    using p1 p2 unfolding POS_INF_def wmin.simps by auto
+    using p1 p2 unfolding wmin.simps by auto
   have pos_eq:"POS_INF \<equiv>\<^sub>E min r1 r2"
     apply(rule repPOS_INF)
-    using bound1 bound2 unfolding POS_INF_def eq1 eq2 by auto
+    using bound1 bound2 unfolding eq1 eq2 by auto
   show ?thesis
     using pos_eq eqInf by auto
 next
@@ -3318,11 +3188,11 @@ next
     and eq2:"r2 = ra"
     using p1 n2 eq1 eq2 by(auto simp add: rep_simps repe.simps)
   have eqNeg:"wmin w1 w2 = NEG_INF"
-    unfolding NEG_INF_def POS_INF_def eq1 eq2 wmin.simps p1 n2 word_sless_def word_sle_def
+    unfolding eq1 eq2 wmin.simps p1 n2 word_sless_def word_sle_def
     by(auto) 
   have neg_eq:"NEG_INF \<equiv>\<^sub>E min r1 r2"
     apply(rule repNEG_INF)
-    using bound1 bound2 unfolding POS_INF_def NEG_INF_def using eq1 eq2 by auto
+    using bound1 bound2 eq1 eq2 by auto
   show "?thesis"
     using eqNeg neg_eq by auto
 next
@@ -3330,17 +3200,17 @@ next
   assume p1:"w1 = POS_INF"
   assume np2:"w2 \<noteq> POS_INF"
   assume nn2:"w2 \<noteq> NEG_INF"
-  have eq2:"r2 =  (real_of_int (sint w2))"
-    and bound1:" (real_of_int (sint POS_INF)) \<le> r1"
-    and bound2a:" (real_of_int (sint NEG_INF)) <  (real_of_int (sint w2))"
-    and bound2b:" (real_of_int (sint w2)) <  (real_of_int (sint POS_INF))"
+  have eq2:"r2 = (real_of_int (sint w2))"
+    and bound1:"(real_of_int (sint POS_INF)) \<le> r1"
+    and bound2a:"(real_of_int (sint NEG_INF)) < (real_of_int (sint w2))"
+    and bound2b:"(real_of_int (sint w2)) < (real_of_int (sint POS_INF))"
     using p1 np2 nn2 eq1 eq2 by(auto simp add: rep_simps repe.simps)
   have eqNeg:"min r1 r2 = sint w2"
-    using p1  unfolding NEG_INF_def POS_INF_def wmin.simps
+    using p1
     by (metis bound1 bound2b dual_order.trans eq2 min_def not_less) 
   have neg_eq:"wmin w1 w2 \<equiv>\<^sub>E  (real_of_int (sint (wmin w1 w2)))"
     apply (rule repINT)
-    using bound1 bound2a bound2b unfolding POS_INF_def NEG_INF_def eq1 eq2 apply auto
+    using bound1 bound2a bound2b unfolding eq1 eq2 apply auto
     using bound2b p1 by (simp add: word_sless_alt)+
   show "?thesis"
     using eqNeg neg_eq
@@ -3353,11 +3223,11 @@ next
     and bound2:" (real_of_int (sint POS_INF)) \<le> r2"
     using n1 p2 eq1 eq2 by(auto simp add: rep_simps repe.simps)    
   have eqNeg:"wmin w1 w2 = NEG_INF"
-    unfolding NEG_INF_def POS_INF_def eq1 eq2 wmin.simps n1 p2 word_sless_def word_sle_def
+    unfolding eq1 eq2 wmin.simps n1 p2 word_sless_def word_sle_def
     by(auto)
   have neg_eq:"NEG_INF \<equiv>\<^sub>E min r1 r2"
     apply(rule repNEG_INF)
-    using bound1 bound2 unfolding POS_INF_def NEG_INF_def eq1 eq2 by auto
+    using bound1 bound2 unfolding eq1 eq2 by auto
   show "wmin w1 w2 \<equiv>\<^sub>E min r1 r2"
     using eqNeg neg_eq by auto                      
 next
@@ -3390,8 +3260,7 @@ next
     by (auto simp add: word_sless_alt)
   have neg_eq:"NEG_INF \<equiv>\<^sub>E min r1 r2"
     apply(rule repNEG_INF)
-    using NEG_INF_def bound1 bound2a bound2b
-    using eq1 min_le_iff_disj by blast
+    using bound1 bound2a bound2b eq1 min_le_iff_disj by blast
   show "wmin w1 w2 \<equiv>\<^sub>E min r1 r2"
     using eqNeg neg_eq by auto
 next
@@ -3412,7 +3281,7 @@ next
     by (auto simp add: less_imp_le less_le_trans min_def)
   have res3:"wmin w1 w2 \<equiv>\<^sub>E  (real_of_int (sint (wmin w1 w2)))"
     apply(rule repINT)
-    using POS_INF_def NEG_INF_def p2 POS_INF_def bound1a res1 bound1a bound1b bound2 
+    using p2 bound1a res1 bound1a bound1b bound2 
     by auto
   show "wmin w1 w2 \<equiv>\<^sub>E min r1 r2" 
     using res1 res2 res3 by auto
@@ -3427,12 +3296,11 @@ next
     and bound2:"r2 \<le>  (real_of_int (sint NEG_INF))"
     using nn1 np1 n2 eq2 eq1 eq2 by (auto simp add: rep_simps repe.simps)
   have res1:"wmin w1 w2 = NEG_INF"
-    using n2 bound1b unfolding NEG_INF_def
+    using n2 bound1b
     by (metis min.absorb_iff2 min_def n2 not_less of_int_less_iff wmin.simps word_sless_alt)
   have res2:"NEG_INF \<equiv>\<^sub>E min r1 r2"
     apply(rule repNEG_INF)
-    using eq1 eq2 bound1a bound1b bound2
-    using min_le_iff_disj by blast
+    using eq1 eq2 bound1a bound1b bound2 min_le_iff_disj by blast
   show "wmin w1 w2 \<equiv>\<^sub>E min r1 r2"
     using res1 res2 by auto
 next
@@ -3603,7 +3471,7 @@ proof -
       have up:"rl1 * rl2 \<le> r1 * r2"
         by auto
       show ?thesis
-        by (metis repL_def timesll tl.simps up maxU12 maxU34  wmin.elims min_repU2 min_repU1) 
+        by (metis repL_def timesll tl.simps up maxU12 maxU34 wmin.elims min_repU2 min_repU1) 
     next
       case 2
       have bound:"ru2 \<ge> 0"
@@ -3688,13 +3556,8 @@ proof -
         using r1 "2" bounds bound grl1 grl2 gru1 gru2
         using mult_left_mono by blast
       have g2:"ru1 * r2 \<le> r1 * r2"
-        using r1 "2" bounds bound grl1 grl2 gru1  gru2
-        proof -
-          have "\<forall>e ea. r2 * ea \<le> r2 * e \<or> \<not> e \<le> ea" 
-            using "2" by (metis mult_left_mono_neg)
-          then show ?thesis
-            by (metis gru1 mult.commute)
-          qed
+        using r1 "2" bounds bound grl2 gru2
+        by (metis mult_left_mono_neg gru1 mult.commute)
       from g1 and g2
       have up:"ru1 * rl2 \<le> r1 * r2"
         by auto
@@ -3724,9 +3587,8 @@ proof -
       have up:"rl1 * ru2 \<le> r1 * r2"
         by auto
       show ?thesis
-      using up maxU12 maxU34 bigMaxU wmax.elims min_repU2 min_repU1
-        min.coboundedI1 min.commute maxt34
-      by (metis  min_repU2 repL_def tl.simps) 
+      using up maxU12 maxU34 bigMaxU min_repU2 min_repU1 min.coboundedI1 maxt34
+      by (metis min_repU2 repL_def tl.simps) 
     next
       case 2
       assume r2:"r2 \<le> 0"
@@ -3828,8 +3690,7 @@ proof -
     have up:"rl1 * rl2 \<le> r1 * r2"
       by auto
     show ?thesis
-    using up maxU12 maxU34 bigMaxU wmin.elims min_repU2 min_repU1
-      min.coboundedI1 min.commute maxt12 maxt34
+    using up maxU12 maxU34 bigMaxU min_repU2 min_repU1 min.coboundedI1 maxt12 maxt34
       by (metis repL_def tl.simps)
   qed
 qed
@@ -3957,9 +3818,7 @@ lemma msb_pos:
       qed
     have set_eq:"(uint ` (({1..(minus(2 ^ (minus(len_of TYPE(32))  1)) 1)})::word set)) 
                = ({1..minus(2 ^ (minus (len_of TYPE(32)) 1)) 1}::int set)"
-      apply(auto)
-      subgoal for xa by (simp add: word_le_def)
-      subgoal for xa by (simp add: word_le_def)
+      apply(auto simp add: word_le_def)
       subgoal for xa 
       proof -
         assume lower:"1 \<le> xa" and upper:"xa \<le> 2147483647"
@@ -3969,12 +3828,9 @@ lemma msb_pos:
         then obtain w::word  where xaw:"xa = uint w" by auto
         then have "w \<in> {1..0x7FFFFFFF} " 
         using lower upper apply(clarsimp, auto)
-        subgoal by (simp add: word_le_def)
-        subgoal by (simp add: word_le_def)
-        done
+        by (auto simp add: word_le_def)
         then show ?thesis
-      using uint_distinct uint_distinct main image_eqI
-      using word_le_def xaw by blast
+          using uint_distinct uint_distinct main image_eqI word_le_def xaw by blast
       qed
       done
     then show  "uint w \<in> {1..2 ^ (len_of TYPE(32) - 1) - 1}" 
@@ -3989,26 +3845,22 @@ lemma msb_neg:
   shows "uint w \<in> {2^((len_of TYPE(32) - 1))+1 .. 2^((len_of TYPE(32)))-1}" 
   proof -
     have mylem:"\<And>w1 w2::word. uint w1 \<ge> uint w2 \<Longrightarrow> w1 \<ge> w2" 
-          subgoal for w1 w2 
-            by (simp add: word_le_def)
-          done
-        have mylem2:"\<And>w1 w2::word.  w1 >  w2 \<Longrightarrow> uint w1 > uint w2" 
-          subgoal for w1 w2 
-            by (simp add: word_less_def)
-          done
-        have gr_to_geq:"w > 0x80000000 \<Longrightarrow> w \<ge> 0x80000001"
-          apply(rule mylem)
-          using mylem2[of "0x80000000" "w"] by auto
-        have taut:"w \<le> 0x80000000 \<or> 0x80000000 < w" by auto
-        have imp:"w \<le> 0x80000000 \<Longrightarrow> False"
-          proof -
-            assume geq:"w \<le> 0x80000000"
-            then have "(msb (-w))"
-              using Word_Lemmas.msb_big[of "-w"] Word_Lemmas.msb_big[of "w"] 
-              by (simp add: msb2) 
-            then show False using msb1 by auto
-          qed
-      have main: "w \<in> {2^((len_of TYPE(32)) - 1)+1 .. 2^((len_of TYPE(32)))-1}"  
+      by (simp add: word_le_def)
+    have mylem2:"\<And>w1 w2::word.  w1 >  w2 \<Longrightarrow> uint w1 > uint w2" 
+      by (simp add: word_less_def)
+    have gr_to_geq:"w > 0x80000000 \<Longrightarrow> w \<ge> 0x80000001"
+      apply(rule mylem)
+      using mylem2[of "0x80000000" "w"] by auto
+    have taut:"w \<le> 0x80000000 \<or> 0x80000000 < w" by auto
+    have imp:"w \<le> 0x80000000 \<Longrightarrow> False"
+      proof -
+        assume geq:"w \<le> 0x80000000"
+        then have "(msb (-w))"
+          using Word_Lemmas.msb_big[of "-w"] Word_Lemmas.msb_big[of "w"] 
+          by (simp add: msb2) 
+        then show False using msb1 by auto
+      qed
+    have main: "w \<in> {2^((len_of TYPE(32)) - 1)+1 .. 2^((len_of TYPE(32)))-1}"  
       using msb1 msb2 apply(clarsimp)
       unfolding word_msb_sint
       proof -
@@ -4028,15 +3880,12 @@ lemma msb_neg:
           unfolding Word.word_uint.Rep_range Word.uints_num by auto
         then obtain w::word  where xaw:"xa = uint w" by auto
         then have the_in:"w \<in> {0x80000001 .. 0xFFFFFFFF} " 
-        using lower upper apply(clarsimp, auto)
-        subgoal by (simp add: word_le_def)
-        subgoal by (simp add: word_le_def)
-        done
+          using lower upper
+          by (auto simp add: word_le_def)
         have the_eq:"(0xFFFFFFFF::word) = -1" by auto
         from the_in the_eq have "w \<in> {0x80000001 .. -1}" by auto
         then show ?thesis
-      using uint_distinct uint_distinct main image_eqI 
-      using  word_le_def xaw by blast
+      using uint_distinct uint_distinct main image_eqI word_le_def xaw by blast
       qed
       done
     then show  "uint w \<in> {2^((len_of TYPE(32)) - 1)+1 .. 2^((len_of TYPE(32)))-1}" 
@@ -4049,35 +3898,29 @@ lemma sint_neg_hom:
   fixes w :: "32 Word.word"
   shows "uint w \<noteq> ((2^(len_of (TYPE(31))))) \<Longrightarrow> (sint(-w) = -(sint w))"
   unfolding Word_Bitwise.word_sint_msb_eq apply auto
-  subgoal using msb_min_neg by auto 
-  prefer 3 subgoal using msb_zero[of w] by (simp add: msb_zero)
-  subgoal
-    proof -
-      assume msb1:"msb (- w)"
-      assume msb2:"\<not> msb w"
-      have "uint w \<in> {1 .. (2^((len_of TYPE(32)) - 1))-1}" using msb_pos[OF msb1 msb2] by auto
-      then have bound:"uint w \<in> {1 .. 0x7FFFFFFF}" by auto
-      have size:"size (w::32 Word.word) = 32" using Word.word_size[of w] by auto 
-      have lem:"\<And>x::int. \<And>n::nat.   x \<in> {1..(2^n)-1} \<Longrightarrow> ((- x) mod (2^n)) - (2^n) = - x"
-        subgoal for x n
-          apply(auto)
-          using Divides.zmod_zminus1_eq_if[of x  "2^n"]
-          apply(cases "x mod 2^n = 0")
-          subgoal apply simp done
-          subgoal by (simp)
-          done
-        done
-      have lem_rule:"uint w \<in> {1..2 ^ 32 - 1} 
-        \<Longrightarrow> (- uint w mod  4294967296) - 4294967296 = - uint w"
-        using lem[of "uint w" 32] by auto
-      have almost:"- uint w mod 4294967296 - 4294967296 = - uint w"
-        apply(rule lem_rule)  
-        using bound by auto
-      show "uint (- w) - 2 ^ size (- w) = - uint w"
-      using bound
-      unfolding Word.uint_word_ariths word_size_neg by (auto simp add: size almost)
-    qed
+    subgoal using msb_min_neg by auto 
+   prefer 3 subgoal using msb_zero[of w] by (simp add: msb_zero)
   proof -
+    assume msb1:"msb (- w)"
+    assume msb2:"\<not> msb w"
+    have "uint w \<in> {1 .. (2^((len_of TYPE(32)) - 1))-1}" using msb_pos[OF msb1 msb2] by auto
+    then have bound:"uint w \<in> {1 .. 0x7FFFFFFF}" by auto
+    have size:"size (w::32 Word.word) = 32" using Word.word_size[of w] by auto 
+    have lem:"\<And>x::int. \<And>n::nat.   x \<in> {1..(2^n)-1} \<Longrightarrow> ((- x) mod (2^n)) - (2^n) = - x"
+      subgoal for x n
+        apply(cases "x mod 2^n = 0")
+        by(auto simp add: Divides.zmod_zminus1_eq_if[of x  "2^n"])
+      done
+    have lem_rule:"uint w \<in> {1..2 ^ 32 - 1} 
+      \<Longrightarrow> (- uint w mod  4294967296) - 4294967296 = - uint w"
+      using lem[of "uint w" 32] by auto
+    have almost:"- uint w mod 4294967296 - 4294967296 = - uint w"
+      apply(rule lem_rule)  
+      using bound by auto
+    show "uint (- w) - 2 ^ size (- w) = - uint w"
+    using bound
+    unfolding Word.uint_word_ariths word_size_neg by (auto simp add: size almost)
+next
   assume neq:"uint w \<noteq> 0x80000000"
   assume msb1:"\<not> msb (- w)"
   assume msb2:"msb w"
@@ -4188,23 +4031,20 @@ lemma neg_less_contra:"\<And>x. Suc x < - (Suc x) \<Longrightarrow> False"
 
 text\<open>Comparison < is correct\<close>
 lemma wgreater_lemma:"w1 \<equiv>\<^sub>L (r1::real) \<Longrightarrow> w2 \<equiv>\<^sub>U r2 \<Longrightarrow> wgreater w1 w2 \<Longrightarrow> r1 > r2"
-  unfolding repU_def repL_def
-  apply(auto)
-  subgoal for r'\<^sub>1 r'\<^sub>2 
-    proof -
-      assume sint_le:"sint w1 > sint w2"
-      then have sless:"(w2 <s w1)" using word_sless_alt by auto
-      assume r1_leq:"r'\<^sub>1 \<le> r1"
-      assume r2_leq:"r2 \<le> r'\<^sub>2"
-      assume wr1:"w1 \<equiv>\<^sub>E r'\<^sub>1"
-      assume wr2:"w2 \<equiv>\<^sub>E r'\<^sub>2"
-      have greater:"r'\<^sub>1 > r'\<^sub>2" 
-        using wr1 wr2 apply(auto simp add: repe.simps)
-        prefer 4 using sless sint_le  by (auto simp add: less_le_trans  not_le)
-      show "r1 > r2"
-        using r1_leq r2_leq greater by auto
-    qed
-  done
+  proof (auto simp add: repU_def repL_def)
+    fix r'\<^sub>1 r'\<^sub>2
+    assume sint_le:"sint w1 > sint w2"
+    then have sless:"(w2 <s w1)" using word_sless_alt by auto
+    assume r1_leq:"r'\<^sub>1 \<le> r1"
+    assume r2_leq:"r2 \<le> r'\<^sub>2"
+    assume wr1:"w1 \<equiv>\<^sub>E r'\<^sub>1"
+    assume wr2:"w2 \<equiv>\<^sub>E r'\<^sub>2"
+    have greater:"r'\<^sub>1 > r'\<^sub>2" 
+      using wr1 wr2 apply(auto simp add: repe.simps)
+      prefer 4 using sless sint_le  by (auto simp add: less_le_trans not_le)
+    show "r1 > r2"
+      using r1_leq r2_leq greater by auto
+  qed
 
 text\<open>Comparison $\geq$ of words\<close>
 fun wgeq :: "word \<Rightarrow> word \<Rightarrow> bool"
@@ -4215,26 +4055,22 @@ where "wgeq w1 w2 =
 
 text\<open>Comparison $\geq$ of words is correct\<close>
 lemma wgeq_lemma:"w1 \<equiv>\<^sub>L r1 \<Longrightarrow> w2 \<equiv>\<^sub>U (r2::real) \<Longrightarrow> wgeq w1 w2 \<Longrightarrow> r1 \<ge> r2"
-  unfolding wgeq.simps
-  subgoal 
-    proof -
-      assume assms:"\<not> (w2 = NEG_INF \<and> w1 = NEG_INF \<or> w2 = POS_INF \<and> w1 = POS_INF) \<and> sint w2 \<le> sint w1"
-      assume a1:"w1 \<equiv>\<^sub>L r1" and a2:"w2 \<equiv>\<^sub>U (r2::real)"
-      from assms have sint_le:"sint w2 \<le> sint w1" by auto
-      then have sless:"(w2 <=s w1)" using word_sless_alt word_sle_def by auto
-      obtain r'\<^sub>1 r'\<^sub>2 where  r1_leq:"r'\<^sub>1 \<le> r1" and r2_leq:"r2 \<le> r'\<^sub>2"
-      and wr1:"w1 \<equiv>\<^sub>E r'\<^sub>1" and wr2:"w2 \<equiv>\<^sub>E r'\<^sub>2"
-      using a1 a2 unfolding repU_def repL_def by auto
-      from assms have check1:"\<not> (w1 = NEG_INF \<and> w2 = NEG_INF)" by auto
-      from assms have check2:"\<not> (w1 = POS_INF \<and> w2 = POS_INF)" by auto
-      have less:"r'\<^sub>2 \<le> r'\<^sub>1" 
-        using sless sint_le  less_le_trans neg_numeral_less_numeral not_le of_int_less_iff 
-          of_int_numeral less_irrefl less_le_trans not_le check1 check2 repe.simps wr2 wr1
-        by(auto simp add: repe.simps)
-      show "r1 \<ge> r2"
-        using r1_leq r2_leq less by auto
-    qed
-  done
+  proof (unfold wgeq.simps)
+    assume assms:"\<not> (w2 = NEG_INF \<and> w1 = NEG_INF \<or> w2 = POS_INF \<and> w1 = POS_INF) \<and> sint w2 \<le> sint w1"
+    assume a1:"w1 \<equiv>\<^sub>L r1" and a2:"w2 \<equiv>\<^sub>U (r2::real)"
+    from assms have sint_le:"sint w2 \<le> sint w1" by auto
+    then have sless:"(w2 <=s w1)" using word_sless_alt word_sle_def by auto
+    obtain r'\<^sub>1 r'\<^sub>2 where  r1_leq:"r'\<^sub>1 \<le> r1" and r2_leq:"r2 \<le> r'\<^sub>2"
+    and wr1:"w1 \<equiv>\<^sub>E r'\<^sub>1" and wr2:"w2 \<equiv>\<^sub>E r'\<^sub>2"
+    using a1 a2 unfolding repU_def repL_def by auto
+    from assms have check1:"\<not> (w1 = NEG_INF \<and> w2 = NEG_INF)" by auto
+    from assms have check2:"\<not> (w1 = POS_INF \<and> w2 = POS_INF)" by auto
+    have less:"r'\<^sub>2 \<le> r'\<^sub>1" 
+      using sless sint_le check1 check2 repe.simps wr2 wr1
+      by(auto simp add: repe.simps)
+    show "r1 \<ge> r2"
+      using r1_leq r2_leq less by auto
+  qed
 
 text\<open>Absolute value of word\<close>
 fun wabs :: "word \<Rightarrow> word"
@@ -4328,16 +4164,13 @@ proof (induction rule: rtsem.induct)
  case rtsem_Const 
    fix w r \<nu>'
    show "Rep_bword w \<equiv>\<^sub>E r \<Longrightarrow> \<nu> REP \<nu>' \<Longrightarrow> [Const w]<>\<nu> \<equiv>\<^sub>P r"
-     using pu_lemma tu_lemma wmax_lemma wmin_lemma  wneg_lemma repU_def repL_def repP_def repe.simps 
-       rep_simps repstate_simps order_refl wtsemU.simps(1) represents_state.cases 
+     using repU_def repL_def repP_def repe.simps rep_simps repstate_simps 
      by auto
 next
  case rtsem_Var
    fix x \<nu>'
    show "\<nu> REP \<nu>' \<Longrightarrow> [Var x]<>\<nu> \<equiv>\<^sub>P \<nu>' x"
-     by(auto simp add: Interval_Arithmetic.wVarU case_prod_conv pu_lemma tu_lemma wmax_lemma 
-         wmin_lemma wneg_lemma repU_def repL_def repP_def repe.simps rep_simps repstate_simps 
-         order_refl wtsemU.simps(1) represents_state.cases)
+   by(auto simp add: repU_def repL_def repP_def repe.simps rep_simps repstate_simps)
 next
  case rtsem_Plus
    fix \<theta>\<^sub>1 :: "trm" and \<nu>':: "rstate" and r1 and \<theta>\<^sub>2 :: "trm" and  r2
@@ -4418,7 +4251,7 @@ next
    and   urep2:"(ub2 \<ge> r2) \<and> (snd ([\<theta>\<^sub>2]<>\<nu>) \<equiv>\<^sub>E ub2)"
    and   lrep1:"(lb1 \<le> r1) \<and> (fst ([\<theta>\<^sub>1]<>\<nu>) \<equiv>\<^sub>E lb1)" 
    and   lrep2:"(lb2 \<le> r2) \<and> (fst ([\<theta>\<^sub>2]<>\<nu>) \<equiv>\<^sub>E lb2)"
-     using prod.case_eq_if repP_def  repU_def repL_def by auto
+     using repP_def repU_def repL_def by auto
    have lbound:"wmax l1 l2 \<equiv>\<^sub>L max r1 r2"
      by (metis dual_order.trans fst_conv le_cases lrep1 lrep2 lu1 lu2 max_def repL_def wmax.elims)
    have ubound:"wmax u1 u2 \<equiv>\<^sub>U max r1 r2"     
@@ -4473,7 +4306,7 @@ next
   obtain ub lb:: real 
    where urep:"(ub \<ge> r) \<and> (snd ([\<theta>]<>\<nu>) \<equiv>\<^sub>E ub)" 
    and   lrep:"(lb \<le> r) \<and> (fst ([\<theta>]<>\<nu>) \<equiv>\<^sub>E lb)" 
-    using prod.case_eq_if repP_def  repU_def repL_def by auto
+    using  repP_def repU_def repL_def by auto
   have ubound:"((wneg u1) \<equiv>\<^sub>L (uminus r))"
     by (metis real_minus_le_minus lu repL_def snd_conv urep wneg_lemma)
   have lbound:"((wneg l1) \<equiv>\<^sub>U (uminus r))"
@@ -4501,9 +4334,9 @@ next
     apply(simp only: repL_def)
     apply(rule exI[where x="max lb (- ub)"])
     apply(rule conjI)  
-    using lrep lu repL_def snd_conv wmax_lemma real_minus_le_minus lu repL_def  urep wneg_lemma
-     apply linarith
-    using lrep lu repL_def snd_conv wmax_lemma real_minus_le_minus lu repL_def  urep wneg_lemma
+     using lrep wmax_lemma real_minus_le_minus urep 
+      apply linarith
+    using lrep wmax_lemma real_minus_le_minus lu urep wneg_lemma
     by simp  
   have ubound:"(wmax u1 (wneg l1) \<equiv>\<^sub>U (abs r))"
     apply(simp only: repU_def)
@@ -4514,8 +4347,7 @@ next
     using lrep lu repL_def snd_conv wmax_lemma real_minus_le_minus lu repL_def urep wneg_lemma
     by simp  
   show "[Abs \<theta>]<>\<nu> \<equiv>\<^sub>P abs r"
-    using repP_def Let_def ubound lbound lu lu wAbsU 
-      by auto
+    using repP_def Let_def ubound lbound lu lu wAbsU by auto
 qed
 
 text\<open>Every word represents some real\<close>
@@ -4530,11 +4362,11 @@ proof -
     apply(rule exI[where x="((2 ^ 31) -1)"])
     using weq by (auto simp add: repe.simps)
   have boundU:"w \<noteq> NEG_INF \<Longrightarrow> w \<noteq> POS_INF \<Longrightarrow> sint (Rep_bword bw) < sint POS_INF"
-    using Rep_bword weq unfolding NEG_INF_def POS_INF_def
+    using Rep_bword weq
     by (metis (no_types, lifting) mem_Collect_eq min.absorb_iff2 min_def not_le 
         Word.word_sint.Rep_eqD)
   have boundL:"w \<noteq> NEG_INF \<Longrightarrow> w \<noteq> POS_INF \<Longrightarrow> sint NEG_INF < sint (Rep_bword bw)"
-    using Rep_bword weq unfolding NEG_INF_def POS_INF_def
+    using Rep_bword weq
     by (metis (no_types, lifting) mem_Collect_eq min.absorb_iff2 min_def not_le 
         Word.word_sint.Rep_eqD)
   have intCase:"w \<noteq> NEG_INF \<Longrightarrow> w \<noteq> POS_INF \<Longrightarrow> ?thesis bw"
@@ -4542,11 +4374,9 @@ proof -
     apply(rule repINT)
     using boundU boundL by(auto)
   then show "?thesis bw"
-  apply(cases "w = POS_INF")
-  subgoal using posInfCase by auto
-  apply(cases "w = NEG_INF")
-  subgoal using negInfCase by auto
-  using intCase by auto
+    apply(cases "w = POS_INF")
+     apply(cases "w = NEG_INF")
+      using posInfCase intCase negInfCase by auto
   qed
 
 text\<open>Every term has a value\<close>
@@ -4571,7 +4401,7 @@ case (wGreaterT t1 v t2 w)
     prefer 3
     apply(rule wgreater_lemma[where ?w1.0="fst([t1]<> v)", where ?w2.0="snd([t2]<> v)"])
     using rep1 rep2 wle repP_def repL_def repU_def  eval1 eval2 
-    by ((simp add: prod.case_eq_if| blast)+)
+    by ((simp add: prod.case_eq_if | blast)+)
 next
   case (wGreaterF t2 v t1 v')
   assume wl:"wgeq (fst ([t2]<>v)) (snd ([t1]<>v))"
@@ -4674,12 +4504,11 @@ lemma rep_upd:"\<omega> = (\<nu>(Inr x := snd([\<theta>]<>\<nu>)))(Inl x := fst(
    \<Longrightarrow> \<omega> REP \<nu>'(x := r)"
   apply(rule REPI)
   apply(rule conjI)
-  apply(unfold repL_def)
-  using trm_sound prod.case_eq_if repP_def repstate_simps repL_def 
-  apply(metis (no_types, lifting) Inl_Inr_False fun_upd_apply sum.inject(1))
-  apply(unfold repU_def)
-  using  repP_def repstate_simps repU_def
-  apply(auto)
+   apply(unfold repL_def)
+   using trm_sound prod.case_eq_if repP_def repstate_simps repL_def 
+   apply(metis (no_types, lifting) Inl_Inr_False fun_upd_apply sum.inject(1))
+  using repP_def repstate_simps repU_def
+  apply(auto simp add: repU_def)
   by (metis (full_types) surjective_pairing trm_sound)
 
 text\<open>Interval program semantics soundly contains real semantics existentially\<close>
@@ -4693,7 +4522,7 @@ proof (induction arbitrary: \<nu>' rule: wpsem.induct)
   and rep:"\<nu> REP \<nu>'"
   show ?case 
     apply(rule exI[where x=\<nu>'])
-    using sem rep  by (auto simp add: eq fml_sound rep)
+    using sem rep by (auto simp add: eq fml_sound rep)
 next
   case (wAssign \<omega> \<nu> x \<theta> \<nu>') 
   assume eq:"\<omega> = \<nu>(Inr x := snd ([\<theta>]<>\<nu>), Inl x := fst ([\<theta>]<>\<nu>))"
