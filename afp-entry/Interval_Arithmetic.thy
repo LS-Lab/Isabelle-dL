@@ -3210,8 +3210,8 @@ next
     by (metis bound1 bound2b dual_order.trans eq2 min_def not_less) 
   have neg_eq:"wmin w1 w2 \<equiv>\<^sub>E  (real_of_int (sint (wmin w1 w2)))"
     apply (rule repINT)
-    using bound1 bound2a bound2b unfolding eq1 eq2 apply auto
-    using bound2b p1 by (simp add: word_sless_alt)+
+    using bound1 bound2a bound2b bound2b p1 unfolding eq1 eq2
+    by (auto simp add: word_sless_alt)
   show "?thesis"
     using eqNeg neg_eq
     by (metis bound2b less_eq_real_def not_less of_int_less_iff p1 wmin.simps word_sless_alt)
@@ -3219,8 +3219,8 @@ next
   case NegPos
   assume n1:"w1 = NEG_INF"   
   assume p2:"w2 = POS_INF"
-  have  bound1:"r1 \<le>  (real_of_int (sint NEG_INF))"
-    and bound2:" (real_of_int (sint POS_INF)) \<le> r2"
+  have  bound1:"r1 \<le> (real_of_int (sint NEG_INF))"
+    and bound2:"(real_of_int (sint POS_INF)) \<le> r2"
     using n1 p2 eq1 eq2 by(auto simp add: rep_simps repe.simps)    
   have eqNeg:"wmin w1 w2 = NEG_INF"
     unfolding eq1 eq2 wmin.simps n1 p2 word_sless_def word_sle_def
@@ -3475,8 +3475,7 @@ proof -
     next
       case 2
       have bound:"ru2 \<ge> 0"
-        using "2" r2 bounds grl1 grl2 gru1 gru2
-        using dual_order.trans by auto
+        using "2" r2 bounds grl1 grl2 gru1 gru2 dual_order.trans by auto
       then have g1:"rl1 * ru2 \<le> rl1 * r2" 
         using "2" r2 bounds grl1 grl2 gru1 gru2 mult_le_cancel_left
         by fastforce
@@ -3496,8 +3495,7 @@ proof -
     proof (cases)
       case Pos
       have bound:"rl2 \<le> 0"
-        using Pos r2 bounds grl1 grl2 gru1 gru2
-        using dual_order.trans by auto
+        using Pos r2 bounds grl1 grl2 gru1 gru2 dual_order.trans by auto
       then have g1:"ru1 * rl2 \<le> ru1 * r2" 
         using Pos bounds grl1 grl2 gru1 gru2 mult_le_cancel_left
         by fastforce
@@ -3511,12 +3509,11 @@ proof -
       have up:"ru1 * rl2 \<le> r1 * r2"
         by auto
       show ?thesis 
-        by (metis up maxU12 maxU34  wmin.elims min_repU2 min_repU1 repL_def timesul tl.simps)
+        by (metis up maxU12 maxU34 wmin.elims min_repU2 min_repU1 repL_def timesul tl.simps)
     next
       case Neg
       have g1:"ru1 * ru2 \<le> 0" 
-        using Neg r2 bounds  grl1 grl2 gru1 gru2
-        using mult_le_0_iff by blast
+        using Neg r2 bounds  grl1 grl2 gru1 gru2 mult_le_0_iff by blast
       have g2:"0 \<le> r1 * r2"
         using Neg r2 zero_le_mult_iff by blast  
       from g1 and g2
@@ -3531,18 +3528,15 @@ proof -
     case PosZero
     assume bounds:"0 \<le> rl1 \<and> rl2 \<le> 0 \<and> 0 \<le> ru2"
     have r1:"r1 \<ge> 0" using bounds dual_order.trans grl1 by blast
-    have bound:"0 \<le> ru1"  using r1  bounds grl1 grl2 gru1 gru2  
-      using dual_order.trans by auto
+    have bound:"0 \<le> ru1" using r1 bounds grl1 grl2 gru1 gru2 dual_order.trans by auto
     consider "r2 \<ge> 0" | "r2 \<le> 0" using le_cases by auto
     then show ?thesis
     proof (cases)
       case 1
       have g1:"rl1 * rl2 \<le> 0" 
-        using r1 "1" bounds grl1 grl2 gru1 gru2
-        using mult_le_0_iff by blast
+        using r1 "1" bounds grl1 grl2 gru1 gru2 mult_le_0_iff by blast
       have g2:"0 \<le> r1 * r2"
-        using r1 "1" bounds grl1 grl2 gru1 gru2
-        using zero_le_mult_iff by blast
+        using r1 "1" bounds grl1 grl2 gru1 gru2 zero_le_mult_iff by blast
       from g1 and g2
       have up:"rl1 * rl2 \<le> r1 * r2"
         by auto
@@ -3569,8 +3563,7 @@ proof -
     case NegZero
     assume bounds:"ru1 \<le> 0 \<and> rl2 \<le> 0 \<and> 0 \<le> ru2"
     have r1:"r1 \<le> 0"  using bounds dual_order.trans gru1 by blast
-    have bound:"rl1 \<le> 0" using r1  bounds grl1 grl2 gru1 gru2  
-      using dual_order.trans by auto
+    have bound:"rl1 \<le> 0" using r1  bounds grl1 grl2 gru1 gru2 dual_order.trans by auto
     consider "r2 \<ge> 0" | "r2 \<le> 0" using le_cases by auto
     then show ?thesis
     proof (cases)
@@ -3580,8 +3573,7 @@ proof -
         using r1 r2 bounds bound grl1 grl2 gru1 gru2
         by (metis mult_le_cancel_left leD)  
       have g2:"rl1 * r2 \<le> r1 * r2"
-        using r1 r2 bounds grl1 grl2 gru1 gru2
-        using mult_right_mono 
+        using r1 r2 bounds grl1 grl2 gru1 gru2 mult_right_mono 
         by (simp add: mult_le_0_iff)
       from g1 and g2
       have up:"rl1 * ru2 \<le> r1 * r2"
@@ -3594,8 +3586,7 @@ proof -
       assume r2:"r2 \<le> 0"
       have lower:"rl1 \<le> 0" using bounds dual_order.trans grl1 r1 by blast
       have g1:"ru1 * ru2 \<le> 0" 
-        using r1 r2 bounds  grl1 grl2 gru1 gru2
-        using mult_le_0_iff by blast
+        using r1 r2 bounds  grl1 grl2 gru1 gru2 mult_le_0_iff by blast
       have g2:"0 \<le> r1 * r2"
         using r1 r2 
         by (simp add: zero_le_mult_iff)
