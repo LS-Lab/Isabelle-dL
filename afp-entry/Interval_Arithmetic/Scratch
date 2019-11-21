@@ -1,6 +1,0 @@
-theory "Finite_String"
-  imports 
-    Main 
-    "HOL-Library.Code_Target_Int"
-begin
-end
