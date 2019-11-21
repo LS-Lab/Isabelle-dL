@@ -4481,7 +4481,7 @@ next
     by (metis fst_conv)
   show "[Neg \<theta>]<>\<nu> \<equiv>\<^sub>P - r"
     unfolding repP_def Let_def using ubound lbound lu 
-    by (auto simp add:  lu wNegU)
+    by (auto)
 next
   case rtsem_Abs
   fix \<theta> :: "trm" and \<nu>' r
@@ -4525,10 +4525,10 @@ proof -
   obtain w where weq:"w = Rep_bword bw" by auto
   have negInfCase:"w = NEG_INF \<Longrightarrow> ?thesis bw"
    apply(rule exI[where x="-((2 ^ 31) -1)"])
-    using weq by (auto simp add: repe.simps NEG_INF_def)
+    using weq by (auto simp add: repe.simps)
   have posInfCase:"w = POS_INF \<Longrightarrow> ?thesis bw"
     apply(rule exI[where x="((2 ^ 31) -1)"])
-    using weq by (auto simp add: repe.simps POS_INF_def)
+    using weq by (auto simp add: repe.simps)
   have boundU:"w \<noteq> NEG_INF \<Longrightarrow> w \<noteq> POS_INF \<Longrightarrow> sint (Rep_bword bw) < sint POS_INF"
     using Rep_bword weq unfolding NEG_INF_def POS_INF_def
     by (metis (no_types, lifting) mem_Collect_eq min.absorb_iff2 min_def not_le 
@@ -4650,8 +4650,8 @@ next
   note rep2 = trm_sound[of t2 v' r2, where \<nu>=v, OF eval2 rep]
   show "[Equals t1 t2]v' \<downharpoonright> False"
   apply(rule rEqualsF, rule eval1, rule eval2)
-    using wgeq_lemma eval1 eval2 rep1 rep2 unfolding repP_def Let_def
-    using  wgreater_lemma rGreaterF  prod.case_eq_if wle 
+    using wgeq_lemma eval1 eval2 rep1 rep2 wgreater_lemma rGreaterF  prod.case_eq_if wle
+    unfolding repP_def
     by (metis (no_types, lifting) less_irrefl) 
 next
   case (wEqualsF2 t2 v t1 v')
@@ -4665,9 +4665,9 @@ next
   note rep2 = trm_sound[of t2 v' r2, where \<nu>=v, OF eval2 rep]
   show "[Equals t1 t2]v' \<downharpoonright> False"
     apply(rule rEqualsF, rule eval1, rule eval2)
-    using wgeq_lemma eval1 eval2 rep1 rep2  wgreater_lemma rGreaterF  prod.case_eq_if wle
-    unfolding repP_def Let_def
-    by (metis (no_types, lifting) less_irrefl rEqualsF)
+    using wgeq_lemma eval1 eval2 rep1 rep2  wgreater_lemma rGreaterF prod.case_eq_if wle
+    unfolding repP_def
+    by (metis (no_types, lifting) less_irrefl)
 qed (auto)
   
 lemma rep_upd:"\<omega> = (\<nu>(Inr x := snd([\<theta>]<>\<nu>)))(Inl x := fst([\<theta>]<>\<nu>)) \<Longrightarrow> \<nu> REP \<nu>' \<Longrightarrow> ([\<theta>::trm]\<nu>' \<down> r)
@@ -4675,12 +4675,11 @@ lemma rep_upd:"\<omega> = (\<nu>(Inr x := snd([\<theta>]<>\<nu>)))(Inl x := fst(
   apply(rule REPI)
   apply(rule conjI)
   apply(unfold repL_def)
-  using trm_sound  prod.case_eq_if repP_def repstate_simps repL_def 
-  apply (metis (no_types, lifting) Inl_Inr_False fun_upd_apply sum.inject(1))
+  using trm_sound prod.case_eq_if repP_def repstate_simps repL_def 
+  apply(metis (no_types, lifting) Inl_Inr_False fun_upd_apply sum.inject(1))
   apply(unfold repU_def)
-  using trm_sound  prod.case_eq_if repP_def repstate_simps repU_def
-  using  Inl_Inr_False fun_upd_apply sum.inject(1) sum.inject(2) 
-  apply auto
+  using  repP_def repstate_simps repU_def
+  apply(auto)
   by (metis (full_types) surjective_pairing trm_sound)
 
 text\<open>Interval program semantics soundly contains real semantics existentially\<close>
