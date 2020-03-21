@@ -355,7 +355,7 @@ fun seq_to_string :: "sequent \<Rightarrow> char list"
 where "seq_to_string (A,S) = join '', '' (map fml_to_string A) @ '' |- '' @ join '', '' (map fml_to_string S)"
   
 fun rule_to_string :: "rule \<Rightarrow> char list"
-where "rule_to_string (SG, C) = (join '';;   '' (map seq_to_string SG)) @ ''            '' @  (*[char_of_nat 10] @ *)seq_to_string C"
+where "rule_to_string (SG, C) = (join '';;   '' (map seq_to_string SG)) @ ''            '' @  \<^cancel>\<open>[char_of_nat 10] @ \<close>seq_to_string C"
 
 fun close :: "'a list \<Rightarrow> 'a \<Rightarrow>'a list"
 where "close L x = filter (\<lambda>y. y \<noteq> x) L"
@@ -779,7 +779,7 @@ fun rule_result :: "rule \<Rightarrow> (nat * ruleApp) \<Rightarrow>  rule optio
    (if j \<ge> length (snd (nth SG i)) then None else
    (case (RightRule_result R j (nth SG i)) of
      Some a \<Rightarrow> merge_rules (SG,C) (a, nth SG i) i
-   | None \<Rightarrow> None(* [(SG,C)]*)))" 
+   | None \<Rightarrow> None\<^cancel>\<open>[(SG,C)]\<close>))" 
 | Step_Cut:"rule_result (SG,C) (i,Cut \<phi>) = 
   (if(fsafe \<phi>) then
     (let (A,S)= nth SG i in  (merge_rules (SG,C) ([(A @ [\<phi>], S), (A,  S @ [\<phi>])], (A,S)) i))
@@ -910,8 +910,8 @@ where
 | RightRule_Imply:"(case (nth (snd (nth SG i)) j) of ( !(!Q && !(!PP))) \<Rightarrow> True | _ \<Rightarrow> False) \<Longrightarrow> rrule_ok SG C i j ImplyR"
 | RightRule_Equiv:"(case (nth (snd (nth SG i)) j) of  (!(!(PPPP && Q) && !(! PP && ! QQ))) \<Rightarrow> (PPPP = PP) \<and> (Q = QQ) | _ \<Rightarrow> False) \<Longrightarrow> rrule_ok SG C i j EquivR"
 (* Note: Used to ban no-op cohides because close function breaks if sequent unchanged by rule, but we should just get the close function right instead *)
-| RightRule_Cohide:"length (snd (nth SG i)) > j \<Longrightarrow> (*(length (snd (nth SG i)) \<noteq> 1) \<Longrightarrow>*) rrule_ok SG C i j CohideR"
-| RightRule_CohideRR:"length (snd (nth SG i)) > j  \<Longrightarrow> (* fst (nth SG i) \<noteq>  [] \<Longrightarrow>  length (snd (nth SG i)) \<noteq> 1 \<Longrightarrow>*) rrule_ok SG C i j CohideRR"
+| RightRule_Cohide:"length (snd (nth SG i)) > j \<Longrightarrow> \<^cancel>\<open>(length (snd (nth SG i)) \<noteq> 1) \<Longrightarrow>\<close> rrule_ok SG C i j CohideR"
+| RightRule_CohideRR:"length (snd (nth SG i)) > j  \<Longrightarrow> \<^cancel>\<open> fst (nth SG i) \<noteq>  [] \<Longrightarrow>  length (snd (nth SG i)) \<noteq> 1 \<Longrightarrow>\<close> rrule_ok SG C i j CohideRR"
 | RightRule_True:"nth (snd (nth SG i)) j = Geq (Const (bword_zero)) (Const (bword_zero)) \<Longrightarrow> rrule_ok SG C i j TrueR"
 
 (* | RightRule_Cohide:"length (snd (nth SG i)) > j \<Longrightarrow> (\<And>\<Gamma> q. (nth SG i) \<noteq> (\<Gamma>, [q])) \<Longrightarrow> rrule_ok SG C i j CohideR"
@@ -1230,7 +1230,7 @@ lemma TUrename_scancel:"TRadmit \<theta> \<Longrightarrow> sterm_sem I \<theta> 
 lemma TUrename_dcancel:"TRadmit \<theta> \<Longrightarrow> dterm_sem I \<theta> \<nu> = dterm_sem I (TUrename what repl  (TUrename what repl \<theta>)) \<nu> "
   using TUrename_cancel by auto
 
-lemma OUrename_cancel:"ORadmit ode \<Longrightarrow> (*ODE_sem I *)ode(* \<nu>*) = (*ODE_sem I *)(OUrename what repl  (OUrename what repl ode)) (*\<nu> *)"
+lemma OUrename_cancel:"ORadmit ode \<Longrightarrow> \<^cancel>\<open>ODE_sem I \<close>ode\<^cancel>\<open> \<nu>\<close> = \<^cancel>\<open>ODE_sem I \<close>(OUrename what repl  (OUrename what repl ode)) \<^cancel>\<open>\<nu> \<close>"
 proof (induction ode)
   case (OVar x)
   then show ?case by(auto)
@@ -2415,7 +2415,7 @@ then have TRA:"TRadmit t"
   obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)"
     by (metis seq2fml.cases) 
   have brenameR_simp:"\<And>\<Gamma> \<Delta> SS. 
-    (\<Gamma>,\<Delta>) = SS \<Longrightarrow>  (* \<theta> p *)
+    (\<Gamma>,\<Delta>) = SS \<Longrightarrow>  \<^cancel>\<open> \<theta> p \<close>
     \<Gamma> ! j = ([[Assign what t]]p) \<Longrightarrow>
     what \<noteq> repl \<Longrightarrow>
   (TRadmit t \<and>  FRadmit([[Assign what t]]p) \<and> FRadmit p \<and> fsafe ([[Assign what t]]p) \<and>
@@ -2549,7 +2549,7 @@ next
 next
   case FalseL then have L:"L = FalseL" by auto
   obtain p q where eq:"nth (fst (nth SG  i)) j = FF"
-    using some L apply(cases " (*snd *)(SG ! i)(* ! j*)", auto simp add: L FF_def)
+    using some L apply(cases " \<^cancel>\<open>snd \<close>(SG ! i)\<^cancel>\<open> ! j\<close>", auto simp add: L FF_def)
     subgoal for a b
       apply(cases "a ! j" ,auto)
       subgoal for x11 x12 
@@ -2739,7 +2739,7 @@ next
 next
   case TrueR then have L:"L = TrueR" by auto
   obtain p q where eq:"nth (snd (nth SG  i)) j = TT"
-    using some L apply(cases " (*snd *)(SG ! i)(* ! j*)", auto simp add: L TT_def)
+    using some L apply(cases " \<^cancel>\<open>snd \<close>(SG ! i)\<^cancel>\<open> ! j\<close>", auto simp add: L TT_def)
     subgoal for a b
       apply(cases "b ! j" ,auto)
       subgoal for x11 x12 
@@ -3911,7 +3911,7 @@ then have TRA:"TRadmit t"
   obtain \<Gamma> and \<Delta> where SG_dec:"(\<Gamma>,\<Delta>) = (SG ! i)"
     by (metis seq2fml.cases) 
   have brenameR_simp:"\<And>\<Gamma> \<Delta> SS. 
-    (\<Gamma>,\<Delta>) = SS \<Longrightarrow>  (* \<theta> p *)
+    (\<Gamma>,\<Delta>) = SS \<Longrightarrow>  \<^cancel>\<open> \<theta> p \<close>
     \<Delta> ! j = ([[Assign what t]]p) \<Longrightarrow>
     what \<noteq> repl \<Longrightarrow>
   (TRadmit t \<and>  FRadmit([[Assign what t]]p) \<and> FRadmit p \<and> fsafe ([[Assign what t]]p) \<and>

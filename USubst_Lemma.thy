@@ -4756,7 +4756,7 @@ next
       subgoal for s by (rule silly[of s])
       done
     have lem:"\<And>ODE. Oadmit \<sigma> ODE (BVO ODE) \<Longrightarrow> 
-(*   (\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x)*)
+\<^cancel>\<open>   (\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x)\<close>
    (OSigSet \<sigma> ODE) \<subseteq> (-(BVO ODE))"
       subgoal for ODE
         apply(induction rule: Oadmit.induct)
@@ -4811,7 +4811,7 @@ next
     done
     have FVT_sub:"(OSigSet \<sigma> ODE) \<subseteq> (-(BVO ODE))"
       using lem[OF OA] unfolding OSigSet_def by auto
-    have agrees: "\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (OSigSet \<sigma> ODE)(*(\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x)*)"
+    have agrees: "\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (OSigSet \<sigma> ODE)\<^cancel>\<open>(\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x)\<close>"
        subgoal for s using agree_sub[OF FVT_sub hmm[of s]] by auto done
     have "\<And>s. s \<in> {0..t} \<Longrightarrow> mk_v (adjoint I \<sigma> (sol 0, bb)) ODE = mk_v (adjoint I \<sigma> (sol s, bb)) ODE"
       subgoal for s         
@@ -4989,7 +4989,7 @@ next
     have mkv:"\<And>s. s \<in> {0..t} \<Longrightarrow> mk_v I (Osubst ODE \<sigma>) (sol 0, bb) (sol s) = mk_v (adjoint I \<sigma> (sol s, bb)) ODE (sol 0, bb) (sol s)"
       subgoal for s by (rule silly[of s])
       done
-    have lem:"\<And>ODE. Oadmit \<sigma> ODE (BVO ODE) \<Longrightarrow> (*(\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x)*) (OSigSet \<sigma> ODE) \<subseteq> (-(BVO ODE))"
+    have lem:"\<And>ODE. Oadmit \<sigma> ODE (BVO ODE) \<Longrightarrow> \<^cancel>\<open>(\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x)\<close> (OSigSet \<sigma> ODE) \<subseteq> (-(BVO ODE))"
       subgoal for ODE
         apply(induction rule: Oadmit.induct)
         apply (auto simp add: OSigSet_def)
@@ -5029,9 +5029,9 @@ next
      qed
        done
      done
-    have FVT_sub:"OSigSet \<sigma> ODE (*(\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x)*) \<subseteq> (-(BVO ODE))"
+    have FVT_sub:"OSigSet \<sigma> ODE \<^cancel>\<open>(\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x)\<close> \<subseteq> (-(BVO ODE))"
       using lem[OF OA] by auto
-    have agrees: "\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (OSigSet \<sigma> ODE) (*(\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x)*)"
+    have agrees: "\<And>s. s \<in> {0..t} \<Longrightarrow> Vagree (sol 0,bb) (sol s, bb) (OSigSet \<sigma> ODE) \<^cancel>\<open>(\<Union>i\<in>{i |i. Inl i \<in> SIGO ODE}. case SFunctions \<sigma> i of None \<Rightarrow> {} | Some x \<Rightarrow> FVT x)\<close>"
        subgoal for s using agree_sub[OF FVT_sub hmm[of s]] by auto done
     have "\<And>s. s \<in> {0..t} \<Longrightarrow> mk_v (adjoint I \<sigma> (sol 0, bb)) ODE = mk_v (adjoint I \<sigma> (sol s, bb)) ODE"
       subgoal for s         

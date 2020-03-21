@@ -269,7 +269,7 @@ inductive dfree :: "trm \<Rightarrow> bool"
 where
   dfree_Var: "dfree (Var i)"
 | dfree_Const: "dfree (Const r)"
-| dfree_Fun: "nonbase f \<Longrightarrow> (*nonbase (debase i) \<Longrightarrow> *)ilength f < MAX_STR \<Longrightarrow> (\<forall>j. dfree (args j)) \<Longrightarrow> dfree (Function f args)"
+| dfree_Fun: "nonbase f \<Longrightarrow> \<^cancel>\<open>nonbase (debase i) \<Longrightarrow>\<close> ilength f < MAX_STR \<Longrightarrow> (\<forall>j. dfree (args j)) \<Longrightarrow> dfree (Function f args)"
 | dfree_Plus: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Plus \<theta>\<^sub>1 \<theta>\<^sub>2)"
 | dfree_Neg: "dfree \<theta> \<Longrightarrow> dfree (Neg \<theta>)"
 | dfree_Times: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"

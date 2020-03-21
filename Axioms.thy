@@ -164,7 +164,7 @@ where [axiom_defs]:"assign_axiom \<equiv>
 
 definition diff_assign_axiom :: "formula"
   where [axiom_defs]:"diff_assign_axiom \<equiv>
-(* [x_':=f();]p(x_') <-> p(f())*)
+\<^cancel>\<open> [x_':=f();]p(x_') <-> p(f())\<close>
   ([[DiffAssign Ix  ($f Ix empty)]] (Prop Ix (singleton (DiffVar Ix))))
     \<leftrightarrow> Prop Ix (singleton ($f Ix empty))"
 

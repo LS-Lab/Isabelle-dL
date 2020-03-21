@@ -128,7 +128,7 @@ definition Iagree :: "interp \<Rightarrow> interp \<Rightarrow> (ident + ident +
 where "Iagree I J V \<equiv>
   (\<forall>i\<in>V.
     (\<forall>x. i = Inl x \<longrightarrow> Functions I x = Functions J x) \<and>
-(*    (\<forall>x. i = Inl x \<longrightarrow> DFunls I x = DFunls J x) \<and>*)
+\<^cancel>\<open>    (\<forall>x. i = Inl x \<longrightarrow> DFunls I x = DFunls J x) \<and>\<close>
     (\<forall>x. i = Inl x \<longrightarrow> Funls I x = Funls J x) \<and>
     (\<forall>x. i = Inr (Inl x) \<longrightarrow> Contexts I x = Contexts J x) \<and>
     (\<forall>x. i = Inr (Inr x) \<longrightarrow> Predicates I x = Predicates J x) \<and>

@@ -805,7 +805,7 @@ next
                  and fsafe:"fsafe \<phi>"
                  and eqP:"P = \<phi>"
                  and aaba: "(aa, ba) = mk_v I ODE (ab, bb) (sol t)"
-                 and all:"\<forall>i. (*(Inl i \<in> BVO ODE \<longrightarrow> sol 0 $ i = ab $ i) \<and>*) (Inl i \<in> Inl ` FVO ODE \<longrightarrow> sol 0 $ i = ab $ i) \<and> (Inl i \<in> FVF \<phi> \<longrightarrow> sol 0 $ i = ab $ i)"
+                 and all:"\<forall>i. \<^cancel>\<open>(Inl i \<in> BVO ODE \<longrightarrow> sol 0 $ i = ab $ i) \<and>\<close> (Inl i \<in> Inl ` FVO ODE \<longrightarrow> sol 0 $ i = ab $ i) \<and> (Inl i \<in> FVF \<phi> \<longrightarrow> sol 0 $ i = ab $ i)"
                  and allSol:"\<forall>x\<in>{0..t}. (sol has_derivative (\<lambda>xa. xa *\<^sub>R ODE_sem I ODE (sol x))) (at x within {0..t})"
                  and mkV:"sol \<in> {0..t} \<rightarrow> {x. mk_v I ODE (ab, bb) x \<in> fml_sem I \<phi>}"
                  and x:"0 \<le> x" 
@@ -904,7 +904,7 @@ next
                    "fsafe \<phi>"
                    "0 \<le> t"
                    "(aa, ba) = mk_v I ODE (ab, bb) (sol t)"
-                   "VSagree (sol 0) ab {x. (*Inl x \<in> BVO ODE \<or> *)Inl x \<in> Inl ` FVO ODE \<or> Inl x \<in> FVF \<phi>}"
+                   "VSagree (sol 0) ab {x. \<^cancel>\<open>Inl x \<in> BVO ODE \<or> \<close>Inl x \<in> Inl ` FVO ODE \<or> Inl x \<in> FVF \<phi>}"
                    and deriv:"\<forall>x\<in>{0..t}. (sol has_derivative (\<lambda>xa. xa *\<^sub>R ODE_sem I ODE (sol x))) (at x within {0..t})"
                    and sol:"sol \<in> {0..t} \<rightarrow> {x. mk_v I ODE (ab, bb) x \<in> fml_sem I \<phi>}"
                    and mem:"x \<in> {0..t}"
@@ -1029,7 +1029,7 @@ next
                       and veq:"(ab, bb) = mk_v I ODE (a, b) (sol t)"
                       and t:"0 \<le> t"
                       and sol:"(sol solves_ode (\<lambda>a. ODE_sem I ODE)) {0..t} {x. mk_v I ODE (a, b) x \<in> fml_sem I P}"
-                      and VSA:"VSagree (sol 0) a  {uu. (*Inl uu \<in> BVO ODE \<or> *)Inl uu \<in> Inl ` FVO ODE \<or> Inl uu \<in> FVF P}"
+                      and VSA:"VSagree (sol 0) a  {uu. \<^cancel>\<open>Inl uu \<in> BVO ODE \<or> \<close>Inl uu \<in> Inl ` FVO ODE \<or> Inl uu \<in> FVF P}"
                     have semBVsub:"(semBV I ODE) \<subseteq> BVO ODE" 
                     proof (induction ODE)
                       case (OVar x1 x2)

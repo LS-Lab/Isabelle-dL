@@ -215,9 +215,9 @@ subgoal
     have scast_eq2:"sint((scast (0x80000001::word))::64 Word.word) = sint ((0x80000001::32 Word.word))"
       by auto
     have sints64:"sints 64 = {i. - (2 ^ 63) \<le> i \<and> i < 2 ^ 63}"
-      using sints_def[of 64] Bit_Representation.range_sbintrunc[of 63] by auto 
+      using sints_def[of 64] range_sbintrunc[of 63] by auto 
     have sints32:"sints 32 = {i. - (2 ^ 31) \<le> i \<and> i < 2 ^ 31}"
-      using sints_def[of 32] Bit_Representation.range_sbintrunc[of 31] by auto 
+      using sints_def[of 32] range_sbintrunc[of 31] by auto 
     have thing1:"0 \<le> 9223372034707292161 + ((-(2 ^ 31))::real)" by auto
     have thing2:"sint ((scast w\<^sub>2)::64 Word.word) \<ge> - (2 ^ 31) " 
       using Word.word_sint.Rep[of "(w\<^sub>2)::32 Word.word"] sints32 
@@ -462,9 +462,9 @@ subgoal
     have scast_eq2:"sint((scast (0x80000001::word))::64 Word.word) = sint ((0x80000001::32 Word.word))"
        by auto
     have sints64:"sints 64 = {i. - (2 ^ 63) \<le> i \<and> i < 2 ^ 63}"
-      using sints_def[of 64] Bit_Representation.range_sbintrunc[of 63] by auto 
+      using sints_def[of 64] range_sbintrunc[of 63] by auto 
     have sints32:"sints 32 = {i. - (2 ^ 31) \<le> i \<and> i < 2 ^ 31}"
-      using sints_def[of 32] Bit_Representation.range_sbintrunc[of 31] by auto 
+      using sints_def[of 32] range_sbintrunc[of 31] by auto 
     have thing1:"0 \<le> 9223372034707292161 + ((-(2 ^ 31))::real)" by auto
     have thing2:"sint ((scast w\<^sub>1)::64 Word.word) \<ge> - (2 ^ 31) " 
       using Word.word_sint.Rep[of "(w\<^sub>1)::32 Word.word"] sints32 
@@ -640,9 +640,9 @@ proof -
    apply(rule Word.sint_up_scast)
    unfolding Word.is_up by auto
  have sints64:"sints 64 = {i. - (2 ^ 63) \<le> i \<and> i < 2 ^ 63}"
-   using sints_def[of 64] Bit_Representation.range_sbintrunc[of 63] by auto 
+   using sints_def[of 64] range_sbintrunc[of 63] by auto 
  have sints32:"sints 32 = {i. - (2 ^ 31) \<le> i \<and> i < 2 ^ 31}"
-   using sints_def[of 32] Bit_Representation.range_sbintrunc[of 31] by auto 
+   using sints_def[of 32] range_sbintrunc[of 31] by auto 
  have truth:" - (2 ^ (size ((scast w\<^sub>1)::64 Word.word) - 1)) \<le> sint ((scast w\<^sub>1)::64 Word.word) + sint ((scast w\<^sub>2)::64 Word.word) \<and> sint ((scast w\<^sub>1)::64 Word.word) + sint ((scast w\<^sub>2)::64 Word.word) \<le> 2 ^ (size ((scast w\<^sub>1)::64 Word.word) - 1) - 1"
    using Word.word_size[of "(scast w\<^sub>2)::64 Word.word"] Word.word_size[of "(scast w\<^sub>1)::64 Word.word"]
    using scast_eq1 scast_eq2 
@@ -741,14 +741,15 @@ proof -
      then have "scast w\<^sub>1 + scast w\<^sub>2 <=s ((- 0x7FFFFFFF)::64 Word.word)" 
        by (metis anEq)
      then obtain r' where geq:"(r' \<ge> r\<^sub>1 + r\<^sub>2)" and leq:"(r' \<le>  (- 0x7FFFFFFF))"
-      using bigOne by auto
-     show "(\<exists>r'\<ge>plus r\<^sub>1  r\<^sub>2.
-       (\<exists>r. uminus (minus(2 ^ 31) 1) = POS_INF \<and> r' = r \<and>  (real_of_int (sint POS_INF)) \<le> r) \<or>
-       (\<exists>r. uminus (minus(2 ^ 31) 1) = uminus (minus(2 ^ 31)  1) \<and> r' = r \<and> r \<le>  (real_of_int (sint ((uminus (minus(2 ^ 31) 1))::word)))) \<or>
-       (\<exists>w. uminus (minus(2 ^ 31) 1) = w \<and>
-            r' =  (real_of_int (sint w)) \<and>
-             (real_of_int (sint w)) <  (real_of_int (sint POS_INF)) \<and> less ( (real_of_int (sint (uminus (minus(2 ^ 31)  1)))))  ( (real_of_int (sint w)))))"
-       using  leq anImp geq by auto
+       using bigOne by auto    
+     show " \<exists>r'\<ge>r\<^sub>1 + r\<^sub>2.
+       (\<exists>r. - (2 ^ 31 - 1) = POS_INF \<and> r' = r \<and> real_of_int (sint POS_INF) \<le> r) \<or>
+       (\<exists>r. - (2 ^ 31 - 1) = - (2 ^ 31 - 1) \<and> r' = r \<and> r \<le> real_of_int (sint (- (2 ^ 31 - 1)::word))) \<or>
+       (\<exists>w. - (2 ^ 31 - 1) = w \<and>
+            r' = real_of_int (sint w) \<and>
+            real_of_int (sint w) < real_of_int (sint POS_INF) \<and> real_of_int (sint (- (2 ^ 31 - 1))) < real_of_int (sint w))"
+       using leq anImp geq
+       by auto
    qed
  have int_case:"\<not>(((scast POS_INF)::64 Word.word) <=s ?sum) \<Longrightarrow> \<not> (?sum <=s ((scast NEG_INF)::64 Word.word)) \<Longrightarrow> ((scast ?sum)::word) \<equiv>\<^sub>U r\<^sub>1 + r\<^sub>2"
    proof -
@@ -851,9 +852,9 @@ subgoal
     have scast_eq2:"sint((scast (0x80000001::word))::64 Word.word) = sint ((0x80000001::32 Word.word))"
       by auto
     have sints64:"sints 64 = {i. - (2 ^ 63) \<le> i \<and> i < 2 ^ 63}"
-      using sints_def[of 64] Bit_Representation.range_sbintrunc[of 63] by auto 
+      using sints_def[of 64] range_sbintrunc[of 63] by auto 
     have sints32:"sints 32 = {i. - (2 ^ 31) \<le> i \<and> i < 2 ^ 31}"
-      using sints_def[of 32] Bit_Representation.range_sbintrunc[of 31] by auto 
+      using sints_def[of 32] range_sbintrunc[of 31] by auto 
     have thing1:"0 \<le> 9223372034707292161 + ((-(2 ^ 31))::real)" by auto
     have "sint (( w\<^sub>2)) \<ge> (-(2 ^ 31))"
       using Word.word_sint.Rep[of "(w\<^sub>2)::32 Word.word"] sints32 
@@ -1120,9 +1121,9 @@ subgoal
     have scast_eq2:"sint((scast (0x80000001::word))::64 Word.word) = sint ((0x80000001::32 Word.word))"
        by auto
     have sints64:"sints 64 = {i. - (2 ^ 63) \<le> i \<and> i < 2 ^ 63}"
-      using sints_def[of 64] Bit_Representation.range_sbintrunc[of 63] by auto 
+      using sints_def[of 64] range_sbintrunc[of 63] by auto 
     have sints32:"sints 32 = {i. - (2 ^ 31) \<le> i \<and> i < 2 ^ 31}"
-      using sints_def[of 32] Bit_Representation.range_sbintrunc[of 31] by auto 
+      using sints_def[of 32] range_sbintrunc[of 31] by auto 
     have thing1:"0 \<le> 9223372034707292161 + ((-(2 ^ 31))::real)" by auto
     have "sint (( w\<^sub>1)) \<ge> (-(2 ^ 31))"
       using Word.word_sint.Rep[of "(w\<^sub>1)::32 Word.word"] sints32 
@@ -1340,9 +1341,9 @@ proof -
    apply(rule Word.sint_up_scast)
    unfolding Word.is_up by auto
  have sints64:"sints 64 = {i. - (2 ^ 63) \<le> i \<and> i < 2 ^ 63}"
-   using sints_def[of 64] Bit_Representation.range_sbintrunc[of 63] by auto 
+   using sints_def[of 64] range_sbintrunc[of 63] by auto 
  have sints32:"sints 32 = {i. - (2 ^ 31) \<le> i \<and> i < 2 ^ 31}"
-   using sints_def[of 32] Bit_Representation.range_sbintrunc[of 31] by auto 
+   using sints_def[of 32] range_sbintrunc[of 31] by auto 
  have truth:" - (2 ^ (size ((scast w\<^sub>1)::64 Word.word) - 1)) \<le> sint ((scast w\<^sub>1)::64 Word.word) + sint ((scast w\<^sub>2)::64 Word.word) \<and> sint ((scast w\<^sub>1)::64 Word.word) + sint ((scast w\<^sub>2)::64 Word.word) \<le> 2 ^ (size ((scast w\<^sub>1)::64 Word.word) - 1) - 1"
    using Word.word_size[of "(scast w\<^sub>2)::64 Word.word"] Word.word_size[of "(scast w\<^sub>1)::64 Word.word"]
    using scast_eq1 scast_eq2 
@@ -1448,12 +1449,12 @@ proof -
        by (metis anEq)
      then obtain r' where geq:"(r' \<le> r\<^sub>1 + r\<^sub>2)" and leq:"(r' \<le>  (- 0x7FFFFFFF))"
       using bigOne by auto
-     show "(\<exists>r'\<le>plus r\<^sub>1  r\<^sub>2.
-       (\<exists>r. uminus (minus(2 ^ 31) 1) = POS_INF \<and> r' = r \<and>  (real_of_int (sint POS_INF)) \<le> r) \<or>
-       (\<exists>r. uminus (minus(2 ^ 31) 1) = uminus (minus(2 ^ 31)  1) \<and> r' = r \<and> r \<le>  (real_of_int (sint ((uminus (minus(2 ^ 31) 1))::word)))) \<or>
-       (\<exists>w. uminus (minus(2 ^ 31) 1) = w \<and>
-            r' =  (real_of_int (sint w)) \<and>
-             (real_of_int (sint w)) <  (real_of_int (sint POS_INF)) \<and> less ( (real_of_int (sint (uminus (minus(2 ^ 31)  1)))))  ( (real_of_int (sint w)))))"
+     show " \<exists>r'\<le>r\<^sub>1 + r\<^sub>2.
+       (\<exists>r. - (2 ^ 31 - 1) = POS_INF \<and> r' = r \<and> real_of_int (sint POS_INF) \<le> r) \<or>
+       (\<exists>r. - (2 ^ 31 - 1) = - (2 ^ 31 - 1) \<and> r' = r \<and> r \<le> real_of_int (sint (- (2 ^ 31 - 1 :: word)))) \<or>
+       (\<exists>w. - (2 ^ 31 - 1) = w \<and>
+            r' = real_of_int (sint w) \<and>
+            real_of_int (sint w) < real_of_int (sint POS_INF) \<and> real_of_int (sint (- (2 ^ 31 - 1))) < real_of_int (sint w))"
        using  leq geq by auto
    qed
    have bigThree:"0x7FFFFFFF <=s ((scast w\<^sub>1)::64 Word.word) + ((scast w\<^sub>2)::64 Word.word) \<Longrightarrow> \<exists>r'\<le>r\<^sub>1 + r\<^sub>2.   (2147483647) \<le> r'"
@@ -2565,7 +2566,7 @@ proof -
         apply(rule Word.sint_up_scast)
         unfolding Word.is_up by auto
       have sints32:"sints 32 = {i. - (2 ^ 31) \<le> i \<and> i < 2 ^ 31}"
-        using sints_def[of 32] Bit_Representation.range_sbintrunc[of 31] by auto 
+        using sints_def[of 32] range_sbintrunc[of 31] by auto 
       have rangew1:"sint ((scast w1)::64 Word.word) \<in> {- (2 ^ 31).. (2^31)} " 
         using Word.word_sint.Rep[of "(w1)::32 Word.word"] sints32   len32 mem_Collect_eq h1 h3 h4 
         by auto
@@ -2612,7 +2613,7 @@ proof -
         apply(rule Word.sint_up_scast)
         unfolding Word.is_up by auto
       have sints32:"sints 32 = {i. - (2 ^ 31) \<le> i \<and> i < 2 ^ 31}"
-        using sints_def[of 32] Bit_Representation.range_sbintrunc[of 31] by auto 
+        using sints_def[of 32] range_sbintrunc[of 31] by auto 
       have rangew1:"sint ((scast w1)::64 Word.word) \<in> {- (2 ^ 31).. (2^31)} " 
         using Word.word_sint.Rep[of "(w1)::32 Word.word"] sints32   len32 mem_Collect_eq h1 h3 h4 
         by auto
@@ -2662,7 +2663,7 @@ proof -
         unfolding Word.is_up by auto
       have h6:"sint NEG_INF = -(2^31)+1" unfolding NEG_INF_def by auto
       have sints32:"sints 32 = {i. - (2 ^ 31) \<le> i \<and> i < 2 ^ 31}"
-        using sints_def[of 32] Bit_Representation.range_sbintrunc[of 31] by auto 
+        using sints_def[of 32] range_sbintrunc[of 31] by auto 
       have rangew1:"sint ((scast w1)::64 Word.word) \<in> {- (2 ^ 31).. (2^31)} " 
         using Word.word_sint.Rep[of "(w1)::32 Word.word"] sints32   len32 mem_Collect_eq h1 h3 h4 
         by auto
@@ -3911,7 +3912,7 @@ lemma msb_neg:
 lemma sint_neg_hom:
   fixes w :: "32 Word.word"
   shows "uint w \<noteq> ((2^(len_of (TYPE(31))))) \<Longrightarrow> (sint(-w) = -(sint w))"
-  unfolding WordBitwise.word_sint_msb_eq apply auto
+  unfolding word_sint_msb_eq apply auto
   subgoal using msb_min_neg by auto 
   prefer 3 subgoal using msb_zero[of w] by (simp add: msb_zero)
   subgoal
@@ -4195,21 +4196,21 @@ fun divU :: "word \<Rightarrow> word \<Rightarrow> word \<Rightarrow> word \<Rig
 where "divU l1 u1 l2 u2 =
   (if (wleq l2 0 \<and> wleq 0 u2) then
     (NEG_INF, POS_INF)
-else if wle 0 l2  then (* top half*)
-  (if wleq l1 0 \<and> wleq 0 u1 then (* top-center*)
+else if wle 0 l2  then \<comment> \<open> top half\<close>
+  (if wleq l1 0 \<and> wleq 0 u1 then \<comment> \<open> top-center\<close>
     (wmin (divl l1 l2) 0,  
      wmax (divu u1 l2) 0)
-   else if wle u1  0 then (* top-left *)
+   else if wle u1  0 then \<comment> \<open> top-left \<close>
      (divl l1 l2, divu u1 u2)
-   else (* top-right *)
+   else \<comment> \<open> top-right \<close>
      (divl l1 u2, divu u1 l2))
-else (* bottom half *)
-  (if wleq l1  0 \<and> wleq 0 u1 then (* bottom-center*)
+else \<comment> \<open> bottom half \<close>
+  (if wleq l1  0 \<and> wleq 0 u1 then \<comment> \<open> bottom-center\<close>
     (wmin (divl u1 u2) 0 
     ,wmax (divu l1 u2) 0)
-  else if wle u1  0 then (* bottom-left *)
+  else if wle u1  0 then \<comment> \<open> bottom-left \<close>
     (divl u1 l2, divu l1 u2)
-  else (* bottom-right*)
+  else \<comment> \<open> bottom-right\<close>
     (divl u1 u2, divu l1 l2)
 ))"
 
