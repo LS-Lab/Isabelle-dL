@@ -3,8 +3,16 @@ imports
   Complex_Main
   Word_Lib.Word_Lib
   Word_Lib.Word_Lemmas
+  Notation_Word
+  Notation_HOL
   Finite_String
-begin 
+abbrevs Zero = "\<^bold>0"
+  and One = "\<^bold>1"
+  and Geq = "\<^bold>\<ge>"
+  and Leq = "\<^bold>\<le>"
+  and Ge = "\<^bold>>"
+  and Le = "\<^bold><"
+begin
 section \<open>Syntax\<close>
 text \<open>
   We define the syntax of dL terms, formulas and hybrid programs. As in
@@ -81,6 +89,12 @@ datatype  trm =
 (* The differential of an arbitrary term (\<theta>)' *)
 | Differential trm
 
+definition Zero::trm ("\<^bold>0")
+  where "Zero = Const (bword_zero)"
+
+definition One::trm ("\<^bold>1")
+  where "One = Const (bword_one)"
+
 type_synonym space  = "ident option"
 
 definition All ::"space" where Space_All_def[simp]:"All = None"
@@ -117,7 +131,6 @@ lemma oprod_induct:
   by(rule IH)
 
 
-
 datatype hp =
 (* Variables standing for programs, given meaning by the interpretation. *)
   Pvar ident                           ("$\<alpha>")
@@ -137,20 +150,20 @@ datatype hp =
 | Sequence "hp"  "hp"         (infixr ";;" 8)
 (* Nondeterministic repetition of a program "a", zero or more times. *)
 | Loop "hp"                      ("_**")
-
 and formula =
-  Geq "trm" "trm"
+  Geq "trm" "trm"                (infix "\<^bold>\<ge>" 50)
 | Prop ident "ident \<Rightarrow> trm"      ("$\<phi>")
 | Not "formula"            ("!")
 | And "formula" "formula"    (infixl "&&" 8)
-| Exists ident "formula"
+| Exists ident "formula"      ("\<^bold>\<exists>_. _")
 (* \<langle>\<alpha>\<rangle>\<phi> iff exists run of \<alpha> where \<phi> is true in end state *)
 | Diamond "hp" "formula"         ("(\<langle> _ \<rangle> _)" 10)
 (* Contexts C are symbols standing for functions from (the semantics of) formulas to 
  * (the semantics of) formulas, thus C(\<phi>) is another formula. While not necessary
  * in terms of expressiveness, contexts allow for more efficient reasoning principles. *)
 | InContext ident "formula"
-    
+
+
 (* Derived forms *)
 definition DFunl :: "ident \<Rightarrow> trm"
   where "DFunl fid = Function fid Var"
@@ -170,8 +183,8 @@ where "Implies P Q = Or Q (Not P)"
 definition Equiv :: "formula \<Rightarrow> formula \<Rightarrow> formula" (infixl "\<leftrightarrow>" 10)
 where "Equiv P Q = Or (And P Q) (And (Not P) (Not Q))"
 
-definition Forall :: "ident \<Rightarrow> formula \<Rightarrow> formula"
-where "Forall x P = Not (Exists x (Not P))"
+definition Forall :: "ident \<Rightarrow> formula \<Rightarrow> formula" ("\<^bold>\<forall>_. _")
+  where "Forall x P = Not (Exists x (Not P))"
 
 definition Equals :: "trm \<Rightarrow> trm \<Rightarrow> formula"
 where "Equals \<theta> \<theta>' = ((Geq \<theta> \<theta>') && (Geq \<theta>' \<theta>))"
@@ -185,20 +198,20 @@ where "Greater \<theta> \<theta>' = ((Geq \<theta> \<theta>') && (Not (Geq \<the
 definition Less :: "trm \<Rightarrow> trm \<Rightarrow> formula"
   where "Less \<theta> \<theta>' = ((Geq \<theta>' \<theta>) && (Not (Geq \<theta> \<theta>')))"
 
-definition Le ::  "trm \<Rightarrow> trm \<Rightarrow> formula" where "Le = Less"
-definition Ge ::  "trm \<Rightarrow> trm \<Rightarrow> formula" where "Ge = Greater"
+definition Le ::  "trm \<Rightarrow> trm \<Rightarrow> formula" (infix "\<^bold><" 50) where "Le = Less"
+definition Ge ::  "trm \<Rightarrow> trm \<Rightarrow> formula" (infix "\<^bold>>" 50) where "Ge = Greater"
 
-definition Leq :: "trm \<Rightarrow> trm \<Rightarrow> formula"
+definition Leq :: "trm \<Rightarrow> trm \<Rightarrow> formula" (infix "\<^bold>\<le>" 50)
   where "Leq \<theta> \<theta>' = (Geq \<theta>' \<theta>)"
 
 definition Box :: "hp \<Rightarrow> formula \<Rightarrow> formula" ("([[_]]_)" 10)
 where "Box \<alpha> P = Not (Diamond \<alpha> (Not P))"
-  
-definition TT ::" formula" 
-where "TT = Geq (Const (bword_zero)) (Const (bword_zero))"
+
+definition TT ::" formula"
+where "TT = Geq \<^bold>0 \<^bold>0"
 
 definition FF ::"formula" 
-where "FF = Geq (Const (bword_zero)) (Const (bword_one))"
+where "FF = Geq \<^bold>0 (One)"
 
 
 type_synonym sequent = "formula list * formula list"
@@ -249,19 +262,19 @@ lemma [expr_diseq]:"p \<noteq> InContext C p" by(induction p, auto)
  * We encode a predicational as a context applied to a formula whose truth value is constant with
  * respect to the state (specifically, always true)*)
 fun Predicational :: "ident \<Rightarrow> formula" ("Pc")
-where "Predicational P = InContext P (Geq (Const (bword_zero)) (Const (bword_zero)))"
+where "Predicational P = InContext P (Geq \<^bold>0 \<^bold>0)"
 
 (* Abbreviations for common syntactic constructs in order to make axiom definitions, etc. more
  * readable. *)
 (* "Empty" function argument tuple, encoded as tuple where all arguments assume a constant value. *)
 definition empty::" ident \<Rightarrow> trm"
-where "empty \<equiv> \<lambda>i.(Const (bword_zero))"
+where "empty \<equiv> \<lambda>i. \<^bold>0"
 
 (* Function argument tuple with (effectively) one argument, where all others have a constant value. *)
 fun singleton :: "trm \<Rightarrow> (ident \<Rightarrow> trm)"
-where "singleton t i = (if i = Ix then t else (Const (bword_zero)))"
+where "singleton t i = (if i = Ix then t else \<^bold>0)"
 
-lemma expand_singleton:"singleton t = (\<lambda>i. (if i = Ix then t else (Const (bword_zero))))"
+lemma expand_singleton:"singleton t = (\<lambda>i. (if i = Ix then t else \<^bold>0))"
   by auto
 
 subsection \<open>Well-Formedness predicates\<close>
@@ -275,6 +288,9 @@ where
 | dfree_Times: "dfree \<theta>\<^sub>1 \<Longrightarrow> dfree \<theta>\<^sub>2 \<Longrightarrow> dfree (Times \<theta>\<^sub>1 \<theta>\<^sub>2)"
 (* regular functionals are not dfree because they can depend on differential state, that's what dfunctionals are for *)
 (*| dfree_DFunctional: "dfree ($$F' fid)"*)
+
+lemma dfree_Zero[simp]: "dfree \<^bold>0"
+  unfolding Zero_def by (simp add: dfree_Const)
 
 inductive_simps dfree_Functional_simps[simp]: "dfree (Functional F)"
   
@@ -430,6 +446,12 @@ inductive_simps
   and dsafe_Diff_simps[simp]: "dsafe (Differential a)"
   and dsafe_Const_simps[simp]: "dsafe (Const r)"
 
+lemma dsafe_Zero[simp]: "dsafe \<^bold>0"
+  by (auto simp: Zero_def)
+
+lemma dsafe_One[simp]: "dsafe \<^bold>1"
+  by (auto simp: One_def)
+
 inductive_simps
       dexec_Plus_simps[simp]: "dexec (Plus a b)"
   and dexec_Neg_simps[simp]: "dexec (Neg a)"
@@ -583,7 +605,7 @@ qed
 (* Basic reasoning principles about syntactic constructs, including inductive principles *)
 lemma dfree_is_dsafe: "dfree \<theta> \<Longrightarrow> dsafe \<theta>"
   by (induction rule: dfree.induct) (auto intro: dsafe.intros)
-  
+
 lemma hp_induct [case_names Var Assign AssignAny DiffAssign Test Evolve Choice Compose Star]:
    "(\<And>x. P ($\<alpha> x)) \<Longrightarrow>
     (\<And>x1 x2. P (x1 := x2)) \<Longrightarrow>
@@ -611,7 +633,7 @@ lemma fml_induct:
 lemma proj_sing1:"(singleton \<theta> vid1) = \<theta>"
   by (auto)
 
-lemma proj_sing2:"vid1 \<noteq> y  \<Longrightarrow> (singleton \<theta> y) = (Const (bword_zero))"
+lemma proj_sing2:"vid1 \<noteq> y  \<Longrightarrow> (singleton \<theta> y) = \<^bold>0"
   by (auto)
 
 

@@ -145,9 +145,15 @@ where
 | TMin:"Tsubst (Min \<theta>1 \<theta>2) \<sigma> = Min (Tsubst \<theta>1 \<sigma>) (Tsubst \<theta>2 \<sigma>)"  
 | TAbs:"Tsubst (Abs \<theta>1) \<sigma> = Abs (Tsubst \<theta>1 \<sigma>) "  
 | TDiff:"Tsubst (Differential \<theta>) \<sigma> = Differential (Tsubst \<theta> \<sigma>)"
-  
+
+lemma TZero[simp]: "Tsubst \<^bold>0 \<sigma> = \<^bold>0"
+  unfolding Zero_def by simp
+
+lemma TOne[simp]: "Tsubst \<^bold>1 \<sigma> = \<^bold>1"
+  unfolding One_def by simp
+
 primrec OsubstFO::"ODE \<Rightarrow> (ident \<Rightarrow> trm) \<Rightarrow> ODE"
-where
+  where
   "OsubstFO (OVar c sp) \<sigma> = OVar c sp"
 | "OsubstFO (OSing x \<theta>) \<sigma> = OSing x (TsubstFO \<theta> \<sigma>)"
 | "OsubstFO (OProd ODE1 ODE2) \<sigma> = oprod (OsubstFO ODE1 \<sigma>) (OsubstFO ODE2 \<sigma>)"

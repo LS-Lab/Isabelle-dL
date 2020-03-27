@@ -6,6 +6,8 @@ imports
   "./Syntax"
 begin
 
+unbundle word_notation
+
 type_synonym word = "32 Word.word"
 
 type_synonym rstate = "ident \<Rightarrow> real"
@@ -5036,7 +5038,6 @@ qed
 
 code_pred "wfsem".  
 
-
-
+unbundle no_word_notation
 
 end

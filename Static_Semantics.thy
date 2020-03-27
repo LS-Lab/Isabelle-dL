@@ -97,6 +97,12 @@ where
 | FVT_Diff:"FVT (Differential f) = (\<Union>x \<in> (FVT f). primify x)"
 | FVT_DiffVar:"FVT (DiffVar x) = {Inr x}"
 
+lemma FVT_Zero[simp]: "FVT \<^bold>0 = {}"
+  by (auto simp: Zero_def)
+
+lemma FVT_One[simp]: "FVT \<^bold>1 = {}"
+  by (simp add: One_def)
+
 fun FVDiff :: "trm \<Rightarrow> (ident + ident) set"
 where "FVDiff f = (\<Union>x \<in> (FVT f). primify x)"
 
@@ -186,6 +192,19 @@ where
 | "FVP (Choice \<alpha> \<beta>) = FVP \<alpha> \<union> FVP \<beta>"
 | "FVP (Sequence \<alpha> \<beta>) = FVP \<alpha> \<union> (FVP \<beta> - MBV \<alpha>)"
 | "FVP (Loop \<alpha>) = FVP \<alpha>"
+
+lemma FVF_FF[simp]: "FVF FF = {}"
+  by (simp add: FF_def)
+
+lemma FVF_TT[simp]: "FVF TT = {}"
+  by (auto simp: TT_def)
+
+lemma FVF_Or[simp]: "FVF (a || b) = FVF a \<union> FVF b"
+  by (auto simp: Or_def)
+
+lemma FVF_Implies[simp]: "FVF (a \<rightarrow> b) = FVF a \<union> FVF b"
+  by (auto simp: Implies_def)
+
 
 fun FVSeq :: "sequent \<Rightarrow> (ident + ident) set"
   where "FVSeq (A,S) = (List.foldr (\<lambda> x acc.  (acc \<union> (FVF x))) A {}) \<union> (List.foldr (\<lambda> x acc.  (acc \<union> (FVF x))) S {})"

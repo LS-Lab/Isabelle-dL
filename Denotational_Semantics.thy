@@ -206,6 +206,9 @@ where
 | Frechet_Diff:"frechet I (Differential d) v = undefined"
 | Frechet_Funl:"frechet I ($$F f) v = undefined"
 
+lemma Frechet_Zero[simp]: "frechet I \<^bold>0 v = (\<lambda>_. 0)"
+  by (simp add: Zero_def)
+
 definition directional_derivative :: "interp \<Rightarrow> trm \<Rightarrow> state \<Rightarrow> real"
 where "directional_derivative I t = (\<lambda>v. frechet I t (fst v) (snd v))"
 
@@ -382,9 +385,21 @@ lemma box_sem [simp]:"fml_sem I (Box \<alpha> \<phi>) = {\<nu>. \<forall> \<omeg
 lemma forall_sem [simp]:"fml_sem I (Forall x \<phi>) = {v. \<forall>r. (repv v x r) \<in> fml_sem I \<phi>}"
   unfolding Forall_def fml_sem.simps
   using Collect_cong by (auto)
-  
+
 lemma greater_sem[simp]:"fml_sem I (Greater \<theta> \<theta>') = {v. dterm_sem I \<theta> v > dterm_sem I \<theta>' v}"
   unfolding Greater_def by auto
+
+lemma sterm_sem_zero[simp]: "sterm_sem I \<^bold>0 \<nu> = 0"
+  by (auto simp: Zero_def bword_zero.rep_eq)
+
+lemma dterm_sem_zero[simp]: "dterm_sem I \<^bold>0 = (\<lambda>_. 0)"
+  by (auto simp: Zero_def bword_zero.rep_eq)
+
+lemma sterm_sem_one[simp]: "sterm_sem I \<^bold>1 \<nu> = 1"
+  by (auto simp: One_def bword_one.rep_eq)
+
+lemma dterm_sem_one[simp]: "dterm_sem I \<^bold>1 = (\<lambda>_. 1)"
+  by (auto simp: One_def bword_one.rep_eq)
 
 lemma loop_sem:"prog_sem I (Loop \<alpha>) = (prog_sem I \<alpha>)\<^sup>*"
   by (auto)

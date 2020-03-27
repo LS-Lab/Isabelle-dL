@@ -64,12 +64,12 @@ lemma constFcong_valid:"valid constFcongAxiom"
 proof (simp add: constFcongAxiom_def valid_def, rule allI, rule impI, rule allI, rule allI, rule impI, unfold empty_def)
   fix I::"interp" and a b
   assume good_interp:"is_interp I"
-  assume fn:"Functions I Ix (\<chi> i. dterm_sem I (Const (bword_zero)) (a, b)) = Functions I Iy (\<chi> i. dterm_sem I (Const (bword_zero)) (a, b))" 
-  have vec_eq:"(\<chi> i. dterm_sem I (if i = Ix then $f Ix (\<lambda>i. Const (bword_zero)) else Const (bword_zero)) (a, b)) = (\<chi> i. dterm_sem I (if i = Ix then $f Iy (\<lambda>i. Const (bword_zero)) else Const (bword_zero)) (a, b))"
+  assume fn:"Functions I Ix (\<chi> i. dterm_sem I \<^bold>0 (a, b)) = Functions I Iy (\<chi> i. dterm_sem I \<^bold>0 (a, b))" 
+  have vec_eq:"(\<chi> i. dterm_sem I (if i = Ix then $f Ix (\<lambda>i. \<^bold>0) else \<^bold>0) (a, b)) = (\<chi> i. dterm_sem I (if i = Ix then $f Iy (\<lambda>i. \<^bold>0) else \<^bold>0) (a, b))"
     apply(rule vec_extensionality)
     using fn by (auto simp add: empty_def)
-  then show "Predicates I Ix (\<chi> i. dterm_sem I (if i = Ix then $f Ix (\<lambda>i. Const (bword_zero))  else Const (bword_zero)) (a, b)) =
-             Predicates I Ix (\<chi> i. dterm_sem I (if i = Ix then $f Iy (\<lambda>i. Const (bword_zero))  else Const (bword_zero)) (a, b))"
+  then show "Predicates I Ix (\<chi> i. dterm_sem I (if i = Ix then $f Ix (\<lambda>i. \<^bold>0)  else \<^bold>0) (a, b)) =
+             Predicates I Ix (\<chi> i. dterm_sem I (if i = Ix then $f Iy (\<lambda>i. \<^bold>0)  else \<^bold>0) (a, b))"
     by auto
 qed
 
@@ -146,11 +146,11 @@ proof (unfold allInstAxiom_def, unfold valid_def, rule allI, rule allI, rule imp
   let ?fs = "dterm_sem I ?f \<nu>"
   assume "is_interp I"
   assume pre:"(\<forall>r. Predicates I Ix
-                 (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) (\<chi> y. if Ix = y then r else fst \<nu> $ y, snd \<nu>)))"
-  have arg_eq:"(\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) (\<chi> y. if Ix = y then ?fs else fst \<nu> $ y, snd \<nu>))
-                  = (\<chi> i. dterm_sem I (if i = Ix then ?f else Const (bword_zero)) (fst \<nu> , snd \<nu>))"
+                 (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) (\<chi> y. if Ix = y then r else fst \<nu> $ y, snd \<nu>)))"
+  have arg_eq:"(\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) (\<chi> y. if Ix = y then ?fs else fst \<nu> $ y, snd \<nu>))
+                  = (\<chi> i. dterm_sem I (if i = Ix then ?f else \<^bold>0) (fst \<nu> , snd \<nu>))"
     by(rule vec_extensionality,auto)
-  show "Predicates I Ix (\<chi> i. dterm_sem I (if i = Ix then ?f else Const (bword_zero)) \<nu>)"
+  show "Predicates I Ix (\<chi> i. dterm_sem I (if i = Ix then ?f else \<^bold>0) \<nu>)"
     using spec[OF pre, of ?fs] arg_eq by auto
 qed
 
@@ -250,11 +250,11 @@ lemma lessEqualRefl_valid:"valid lessEqualReflAxiom"
   by(auto simp add: lessEqualReflAxiom_def valid_def Leq_def)
 
 lemma assign_lem1:
-"dterm_sem I (if i = Ix then Syntax.Var Ix else (Const (bword_zero)))
+"dterm_sem I (if i = Ix then Syntax.Var Ix else \<^bold>0)
                    (vec_lambda (\<lambda>y. if Ix = y then Functions I Ix
   (vec_lambda (\<lambda>i. dterm_sem I (empty i) \<nu>)) else  vec_nth (fst \<nu>) y), snd \<nu>)
 =
- dterm_sem I (if i = Ix then $f Ix empty else (Const (bword_zero))) \<nu>"
+ dterm_sem I (if i = Ix then $f Ix empty else \<^bold>0) \<nu>"
   by (cases "i = Ix") (auto simp: proj_sing1)
 
 definition assigndAxiom :: "formula"
@@ -338,7 +338,7 @@ proof (unfold CQaxrule_def,rule soundI)
     using pres[of 0] apply(auto simp add: Equiv_def Or_def TT_def FF_def pres[of 0])
     apply(rule ext)
     using pre by auto
-  have vec_eq:"\<And>a b. (\<chi> i. dterm_sem I (if i = Ix then $$F Ix else Const (bword_zero)) (a, b)) = (\<chi> i. dterm_sem I (if i = Ix then $$F Iy else Const (bword_zero)) (a, b))"
+  have vec_eq:"\<And>a b. (\<chi> i. dterm_sem I (if i = Ix then $$F Ix else \<^bold>0) (a, b)) = (\<chi> i. dterm_sem I (if i = Ix then $$F Iy else \<^bold>0) (a, b))"
     apply(rule vec_extensionality)
     using pre2 by(auto)
   show "seq_sem I ([], [Equiv(Prop Iz (singleton ($$F Ix)))(Prop Iz (singleton ($$F Iy)))]) = UNIV"
@@ -381,10 +381,10 @@ theorem test_valid: "valid test_axiom"
   by (auto simp add: valid_def test_axiom_def)  
 
 lemma diff_assign_lem1:
-"dterm_sem I (if i = Ix then Syntax.DiffVar Ix else (Const (bword_zero)))
+"dterm_sem I (if i = Ix then Syntax.DiffVar Ix else \<^bold>0)
                    (fst \<nu>, vec_lambda (\<lambda>y. if Ix = y then Functions I Ix (vec_lambda (\<lambda>i. dterm_sem I (empty i) \<nu>)) else  vec_nth (snd \<nu>) y))
 =
- dterm_sem I (if i = Ix then $f Ix empty else (Const (bword_zero))) \<nu>
+ dterm_sem I (if i = Ix then $f Ix empty else \<^bold>0) \<nu>
 "
   by (cases "i = Ix") (auto simp: proj_sing1)
 
@@ -553,16 +553,16 @@ theorem MP_sound: "MP_holds \<phi> \<psi>"
 
 lemma CT_lemma:"\<And>I::interp. \<And> a::(real, ident) vec. \<And> b::(real, ident) vec. \<forall>I::interp. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b)) \<Longrightarrow>
              is_interp I \<Longrightarrow>
-             Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = Ix then \<theta> else  (Const (bword_zero))) (a, b))) =
-             Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = Ix then \<theta>' else (Const (bword_zero))) (a, b)))"
+             Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = Ix then \<theta> else  \<^bold>0) (a, b))) =
+             Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = Ix then \<theta>' else \<^bold>0) (a, b)))"
 proof -
   fix I :: "interp" and a :: "(real, ident) vec" and b :: "(real, ident) vec"
   assume a1: "is_interp I"
   assume "\<forall>I::interp. is_interp I \<longrightarrow> (\<forall>a b. dterm_sem I \<theta> (a, b) = dterm_sem I \<theta>' (a, b))"
-  then have "\<forall>i. dterm_sem I (if i = Ix then \<theta>' else (Const (bword_zero))) (a, b) = dterm_sem I (if i = Ix then \<theta> else (Const (bword_zero))) (a, b)"
+  then have "\<forall>i. dterm_sem I (if i = Ix then \<theta>' else \<^bold>0) (a, b) = dterm_sem I (if i = Ix then \<theta> else \<^bold>0) (a, b)"
     using a1 by presburger
-  then show "Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = Ix then \<theta> else (Const (bword_zero))) (a, b)))
-           = Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = Ix then \<theta>' else (Const (bword_zero))) (a, b)))"
+  then show "Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = Ix then \<theta> else \<^bold>0) (a, b)))
+           = Functions I var (vec_lambda (\<lambda>i. dterm_sem I (if i = Ix then \<theta>' else \<^bold>0) (a, b)))"
     by presburger
 qed
 
@@ -580,7 +580,7 @@ proof (auto simp only: CQ_holds_def valid_def equals_sem vec_extensionality vec_
   assume good:"is_interp I"
   have sem_eq:"dterm_sem I \<theta> (a,b) = dterm_sem I \<theta>' (a,b)"
     using sem good by auto
-  have feq:"(\<chi> i. dterm_sem I (if i = Ix then \<theta> else Const (bword_zero)) (a, b)) = (\<chi> i. dterm_sem I (if i = Ix then \<theta>' else Const (bword_zero)) (a, b))"  
+  have feq:"(\<chi> i. dterm_sem I (if i = Ix then \<theta> else \<^bold>0) (a, b)) = (\<chi> i. dterm_sem I (if i = Ix then \<theta>' else \<^bold>0) (a, b))"  
     apply(rule vec_extensionality)
     using sem_eq by auto
   then show "(a, b) \<in> fml_sem I ($\<phi> var (singleton \<theta>) \<leftrightarrow> $\<phi> var (singleton \<theta>'))"

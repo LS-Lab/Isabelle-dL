@@ -176,7 +176,7 @@ lemma the_all_deriv:
   
 typedef strm = "{\<theta>:: trm. dfree \<theta>}"
   morphisms raw_term simple_term
-  by(rule exI[where x= "Const (bword_zero)"], auto simp add: dfree_Const)
+  by(rule exI[where x= "\<^bold>0"], auto simp add: dfree_Zero)
   
 typedef good_interp = "{I:: interp. is_interp I}"
   morphisms raw_interp good_interp

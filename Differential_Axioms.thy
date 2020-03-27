@@ -10,6 +10,9 @@ imports
   "./Axioms"
   "./Coincidence"
 begin
+
+unbundle no_funcset_notation
+
 section \<open>Differential Axioms\<close>
 text \<open>Differential axioms fall into two categories:
 Axioms for computing the derivatives of terms and axioms for proving properties of ODEs.
@@ -18,7 +21,7 @@ axioms are more involved, often requiring extensive use of the ODE libraries.\<c
 
 subsection \<open>Derivative Axioms\<close>
 definition diff_const_axiom :: "formula"
-where [axiom_defs]:"diff_const_axiom \<equiv> Equals (Differential ($f Ix empty)) (Const (bword_zero))"
+where [axiom_defs]:"diff_const_axiom \<equiv> Equals (Differential ($f Ix empty)) \<^bold>0"
 
 definition diff_var_axiom :: "formula"
 where [axiom_defs]:"diff_var_axiom \<equiv> Equals (Differential (Syntax.Var Ix)) (DiffVar Ix)"
@@ -45,7 +48,7 @@ where [axiom_defs]:"diff_times_axiom \<equiv> Equals (Differential (Times (state
 
 (* [y=g(x)][y'=1](f(g(x))' = f(y)')*)
 definition diff_chain_axiom::"formula"
-where [axiom_defs]:"diff_chain_axiom \<equiv> [[Syntax.Assign Iy (f1 Iy Ix)]]([[DiffAssign Iy (Const (bword_one))]] 
+where [axiom_defs]:"diff_chain_axiom \<equiv> [[Syntax.Assign Iy (f1 Iy Ix)]]([[DiffAssign Iy \<^bold>1]] 
   (Equals (Differential ($f Ix (singleton (f1 Iy Ix)))) (Times (Differential (f1 Ix Iy)) (Differential (f1 Iy Ix)))))"
 
 subsection \<open>ODE Axioms\<close>
@@ -82,10 +85,10 @@ where [axiom_defs]:"DSaxiom =
 (([[EvolveODE (OSing Ix (f0 Ix)) (p1 Iy Ix)]]p1 Iz Ix)
 \<leftrightarrow> 
 (Forall Iy
- (Implies (Geq (Syntax.Var Iy) (Const (bword_zero))) 
+ (Implies (Geq (Syntax.Var Iy) \<^bold>0) 
  (Implies 
    (Forall Iz 
-     (Implies (And (Geq (Syntax.Var Iz) (Const (bword_zero))) (Geq (Syntax.Var Iy) (Syntax.Var Iz)))
+     (Implies (And (Geq (Syntax.Var Iz) \<^bold>0) (Geq (Syntax.Var Iy) (Syntax.Var Iz)))
         (Prop Iy (singleton (Plus (Syntax.Var Ix) (Times (f0 Ix) (Syntax.Var Iz)))))))
    ([[Syntax.Assign Ix (Plus (Syntax.Var Ix) (Times (f0 Ix) (Syntax.Var Iy)))]]p1 Iz Ix )))))"
 
@@ -699,16 +702,17 @@ where [axiom_defs]:"DGaxiom = (([[EvolveODE (OSing Ix (f1 Ix Ix)) (p1 Ix Ix)]]p1
        p1 Iy Ix)))"
 
 subsection \<open>Proofs for Derivative Axioms\<close>
+
+lemma frechet_empty[simp]: "frechet I (Syntax.empty i) = (\<lambda>_ _. 0)"
+  by (auto simp: Syntax.empty_def)
+
 lemma constant_deriv_inner:
  assumes interp:"\<forall>x i. (Functions I i has_derivative FunctionFrechet I i x) (at x)"
  shows "FunctionFrechet I Ix (vec_lambda (\<lambda>i. sterm_sem I (empty i) (fst \<nu>))) (vec_lambda(\<lambda>i. frechet I (empty i) (fst \<nu>) (snd \<nu>)))= 0"
 proof -
   have empty_zero:"(vec_lambda(\<lambda>i. frechet I (empty i) (fst \<nu>) (snd \<nu>))) = 0"
     using empty_def Cart_lambda_cong frechet.simps(5) zero_vec_def
-    apply auto
-    apply(rule vec_extensionality)
-    using empty_def Cart_lambda_cong frechet.simps(5) zero_vec_def
-    by (smt Frechet_Const)
+    by (simp add: vec_extensionality)
   let ?x = "(vec_lambda (\<lambda>i. sterm_sem I (empty i) (fst \<nu>)))"
   from interp
   have has_deriv:"(Functions I Ix has_derivative FunctionFrechet I Ix ?x) (at ?x)"
@@ -776,7 +780,7 @@ definition DiffLinearAxiom::"formula"
 theorem DiffLinear_valid:"valid DiffLinearAxiom"
   apply(auto simp add: DiffLinearAxiom_def valid_def Minus_def DFunl_def empty_def)
   subgoal for I a b
-    using frechet_correctness[of I "(Times  ($f Iy (\<lambda>i. Const (bword_zero))) ($f Ix trm.Var))" b] 
+    using frechet_correctness[of I "(Times  ($f Iy (\<lambda>i. \<^bold>0)) ($f Ix trm.Var))" b] 
     using constant_deriv_zeroY
     unfolding state_fun_def apply (auto intro: dfree.intros)
     unfolding directional_derivative_def by(auto simp add: empty_def) 
@@ -969,32 +973,32 @@ proof -
        and ac bc
      assume good:"is_interp I"
      assume bigNone:"
-     \<forall>\<omega>. (\<exists>\<nu> sol t. ((ab, bb), \<omega>) = (\<nu>, mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) ODE) \<nu> (sol t)) \<and>
+     \<forall>\<omega>. (\<exists>\<nu> sol t. ((ab, bb), \<omega>) = (\<nu>, mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) ODE) \<nu> (sol t)) \<and>
                     0 \<le> t \<and>
-                    (sol solves_ode (\<lambda>_. ODE_sem I (oprod(OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) ODE ))) {0..t}
+                    (sol solves_ode (\<lambda>_. ODE_sem I (oprod(OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) ODE ))) {0..t}
                      {x. Predicates I Iy
-                          (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-                                 (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) \<nu> x))} \<and>
+                          (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+                                 (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) \<nu> x))} \<and>
                     sol 0 = fst \<nu>) \<longrightarrow>
           \<omega> \<in> fml_sem I (Pc Ix)"
-     let ?my\<omega> = "mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab,bb) (sol t)"
+     let ?my\<omega> = "mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab,bb) (sol t)"
      assume t:"0 \<le> t"
-     assume aaba:"(aa, ba) = mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t)"
-     assume sol:"(sol solves_ode (\<lambda>_. ODE_sem I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE))) {0..t}
+     assume aaba:"(aa, ba) = mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab, bb) (sol t)"
+     assume sol:"(sol solves_ode (\<lambda>_. ODE_sem I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE))) {0..t}
       {x. Predicates I Iy
-           (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-                  (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) x))}"
+           (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+                  (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab, bb) x))}"
      assume sol0:"sol 0 = fst (ab, bb)"
      assume acbc:"(ac, bc) =
-     repd (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t)) Ix
-      (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))
-        (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t)))"
-     have bigEx:"(\<exists>\<nu> sol t. ((ab, bb), ?my\<omega>) = (\<nu>, mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) \<nu> (sol t)) \<and>
+     repd (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab, bb) (sol t)) Ix
+      (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))
+        (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab, bb) (sol t)))"
+     have bigEx:"(\<exists>\<nu> sol t. ((ab, bb), ?my\<omega>) = (\<nu>, mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) \<nu> (sol t)) \<and>
                     0 \<le> t \<and>
-                    (sol solves_ode (\<lambda>_. ODE_sem I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE))) {0..t}
+                    (sol solves_ode (\<lambda>_. ODE_sem I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE))) {0..t}
                      {x. Predicates I Iy
-                          (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-                                 (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) \<nu> x))} \<and>
+                          (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+                                 (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) \<nu> x))} \<and>
                     sol 0 = fst \<nu>)"
        apply(rule exI[where x="(ab, bb)"])
        apply(rule exI[where x="sol"])
@@ -1012,30 +1016,30 @@ proof -
      have ODE_sem:"ODE_sem I ODE (sol t) $ Ix = 0"
        using ODE_zero notin1 notin2  good
        by blast 
-     have vec_eq:"(\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) (sol t)) =
-           (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-            (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t)))"
+     have vec_eq:"(\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) (sol t)) =
+           (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+            (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab, bb) (sol t)))"
        apply(rule vec_extensionality)
        apply simp
-       using mk_v_agree[of I "(oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE)" "(ab, bb)" "(sol t)"]
+       using mk_v_agree[of I "(oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE)" "(ab, bb)" "(sol t)"]
        by(simp add: Vagree_def)
-     have sem_eq:"(?my\<omega> \<in> fml_sem I (Pc Ix)) = ((repd (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t)) Ix
-     (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))
-       (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t)))) \<in> fml_sem I (Pc Ix))"
+     have sem_eq:"(?my\<omega> \<in> fml_sem I (Pc Ix)) = ((repd (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab, bb) (sol t)) Ix
+     (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))
+       (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab, bb) (sol t)))) \<in> fml_sem I (Pc Ix))"
        apply(rule coincidence_formula)
        subgoal using dsafe by auto 
         apply(rule good) apply(rule good)
         subgoal by (rule Iagree_refl)
-       using mk_v_agree[of "I" "(oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE)" "(ab, bb)" "(sol t)"]
+       using mk_v_agree[of "I" "(oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE)" "(ab, bb)" "(sol t)"]
        unfolding Vagree_def 
        apply simp
        apply(erule conjE)+
        apply(erule allE[where x="Ix"])+
        apply(simp add: ODE_sem)
        using vec_eq by simp
-     show  "repd (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t)) Ix
-      (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))
-        (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t)))
+     show  "repd (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab, bb) (sol t)) Ix
+      (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))
+        (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab, bb) (sol t)))
      \<in> fml_sem I (Pc Ix)"
        using bigRes sem_eq by blast
    next
@@ -1043,29 +1047,29 @@ proof -
      and aa ba ab bb sol 
      and t::real
      assume good_interp:"is_interp I"
-     assume all:"\<forall>\<omega>. (\<exists>\<nu> sol t. ((ab, bb), \<omega>) = (\<nu>, mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) \<nu> (sol t)) \<and>
+     assume all:"\<forall>\<omega>. (\<exists>\<nu> sol t. ((ab, bb), \<omega>) = (\<nu>, mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) \<nu> (sol t)) \<and>
                        0 \<le> t \<and>
-                       (sol solves_ode (\<lambda>_. ODE_sem I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE))) {0..t}
+                       (sol solves_ode (\<lambda>_. ODE_sem I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE))) {0..t}
                         {x. Predicates I Iy
-                             (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-                                    (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) \<nu> x))} \<and>
+                             (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+                                    (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) \<nu> x))} \<and>
                        sol 0 = fst \<nu>) \<longrightarrow>
-             (\<forall>\<omega>'. \<omega>' = repd \<omega> Ix (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) \<omega>) \<longrightarrow> \<omega>' \<in> fml_sem I (Pc Ix))"
-      let ?my\<omega> = "mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t)" 
+             (\<forall>\<omega>'. \<omega>' = repd \<omega> Ix (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) \<omega>) \<longrightarrow> \<omega>' \<in> fml_sem I (Pc Ix))"
+      let ?my\<omega> = "mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab, bb) (sol t)" 
       assume t:"0 \<le> t"
-      assume aaba:"(aa, ba) = mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t)"
+      assume aaba:"(aa, ba) = mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab, bb) (sol t)"
       assume sol:"
-        (sol solves_ode (\<lambda>_. ODE_sem I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE))) {0..t}
+        (sol solves_ode (\<lambda>_. ODE_sem I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE))) {0..t}
          {x. Predicates I Iy
-              (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-                    (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) x))}"
+              (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+                    (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab, bb) x))}"
       assume sol0:"sol 0 = fst (ab, bb)"
-      have bigEx:"(\<exists>\<nu> sol t. ((ab, bb), ?my\<omega>) = (\<nu>, mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) \<nu> (sol t)) \<and>
+      have bigEx:"(\<exists>\<nu> sol t. ((ab, bb), ?my\<omega>) = (\<nu>, mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) \<nu> (sol t)) \<and>
                       0 \<le> t \<and>
-                      (sol solves_ode (\<lambda>_. ODE_sem I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE))) {0..t}
+                      (sol solves_ode (\<lambda>_. ODE_sem I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE))) {0..t}
                        {x. Predicates I Iy
-                            (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-                                   (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) \<nu> x))} \<and>
+                            (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+                                   (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) \<nu> x))} \<and>
                       sol 0 = fst \<nu>)"
         apply(rule exI[where x="(ab, bb)"])
         apply(rule exI[where x=sol])
@@ -1076,10 +1080,10 @@ proof -
          apply(rule t)
         apply(rule conjI)
          using sol sol0 by(blast)+
-      have rep_sem_eq:"repd (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t)) Ix
-                 (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))
-                   (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t)))  \<in> fml_sem I (Pc Ix)
-         = (repd ?my\<omega> Ix (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) ?my\<omega>) \<in> fml_sem I (Pc Ix))"
+      have rep_sem_eq:"repd (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab, bb) (sol t)) Ix
+                 (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))
+                   (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab, bb) (sol t)))  \<in> fml_sem I (Pc Ix)
+         = (repd ?my\<omega> Ix (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) ?my\<omega>) \<in> fml_sem I (Pc Ix))"
         apply(rule coincidence_formula)
           subgoal using dsafe by simp apply(rule good_interp) apply (rule good_interp)
          subgoal by (rule Iagree_refl)
@@ -1090,37 +1094,37 @@ proof -
         using ODE_zero notin1 notin2 good_interp
         by blast 
       have vec_eq:"
-      (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-             (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t))) =
-      (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) (sol t))"
+      (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+             (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab, bb) (sol t))) =
+      (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) (sol t))"
         apply(rule vec_extensionality)
-        using mk_v_agree[of I "(oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE)" "(ab, bb)" "(sol t)"]
+        using mk_v_agree[of I "(oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE)" "(ab, bb)" "(sol t)"]
         by (simp add: Vagree_def)
       have sem_eq:
-        "(repd ?my\<omega> Ix (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) ?my\<omega>) \<in> fml_sem I (Pc Ix)) 
-     = (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t) \<in> fml_sem I (Pc Ix)) "
+        "(repd ?my\<omega> Ix (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) ?my\<omega>) \<in> fml_sem I (Pc Ix)) 
+     = (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab, bb) (sol t) \<in> fml_sem I (Pc Ix)) "
         apply(rule coincidence_formula)
           subgoal using dsafe by simp apply(rule good_interp) apply(rule good_interp)
          subgoal by (rule Iagree_refl)
-        using mk_v_agree[of I "(OProd  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE)" "(ab, bb)" "(sol t)"]
+        using mk_v_agree[of I "(OProd  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE)" "(ab, bb)" "(sol t)"]
         unfolding Vagree_def apply simp
         apply(erule conjE)+
         apply(erule allE[where x=Ix])+
         using ODE_sem_assoc ODE_sem vec_eq
         by (simp add: ODE_sem vec_eq )
-      have some_sem:"repd (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t)) Ix
-                (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))
-                  (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t))) \<in> fml_sem I (Pc Ix)"
+      have some_sem:"repd (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab, bb) (sol t)) Ix
+                (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))
+                  (mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab, bb) (sol t))) \<in> fml_sem I (Pc Ix)"
         using rep_sem_eq 
         using all bigEx by blast
-      have bigImp:"(\<forall>\<omega>'. \<omega>' = repd ?my\<omega> Ix (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) ?my\<omega>) \<longrightarrow> \<omega>' \<in> fml_sem I (Pc Ix))"
+      have bigImp:"(\<forall>\<omega>'. \<omega>' = repd ?my\<omega> Ix (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) ?my\<omega>) \<longrightarrow> \<omega>' \<in> fml_sem I (Pc Ix))"
         apply(rule allI)
         apply(rule impI)
         apply auto
         using some_sem by auto
-      have fml_sem:"repd ?my\<omega> Ix (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) ?my\<omega>) \<in> fml_sem I (Pc Ix)"
+      have fml_sem:"repd ?my\<omega> Ix (dterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) ?my\<omega>) \<in> fml_sem I (Pc Ix)"
         using sem_eq bigImp by blast
-     show "mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))ODE) (ab, bb) (sol t) \<in> fml_sem I (Pc Ix)"
+     show "mk_v I (oprod  (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))ODE) (ab, bb) (sol t) \<in> fml_sem I (Pc Ix)"
        using fml_sem sem_eq by blast
    qed
 qed
@@ -1240,7 +1244,7 @@ proof -
   have invZ:"Rep_ident (Abs_ident ''$z'') = ''$z''"
     apply(rule Abs_ident_inverse)
     by(auto simp add: max_str) 
-  have dsafe:"dsafe($f Ix (\<lambda>i. Const (bword_zero)))"  by(auto simp add: p1_def Ix_def f1_def invX Iy_def ident_expose_def Abs_ident_inverse invY SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def ilength_def max_str)
+  have dsafe:"dsafe($f Ix (\<lambda>i. \<^bold>0))"  by(auto simp add: p1_def Ix_def f1_def invX Iy_def ident_expose_def Abs_ident_inverse invY SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def ilength_def max_str)
   have osafe:"osafe(OSing Ix (f0 Ix))" by(auto simp add: f0_def p1_def Ix_def f1_def invX Iy_def ident_expose_def Abs_ident_inverse invY SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def ilength_def max_str empty_def)
   have fsafe:"fsafe(p1 Iy Ix)" by(auto simp add: f0_def p1_def Ix_def f1_def invX Iy_def ident_expose_def Abs_ident_inverse invY SSENT_def FSENT_def SSENTINEL_def FSENTINEL_def ilength_def max_str empty_def)
   show "valid DSaxiom"
@@ -1257,10 +1261,10 @@ proof -
               {x. mk_v I (OSing Ix (f0 Ix)) \<nu> x \<in> fml_sem I (p1 Iy Ix)} \<and>
               (sol 0) = (fst \<nu>)) \<longrightarrow>
          \<omega> \<in> fml_sem I (p1 Iz Ix)"
-    assume "dterm_sem I (Const (bword_zero)) (repv (a, b) Iy r) \<le> dterm_sem I (trm.Var Iy) (repv (a, b) Iy r)"
+    assume "dterm_sem I \<^bold>0 (repv (a, b) Iy r) \<le> dterm_sem I (trm.Var Iy) (repv (a, b) Iy r)"
     hence leq:"0 \<le> r" by(auto simp add: POS_INF_def NEG_INF_def Abs_bword_inverse  bword_zero_def)
     assume "\<forall>ra. repv (repv (a, b) Iy r) Iz ra
-         \<in> {v. dterm_sem I (Const (bword_zero)) v \<le> dterm_sem I (trm.Var Iz) v} \<inter>
+         \<in> {v. dterm_sem I \<^bold>0 v \<le> dterm_sem I (trm.Var Iz) v} \<inter>
             {v. dterm_sem I (trm.Var Iz) v \<le> dterm_sem I (trm.Var Iy) v} \<longrightarrow>
          Predicates I Iy
           (\<chi> i. dterm_sem I (singleton (Plus (trm.Var Ix) (Times (f0 Ix) (trm.Var Iz))) i)
@@ -1313,8 +1317,8 @@ proof -
   have "?abba = mk_v I (OSing Ix (f0 Ix)) (a,b) (?sol r)"
     using prod_eq_iff prereq1a prereq1b by blast
   hence req1:"((a, b), ?abba) = ((a, b), mk_v I (OSing Ix (f0 Ix)) (a,b) (?sol r))" by auto
-  have "sterm_sem I ($f Ix (\<lambda>i. Const (bword_zero))) b = Functions I Ix (\<chi> i. 0)"  by(auto simp add: POS_INF_def NEG_INF_def Abs_bword_inverse f0_def empty_def bword_zero_def)
-  hence vec_simp:"(\<lambda>a b. \<chi> i. if i = Ix then sterm_sem I ($f Ix (\<lambda>i. Const (bword_zero))) b else 0) 
+  have "sterm_sem I ($f Ix (\<lambda>i. \<^bold>0)) b = Functions I Ix (\<chi> i. 0)"  by(auto simp add: POS_INF_def NEG_INF_def Abs_bword_inverse f0_def empty_def bword_zero_def)
+  hence vec_simp:"(\<lambda>a b. \<chi> i. if i = Ix then sterm_sem I ($f Ix (\<lambda>i. \<^bold>0)) b else 0) 
       = (\<lambda>a b. \<chi> i. if i = Ix then Functions I Ix (\<chi> i. 0) else 0)"
     by (auto simp add: vec_eq_iff cong: if_cong)
   have sub: "{0..r} \<subseteq> UNIV" by auto
@@ -1336,21 +1340,21 @@ proof -
       apply(erule allE[where x="t"])
       apply(auto simp add: p1_def)
     proof -
-      have eq:"(\<chi> i. dterm_sem I (if i = Ix then Plus (trm.Var Ix) (Times (f0 Ix) (trm.Var Iz)) else Const (bword_zero))
+      have eq:"(\<chi> i. dterm_sem I (if i = Ix then Plus (trm.Var Ix) (Times (f0 Ix) (trm.Var Iz)) else \<^bold>0)
             (\<chi> y. if Iz = y then t else fst (\<chi> y. if Iy = y then r else fst (a, b) $ y, b) $ y, b)) =
-            (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-              (mk_v I (OSing Ix ($f Ix (\<lambda>i. Const (bword_zero)))) (a, b)
+            (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+              (mk_v I (OSing Ix ($f Ix (\<lambda>i. \<^bold>0))) (a, b)
                 (\<chi> i. if i = Ix then a $ i + Functions I Ix (\<chi> _. 0) * t else a $ i)))"
-        using vne12 vne13 mk_v_agree[of "I" "(OSing Ix ($f Ix (\<lambda>i. Const (bword_zero))))" "(a, b)" "(\<chi> i. if i = Ix then a $ i + Functions I Ix (\<chi> _. 0) * t else a $ i)"]
+        using vne12 vne13 mk_v_agree[of "I" "(OSing Ix ($f Ix (\<lambda>i. \<^bold>0)))" "(a, b)" "(\<chi> i. if i = Ix then a $ i + Functions I Ix (\<chi> _. 0) * t else a $ i)"]
     by(auto simp add: vec_eq_iff POS_INF_def NEG_INF_def Abs_bword_inverse f0_def empty_def  f0_def empty_def Vagree_def bword_zero_def)
       show "0 \<le> t \<Longrightarrow>
     t \<le> r \<Longrightarrow>
     Predicates I Iy
-     (\<chi> i. dterm_sem I (if i = Ix then Plus (trm.Var Ix) (Times (f0 Ix) (trm.Var Iz)) else Const (bword_zero))
+     (\<chi> i. dterm_sem I (if i = Ix then Plus (trm.Var Ix) (Times (f0 Ix) (trm.Var Iz)) else \<^bold>0)
             (\<chi> y. if Iz = y then t else fst (\<chi> y. if Iy = y then r else fst (a, b) $ y, b) $ y, b)) \<Longrightarrow>
     Predicates I Iy
-     (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-            (mk_v I (OSing Ix ($f Ix (\<lambda>i. Const (Abs_bword 0)))) (a, b)
+     (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+            (mk_v I (OSing Ix ($f Ix (\<lambda>i. \<^bold>0))) (a, b)
               (\<chi> i. if i = Ix then a $ i + Functions I Ix (\<chi> _. 0) * t else a $ i)))" 
         using eq bword_zero_def by auto
     qed
@@ -1379,9 +1383,9 @@ next
   and t:: real
   assume good_interp:"is_interp I"
   assume all:"
-       \<forall>r. dterm_sem I (Const (bword_zero)) (repv (ab, bb) Iy r) \<le> dterm_sem I (trm.Var Iy) (repv (ab, bb) Iy r) \<longrightarrow>
+       \<forall>r. dterm_sem I \<^bold>0 (repv (ab, bb) Iy r) \<le> dterm_sem I (trm.Var Iy) (repv (ab, bb) Iy r) \<longrightarrow>
            (\<forall>ra. repv (repv (ab, bb) Iy r) Iz ra
-                 \<in> {v. dterm_sem I (Const (bword_zero)) v \<le> dterm_sem I (trm.Var Iz) v} \<inter>
+                 \<in> {v. dterm_sem I \<^bold>0 v \<le> dterm_sem I (trm.Var Iz) v} \<inter>
                     {v. dterm_sem I (trm.Var Iz) v \<le> dterm_sem I (trm.Var Iy) v} \<longrightarrow>
                  Predicates I Iy
                   (\<chi> i. dterm_sem I (singleton (Plus (trm.Var Ix) (Times (f0 Ix) (trm.Var Iz))) i)
@@ -1398,9 +1402,9 @@ next
     using solves_ode_domainD by fastforce
   (* sol 0 = fst (ab, bb)*)
   assume sol0:"  (sol 0) = (fst (ab, bb)) "
-  have impl:"dterm_sem I (Const (bword_zero)) (repv (ab, bb) Iy t) \<le> dterm_sem I (trm.Var Iy) (repv (ab, bb) Iy t) \<longrightarrow>
+  have impl:"dterm_sem I \<^bold>0 (repv (ab, bb) Iy t) \<le> dterm_sem I (trm.Var Iy) (repv (ab, bb) Iy t) \<longrightarrow>
            (\<forall>ra. repv (repv (ab, bb) Iy t) Iz ra
-                 \<in> {v. dterm_sem I (Const (bword_zero)) v \<le> dterm_sem I (trm.Var Iz) v} \<inter>
+                 \<in> {v. dterm_sem I \<^bold>0 v \<le> dterm_sem I (trm.Var Iz) v} \<inter>
                     {v. dterm_sem I (trm.Var Iz) v \<le> dterm_sem I (trm.Var Iy) v} \<longrightarrow>
                  Predicates I Iy
                   (\<chi> i. dterm_sem I (singleton (Plus (trm.Var Ix) (Times (f0 Ix) (trm.Var Iz))) i)
@@ -1411,13 +1415,14 @@ next
   interpret ll:ll_on_open_it UNIV "(\<lambda>_. ODE_sem I (OSing Ix (f0 Ix)))" "UNIV" 0
     apply(standard)
         apply(auto)
-     unfolding local_lipschitz_def f0_def empty_def sterm_sem.simps apply(safe)
-     using gt_ex local_lipschitz_constI lipschitz_on_constant by fastforce
+     unfolding local_lipschitz_def f0_def empty_def sterm_sem.simps sterm_sem_zero apply(safe)
+     using gt_ex local_lipschitz_constI lipschitz_on_constant
+     by fastforce
   have eq_UNIV:"ll.existence_ivl 0 (sol 0) = UNIV"
     apply(rule ll.existence_ivl_eq_domain)
         apply(auto)
     subgoal for tm tM t
-      apply(unfold f0_def empty_def sterm_sem.simps)
+      apply(unfold f0_def empty_def sterm_sem_zero sterm_sem.simps)
       by(metis add.right_neutral mult_zero_left order_refl)
     done
   (* Combine with flow_usolves_ode and equals_flowI to get uniqueness of solution *)
@@ -1441,7 +1446,7 @@ next
     done
   let ?c = "Functions I Ix (\<chi> _. 0)"
   let ?sol = "(\<lambda>t. \<chi> i. if i = Ix then (ab $ i) + ?c * t else (ab $ i))"
-  have vec_simp:"(\<lambda>a b. \<chi> i. if i = Ix then sterm_sem I ($f Ix (\<lambda>i. Const (bword_zero))) b else 0) 
+  have vec_simp:"(\<lambda>a b. \<chi> i. if i = Ix then sterm_sem I ($f Ix (\<lambda>i. \<^bold>0)) b else 0) 
       = (\<lambda>a b. \<chi> i. if i = Ix then Functions I Ix (\<chi> i. 0) else 0)"
     by(auto simp add: vec_eq_iff POS_INF_def NEG_INF_def Abs_bword_inverse f0_def empty_def bword_zero_def cong: if_cong)
   have exp_sol:"(?sol solves_ode (\<lambda>_. ODE_sem I (OSing Ix (f0 Ix)))) {0..t}
@@ -1454,8 +1459,7 @@ next
      apply (rule ext)
      apply (subst scaleR_vec_def)
      apply (rule refl)
-    apply (auto intro!: derivative_eq_intros)
-    by(auto simp add: vec_eq_iff POS_INF_def NEG_INF_def Abs_bword_inverse f0_def empty_def bword_zero_def)
+    by (auto intro!: derivative_eq_intros)
   from exp_sol have exp_sol':"\<And>s. s \<ge> 0 \<Longrightarrow> s \<le> t \<Longrightarrow> (?sol solves_ode (\<lambda>_. ODE_sem I (OSing Ix (f0 Ix)))) {0..s} UNIV"
     by (simp add: solves_ode_subset)
   have exp_sol0_eq:"?sol 0 = ll.flow  0 (?sol 0) 0"
@@ -1496,28 +1500,28 @@ next
     using sol apply(auto  dest!: solves_ode_domainD)
     subgoal for xa using isFlow[of xa] by(auto)
     done
-  have thing:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> fst (mk_v I (OSing Ix ($f Ix (\<lambda>i. Const (bword_zero)))) (ab, bb) (?sol s)) $ Ix = ab $ Ix + Functions I Ix (\<chi> i. 0) * s"
+  have thing:"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> fst (mk_v I (OSing Ix ($f Ix (\<lambda>i. \<^bold>0))) (ab, bb) (?sol s)) $ Ix = ab $ Ix + Functions I Ix (\<chi> i. 0) * s"
     subgoal for s
-      using mk_v_agree[of I "(OSing Ix ($f Ix (\<lambda>i. Const (bword_zero))))" "(ab, bb)" "(?sol s)"] apply auto
+      using mk_v_agree[of I "(OSing Ix ($f Ix (\<lambda>i. \<^bold>0)))" "(ab, bb)" "(?sol s)"] apply auto
       unfolding Vagree_def by auto
     done
-  have thing':"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow>  fst (mk_v I (OSing Ix ($f Ix (\<lambda>i. Const (bword_zero)))) (ab, bb) (sol s)) $ Ix = ab $ Ix + Functions I Ix (\<chi> i. 0) * s"
+  have thing':"\<And>s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow>  fst (mk_v I (OSing Ix ($f Ix (\<lambda>i. \<^bold>0))) (ab, bb) (sol s)) $ Ix = ab $ Ix + Functions I Ix (\<chi> i. 0) * s"
     subgoal for s using thing[of s] sol_eq_exp[of s] by auto done
-  have another_eq:"\<And>i s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
+  have another_eq:"\<And>i s. 0 \<le> s \<Longrightarrow> s \<le> t \<Longrightarrow> dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
                 (mk_v I (OSing Ix (f0 Ix)) (ab, bb) (sol s))
 
-        =  dterm_sem I (if i = Ix then Plus (trm.Var Ix) (Times (f0 Ix) (trm.Var Iz)) else Const (bword_zero))
+        =  dterm_sem I (if i = Ix then Plus (trm.Var Ix) (Times (f0 Ix) (trm.Var Iz)) else \<^bold>0)
                 (\<chi> y. if Iz = y then s else fst (\<chi> y. if Iy = y then s else fst (ab, bb) $ y, bb) $ y, bb)"
     using mk_v_agree[of "I" "(OSing Ix (f0 Ix))" "(ab, bb)" "(sol s)"]  vne12 vne23 vne13
     apply(auto simp add: f0_def p1_def empty_def)
     unfolding Vagree_def apply(simp add: f0_def empty_def)
-    subgoal for s using thing' by auto (simp add: vec_eq_iff POS_INF_def NEG_INF_def Abs_bword_inverse bword_zero_def)
+    subgoal for s using thing' by auto
     done
   have allRa':"(\<forall>ra. repv (repv (ab, bb) Iy t) Iz ra
-               \<in> {v. dterm_sem I (Const (bword_zero)) v \<le> dterm_sem I (trm.Var Iz) v} \<inter>
+               \<in> {v. dterm_sem I \<^bold>0 v \<le> dterm_sem I (trm.Var Iz) v} \<inter>
                   {v. dterm_sem I (trm.Var Iz) v \<le> dterm_sem I (trm.Var Iy) v} \<longrightarrow>
                Predicates I Iy
-                (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
+                (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
                 (mk_v I (OSing Ix (f0 Ix)) (ab, bb) (sol ra))))"
     apply(rule allI)
     subgoal for ra
@@ -1532,18 +1536,18 @@ next
       apply(rule disjI2)
       by (auto simp add: POS_INF_def NEG_INF_def Abs_bword_inverse f0_def empty_def bword_zero_def)
     done
-  have thing':"\<And>ra i. 0 \<le> ra \<Longrightarrow> ra \<le> t \<Longrightarrow> dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) (mk_v I (OSing Ix ($f Ix (\<lambda>i. Const (bword_zero)))) (ab, bb) (sol ra))
-      =  dterm_sem I (if i = Ix then Plus (trm.Var Ix) (Times (f0 Ix) (trm.Var Iz)) else Const (bword_zero))
+  have thing':"\<And>ra i. 0 \<le> ra \<Longrightarrow> ra \<le> t \<Longrightarrow> dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) (mk_v I (OSing Ix ($f Ix (\<lambda>i. \<^bold>0))) (ab, bb) (sol ra))
+      =  dterm_sem I (if i = Ix then Plus (trm.Var Ix) (Times (f0 Ix) (trm.Var Iz)) else \<^bold>0)
             (\<chi> y. if Iz = y then ra else fst (\<chi> y. if Iy = y then t else fst (ab, bb) $ y, bb) $ y, bb) "
     subgoal for ra i
-      using vne12 vne13 mk_v_agree[of I "OSing Ix ($f Ix (\<lambda>i. Const (bword_zero)))" "(ab,bb)" "(sol ra)"] 
+      using vne12 vne13 mk_v_agree[of I "OSing Ix ($f Ix (\<lambda>i. \<^bold>0))" "(ab,bb)" "(sol ra)"] 
       apply (auto)
       unfolding Vagree_def apply(safe)
       apply(erule allE[where x="Ix"])+
       using sol_eq_exp[of ra] anotherFact[of ra] by auto
     done
   have allRa:"(\<forall>ra. repv (repv (ab, bb) Iy t) Iz ra
-               \<in> {v. dterm_sem I (Const (bword_zero)) v \<le> dterm_sem I (trm.Var Iz) v} \<inter>
+               \<in> {v. dterm_sem I \<^bold>0 v \<le> dterm_sem I (trm.Var Iz) v} \<inter>
                   {v. dterm_sem I (trm.Var Iz) v \<le> dterm_sem I (trm.Var Iy) v} \<longrightarrow>
                Predicates I Iy
                 (\<chi> i. dterm_sem I (singleton (Plus (trm.Var Ix) (Times (f0 Ix) (trm.Var Iz))) i)
@@ -1560,11 +1564,11 @@ next
                       (dterm_sem I (Plus (trm.Var Ix) (Times (f0 Ix) (trm.Var Iy))) (repv (ab, bb) Iy t)) \<longrightarrow>
                  \<omega> \<in> fml_sem I (p1 Iz Ix))"
     using impl allRa by (auto simp add: POS_INF_def NEG_INF_def Abs_bword_inverse bword_zero_def)
-  have someEq:"(\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
+  have someEq:"(\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
             (\<chi> y. if Ix = y then (if Iy = Ix then t else fst (ab, bb) $ Ix) + Functions I Ix (\<chi> i. 0) * t
                   else fst (\<chi> y. if Iy = y then t else fst (ab, bb) $ y, bb) $ y,
              bb)) 
-             = (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) (mk_v I (OSing Ix ($f Ix (\<lambda>i. Const (bword_zero)))) (ab, bb) (sol t)))"
+             = (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) (mk_v I (OSing Ix ($f Ix (\<lambda>i. \<^bold>0))) (ab, bb) (sol t)))"
     apply(rule vec_extensionality)
     using vne12 sol_eq_exp t thing by auto
   show "mk_v I (OSing Ix (f0 Ix)) (ab, bb) (sol t) \<in> fml_sem I (p1 Iz Ix)"
@@ -2337,9 +2341,9 @@ next
                                (\<chi> i. dterm_sem I (local.empty i) (mk_v I (OVar Ix) (sola 0, b) x))})) \<longrightarrow>
             directional_derivative I (f1 Iy Ix) (a, ba) \<le> directional_derivative I (f1 Ix Ix) (a, ba)"
   assume geq0:"dterm_sem I (f1 Iy Ix) (sol 0, b) < dterm_sem I (f1 Ix Ix) (sol 0, b)"
-  have free1:"dfree ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))"
+  have free1:"dfree ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))"
     by (auto intro: dfree.intros)
-  have free2:"dfree ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))"
+  have free2:"dfree ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))"
     by (auto intro: dfree.intros)
   from geq0 
   have geq0':"sterm_sem I (f1 Iy Ix) (sol 0) < sterm_sem I (f1 Ix Ix) (sol 0)"
@@ -2425,13 +2429,13 @@ next
     by(auto intro: derivative_intros)
   have sol1:"(sol solves_ode (\<lambda>_. ODE_sem I (OVar Ix))) {0..t} {x. mk_v I (OVar Ix) (sol 0, b) x \<in> fml_sem I (Prop Ix empty)}"
     using sol unfolding p1_def singleton_def empty_def by auto
-  have FVTsub1:"Ix \<in> ODE_vars I (OVar Ix) \<Longrightarrow> FVT ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) \<subseteq> semBV I ((OVar Ix))"
+  have FVTsub1:"Ix \<in> ODE_vars I (OVar Ix) \<Longrightarrow> FVT ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) \<subseteq> semBV I ((OVar Ix))"
     apply auto
     subgoal for x xa
       apply(cases "xa = Ix")
        by auto
     done
-  have FVTsub2:"Ix \<in> ODE_vars I (OVar Ix) \<Longrightarrow> FVT ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) \<subseteq> semBV I ((OVar Ix))"
+  have FVTsub2:"Ix \<in> ODE_vars I (OVar Ix) \<Longrightarrow> FVT ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) \<subseteq> semBV I ((OVar Ix))"
     apply auto
     subgoal for x xa
       apply(cases "xa = Ix")
@@ -2518,32 +2522,32 @@ proof -
      proof -
        assume good_interp:"is_interp I"
        assume "
-\<forall>aa ba. (\<exists>sol t. (aa, ba) = mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (sol t) \<and>
+\<forall>aa ba. (\<exists>sol t. (aa, ba) = mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (sol t) \<and>
                       0 \<le> t \<and>
                       (sol solves_ode (\<lambda>a b. \<chi> i. if i = Ix then sterm_sem I (f1 Ix Ix) b else 0)) {0..t}
                        {x. Predicates I Ix
-                            (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-                                   (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) x))} \<and>
+                            (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+                                   (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) x))} \<and>
                       VSagree (sol 0) a {uu. uu = Ix \<or>
-                            Inl uu \<in> Inl ` {x. \<exists>xa. Inl x \<in> FVT (if xa = Ix then trm.Var Ix else Const (bword_zero))} \<or>
-                            (\<exists>x. Inl uu \<in> FVT (if x = Ix then trm.Var Ix else Const (bword_zero)))}) \<longrightarrow>
-             Predicates I Iy (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) (aa, ba))"
+                            Inl uu \<in> Inl ` {x. \<exists>xa. Inl x \<in> FVT (if xa = Ix then trm.Var Ix else \<^bold>0)} \<or>
+                            (\<exists>x. Inl uu \<in> FVT (if x = Ix then trm.Var Ix else \<^bold>0))}) \<longrightarrow>
+             Predicates I Iy (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) (aa, ba))"
        then have 
          bigNone:"
-\<And>aa ba. (\<exists>sol t. (aa, ba) = mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (sol t) \<and>
+\<And>aa ba. (\<exists>sol t. (aa, ba) = mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (sol t) \<and>
                       0 \<le> t \<and>
                       (sol solves_ode (\<lambda>a b. \<chi> i. if i = Ix then sterm_sem I (f1 Ix Ix) b else 0)) {0..t}
                        {x. Predicates I Ix
-                            (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-                                   (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) x))} \<and>
-                      VSagree (sol 0) a {uu. uu = Ix \<or> (\<exists>x. Inl uu \<in> FVT (if x = Ix then trm.Var Ix else Const (bword_zero)))}) \<longrightarrow>
-             Predicates I Iy (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) (aa, ba))"
+                            (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+                                   (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) x))} \<and>
+                      VSagree (sol 0) a {uu. uu = Ix \<or> (\<exists>x. Inl uu \<in> FVT (if x = Ix then trm.Var Ix else \<^bold>0))}) \<longrightarrow>
+             Predicates I Iy (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) (aa, ba))"
          by (auto)
        assume aaba:"(aa, ba) =
-  mk_v I (OProd (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+  mk_v I (OProd (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
            (OSing Iy
-             (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-               ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+             (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+               ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
    (\<chi> y. if Iy = y then 0 else fst (a, b) $ y, b) (sol t)"
        assume t:"0 \<le> t"
        assume sol:"
@@ -2551,57 +2555,57 @@ proof -
    (\<lambda>a b. (\<chi> i. if i = Ix then sterm_sem I (f1 Ix Ix) b else 0) +
           (\<chi> i. if i = Iy then sterm_sem I (Plus (Times (f1 Iy Ix) (trm.Var Iy)) (f1 Iz Ix)) b else 0)))
    {0..t} {x. Predicates I Ix
-               (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-                      (mk_v I (OProd (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+               (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+                      (mk_v I (OProd (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                                 (OSing Iy
-                                  (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                                    ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+                                  (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                                    ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
                         (\<chi> y. if Iy = y then 0 else fst (a, b) $ y, b) x))}"
      assume VSag:"VSagree (sol 0) (\<chi> y. if Iy = y then 0 else fst (a, b) $ y)
      {x. x = Iy \<or> x = Ix \<or> x = Iy \<or> x = Ix \<or> Inl x \<in> Inl ` {x. x = Iy \<or> x = Ix} \<or> x = Ix}"
        let ?sol = "(\<lambda>t. \<chi> i. if i = Ix then sol t $ Ix else 0)"
-       let ?aaba' = "mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (?sol t)"
+       let ?aaba' = "mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (?sol t)"
      from bigNone[of "fst ?aaba'" "snd ?aaba'"] 
-     have bigEx:"(\<exists>sol t. ?aaba' = mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (sol t) \<and>
+     have bigEx:"(\<exists>sol t. ?aaba' = mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (sol t) \<and>
                         0 \<le> t \<and>
                         (sol solves_ode (\<lambda>a b. \<chi> i. if i = Ix then sterm_sem I (f1 Ix Ix) b else 0)) {0..t}
                          {x. Predicates I Ix
-                              (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-                                     (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) x))} \<and>
-                        VSagree (sol 0) a {uu. uu = Ix \<or> (\<exists>x. Inl uu \<in> FVT (if x = Ix then trm.Var Ix else Const (bword_zero)))}) \<longrightarrow>
-               Predicates I Iy (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) (?aaba'))" 
+                              (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+                                     (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) x))} \<and>
+                        VSagree (sol 0) a {uu. uu = Ix \<or> (\<exists>x. Inl uu \<in> FVT (if x = Ix then trm.Var Ix else \<^bold>0))}) \<longrightarrow>
+               Predicates I Iy (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) (?aaba'))" 
        by simp
-     have pre1:"?aaba' = mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (?sol t)" 
+     have pre1:"?aaba' = mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (?sol t)" 
        by (rule refl)
-     have agreeL:"\<And>s. fst (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+     have agreeL:"\<And>s. fst (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                    (OSing Iy
-                     (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                       ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+                     (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                       ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
            (\<chi> y. if Iy = y then 0 else fst (a, b) $ y, b) (sol s)) $ Ix = sol s $ Ix"
        subgoal for s
-         using mk_v_agree[of I "(oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+         using mk_v_agree[of I "(oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                    (OSing Iy
-                      (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                        ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))" "(\<chi> y. if Iy = y then 0 else fst (a, b) $ y, b)" "(sol s)"]
+                      (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                        ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))" "(\<chi> y. if Iy = y then 0 else fst (a, b) $ y, b)" "(sol s)"]
          unfolding Vagree_def by auto done
-       have agreeR:"\<And>s. fst (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (\<chi> i. if i = Ix then sol s $ Ix else 0)) $ Ix = sol s $ Ix" 
+       have agreeR:"\<And>s. fst (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (\<chi> i. if i = Ix then sol s $ Ix else 0)) $ Ix = sol s $ Ix" 
          subgoal for s
-           using mk_v_agree[of "I" "(OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))" "(a, b)" "(\<chi> i. if i = Ix then sol s $ Ix else 0)"]
+           using mk_v_agree[of "I" "(OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))" "(a, b)" "(\<chi> i. if i = Ix then sol s $ Ix else 0)"]
            unfolding Vagree_def by auto
          done
        have FV:"(FVF (p1 Ix Ix)) = {Inl Ix}" unfolding p1_def expand_singleton
          apply auto subgoal for x xa apply(cases "xa = Ix") by auto done
-       have agree:"\<And>s. Vagree (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+       have agree:"\<And>s. Vagree (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                      (OSing Iy
-                       (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                         ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
-             (\<chi> y. if Iy = y then 0 else fst (a, b) $ y, b) (sol s)) (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (\<chi> i. if i = Ix then sol s $ Ix else 0)) (FVF (p1 Ix Ix))"
+                       (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                         ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
+             (\<chi> y. if Iy = y then 0 else fst (a, b) $ y, b) (sol s)) (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (\<chi> i. if i = Ix then sol s $ Ix else 0)) (FVF (p1 Ix Ix))"
          using agreeR agreeL unfolding Vagree_def FV by auto
        note con_sem_eq = coincidence_formula[OF fsafe Iagree_refl agree]
        have constraint:"\<And>s. 0 \<le> s \<and> s \<le> t \<Longrightarrow>
          Predicates I Ix
-         (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-               (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (\<chi> i. if i = Ix then sol s $ Ix else 0)))"
+         (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+               (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (\<chi> i. if i = Ix then sol s $ Ix else 0)))"
          using sol apply simp
          apply(drule solves_odeD(2))
           apply auto[1]
@@ -2636,7 +2640,7 @@ proof -
          apply(rule has_derivative_proj[of "(\<lambda> i t. sol t $ i)" "(\<lambda>j xa. (xa *\<^sub>R ((\<chi> i. if i = Ix then sterm_sem I (f1 Ix Ix) (sol s) else 0) +
                          (\<chi> i. if i = Iy then sterm_sem I (Plus (Times (f1 Iy Ix) (trm.Var Iy)) (f1 Iz Ix)) (sol s) else 0)) $ j))" "at s within {0..t}""Ix"])
          using sol_deriv[of s] by auto done
-      have hmm:"\<And>s. (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) (sol s)) = (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) (\<chi> i. if i = Ix then sol s $ Ix else 0))"
+      have hmm:"\<And>s. (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) (sol s)) = (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) (\<chi> i. if i = Ix then sol s $ Ix else 0))"
         by(rule vec_extensionality, auto)
       have aha:"\<And>s. (\<lambda>xa. xa * sterm_sem I (f1 Ix Ix) (sol s)) = (\<lambda>xa. xa * sterm_sem I (f1 Ix Ix) (\<chi> i. if i = Ix then sol s $ Ix else 0))"
         subgoal for s
@@ -2689,21 +2693,21 @@ proof -
         by auto 
       have pre2:"(?sol solves_ode (\<lambda>a b. \<chi> i. if i = Ix then sterm_sem I (f1 Ix Ix) b else 0)) {0..t}
      {x. Predicates I Ix
-          (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-                 (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) x))}"
+          (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+                 (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) x))}"
         apply(rule solves_odeI)
          subgoal by (rule deriv)
         subgoal for s using constraint by auto
         done
-      have pre3:"VSagree (?sol 0) a {u. u = Ix \<or> (\<exists>x. Inl u \<in> FVT (if x = Ix then trm.Var Ix else Const (bword_zero)))}"
+      have pre3:"VSagree (?sol 0) a {u. u = Ix \<or> (\<exists>x. Inl u \<in> FVT (if x = Ix then trm.Var Ix else \<^bold>0))}"
         using vne12 VSag unfolding VSagree_def by simp 
-      have bigPre:"(\<exists>sol t. ?aaba' = mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then Var Ix else Const (bword_zero)))) (a, b) (sol t) \<and>
+      have bigPre:"(\<exists>sol t. ?aaba' = mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then Var Ix else \<^bold>0))) (a, b) (sol t) \<and>
                       0 \<le> t \<and>
                       (sol solves_ode (\<lambda>a b. \<chi> i. if i = Ix then sterm_sem I (f1 Ix Ix) b else 0)) {0..t}
                        {x. Predicates I Ix
-                            (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-                                   (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then Var Ix else Const (bword_zero)))) (a, b) x))} \<and>
-                      VSagree (sol 0) a {u. u = Ix \<or> (\<exists>x. Inl u \<in> FVT (if x = Ix then Var Ix else Const (bword_zero)))})"
+                            (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+                                   (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then Var Ix else \<^bold>0))) (a, b) x))} \<and>
+                      VSagree (sol 0) a {u. u = Ix \<or> (\<exists>x. Inl u \<in> FVT (if x = Ix then Var Ix else \<^bold>0))})"
         apply(rule exI[where x="?sol"])
         apply(rule exI[where x=t])
         apply(rule conjI)
@@ -2713,106 +2717,106 @@ proof -
         apply(rule conjI)
          apply(rule pre2)
         by(rule pre3)
-      have pred2:"Predicates I Iy (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) ?aaba')"
+      have pred2:"Predicates I Iy (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) ?aaba')"
         using bigEx bigPre by auto
       then have pred2':"?aaba' \<in> fml_sem I (p1 Iy Ix)" unfolding p1_def expand_singleton by auto
-      let ?res_state = "(mk_v I (OProd (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+      let ?res_state = "(mk_v I (OProd (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                     (OSing Iy
-                      (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                        ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+                      (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                        ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
             (\<chi> y. if Iy = y then 0 else fst (a, b) $ y, b) (sol t))"
       have aabaX:"(fst ?aaba') $ Ix = sol t $ Ix" 
-        using aaba mk_v_agree[of "I" "(OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))"
+        using aaba mk_v_agree[of "I" "(OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))"
  "(a, b)" "(?sol t)"] 
       proof -
-        assume " Vagree (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (\<chi> i. if i = Ix then sol t $ Ix else 0))
-     (a, b) (- semBV I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))) \<and>
-   Vagree (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (\<chi> i. if i = Ix then sol t $ Ix else 0))
-     (mk_xode I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (\<chi> i. if i = Ix then sol t $ Ix else 0))
-     (semBV I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))))"
-        then have ag:" Vagree (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (?sol t))
-   (mk_xode I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (?sol t))
-   (semBV I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))))"
+        assume " Vagree (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (\<chi> i. if i = Ix then sol t $ Ix else 0))
+     (a, b) (- semBV I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))) \<and>
+   Vagree (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (\<chi> i. if i = Ix then sol t $ Ix else 0))
+     (mk_xode I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (\<chi> i. if i = Ix then sol t $ Ix else 0))
+     (semBV I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))))"
+        then have ag:" Vagree (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (?sol t))
+   (mk_xode I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (?sol t))
+   (semBV I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))))"
           by auto
-        have sembv:"(semBV I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))) = {Inl Ix, Inr Ix}"
+        have sembv:"(semBV I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))) = {Inl Ix, Inr Ix}"
           by auto
         have sub:"{Inl Ix} \<subseteq> {Inl Ix, Inr Ix}" by auto
-        have ag':"Vagree (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (?sol t))
-          (mk_xode I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (?sol t)) {Inl Ix}" 
+        have ag':"Vagree (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (?sol t))
+          (mk_xode I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (?sol t)) {Inl Ix}" 
           using ag agree_sub[OF sub] sembv by auto
-        then have eq1:"fst (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (?sol t)) $ Ix 
-          = fst (mk_xode I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (?sol t)) $ Ix" unfolding Vagree_def by auto
+        then have eq1:"fst (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (?sol t)) $ Ix 
+          = fst (mk_xode I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (?sol t)) $ Ix" unfolding Vagree_def by auto
         moreover have "... = sol t $ Ix" by auto
         ultimately show ?thesis by auto
       qed
       have res_stateX:"(fst ?res_state) $ Ix = sol t $ Ix" 
-        using mk_v_agree[of I "(oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+        using mk_v_agree[of I "(oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                     (OSing Iy
-                      (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                        ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))"
+                      (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                        ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))"
             "(\<chi> y. if Iy = y then 0 else fst (a, b) $ y, b)" "(sol t)"]
       proof -
-        assume "Vagree (mk_v I (OProd (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+        assume "Vagree (mk_v I (OProd (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                      (OSing Iy
-                       (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                         ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+                       (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                         ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
              (\<chi> y. if Iy = y then 0 else fst (a, b) $ y, b) (sol t))
      (\<chi> y. if Iy = y then 0 else fst (a, b) $ y, b)
-     (- semBV I (OProd (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+     (- semBV I (OProd (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                   (OSing Iy
-                    (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                      ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))) \<and>
-    Vagree (mk_v I (OProd (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+                    (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                      ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))) \<and>
+    Vagree (mk_v I (OProd (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                      (OSing Iy
-                       (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                         ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+                       (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                         ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
              (\<chi> y. if Iy = y then 0 else fst (a, b) $ y, b) (sol t))
      (mk_xode I
-       (OProd (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+       (OProd (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
          (OSing Iy
-           (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-             ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+           (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+             ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
        (sol t))
-     (semBV I (OProd (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+     (semBV I (OProd (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                 (OSing Iy
-                  (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                    ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))))))"
-        then have ag:" Vagree (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+                  (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                    ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))))))"
+        then have ag:" Vagree (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                  (OSing Iy
-                   (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                     ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+                   (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                     ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
          (\<chi> y. if Iy = y then 0 else fst (a, b) $ y, b) (sol t))
  (mk_xode I
-   (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+   (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
      (OSing Iy
-       (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-         ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+       (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+         ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
    (sol t))
- (semBV I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+ (semBV I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
             (OSing Iy
-              (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))))))" by auto
-        have sembv:"(semBV I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+              (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))))))" by auto
+        have sembv:"(semBV I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
             (OSing Iy
-              (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))) = {Inl Ix, Inr Ix, Inl Iy, Inr Iy}" by auto
+              (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))) = {Inl Ix, Inr Ix, Inl Iy, Inr Iy}" by auto
         have sub:"{Inl Ix} \<subseteq> {Inl Ix, Inr Ix, Inl Iy, Inr Iy}" by auto
-        have ag':"Vagree (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+        have ag':"Vagree (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                  (OSing Iy
-                   (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                     ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+                   (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                     ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
          (\<chi> y. if Iy = y then 0 else fst (a, b) $ y, b) (sol t))
    (mk_xode I
-     (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+     (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
        (OSing Iy
-         (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-           ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+         (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+           ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
      (sol t)) {Inl Ix}" using ag sembv agree_sub[OF sub] by auto
         then have "fst ?res_state $ Ix = fst ((mk_xode I
-     (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+     (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
        (OSing Iy
-         (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-           ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+         (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+           ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
      (sol t))) $ Ix" unfolding Vagree_def 
            (*by blast *)
         moreover have "... = sol t $ Ix" by auto
@@ -2823,11 +2827,11 @@ proof -
      have fml_sem_eq:"(?res_state \<in> fml_sem I (p1 Iy Ix)) = (?aaba' \<in> fml_sem I (p1 Iy Ix))"
        using coincidence_formula[OF p2safe Iagree_refl agree, of I] by auto
      then show "Predicates I Iy
-     (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-            (mk_v I (OProd (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+     (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+            (mk_v I (OProd (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                       (OSing Iy
-                        (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                          ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+                        (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                          ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
               (\<chi> y. if Iy = y then 0 else fst (a, b) $ y, b) (sol t)))"
      using pred2 unfolding p1_def expand_singleton by auto
   qed
@@ -2835,21 +2839,21 @@ subgoal for I a b r aa ba sol t
 proof -
   assume good_interp:"is_interp I"
   assume bigNone:"    \<forall>aa ba. (\<exists>sol t. (aa, ba) =
-                     mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+                     mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                               (OSing Iy
-                                (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                                  ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+                                (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                                  ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
                       (\<chi> y. if Iy = y then r else fst (a, b) $ y, b) (sol t) \<and>
                      0 \<le> t \<and>
                      (sol solves_ode
                       (\<lambda>a b. (\<chi> i. if i = Ix then sterm_sem I (f1 Ix Ix) b else 0) +
                              (\<chi> i. if i = Iy then sterm_sem I (Plus (Times (f1 Iy Ix) (trm.Var Iy)) (f1 Iz Ix)) b else 0)))
                       {0..t} {x. Predicates I Ix
-                                  (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-                                         (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+                                  (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+                                         (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                                                    (OSing Iy
-                                                     (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                                                       ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+                                                     (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                                                       ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
                                            (\<chi> y. if Iy = y then r else fst (a, b) $ y, b) x))} \<and>
                      VSagree (sol 0) (\<chi> y. if Iy = y then r else fst (a, b) $ y)
                       {uu. uu = Iy \<or>
@@ -2857,29 +2861,29 @@ proof -
                             uu = Iy \<or>
                             uu = Ix \<or>
                             Inl uu
-                            \<in> Inl ` ({x. \<exists>xa. Inl x \<in> FVT (if xa = Ix then trm.Var Ix else Const (bword_zero))} \<union>
-                                      {x. x = Iy \<or> (\<exists>xa. Inl x \<in> FVT (if xa = Ix then trm.Var Ix else Const (bword_zero)))}) \<or>
-                            (\<exists>x. Inl uu \<in> FVT (if x = Ix then trm.Var Ix else Const (bword_zero)))}) \<longrightarrow>
-            Predicates I Iy (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) (aa, ba))"
-    assume aaba:"(aa, ba) = mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (sol t)"
+                            \<in> Inl ` ({x. \<exists>xa. Inl x \<in> FVT (if xa = Ix then trm.Var Ix else \<^bold>0)} \<union>
+                                      {x. x = Iy \<or> (\<exists>xa. Inl x \<in> FVT (if xa = Ix then trm.Var Ix else \<^bold>0))}) \<or>
+                            (\<exists>x. Inl uu \<in> FVT (if x = Ix then trm.Var Ix else \<^bold>0))}) \<longrightarrow>
+            Predicates I Iy (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) (aa, ba))"
+    assume aaba:"(aa, ba) = mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (sol t)"
     assume t:"0 \<le> t"
     assume sol:"(sol solves_ode (\<lambda>a b. \<chi> i. if i = Ix then sterm_sem I (f1 Ix Ix) b else 0)) {0..t}
      {x. Predicates I Ix
-          (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-                 (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) x))}"
+          (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+                 (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) x))}"
     assume VSA:"VSagree (sol 0) a
      {uu. uu = Ix \<or>
-           Inl uu \<in> Inl ` {x. \<exists>xa. Inl x \<in> FVT (if xa = Ix then trm.Var Ix else Const (bword_zero))} \<or>
-           (\<exists>x. Inl uu \<in> FVT (if x = Ix then trm.Var Ix else Const (bword_zero)))}"
+           Inl uu \<in> Inl ` {x. \<exists>xa. Inl x \<in> FVT (if xa = Ix then trm.Var Ix else \<^bold>0)} \<or>
+           (\<exists>x. Inl uu \<in> FVT (if x = Ix then trm.Var Ix else \<^bold>0))}"
     let ?xode = "(\<lambda>a b. \<chi> i. if i = Ix then sterm_sem I (f1 Ix Ix) b else 0)"
     let ?xconstraint = UNIV
     let ?ivl = "ll_on_open.existence_ivl {0 .. t} ?xode ?xconstraint 0 (sol 0)"
-    have freef1:"dfree ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))"
+    have freef1:"dfree ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))"
       by(auto simp add: dfree_Fun dfree_Const)
     have simple_term_inverse':"\<And>\<theta>. dfree \<theta> \<Longrightarrow> raw_term (simple_term \<theta>) = \<theta>"
       using simple_term_inverse by auto
     have old_lipschitz:"local_lipschitz (UNIV::real set) UNIV (\<lambda>a b. \<chi> i. if i = Ix then sterm_sem I (f1 Ix Ix) b else 0)"
-      apply(rule c1_implies_local_lipschitz[where f'="(\<lambda> (t,b). blinfun_vec(\<lambda> i. if i = Ix then blin_frechet (good_interp I) (simple_term (Function Ix (\<lambda> i. if i = Ix then Var Ix else Const (bword_zero)))) b else Blinfun(\<lambda> _. 0)))"])
+      apply(rule c1_implies_local_lipschitz[where f'="(\<lambda> (t,b). blinfun_vec(\<lambda> i. if i = Ix then blin_frechet (good_interp I) (simple_term (Function Ix (\<lambda> i. if i = Ix then Var Ix else \<^bold>0))) b else Blinfun(\<lambda> _. 0)))"])
          apply auto
        subgoal for x
          apply(rule has_derivative_vec)
@@ -2889,10 +2893,10 @@ proof -
            apply(cases "i = Ix")
             apply(auto simp add: f1_def expand_singleton)
          proof -
-           let ?h = "(\<lambda>b. Functions I Ix (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) b))"
-           let ?h' = "(\<lambda>b'. FunctionFrechet I Ix (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) x) (\<chi> i. frechet I (if i = Ix then trm.Var Ix else Const (bword_zero)) x b'))" 
-           let ?f = "(\<lambda> b. (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) b))"
-           let ?f' = "(\<lambda> b'. (\<chi> i. frechet I (if i = Ix then trm.Var Ix else Const (bword_zero)) x b'))"
+           let ?h = "(\<lambda>b. Functions I Ix (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) b))"
+           let ?h' = "(\<lambda>b'. FunctionFrechet I Ix (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) x) (\<chi> i. frechet I (if i = Ix then trm.Var Ix else \<^bold>0) x b'))" 
+           let ?f = "(\<lambda> b. (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) b))"
+           let ?f' = "(\<lambda> b'. (\<chi> i. frechet I (if i = Ix then trm.Var Ix else \<^bold>0) x b'))"
            let ?g = "Functions I Ix"
            let ?g'= "FunctionFrechet I Ix (?f x)"
            have heq:"?h = ?g \<circ> ?f" by(rule ext, auto)
@@ -2904,13 +2908,13 @@ proof -
              using good_interp unfolding is_interp_def by blast
            have gfderiv: "((?g \<circ> ?f) has_derivative(?g' \<circ> ?f')) (at x)"
              using fderiv gderiv diff_chain_at by blast
-           have boring_eq:"(\<lambda>b. Functions I Ix (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) b)) =
-             sterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))"
+           have boring_eq:"(\<lambda>b. Functions I Ix (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) b)) =
+             sterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))"
              by(rule ext, auto)
            have "(?h has_derivative ?h') (at x)" using gfderiv heq heq' by auto
-           then show "(sterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) has_derivative
- (\<lambda>v'. (THE f'. \<forall>x. (Functions I Ix has_derivative f' x) (at x)) (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) x)
-        (\<chi> i. frechet I (if i = Ix then trm.Var Ix else Const (bword_zero)) x v')))
+           then show "(sterm_sem I ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) has_derivative
+ (\<lambda>v'. (THE f'. \<forall>x. (Functions I Ix has_derivative f' x) (at x)) (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) x)
+        (\<chi> i. frechet I (if i = Ix then trm.Var Ix else \<^bold>0) x v')))
  (at x)"
              using boring_eq by auto
          qed
@@ -2919,7 +2923,7 @@ proof -
       have the_thing:"continuous_on (UNIV::('sz Rvec set)) 
         (\<lambda>b.
           blinfun_vec
-           (\<lambda>i. if i = Ix then blin_frechet (good_interp I) (simple_term ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) b
+           (\<lambda>i. if i = Ix then blin_frechet (good_interp I) (simple_term ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) b
                 else Blinfun (\<lambda>_. 0)))"
          apply(rule continuous_blinfun_vec')
          subgoal for i
@@ -2930,27 +2934,27 @@ proof -
        have another_cont:"continuous_on (UNIV) 
         (\<lambda>x.
           blinfun_vec
-           (\<lambda>i. if i = Ix then blin_frechet (good_interp I) (simple_term ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (snd x)
+           (\<lambda>i. if i = Ix then blin_frechet (good_interp I) (simple_term ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (snd x)
                 else Blinfun (\<lambda>_. 0)))"
          apply(rule continuous_on_compose2[of UNIV "(\<lambda>b. blinfun_vec
-           (\<lambda>i. if i = Ix then blin_frechet (good_interp I) (simple_term ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) b
+           (\<lambda>i. if i = Ix then blin_frechet (good_interp I) (simple_term ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) b
                 else Blinfun (\<lambda>_. 0)))"])
            apply(rule the_thing)
           by (auto simp add: continuous_on_snd)
        have ext:"(\<lambda>x. case x of
         (t, b) \<Rightarrow>
           blinfun_vec
-           (\<lambda>i. if i = Ix then blin_frechet (good_interp I) (simple_term ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) b
+           (\<lambda>i. if i = Ix then blin_frechet (good_interp I) (simple_term ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) b
                 else Blinfun (\<lambda>_. 0))) =(\<lambda>x.
           blinfun_vec
-           (\<lambda>i. if i = Ix then blin_frechet (good_interp I) (simple_term ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (snd x)
+           (\<lambda>i. if i = Ix then blin_frechet (good_interp I) (simple_term ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (snd x)
            else Blinfun (\<lambda>_. 0))) " apply(rule ext, auto) 
          by (metis snd_conv)
        then show  "continuous_on (UNIV) 
         (\<lambda>x. case x of
         (t, b) \<Rightarrow>
           blinfun_vec
-           (\<lambda>i. if i = Ix then blin_frechet (good_interp I) (simple_term ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) b
+           (\<lambda>i. if i = Ix then blin_frechet (good_interp I) (simple_term ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) b
                 else Blinfun (\<lambda>_. 0)))"
          using another_cont
          by (simp add: another_cont local.ext)
@@ -3030,20 +3034,20 @@ proof -
     have sol_deriv_proj_Ix:"\<And>s. s\<in>?ivl \<Longrightarrow>  ((\<lambda>t. ?flow t $ Ix) has_derivative (\<lambda>xa. xa * (sterm_sem I (f1 Ix Ix) (?flow s)))) (at s within ?ivl)"
       subgoal for s
         using sol_deriv_proj'[of s Ix] by auto done
-    have deriv1_args:"\<And>s. s \<in> ?ivl \<Longrightarrow> ((\<lambda> t. (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) (?flow t))) has_derivative ((\<lambda> t'. \<chi> i . t' * (if i = Ix then sterm_sem I (f1 Ix Ix) (?flow s) else 0)))) (at s within ?ivl)"
+    have deriv1_args:"\<And>s. s \<in> ?ivl \<Longrightarrow> ((\<lambda> t. (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) (?flow t))) has_derivative ((\<lambda> t'. \<chi> i . t' * (if i = Ix then sterm_sem I (f1 Ix Ix) (?flow s) else 0)))) (at s within ?ivl)"
       apply(rule has_derivative_vec)
       by (auto simp add: sol_deriv_proj_Ix)          
     have con_fid:"\<And>fid. continuous_on ?ivl (\<lambda>x. sterm_sem I (f1 fid Ix) (?flow x))"
       subgoal for fid
       apply(rule has_derivative_continuous_on[of "?ivl" "(\<lambda>x. sterm_sem I (f1 fid Ix) (?flow x))"
-          "(\<lambda>t t'.  FunctionFrechet I fid (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) (?flow t)) (\<chi> i . t' * (if i = Ix then sterm_sem I (f1 Ix Ix) (?flow t) else 0)))"])
+          "(\<lambda>t t'.  FunctionFrechet I fid (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) (?flow t)) (\<chi> i . t' * (if i = Ix then sterm_sem I (f1 Ix Ix) (?flow t) else 0)))"])
     proof -
       fix s
       assume ivl:"s \<in> ?ivl"
       let ?h = "(\<lambda>x. sterm_sem I (f1 fid Ix) (?flow x))"
       let ?g = "Functions I fid"
-      let ?f = "(\<lambda>x. (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) (?flow x)))"
-      let ?h' = "(\<lambda>t'. FunctionFrechet I fid (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) (?flow s))
+      let ?f = "(\<lambda>x. (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) (?flow x)))"
+      let ?h' = "(\<lambda>t'. FunctionFrechet I fid (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) (?flow s))
               (\<chi> i. t' * (if i = Ix then sterm_sem I (f1 Ix Ix) (?flow s) else 0)))"
       let ?g' = "FunctionFrechet I fid (?f s)"
       let ?f' = "(\<lambda> t'. \<chi> i . t' * (if i = Ix then sterm_sem I (f1 Ix Ix) (?flow s) else 0))"
@@ -3057,7 +3061,7 @@ proof -
       have gfderiv:"((?g \<circ> ?f) has_derivative (?g' \<circ> ?f')) (at s within ?ivl)"
         using fderiv gderiv diff_chain_within by blast
       show "((\<lambda>x. sterm_sem I (f1 fid Ix) (?flow x)) has_derivative
-       (\<lambda>t'. FunctionFrechet I fid (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) (?flow s))
+       (\<lambda>t'. FunctionFrechet I fid (\<chi> i. sterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) (?flow s))
               (\<chi> i. t' * (if i = Ix then sterm_sem I (f1 Ix Ix) (?flow s) else 0))))
        (at s within ?ivl)"
         using heq heq' gfderiv by auto
@@ -3244,10 +3248,10 @@ proof -
       by(rule solves_ode_subset, rule sol_new, rule sub')
     let ?soly = "ll_new.flow 0 r"
     let ?sol' = "(\<lambda>t. \<chi> i. if i = Iy then ?soly t else sol t $ i)" 
-    let ?aaba' = "mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+    let ?aaba' = "mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                              (OSing Iy
-                               (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                                 ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))))) 
+                               (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                                 ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))))) 
                          (\<chi> y. if Iy = y then r else fst (a, b) $ y, b) 
                          (?sol' t)"
     have duh:"(fst ?aaba', snd ?aaba') = ?aaba'" by auto
@@ -3362,65 +3366,65 @@ proof -
     (at s within {0..t})"
        subgoal for s
          using inner_deriv[of s] deriv_eta[of s] by auto done
-     have FVT:"\<And>i. FVT (if i = Ix then trm.Var Ix else Const (bword_zero)) \<subseteq> {Inl Ix}" by auto
-     have agree:"\<And>s. Vagree (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (sol s)) (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+     have FVT:"\<And>i. FVT (if i = Ix then trm.Var Ix else \<^bold>0) \<subseteq> {Inl Ix}" by auto
+     have agree:"\<And>s. Vagree (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (sol s)) (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                   (OSing Iy
-                    (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                      ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+                    (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                      ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
           (\<chi> y. if Iy = y then r else fst (a, b) $ y, b) (\<chi> i. if i = Iy then ll_new.flow 0 r s else sol s $ i)) {Inl Ix}"
        subgoal for s
-         using mk_v_agree [of "I" "(OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))" "(a, b)" "(sol s)"]
-         using mk_v_agree [of I "(oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+         using mk_v_agree [of "I" "(OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))" "(a, b)" "(sol s)"]
+         using mk_v_agree [of I "(oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                   (OSing Iy
-                    (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                      ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))" "(\<chi> y. if Iy = y then r else fst (a, b) $ y, b)" "(\<chi> i. if i = Iy then ll_new.flow 0 r s else sol s $ i)"]
+                    (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                      ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))" "(\<chi> y. if Iy = y then r else fst (a, b) $ y, b)" "(\<chi> i. if i = Iy then ll_new.flow 0 r s else sol s $ i)"]
          unfolding Vagree_def using vne12 by simp
        done
-     have agree':"\<And>s i. Vagree (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (sol s)) (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+     have agree':"\<And>s i. Vagree (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (sol s)) (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                   (OSing Iy
-                    (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                      ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
-          (\<chi> y. if Iy = y then r else fst (a, b) $ y, b) (\<chi> i. if i = Iy then ll_new.flow 0 r s else sol s $ i)) (FVT (if i = Ix then trm.Var Ix else Const (bword_zero)))"
+                    (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                      ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
+          (\<chi> y. if Iy = y then r else fst (a, b) $ y, b) (\<chi> i. if i = Iy then ll_new.flow 0 r s else sol s $ i)) (FVT (if i = Ix then trm.Var Ix else \<^bold>0))"
        subgoal for s i using agree_sub[OF FVT[of i] agree[of s]] by auto done
-     have safe:"\<And>i. dsafe (if i = Ix then trm.Var Ix else Const (bword_zero))" subgoal for i apply(cases "i = Ix", auto) done done           
-     have dterm_sem_eq:"\<And>s i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (sol s)) 
-       = dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-       (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+     have safe:"\<And>i. dsafe (if i = Ix then trm.Var Ix else \<^bold>0)" subgoal for i apply(cases "i = Ix", auto) done done           
+     have dterm_sem_eq:"\<And>s i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (sol s)) 
+       = dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+       (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                   (OSing Iy
-                    (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                      ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+                    (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                      ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
           (\<chi> y. if Iy = y then r else fst (a, b) $ y, b) (\<chi> i. if i = Iy then ll_new.flow 0 r s else sol s $ i))"
        subgoal for s i using coincidence_dterm[OF safe[of i] agree'[of s i], of I] by auto done
-     have dterm_vec_eq:"\<And>s. (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (sol s)))
-       = (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-       (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+     have dterm_vec_eq:"\<And>s. (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (sol s)))
+       = (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+       (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                   (OSing Iy
-                    (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                      ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+                    (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                      ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
           (\<chi> y. if Iy = y then r else fst (a, b) $ y, b) (\<chi> i. if i = Iy then ll_new.flow 0 r s else sol s $ i)))"
        subgoal for s
          apply(rule vec_extensionality)
          subgoal for i using dterm_sem_eq[of i s] by auto
          done done
      have pred_same:"\<And>s. s \<in> {0..t} \<Longrightarrow> Predicates I Ix
-        (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-               (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (sol s))) \<Longrightarrow>
+        (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+               (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (sol s))) \<Longrightarrow>
 Predicates I Ix
- (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-        (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+ (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+        (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                   (OSing Iy
-                    (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                      ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+                    (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                      ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
           (\<chi> y. if Iy = y then r else fst (a, b) $ y, b) (\<chi> i. if i = Iy then ll_new.flow 0 r s else sol s $ i)))"
        subgoal for s using dterm_vec_eq[of s] by auto done
    have sol'_domain:"\<And>s. 0 \<le> s \<Longrightarrow>
   s \<le> t \<Longrightarrow>
   Predicates I Ix
-   (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-          (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+   (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+          (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                     (OSing Iy
-                      (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                        ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+                      (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                        ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
                         (\<chi> y. if Iy = y then r else fst (a, b) $ y, b) (\<chi> i. if i = Iy then ll_new.flow 0 r s else sol s $ i)))"
        subgoal for s
          using sol apply simp
@@ -3431,50 +3435,50 @@ Predicates I Ix
  (\<lambda>a b. (\<chi> i. if i = Ix then sterm_sem I (f1 Ix Ix) b else 0) +
         (\<chi> i. if i = Iy then sterm_sem I (Plus (Times (f1 Iy Ix) (trm.Var Iy)) (f1 Iz Ix)) b else 0)))
  {0..t} {x. Predicates I Ix
-             (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-                    (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+             (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+                    (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                               (OSing Iy
-                                (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                                  ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+                                (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                                  ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
                       (\<chi> y. if Iy = y then r else fst (a, b) $ y, b) x))}"
        apply(rule solves_odeI)
        subgoal
          unfolding has_vderiv_on_def has_vector_derivative_def
          using sol'_deriv by auto
        by(auto, rule sol'_domain, auto)
-     have set_eq:"{y. y = Iy \<or> y = Ix \<or> y = Iy \<or> y = Ix \<or> (\<exists>x. Inl y \<in> FVT (if x = Ix then trm.Var Ix else Const (bword_zero)))} = {Ix, Iy}"
+     have set_eq:"{y. y = Iy \<or> y = Ix \<or> y = Iy \<or> y = Ix \<or> (\<exists>x. Inl y \<in> FVT (if x = Ix then trm.Var Ix else \<^bold>0))} = {Ix, Iy}"
        by auto
      have "VSagree (?sol' 0) (\<chi> y. if Iy = y then r else fst (a, b) $ y) {Ix, Iy}"
        using VSA unfolding VSagree_def by simp 
      then have VSA':" VSagree (?sol' 0) (\<chi> y. if Iy = y then r else fst (a, b) $ y)
        
- {y. y = Iy \<or> y = Ix \<or> y = Iy \<or> y = Ix \<or> (\<exists>x. Inl y \<in> FVT (if x = Ix then trm.Var Ix else Const (bword_zero)))} "
+ {y. y = Iy \<or> y = Ix \<or> y = Iy \<or> y = Ix \<or> (\<exists>x. Inl y \<in> FVT (if x = Ix then trm.Var Ix else \<^bold>0))} "
        by (auto simp add: set_eq)
      have bigPre:"(\<exists>sol t. (fst ?aaba', snd ?aaba') =
-                    mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+                    mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                              (OSing Iy
-                               (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                                 ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+                               (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                                 ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
                      ((\<chi> y. if Iy = y then r else fst (a,b) $ y), b) (sol t) \<and>
                     0 \<le> t \<and>
                     (sol solves_ode
                      (\<lambda>a b. (\<chi> i. if i = Ix then sterm_sem I (f1 Ix Ix) b else 0) +
                             (\<chi> i. if i = Iy then sterm_sem I (Plus (Times (f1 Iy Ix) (trm.Var Iy)) (f1 Iz Ix)) b else 0)))
                      {0..t} {x. Predicates I Ix
-                                 (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-                                        (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+                                 (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+                                        (mk_v I (oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                                                   (OSing Iy
-                                                    (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                                                      ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))
+                                                    (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                                                      ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))
                                           ((\<chi> y. if Iy = y then r else (fst (a,b)) $ y), b) x))} \<and>
                     VSagree (sol 0) (\<chi> y. if Iy = y then r else fst (a,b) $ y)
                      {uu. uu = Iy \<or>
                     uu = Ix \<or>
                     uu = Iy \<or>
                     uu = Ix \<or>
-                    Inl uu \<in> Inl ` ({x. \<exists>xa. Inl x \<in> FVT (if xa = Ix then trm.Var Ix else Const (bword_zero))} \<union>
-                                     {x. x = Iy \<or> (\<exists>xa. Inl x \<in> FVT (if xa = Ix then trm.Var Ix else Const (bword_zero)))}) \<or>
-                    (\<exists>x. Inl uu \<in> FVT (if x = Ix then trm.Var Ix else Const (bword_zero)))})"
+                    Inl uu \<in> Inl ` ({x. \<exists>xa. Inl x \<in> FVT (if xa = Ix then trm.Var Ix else \<^bold>0)} \<union>
+                                     {x. x = Iy \<or> (\<exists>xa. Inl x \<in> FVT (if xa = Ix then trm.Var Ix else \<^bold>0))}) \<or>
+                    (\<exists>x. Inl uu \<in> FVT (if x = Ix then trm.Var Ix else \<^bold>0))})"
        apply(rule exI[where x="?sol'"])
        apply(rule exI[where x=t])
        apply(rule conjI)
@@ -3484,41 +3488,42 @@ Predicates I Ix
        apply(rule conjI)
         apply(rule sol')
         using VSA' unfolding VSagree_def by auto
-     have pred_sem:"Predicates I Iy (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) ?aaba')"
+     have pred_sem:"Predicates I Iy (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) ?aaba')"
        using mp[OF bigEx bigPre] by auto
-     let ?other_state = "(mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (sol t))"
+     let ?other_state = "(mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (sol t))"
      have agree:"Vagree (?aaba') (?other_state) {Inl Ix} "
-       using mk_v_agree [of "I" "(oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))
+       using mk_v_agree [of "I" "(oprod (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))
                  (OSing Iy
-                   (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))) (trm.Var Iy))
-                     ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))))"
+                   (Plus (Times ($f Iy (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)) (trm.Var Iy))
+                     ($f Iz (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))))"
          "(\<chi> y. if Iy = y then r else fst (a, b) $ y, b)" "(?sol' t)"]
-       using mk_v_agree [of "I" "(OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero))))" "(a, b)" "(sol t)"]
+       using mk_v_agree [of "I" "(OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0)))" "(a, b)" "(sol t)"]
        unfolding Vagree_def using vne12 by simp
-     have sub:"\<And>i. FVT (if i = Ix then trm.Var Ix else Const (bword_zero)) \<subseteq> {Inl Ix}"
+     have sub:"\<And>i. FVT (if i = Ix then trm.Var Ix else \<^bold>0) \<subseteq> {Inl Ix}"
        by auto
-     have agree':"\<And>i. Vagree (?aaba') (?other_state) (FVT (if i = Ix then trm.Var Ix else Const (bword_zero))) "
+     have agree':"\<And>i. Vagree (?aaba') (?other_state) (FVT (if i = Ix then trm.Var Ix else \<^bold>0)) "
        subgoal for i using agree_sub[OF sub[of i] agree] by auto done
-     have silly_safe:"\<And>i. dsafe (if i = Ix then trm.Var Ix else Const (bword_zero))"
+     have silly_safe:"\<And>i. dsafe (if i = Ix then trm.Var Ix else \<^bold>0)"
        subgoal for i
          apply(cases "i = Ix")
           by (auto simp add: dsafe_Var dsafe_Const)
        done
-     have dsem_eq:"(\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) ?aaba')  = 
-        (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero)) ?other_state)"
+     have dsem_eq:"(\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) ?aaba')  = 
+        (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0) ?other_state)"
        apply(rule vec_extensionality)
        subgoal for i
          using coincidence_dterm[OF silly_safe[of i] agree'[of i], of I] by auto
        done
      show
     "Predicates I Iy
-     (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else Const (bword_zero))
-            (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else Const (bword_zero)))) (a, b) (sol t)))"
+     (\<chi> i. dterm_sem I (if i = Ix then trm.Var Ix else \<^bold>0)
+            (mk_v I (OSing Ix ($f Ix (\<lambda>i. if i = Ix then trm.Var Ix else \<^bold>0))) (a, b) (sol t)))"
      using pred_sem dsem_eq by auto
 qed
 
 done
 qed
 *)
+
 end
 

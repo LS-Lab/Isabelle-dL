@@ -5780,7 +5780,48 @@ proof -
   qed
   then show ?thesis unfolding valid_def by blast 
 qed
-  
+
+context includes no_funcset_notation begin
+
+lemma Tadmit_Zero[simp]: "Tadmit \<sigma> \<^bold>0"
+  unfolding Zero_def by simp
+
+lemma Tadmit_One[simp]: "Tadmit \<sigma> \<^bold>1"
+  unfolding One_def by simp
+
+lemma fsafe_TT[simp]: "fsafe TT"
+  unfolding TT_def by simp
+
+lemma fsafe_FF[simp]: "fsafe FF"
+  unfolding FF_def by simp
+
+lemma fsafe_Or[simp]:
+  "fsafe (A || B) \<longleftrightarrow> fsafe A \<and> fsafe B"
+  unfolding Or_def
+  by simp
+
+lemma fsafe_Implies[simp]:
+  "fsafe (A \<rightarrow> B) \<longleftrightarrow> fsafe A \<and> fsafe B"
+  unfolding Implies_def
+  by auto
+
+lemma Fadmit_TT[simp]: "Fadmit \<sigma> TT"
+  unfolding TT_def by simp
+
+lemma Fadmit_FF[simp]: "Fadmit \<sigma> FF"
+  unfolding FF_def by simp
+
+lemma Fadmit_Or[simp]:
+  "Fadmit \<sigma> (A || B) \<longleftrightarrow> Fadmit \<sigma> A \<and> Fadmit \<sigma> B"
+  unfolding Or_def
+  by simp
+
+lemma Fadmit_Implies[simp]:
+  "Fadmit \<sigma> (A \<rightarrow> B) \<longleftrightarrow> Fadmit \<sigma> A \<and> Fadmit \<sigma> B"
+  unfolding Implies_def
+  by auto
+
+end
 
 lemma subst_sequent:
   fixes I::" interp" and \<nu>::" state"
@@ -5799,19 +5840,15 @@ proof -
     using subst_eqG subst_eqD 
     by (auto simp add: Implies_def Or_def)
   have fsafeG:"fsafe (foldr (&&) \<Gamma> TT)" 
-    using Ssafe apply(induction \<Gamma>, auto simp add: Ssafe_def TT_def)
-    by fastforce
+    using Ssafe by (induction \<Gamma>) fastforce+
   have fsafeD:"fsafe (foldr (||) \<Delta> FF)" 
-    using Ssafe Or_def apply(induction \<Delta>, auto simp add: Ssafe_def FF_def Or_def)
-    by fastforce
+    using Ssafe by(induction \<Delta>) fastforce+
   have fsafe:"fsafe ?f" 
-    using fsafeD fsafeG by (auto simp add: Implies_def Or_def)
+    using fsafeD fsafeG by auto
   have FadmitG:"Fadmit \<sigma> (foldr (&&) \<Gamma> TT)"
-    using Sadmit Or_def apply(induction \<Gamma>, auto simp add: Sadmit_def TT_def Or_def)
-    by fastforce
+    using Sadmit by (induction \<Gamma>) (fastforce simp add: Sadmit_def)+
   have FadmitD:"Fadmit \<sigma> (foldr (||) \<Delta> FF)"
-    using Sadmit Or_def apply(induction \<Delta>, auto simp add: Sadmit_def FF_def Or_def)
-    by fastforce
+    using Sadmit by (induction \<Delta>) (fastforce simp add: Sadmit_def)+
   have Fadmit:"Fadmit \<sigma> ?f" 
     using FadmitG FadmitD unfolding Implies_def
     by (simp add: Implies_def Or_def)
