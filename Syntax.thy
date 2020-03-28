@@ -12,6 +12,7 @@ abbrevs Zero = "\<^bold>0"
   and Leq = "\<^bold>\<le>"
   and Ge = "\<^bold>>"
   and Le = "\<^bold><"
+  and Equals = "\<^bold>="
 begin
 section \<open>Syntax\<close>
 text \<open>
@@ -186,7 +187,7 @@ where "Equiv P Q = Or (And P Q) (And (Not P) (Not Q))"
 definition Forall :: "ident \<Rightarrow> formula \<Rightarrow> formula" ("\<^bold>\<forall>_. _")
   where "Forall x P = Not (Exists x (Not P))"
 
-definition Equals :: "trm \<Rightarrow> trm \<Rightarrow> formula"
+definition Equals :: "trm \<Rightarrow> trm \<Rightarrow> formula" (infix "\<^bold>=" 50)
 where "Equals \<theta> \<theta>' = ((Geq \<theta> \<theta>') && (Geq \<theta>' \<theta>))"
 
 definition NotEquals :: "trm \<Rightarrow> trm \<Rightarrow> formula"
