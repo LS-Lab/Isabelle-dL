@@ -5,6 +5,8 @@ begin
 
 text \<open>TODO: add to \<open>Differential_Axioms\<close>?\<close> 
 
+subsection \<open>Definitions\<close>
+
 \<comment> \<open>
 < {c&q(||)} > (f(||)>=0&p(||)) ->
 f(||)<=0 ->
@@ -24,6 +26,29 @@ definition IVTaxiom :: formula
   in
   (\<langle> EvolveODE c q \<rangle> (p && f \<^bold>\<ge> \<^bold>0)) \<rightarrow> (\<^bold>0 \<^bold>\<ge> f \<rightarrow>
   (\<langle> EvolveODE c q \<rangle> (f \<^bold>= \<^bold>0 && \<langle>EvolveODE c q\<rangle> (f \<^bold>\<ge> \<^bold>0 && p)))))"
+
+
+\<comment> \<open>
+differential conditional cut
+
+ [{c&r(||)}](p(||)->q(||))<-(([{c&r(||)&p(||)}]q(||)) & ([{c&r(||)}](!p(||)->[{c&r(||)}]!p(||))))
+
+e.g., (40) in  \<^url>\<open>https://arxiv.org/abs/1903.00153v1\<close>
+\<close>
+definition DCCaxiom :: formula
+  where "DCCaxiom =
+  (let
+    c = OVar Ix All;
+    p = Pc Ix;
+    q = Pc Iy;
+    r = Pc Iz
+  in
+  (([[EvolveODE c (r && p)]] q) && [[EvolveODE c r]] (!p \<rightarrow> [[EvolveODE c r]] !p))
+  \<rightarrow>
+  [[ EvolveODE c r ]] (p \<rightarrow> q))"
+
+
+subsection \<open>Proofs\<close>
 
 lemma FVT_state_fun: "FVT (state_fun f) = range Inl"
   by (auto simp: state_fun_def)
@@ -211,5 +236,78 @@ proof (clarsimp simp add: Let_def valid_def)
     done
 qed
 
+lemma DCC_valid:"valid DCCaxiom"
+proof -
+  define c where "c = OVar Ix All"
+  define p where "p = Pc Ix"
+  define q where "q = Pc Iy"
+  define r where "r = Pc Iz"
+  have "valid ((([[EvolveODE c (r && p)]]q) && ([[EvolveODE c r]]! p \<rightarrow> [[EvolveODE c r]]! p)) \<rightarrow> ([[EvolveODE c r]](p \<rightarrow> q)))"
+    unfolding valid_def fml_sem.simps impl_sem Int_iff
+  proof safe
+    fix I :: interp
+      and x0 :: "simple_state"
+      and x0' :: "simple_state"
+    assume I: "is_interp I"
+      and H1: "(x0, x0') \<in> fml_sem I ([[EvolveODE c (r && p)]]q)"
+      and H2: "(x0, x0') \<in> fml_sem I ([[EvolveODE c r]]! p \<rightarrow> [[EvolveODE c r]]! p)"
+    show "(x0, x0') \<in> fml_sem I ([[EvolveODE c r]]p \<rightarrow> q)"
+    proof clarsimp
+      fix x :: simple_state
+        and x' :: simple_state
+        and sol :: "real \<Rightarrow> simple_state"
+        and t :: real
+      let ?x = "\<lambda>s. mk_v I c (sol (0::real), x0') (sol s)"
+      assume "x0 = sol (0::real)"
+        and x: "(x, x') = mk_v I c (sol (0::real), x0') (sol t)"
+        and "(0::real) \<le> t"
+        and sol: "(sol solves_ode (\<lambda>a. ODE_sem I c)) {0..t} {x. mk_v I c (sol 0, x0') x \<in> fml_sem I r}"
+        and sol_t_p: "?x t \<in> fml_sem I p"
+      have xt_r: "((x0, x0'), ?x t) \<in> prog_sem I (EvolveODE c r)"
+        using x sol sol_t_p \<open>x0 = sol 0\<close> \<open>0 \<le> t\<close>
+        by auto
+      have "?x s \<in> fml_sem I p" if "0 \<le> s" "s \<le> t" for s
+      proof (rule ccontr)
+        assume not_p: "?x s \<notin> fml_sem I p"
+        have s_r: "((x0, x0'), ?x s) \<in> prog_sem I (EvolveODE c r)"
+          using \<open>0 \<le> s\<close> \<open>s \<le> t\<close> \<open>x0 = sol 0\<close>
+          by (auto simp: intro!: exI[where x=sol] exI[where x=s] solves_ode_subset[OF sol])
+        from H2[unfolded box_sem mem_Collect_eq, rule_format, OF s_r]
+        have "?x s \<in> fml_sem I (! p \<rightarrow> [[EvolveODE c r]]! p)" .
+        then have s_not_p: "?x s \<in> fml_sem I ([[EvolveODE c r]]! p)" using not_p by auto
+        have s_t: "(?x s, ?x t) \<in> prog_sem I (EvolveODE c r)"
+        proof -
+          have mk_v_eq: "mk_v I c (?x s) = mk_v I c (sol 0, x0')"
+            by (auto simp: mk_v_concrete vec_eq_iff)
+          have "((\<lambda>t. sol (s + t)) solves_ode (\<lambda>a. ODE_sem I c)) {0..t - s} {x. mk_v I c (sol 0, x0') x \<in> fml_sem I r}"
+            using shift_autonomous_solution[OF sol, of s] \<open>0 \<le> s\<close> \<open>s \<le> t\<close>
+            by (auto simp: add.commute intro: solves_ode_subset)
+          moreover have "sol s = fst (mk_v I c (sol 0, x0') (sol s))"
+            using \<open>0 \<le> s\<close> \<open>s \<le> t\<close> I
+            by (auto simp: mk_v_concrete vec_eq_iff
+                intro!: constant_when_zero[of sol 0, OF refl sol] ODE_unbound_zero)
+          ultimately show ?thesis
+            using \<open>0 \<le> s\<close> \<open>s \<le> t\<close>
+            unfolding prog_sem.simps mem_Collect_eq mk_v_eq
+            by (auto simp add: mk_v_eq intro!: exI[where x="\<lambda>tt. sol (s + tt)"] exI[where x="t - s"])
+        qed
+        from s_not_p[unfolded box_sem mem_Collect_eq, rule_format, OF s_t]
+        have "?x t \<notin> fml_sem I p" by simp
+        then show False using sol_t_p ..
+      qed
+      then have "(sol solves_ode (\<lambda>a. ODE_sem I c)) {0..t}
+      {x. mk_v I c (sol 0, x0') x \<in> fml_sem I r \<and> mk_v I c (sol 0, x0') x \<in> fml_sem I p}"
+        using sol
+        by (auto simp: solves_ode_def)
+      then have "((x0, x0'), ?x t) \<in> prog_sem I (EvolveODE c (r && p))"
+        using \<open>x0 = sol 0\<close> \<open>0 \<le> t\<close> sol
+        by (auto intro!: exI[where x=sol] exI[where x=t])
+      from H1[unfolded box_sem mem_Collect_eq, rule_format, OF this]
+      show "mk_v I c (sol (0::real), x0') (sol t) \<in> fml_sem I q" .
+    qed
+  qed
+  then show ?thesis
+    unfolding DCCaxiom_def Let_def c_def p_def q_def r_def.
+qed
 
 end
