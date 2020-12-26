@@ -162,17 +162,16 @@ instance
 end
 
 fun string_expose::"string \<Rightarrow> (unit + (char * string))"
-  where "string_expose Nil = Inl ()"
-  | "string_expose (c#cs) = Inr(c,cs)"
+  where [code]:"string_expose Nil = Inl ()"
+  | [code]:"string_expose (c#cs) = Inr(c,cs)"
 
 fun string_cons::"char \<Rightarrow> string \<Rightarrow> string"
   where "string_cons c s = (if length s \<ge> MAX_STR then s else c # s)" 
 
 lift_definition ident_empty::ident is "''''" by(auto simp add: max_str)
 lift_definition ident_cons::"char \<Rightarrow> ident \<Rightarrow> ident" is "string_cons" by auto
-lift_definition ident_expose::"ident \<Rightarrow> (unit + (char*ident))" is string_expose 
-(*  by (smt dual_order.trans le_add_same_cancel1 lessI less_imp_le list.size(4) pred_prod_inject pred_sum.simps string_expose.elims top1I)*)
-  sorry
+lift_definition ident_expose::"ident \<Rightarrow> (unit + (char*ident))" is string_expose
+  by (smt dual_order.trans le_add_same_cancel1 lessI less_imp_le list.size(4) pred_prod_inject pred_sum.simps string_expose.elims top1I)
 (*  apply(auto)
   by (smt ge_eq_refl order_refl prod.rel_eq prod.rel_mono reflp_ge_eq reflp_ident sum.rel_eq sum.rel_mono)*)
 

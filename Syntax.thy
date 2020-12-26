@@ -64,7 +64,7 @@ lift_definition bword_one::"bword" is "1::32 Word.word"
 lift_definition bword_neg_one::"bword" is "-1::32 Word.word"
     by(auto simp add: POS_INF_def NEG_INF_def)
 
-datatype  trm =
+datatype trm =
 (* Real-valued variables given meaning by the state and modified by programs. *)
   Var ident
 | Const lit
@@ -86,7 +86,7 @@ datatype  trm =
 | Abs trm
 (* A (real-valued) variable standing for a differential, such as x', given meaning by the state
  * and modified by programs. *)
-| DiffVar ident ("$'") 
+| DiffVar ident ("$''") 
 (* The differential of an arbitrary term (\<theta>)' *)
 | Differential trm
 

@@ -40,8 +40,8 @@ definition w::myvars where "w = i4"
 
 inductive is_i1::"myvars \<Rightarrow> bool"
   where i1_is_i1:"is_i1 i1"*)
-
-global_interpretation ddl:ids Ix Iy Iz "is_i1" Ix Iy Iz Ix Iy Iz Iw
+(*
+global_interpretation ddl: ids Ix Iy Iz "is_i1" Ix Iy Iz Ix Iy Iz Iw
   defines ddl_pt_result = "ddl.pt_result"
   and ddl_rule_result = "ddl.rule_result"
   and ddl_start_proof = "ddl.start_proof"
@@ -148,8 +148,8 @@ and ddl_Rsafe = "ddl.Rsafe"
   done
 
 
-
-    
+*)
+  (*  
 declare 
 ddl.pt_result.simps[code_pred_simp]  
 ddl.rule_result.simps[code_pred_simp] 
@@ -174,7 +174,7 @@ Syntax.osafe.intros[code_pred_intro]
 Syntax.dsafe.intros[code_pred_intro]
 Syntax.dfree.intros[code_pred_intro]
 
-
+*)
 declare 
 (*ddl.is_singleton.intros[code_pred_intro]
 ddl.sing_at.intros[code_pred_intro]*)
@@ -190,40 +190,20 @@ by (rule is_i1.cases)
 code_pred (modes: o \<Rightarrow> i \<Rightarrow> bool as is_singleton_i) "ddl_is_singleton"
   by(rule ddl.is_singleton.cases)*)
 
-code_pred "Syntax.dfree"  using Syntax.dfree.cases 
-  apply auto
-  by smt
-code_pred "Syntax.osafe"  using Syntax.osafe.cases by metis
-code_pred "Syntax.fsafe"  
-  apply(rule Syntax.fsafe.cases[of xa thesis]) 
-           apply blast+
-  apply(rule hpsafe.cases)
-           apply blast+
-  apply(rule dsafe.cases)
-         apply blast+
-  done
+code_pred "Syntax.dfree".
+code_pred "Syntax.osafe".
+code_pred "Syntax.fsafe".
 
 
-code_pred "ddl_TRadmit" apply(rule ddl.TRadmit.cases) by(auto)
-code_pred  (modes: i \<Rightarrow>  bool as fradmit_i) "ddl_FRadmit"
-   apply(rule ddl.FRadmit.cases)
-         apply(auto)
-  apply(rule ddl.PRadmit.cases)
-          apply(auto)
-  done
+code_pred "TRadmit".
+code_pred  (modes: i \<Rightarrow>  bool as fradmit_i) "FRadmit".
 
 
-code_pred (modes: i \<Rightarrow> i \<Rightarrow> i \<Rightarrow> bool as oadmit_i) "ddl_Oadmit"
-  apply(rule ddl.Oadmit.cases)
-      apply(auto)
-  done
+code_pred (modes: i \<Rightarrow> i \<Rightarrow> i \<Rightarrow> bool as oadmit_i) "Oadmit".
 
-code_pred (modes: i \<Rightarrow> i \<Rightarrow>  bool as fadmit_i) "ddl_Fadmit"
-  apply(rule ddl.Fadmit.cases)
-            apply(auto)
-  apply(rule ddl.Padmit.cases)
-  by(auto)
-    
+code_pred (modes: i \<Rightarrow> i \<Rightarrow>  bool as fadmit_i) "Fadmit".
+(*
+  *)  
 (*
 
 definition ssafe ::"('sf, 'sc, 'sz) subst \<Rightarrow> bool"
@@ -252,13 +232,15 @@ lift_definition ident_enum_all::"(ident \<Rightarrow> bool) \<Rightarrow> bool" 
 lift_definition ident_enum_ex::"(ident \<Rightarrow> bool) \<Rightarrow> bool" is string_enum_ex
   done
 *)
-export_code "ident_upto" in Scala
+(*declare  ident_expose_def[code]  *)
 
+(*export_code "pt_result" in Scala*)
+(*
 export_code "ddl_ssafe" in Scala
 export_code "ddl_start_proof" in Scala
   code_pred (modes: i \<Rightarrow> i \<Rightarrow> bool as fadmit_i) "ddl.Fadmit" 
   done
-
+*)
 (*export_code "ddl_pt_result" in Scala*)
 
 
