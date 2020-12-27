@@ -232,7 +232,7 @@ definition FVA :: "(ident \<Rightarrow> trm) \<Rightarrow> (ident + ident) set"
 where "FVA args = (\<Union> i. FVT (args i))"
 
 fun SFV :: "subst \<Rightarrow> (ident + ident + ident) \<Rightarrow> (ident + ident) set"
-where "SFV \<sigma> (Inl i) = (case SFunctions \<sigma> i of Some f' \<Rightarrow> FVT f' | None \<Rightarrow> {}) \<union> (case SFunls \<sigma> i of Some f' \<Rightarrow> FVT f' | None \<Rightarrow> {})"
+where "SFV \<sigma> (Inl i) = (case SFunctions \<sigma> i of Some f' \<Rightarrow> FVT f' | None \<Rightarrow> {}) " (* \<union> (case SFunls \<sigma> i of Some f' \<Rightarrow> FVT f' | None \<Rightarrow> {}) *)
 | "SFV \<sigma> (Inr (Inl i)) = {}"
 | "SFV \<sigma> (Inr (Inr i)) = (case SPredicates \<sigma> i of Some p' \<Rightarrow> FVF p' | None \<Rightarrow> {})"
 
@@ -501,7 +501,7 @@ where "extendc I R =
 definition adjoint :: "interp \<Rightarrow> subst \<Rightarrow> state \<Rightarrow> interp" 
 where adjoint_def:"adjoint I \<sigma> \<nu> =
 \<lparr>Functions =   (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. dterm_sem (extendf I R) f' \<nu>) | None \<Rightarrow> Functions I f),
- Funls =       (\<lambda>f. case SFunls \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. dterm_sem I f' \<nu>) | None \<Rightarrow> Funls I f),
+ Funls =       (\<lambda>f. case SFunls \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. dterm_sem I f' R) | None \<Rightarrow> Funls I f),
  Predicates = (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda>R. \<nu> \<in> fml_sem (extendf I R) p') | None \<Rightarrow> Predicates I p),
  Contexts =   (\<lambda>c. case SContexts \<sigma> c of Some c' \<Rightarrow> (\<lambda>R. fml_sem (extendc I R) c') | None \<Rightarrow> Contexts I c),
  Programs =   (\<lambda>a. case SPrograms \<sigma> a of Some a' \<Rightarrow> prog_sem I a' | None \<Rightarrow> Programs I a),
@@ -527,7 +527,7 @@ lemma adjoint_free:
   assumes sfree:"(\<And>i f'. SFunctions \<sigma> i = Some f' \<Longrightarrow> dfree f')"
   shows "adjoint I \<sigma> \<nu> =
   \<lparr>Functions =  (\<lambda>f. case SFunctions \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. sterm_sem (extendf I R) f' (fst \<nu>)) | None \<Rightarrow> Functions I f),
-   Funls =  (\<lambda>f. case SFunls \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. dterm_sem I f' \<nu>) | None \<Rightarrow> Funls I f),
+   Funls =  (\<lambda>f. case SFunls \<sigma> f of Some f' \<Rightarrow> (\<lambda>R. dterm_sem I f' R) | None \<Rightarrow> Funls I f),
    Predicates = (\<lambda>p. case SPredicates \<sigma> p of Some p' \<Rightarrow> (\<lambda>R. \<nu> \<in> fml_sem (extendf I R) p') | None \<Rightarrow> Predicates I p),
    Contexts =   (\<lambda>c. case SContexts \<sigma> c of Some c' \<Rightarrow> (\<lambda>R. fml_sem (extendc I R) c') | None \<Rightarrow> Contexts I c),
    Programs =   (\<lambda>a. case SPrograms \<sigma> a of Some a' \<Rightarrow> prog_sem I a' | None \<Rightarrow> Programs I a),

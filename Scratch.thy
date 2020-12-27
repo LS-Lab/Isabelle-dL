@@ -244,7 +244,7 @@ export_code "ddl_start_proof" in Scala
 (*export_code "ddl_pt_result" in Scala*)
 
 
-export_code ddl_rule_to_string in Scala
+(*export_code ddl_rule_to_string in Scala*)
 
 (* 
 subsection \<open>Implementation of Polynomial Mappings as Association Lists\<close>
