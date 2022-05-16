@@ -81,7 +81,7 @@ text\<open>
   primed variables x'.
   \<close>
 text\<open>Free variables of a term \<close>
-primrec FVT :: "trm \<Rightarrow> (ident + ident) set"
+primrec FVT::"trm \<Rightarrow> (ident + ident) set"
 where
   FVT_Var:"FVT (Var x) = {Inl x}"
 | FVT_Const:"FVT (Const x) = {}"
@@ -94,7 +94,10 @@ where
 | FVT_Max:"FVT (Max f g) = FVT f \<union> FVT g"
 | FVT_Min:"FVT (Min f g) = FVT f \<union> FVT g"
 | FVT_Abs:"FVT (Abs f) = FVT f"
-| FVT_Diff:"FVT (Differential f) = (\<Union>x \<in> (FVT f). primify x)"
+| FVT_Diff:"FVT (Differential f) = 
+   (\<Union>x \<in> {x. Inl x \<in> (FVT f)}. {Inl x, Inr x})
+  \<union>(\<Union>x \<in> {x. Inr x \<in> (FVT f)}. {Inl x, Inr x})"
+
 | FVT_DiffVar:"FVT (DiffVar x) = {Inr x}"
 
 lemma FVT_Zero[simp]: "FVT \<^bold>0 = {}"

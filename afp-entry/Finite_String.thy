@@ -8,7 +8,7 @@ text\<open>Finite-String.thy implements a type of strings whose lengths are boun
     versions of the dL entry and simply in case the typeclass instances herein are useful. One could
     imagine using this type in file formats with fixed-length fields.
 
-    Author:     Brandon Bohrer\<close>
+    Author:     Rose Bohrer\<close>
 
 theory "Finite_String"
   imports 

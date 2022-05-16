@@ -1,5 +1,5 @@
 theory "Scratch"
-imports Main  "./Proof_Checker"
+imports Main  (*"./Proof_Checker"*)
 begin
 type_synonym arity = Enum.finite_5
 

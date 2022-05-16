@@ -3,10 +3,10 @@ text\<open> Interval-Arithmetic.thy implements conservative interval arithmetic 
    outside the representable bounds. It is suitable for use in interpreters for languages which
    must have a well-understood low-level behavior. This theory was originally part of the paper:
 
-   Brandon Bohrer, et. al. VeriPhy: Verified Controller Executables from Verified Cyber-Physical 
+   Rose Bohrer, et. al. VeriPhy: Verified Controller Executables from Verified Cyber-Physical 
    System Models. PLDI, 2018.
  
-   Author:     Brandon Bohrer
+   Author:     Rose Bohrer
 \<close>
 theory Interval_Arithmetic
 imports
